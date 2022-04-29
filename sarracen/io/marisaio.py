@@ -324,5 +324,5 @@ def read_marisa(filename, slicenumber=0):
 	if (not endsliceread):
 		raise AssertionError("Did not find end of slice tag")
 
-	data.parms = params
+	data.params = params
 	return data
