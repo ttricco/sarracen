@@ -7,3 +7,5 @@ class SarracenDataFrame(DataFrame):
 
         # call pandas DataFrame contructor
         super().__init__(data, *args, **kwargs)
+
+        self.params = dict()
