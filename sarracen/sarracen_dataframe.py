@@ -3,6 +3,8 @@ from pandas import DataFrame
 
 class SarracenDataFrame(DataFrame):
 
+    _metadata = ['_params', 'params']
+
     def __init__(self, data=None, *args, **kwargs):
 
         # call pandas DataFrame contructor
