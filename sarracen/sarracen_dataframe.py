@@ -3,11 +3,12 @@ from pandas import DataFrame
 
 class SarracenDataFrame(DataFrame):
 
+    _metadata = ['_params']
+
     def __init__(self, data=None, *args, **kwargs):
 
         # call pandas DataFrame contructor
         super().__init__(data, *args, **kwargs)
-        self.params = dict()
 
     @property
     def params(self):
