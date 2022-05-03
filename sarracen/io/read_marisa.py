@@ -224,7 +224,7 @@ def read_marisa(filename, slicenumber=0):
 	endsliceread = False
 	i = slicetagID
 	n = 0
-	data = SarracenDataFrame()
+	df = pd.DataFrame()
 	params = dict()
 	while (not done):
 		fp.seek(offsets[i], 0)
@@ -253,76 +253,75 @@ def read_marisa(filename, slicenumber=0):
 			params['totalmomentum'] = np.frombuffer(_marisa_read_data(fp), dtype=np.float64)[0]
 
 		if (tag == MARISAIO_TAGS.rx):
-			data[MARISAIO_TAGS.rx.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
+			df[MARISAIO_TAGS.rx.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
 		if (tag == MARISAIO_TAGS.ry):
-			data[MARISAIO_TAGS.ry.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
+			df[MARISAIO_TAGS.ry.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
 		if (tag == MARISAIO_TAGS.rz):
-			data[MARISAIO_TAGS.rz.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
+			df[MARISAIO_TAGS.rz.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
 		if (tag == MARISAIO_TAGS.vx):
-			data[MARISAIO_TAGS.vx.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
+			df[MARISAIO_TAGS.vx.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
 		if (tag == MARISAIO_TAGS.vy):
-			data[MARISAIO_TAGS.vy.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
+			df[MARISAIO_TAGS.vy.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
 		if (tag == MARISAIO_TAGS.vz):
-			data[MARISAIO_TAGS.vz.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
+			df[MARISAIO_TAGS.vz.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
 
 		if (tag == MARISAIO_TAGS.bx):
-			data[MARISAIO_TAGS.bx.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
+			df[MARISAIO_TAGS.bx.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
 		if (tag == MARISAIO_TAGS.by):
-			data[MARISAIO_TAGS.by.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
+			df[MARISAIO_TAGS.by.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
 		if (tag == MARISAIO_TAGS.bz):
-			data[MARISAIO_TAGS.bz.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
+			df[MARISAIO_TAGS.bz.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
 		if (tag == MARISAIO_TAGS.psi):
-			data[MARISAIO_TAGS.psi.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
+			df[MARISAIO_TAGS.psi.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
 
 		if (tag == MARISAIO_TAGS.euleralpha):
-			data[MARISAIO_TAGS.rx.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
+			df[MARISAIO_TAGS.rx.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
 		if (tag == MARISAIO_TAGS.ax):
-			data[MARISAIO_TAGS.ax.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
+			df[MARISAIO_TAGS.ax.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
 		if (tag == MARISAIO_TAGS.ay):
-			data[MARISAIO_TAGS.ay.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
+			df[MARISAIO_TAGS.ay.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
 		if (tag == MARISAIO_TAGS.az):
-			data[MARISAIO_TAGS.az.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
+			df[MARISAIO_TAGS.az.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
 
 
 		if (tag == MARISAIO_TAGS.m):
-			data[MARISAIO_TAGS.m.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
+			df[MARISAIO_TAGS.m.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
 		if (tag == MARISAIO_TAGS.h):
-			data[MARISAIO_TAGS.h.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
+			df[MARISAIO_TAGS.h.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
 		if (tag == MARISAIO_TAGS.rho):
-			data[MARISAIO_TAGS.rho.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
+			df[MARISAIO_TAGS.rho.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
 		if (tag == MARISAIO_TAGS.P):
-			data[MARISAIO_TAGS.P.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
+			df[MARISAIO_TAGS.P.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
 		if (tag == MARISAIO_TAGS.ue):
-			data[MARISAIO_TAGS.ue.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
+			df[MARISAIO_TAGS.ue.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
 		if (tag == MARISAIO_TAGS.ke):
-			data[MARISAIO_TAGS.ke.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
+			df[MARISAIO_TAGS.ke.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
 		if (tag == MARISAIO_TAGS.s):
-			data[MARISAIO_TAGS.s.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
+			df[MARISAIO_TAGS.s.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
 
 		if (tag == MARISAIO_TAGS.alpha):
-			data[MARISAIO_TAGS.alpha.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
+			df[MARISAIO_TAGS.alpha.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
 		if (tag == MARISAIO_TAGS.alphamag):
-			data[MARISAIO_TAGS.alphamag.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
+			df[MARISAIO_TAGS.alphamag.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
 		if (tag == MARISAIO_TAGS.alphau):
-			data[MARISAIO_TAGS.alphau.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
+			df[MARISAIO_TAGS.alphau.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
 
 		if (tag == MARISAIO_TAGS.divv):
-			data[MARISAIO_TAGS.divv.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
+			df[MARISAIO_TAGS.divv.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
 		if (tag == MARISAIO_TAGS.divb):
-			data[MARISAIO_TAGS.divb.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
+			df[MARISAIO_TAGS.divb.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
 		if (tag == MARISAIO_TAGS.divbsymm):
-			data[MARISAIO_TAGS.divbsymm.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
+			df[MARISAIO_TAGS.divbsymm.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
 		if (tag == MARISAIO_TAGS.curlb):
-			data[MARISAIO_TAGS.curlb.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
+			df[MARISAIO_TAGS.curlb.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
 		if (tag == MARISAIO_TAGS.dustfrac):
-			data[MARISAIO_TAGS.dustfrac.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
+			df[MARISAIO_TAGS.dustfrac.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
 		if (tag == MARISAIO_TAGS.colour):
-			data[MARISAIO_TAGS.colour.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
+			df[MARISAIO_TAGS.colour.name] = np.frombuffer(_marisa_read_data(fp), dtype=np.double)
 
 		i = i + 1
 
 	if (not endsliceread):
 		raise AssertionError("Did not find end of slice tag")
 
-	data.params = params
-	return data
+	return SarracenDataFrame(df, params=params)
