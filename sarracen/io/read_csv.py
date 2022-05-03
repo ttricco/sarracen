@@ -17,11 +17,8 @@ def read_csv(filename):
     """
     df = SarracenDataFrame(pd.read_csv(filename))
 
-    labels = _get_labels(df.columns)
-    units = _get_units(df.columns)
-
-    #df.columns = labels
-    #df.units = units
+    df.units = _get_units(df.columns)
+    df.columns = _get_labels(df.columns)
 
     return df
 

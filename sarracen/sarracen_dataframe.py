@@ -15,7 +15,7 @@ class SarracenDataFrame(DataFrame):
         self.params = params
 
         self._units = None
-        self.units = Series(['' for i in range(len(self.columns))])
+        self.units = Series([np.nan for i in range(len(self.columns))])
 
 
     @property
