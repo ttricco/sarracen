@@ -1,4 +1,4 @@
-from math import pi
+import numpy as np
 
 
 class Kernel:
@@ -10,7 +10,7 @@ class Kernel:
         self._cnormk3D = cnormk3D
         self._wfunc = wfunc
 
-    def value(self, q, dimension):
+    def w(self, q, dimension):
         """
         The dimensionless part of this kernel at a specific value of q.
         :param q: The value of q to evaluate this kernel at.
@@ -29,7 +29,7 @@ class CubicSplineKernel(Kernel):
     An implementation of the Cubic Spline kernel, in 1, 2, and 3 dimensions.
     """
     def __init__(self):
-        super().__init__(2.0, 2./3., 10./(7.*pi), 1./pi, self._weight)
+        super().__init__(2.0, 2./3., 10./(7.*np.pi), 1./np.pi, self._weight)
 
     @staticmethod
     def _weight(q):
