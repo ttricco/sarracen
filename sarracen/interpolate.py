@@ -11,12 +11,12 @@ def interpolate2D(data, x, y, target, kernel, xmin, ymin, pixwidthx, pixwidthy, 
     :param y: The column label of the y-directional axis.
     :param target: The column label of the target smoothing data.
     :param kernel: The kernel to use for smoothing the target data.
-    :param xmin: The starting x-coordinate (in particle data space)
-    :param ymin: The starting y-coordinate (in particle data space)
-    :param pixcountx: The number of pixels in the output image in the x-direction
-    :param pixcounty: The number of pixels in the output image in the y-direction
+    :param xmin: The starting x-coordinate (in particle data space).
+    :param ymin: The starting y-coordinate (in particle data space).
     :param pixwidthx: The width that each pixel represents in particle data space.
     :param pixwidthy: The height that each pixel represents in particle data space
+    :param pixcountx: The number of pixels in the output image in the x-direction.
+    :param pixcounty: The number of pixels in the output image in the y-direction.
     :return: The output image, in a 2-dimensional numpy array.
     """
     image = np.zeros((pixcounty, pixcountx))
