@@ -1,0 +1,4 @@
+from sarracen.kernels.base_kernel import BaseKernel
+from sarracen.kernels.cubic_spline import CubicSplineKernel
+from sarracen.kernels.quartic_spline import QuarticSplineKernel
+from sarracen.kernels.quintic_spline import QuinticSplineKernel
