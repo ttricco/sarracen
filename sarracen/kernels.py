@@ -23,6 +23,22 @@ class Kernel:
 
         return norm * self._wfunc(q)
 
+    @property
+    def radkernel(self):
+        return self._radkernel
+
+    @radkernel.getter
+    def radkernel(self):
+        return self._radkernel
+
+    @property
+    def cnormk2D(self):
+        return self._cnormk2D
+
+    @cnormk2D.getter
+    def cnormk2D(self):
+        return self._cnormk2D
+
 
 class CubicSplineKernel(Kernel):
     """
