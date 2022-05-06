@@ -1,6 +1,9 @@
 from pandas import DataFrame, Series
 import numpy as np
 
+from sarracen.render import render
+from sarracen.kernels import CubicSplineKernel, BaseKernel
+
 
 class SarracenDataFrame(DataFrame):
 
@@ -17,6 +20,18 @@ class SarracenDataFrame(DataFrame):
         self._units = None
         self.units = Series([np.nan for i in range(len(self.columns))])
 
+    def render(self,
+               target: str,
+               x: str = 'x',
+               y: str = 'y',
+               kernel: BaseKernel = CubicSplineKernel(2),
+               xmin: float = 0,
+               ymin: float = 0,
+               xmax: float = 1,
+               ymax: float = 1,
+               pixcountx: int = 480,
+               pixcounty: int = 480):
+        render(self, x, y, target, kernel, xmin, ymin, xmax, ymax, pixcountx, pixcounty)
 
     @property
     def params(self):
