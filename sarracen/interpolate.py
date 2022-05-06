@@ -1,14 +1,14 @@
 import numpy as np
 
 from sarracen import SarracenDataFrame
-from sarracen.kernels import Kernel
+from sarracen.kernels import BaseKernel
 
 
 def interpolate2D(data: SarracenDataFrame,
                   x: str,
                   y: str,
                   target: str,
-                  kernel: Kernel,
+                  kernel: BaseKernel,
                   pixwidthx: float,
                   pixwidthy: float,
                   xmin: float = 0,
@@ -37,9 +37,12 @@ def interpolate2D(data: SarracenDataFrame,
     if pixwidthy <= 0:
         raise ValueError("pixwidthy must be greater than zero!")
     if pixcountx <= 0:
-        raise ValueError(f"pixcountx must be greater than zero!")
+        raise ValueError("pixcountx must be greater than zero!")
     if pixcounty <= 0:
-        raise ValueError(f"pixcounty must be greater than zero!")
+        raise ValueError("pixcounty must be greater than zero!")
+
+    if kernel.ndims != 2:
+        raise ValueError("Kernel must be two-dimensional!")
 
     image = np.zeros((pixcounty, pixcountx))
 
@@ -93,7 +96,7 @@ def interpolate2D(data: SarracenDataFrame,
             for ipix in range(ipixmin, ipixmax):
                 # calculate contribution at i, j due to particle at x, y
                 q2 = dx2i[ipix] + dy2
-                wab = kernel.w(np.sqrt(q2), 2)
+                wab = kernel.w(np.sqrt(q2))
 
                 # add contribution to image
                 image[jpix][ipix] += term * wab
