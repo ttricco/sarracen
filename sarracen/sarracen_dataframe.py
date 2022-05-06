@@ -43,7 +43,7 @@ class SarracenDataFrame(DataFrame):
                ymin: float = None,
                xmax: float = None,
                ymax: float = None,
-               pixcountx: int = 128,
+               pixcountx: int = 256,
                pixcounty: int = None) -> ('Figure', 'Axes'):
         """
         Render the data within this dataframe to a 2D matplotlib object, using 2D SPH Interpolation of the target
