@@ -1,10 +1,9 @@
 import numpy as np
 
-from sarracen import SarracenDataFrame
 from sarracen.kernels import BaseKernel
 
 
-def interpolate2D(data: SarracenDataFrame,
+def interpolate2D(data: 'SarracenDataFrame',
                   x: str,
                   y: str,
                   target: str,
