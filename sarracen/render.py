@@ -1,20 +1,11 @@
+from typing import Union
+
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib.colors import Colormap
 
 from sarracen.interpolate import interpolate2D
 from sarracen.kernels import BaseKernel, CubicSplineKernel
-
-
-def snap(value: float):
-    """
-    Return a number snapped to the nearest integer, with 1e-4 tolerance.
-    :param value: The number to snap.
-    :return: An integer if a close integer is detected, otherwise return 'value'.
-    """
-    if np.isclose(value, np.rint(value), atol=1e-4):
-        return np.rint(value)
-    else:
-        return value
 
 
 def render(data: 'SarracenDataFrame',
@@ -27,7 +18,8 @@ def render(data: 'SarracenDataFrame',
            xmax: float = None,
            ymax: float = None,
            pixcountx: int = 256,
-           pixcounty: int = None) -> ('Figure', 'Axes'):
+           pixcounty: int = None,
+           cmap: Union[str, Colormap] = 'RdBu') -> ('Figure', 'Axes'):
     """
     Render the data within a SarracenDataFrame to a 2D matplotlib object, using 2D SPH Interpolation
     of the target variable.
@@ -42,6 +34,7 @@ def render(data: 'SarracenDataFrame',
     :param ymax: The maximum bound in the y-direction.
     :param pixcountx: The number of pixels in the x-direction.
     :param pixcounty: The number of pixels in the y-direction.
+    :param cmap: The color map to use for plotting this data.
     :return: The completed plot.
     """
     # x & y columns default to the variables determined by the SarracenDataFrame.
@@ -50,15 +43,16 @@ def render(data: 'SarracenDataFrame',
     if y is None:
         y = data.ycol
 
-    # snap the bounds of the plot to the nearest integer.
+    # plot bounds default to variable determined in SarracenDataFrame
     if xmin is None:
-        xmin = snap(data.loc[:, x].min())
+        xmin = data.xmin
     if ymin is None:
-        ymin = snap(data.loc[:, y].min())
+        ymin = data.ymin
     if xmax is None:
-        xmax = snap(data.loc[:, x].max())
+        xmax = data.xmax
     if ymax is None:
-        ymax = snap(data.loc[:, y].max())
+        ymax = data.ymax
+
     # set pixcounty to maintain an aspect ratio that is the same as the underlying bounds of the data.
     if pixcounty is None:
         pixcounty = int(np.rint(pixcountx * ((ymax - ymin) / (xmax - xmin))))
@@ -67,9 +61,9 @@ def render(data: 'SarracenDataFrame',
     pixwidthy = (ymax - ymin) / pixcounty
     image = interpolate2D(data, x, y, target, kernel, pixwidthx, pixwidthy, xmin, ymin, pixcountx, pixcounty)
 
-    # this figsize approximation seems to work well enough in most cases
-    fig, ax = plt.subplots(figsize=(4, 3 * ((ymax - ymin) / (xmax - xmin))))
-    img = ax.imshow(image, cmap='RdBu', origin='lower', extent=[xmin, xmax, ymin, ymax])
+    # ensure the plot size maintains the aspect ratio of the underlying bounds of the data
+    fig, ax = plt.subplots(figsize=(6.4, 4.8 * ((ymax - ymin) / (xmax - xmin))))
+    img = ax.imshow(image, cmap=cmap, origin='lower', extent=[xmin, xmax, ymin, ymax])
     ax.set_xlabel(x)
     ax.set_ylabel(y)
     cbar = fig.colorbar(img, ax=ax)
