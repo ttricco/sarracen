@@ -1,0 +1,6 @@
+.gitignore
+.DS_store
+.python-version
+.ipynb_checkpoints
+*.ipynb
+__pycache__
