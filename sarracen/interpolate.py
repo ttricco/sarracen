@@ -134,64 +134,40 @@ def interpolate2DCross(data: SarracenDataFrame,
     pixwidth = xlength / pixcount
     xpixwidth = (x2 - x1) / pixcount
 
+    particles = data.copy()[['m', 'rho', 'h', target, x, y, ]]
+    particles['weight'] = particles['m'] / (particles['rho'] * particles['h'] ** 2)
+    particles = particles[particles['weight'] > 0]
+    particles['radkern'] = kernel.radkernel * particles['h']
+    particles['term'] = particles['weight'] * particles[target]
+    particles['hi1'] = 1 / particles['h']
+
+    aa = 1 + gradient**2
+    particles['bb'] = 2 * gradient * (yint - particles[y]) - 2 * particles[x]
+    particles['cc'] = particles[x] ** 2 - particles[y] ** 2 - 2 * yint * particles[y] + yint ** 2 - particles['radkern'] ** 2
+    particles['determinant'] = particles['bb'] ** 2 - 4 * aa * particles['cc']
+
+    particles = particles[particles['determinant'] > 0]
+    particles['det'] = np.sqrt(particles['determinant'])
+    particles['xstart'] = ((-particles['bb'] - particles['det']) / (2 * aa)).clip(lower=x1, upper=x2)
+    particles['xend'] = ((-particles['bb'] + particles['det']) / (2 * aa)).clip(lower=y1, upper=y2)
+    particles['ystart'] = gradient * particles['xstart'] + yint
+    particles['yend'] = gradient * particles['xend'] + yint
+
+    particles['rstart'] = np.sqrt((particles['xstart']-x1)**2 + (particles['ystart']-y1)**2)
+    particles['rend'] = np.sqrt((particles['xend']-x1)**2 + ((particles['yend']-y1)**2))
+    particles['ipixmin'] = np.rint(particles['rstart']/pixwidth).clip(lower=0, upper=pixcount)
+    particles['ipixmax'] = np.rint(particles['rend']/pixwidth).clip(lower=0, upper=pixcount)
+
     # iterate through all particles
-    for i, particle in data.iterrows():
-        # dimensionless weight
-        # w_i = m_i / (rho_i * (h_i) ** 2)
-        weight = particle['m'] / (particle['rho'] * particle['h'] ** 2)
+    for part in particles[['ipixmin', 'ipixmax', x, y, 'hi1', 'term']].itertuples():
+        for ipix in range(int(part[1]), int(part[2])):
+            xpix = x1 + (ipix+0.5)*xpixwidth
+            ypix = gradient*xpix + yint
+            dy = ypix - part[4]
+            dx = xpix - part[3]
+            q2 = (dx*dx + dy*dy)*part[5]*part[5]
 
-        if weight <= 0:
-            continue
-
-        radkern = kernel.radkernel * particle['h']
-        term = weight * particle[target]
-        hi1 = 1 / particle['h']
-
-        aa = 1 + gradient**2
-        bb = 2 * gradient * (yint - particle[y]) - 2 * particle[x]
-        cc = particle[x] ** 2 - particle[y] ** 2 - 2 * yint * particle[y] + yint ** 2 - radkern**2
-
-        determinant = bb**2 - 4*aa*cc
-        if determinant > 0:
-            det = np.sqrt(determinant)
-            xstart = (-bb - det) / (2 * aa)
-            xend = (-bb + det) / (2 * aa)
-
-            if xstart < x1:
-                xstart = x1
-            if xstart > x2:
-                xstart = x2
-            if xend < x1:
-                xend = x1
-            if xend > x2:
-                xend = x2
-
-            ystart = gradient*xstart + yint
-            yend = gradient*xend + yint
-
-            rstart = np.sqrt((xstart-x1)**2 + (ystart-y1)**2)
-            rend = np.sqrt((xend-x1)**2 + (yend-y1)**2)
-
-            ipixmin = int(np.rint(rstart/pixwidth))
-            ipixmax = int(np.rint(rend/pixwidth))
-
-            if ipixmin < 0:
-                ipixmin = 0
-            if ipixmax < 0:
-                ipixmax = 0
-            if ipixmin > pixcount:
-                ipixmin = pixcount
-            if ipixmax > pixcount:
-                ipixmax = pixcount
-
-            for ipix in range(ipixmin, ipixmax):
-                xpix = x1 + (ipix+0.5)*xpixwidth
-                ypix = gradient*xpix + yint
-                dy = ypix - particle[y]
-                dx = xpix - particle[x]
-                q2 = (dx*dx + dy*dy)*hi1*hi1
-
-                wab = kernel.w(np.sqrt(q2))
-                output[ipix] += term * wab
+            wab = kernel.w(np.sqrt(q2))
+            output[ipix] += part[6] * wab
 
     return output
