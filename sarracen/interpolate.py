@@ -45,59 +45,42 @@ def interpolate2D(data: 'SarracenDataFrame',
 
     image = np.zeros((pixcounty, pixcountx))
 
+    # clone the necessary data columns into a new dataframe for vectorized operations
+    parts = data.copy()[['m', 'rho', 'h', target, x, y]]
+    parts['weight'] = parts['m'] / (parts['rho'] * parts['h'] ** 2)
+
+    # filter out particles with 0 weight
+    parts = parts[parts['weight'] > 0]
+    parts['radkern'] = kernel.radkernel * parts['h']
+    parts['term'] = parts['weight'] * parts[target]
+    parts['hi21'] = (1 / parts['h']) ** 2
+
+    # determine maximum and minimum pixels that each particle contributes to
+    parts['ipixmin'] = np.rint((parts[x] - parts['radkern'] - xmin) / pixwidthx).clip(lower=0, upper=pixcountx)
+    parts['jpixmin'] = np.rint((parts[y] - parts['radkern'] - ymin) / pixwidthy).clip(lower=0, upper=pixcounty)
+    parts['ipixmax'] = np.rint((parts[x] + parts['radkern'] - xmin) / pixwidthx).clip(lower=0, upper=pixcountx)
+    parts['jpixmax'] = np.rint((parts[y] + parts['radkern'] - ymin) / pixwidthy).clip(lower=0, upper=pixcounty)
+
     # iterate through all pixels
-    for i, particle in data.iterrows():
-        # dimensionless weight
-        # w_i = m_i / (rho_i * (h_i) ** 2)
-        weight = particle['m'] / (particle['rho'] * particle['h'] ** 2)
-
-        # skip particles with 0 weight
-        if weight <= 0:
-            continue
-
-        # kernel radius scaled by the particle's 'h' value
-        radkern = kernel.radkernel * particle['h']
-        term = weight * particle[target]
-        hi1 = 1 / particle['h']
-        hi21 = hi1 ** 2
-
-        part_x = particle[x]
-        part_y = particle[y]
-
-        # determine the min/max x&y coordinates affected by this particle
-        ipixmin = int(np.rint((part_x - radkern - xmin) / pixwidthx))
-        jpixmin = int(np.rint((part_y - radkern - ymin) / pixwidthy))
-        ipixmax = int(np.rint((part_x + radkern - xmin) / pixwidthx))
-        jpixmax = int(np.rint((part_y + radkern - ymin) / pixwidthy))
-
-        # ensure that the min/max x&y coordinates remain within the bounds of the image
-        if ipixmin < 0:
-            ipixmin = 0
-        if ipixmax > pixcountx:
-            ipixmax = pixcountx
-        if jpixmin < 0:
-            jpixmin = 0
-        if jpixmax > pixcounty:
-            jpixmax = pixcounty
-
+    for part in parts[['ipixmin', 'ipixmax', x, 'hi21', 'jpixmin', 'jpixmax', y, 'term']].itertuples():
         # precalculate differences in the x-direction (optimization)
         dx2i = np.zeros(pixcountx)
-        for ipix in range(ipixmin, ipixmax):
-            dx2i[ipix] = ((xmin + (ipix + 0.5) * pixwidthx - part_x) ** 2) * hi21
+        for ipix in range(int(part[1]), int(part[2])):
+            dx2i[ipix] = ((xmin + (ipix + 0.5) * pixwidthx - part[3]) ** 2) * part[4]
 
         # traverse horizontally through affected pixels
-        for jpix in range(jpixmin, jpixmax):
+        for jpix in range(int(part[5]), int(part[6])):
             # determine differences in the y-direction
             ypix = ymin + (jpix + 0.5) * pixwidthy
-            dy = ypix - part_y
-            dy2 = dy * dy * hi21
+            dy = ypix - part[7]
+            dy2 = dy * dy * part[4]
 
-            for ipix in range(ipixmin, ipixmax):
+            for ipix in range(int(part[1]), int(part[2])):
                 # calculate contribution at i, j due to particle at x, y
                 q2 = dx2i[ipix] + dy2
                 wab = kernel.w(np.sqrt(q2))
 
                 # add contribution to image
-                image[jpix][ipix] += term * wab
+                image[jpix][ipix] += part[8] * wab
 
     return image
