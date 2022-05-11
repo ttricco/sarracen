@@ -64,9 +64,9 @@ class SarracenDataFrame(DataFrame):
 
         # First look for 'z', then 'rz', and then assume that data is 2 dimensional
         if 'z' in self.columns:
-            self._zcol = 'y'
+            self._zcol = 'z'
         elif 'rz' in self.columns:
-            self._zcol = 'ry'
+            self._zcol = 'rz'
         else:
             self._zcol = None
 
