@@ -1,5 +1,7 @@
 import numpy as np
+import pandas as pd
 from numpy import ndarray
+from pandas import DataFrame
 
 from sarracen import SarracenDataFrame
 from sarracen.kernels import BaseKernel
@@ -114,7 +116,7 @@ def interpolate2DCross(data: SarracenDataFrame,
                        y1: float = 0,
                        x2: float = 1,
                        y2: float = 1,
-                       pixcount: int = 150) -> ndarray:
+                       pixcount: int = 500) -> ndarray:
     """
     Interpolates particle data in a SarracenDataFrame across two directional axes to a 1D
     cross-section line.
@@ -153,15 +155,17 @@ def interpolate2DCross(data: SarracenDataFrame,
     pixwidth = xlength / pixcount
     xpixwidth = (x2 - x1) / pixcount
 
-    # clone the necessary data columns into a new dataframe for vectorized operations
-    parts = data.copy()[['m', 'rho', 'h', target, x, y]]
-    parts['weight'] = parts['m'] / (parts['rho'] * parts['h'] ** 2)
+    # copy necessary data columns into a new dataframe for vectorized operations
+    parts = pd.DataFrame()
+    parts['x'] = data[x]
+    parts['y'] = data[y]
+    parts['weight'] = data['m'] / (data['rho'] * data['h'] ** 2)
+    parts['h'] = data['h']
+    parts['term'] = parts['weight'] * data[target]
 
     # filter out particles with 0 weight
     parts = parts[parts['weight'] > 0]
-    parts['radkern'] = kernel.radkernel * parts['h']
-    parts['term'] = parts['weight'] * parts[target]
-    parts['hi1'] = 1 / parts['h']
+    parts = parts.drop('weight', axis=1)
 
     # the intersections between the line and a particle's 'smoothing circle' are
     # found by solving a quadratic equation with the below values of a, b, and c.
@@ -169,39 +173,40 @@ def interpolate2DCross(data: SarracenDataFrame,
     # cross-section, and can be removed.
     aa = 1 + gradient**2
     parts['bb'] = 2 * gradient * (yint - parts[y]) - 2 * parts[x]
-    parts['cc'] = parts[x] ** 2 + parts[y] ** 2 - 2 * yint * parts[y] + yint ** 2 - parts['radkern'] ** 2
-    parts['determinant'] = parts['bb'] ** 2 - 4 * aa * parts['cc']
-    parts = parts[parts['determinant'] >= 0]
-    parts['det'] = np.sqrt(parts['determinant'])
+    parts['cc'] = parts[x] ** 2 + parts[y] ** 2 - 2 * yint * parts[y] + yint ** 2 - (kernel.radkernel * parts['h']) ** 2
+    parts['det'] = parts['bb'] ** 2 - 4 * aa * parts['cc']
+    parts = parts[parts['det'] >= 0]
+    parts['det'] = np.sqrt(parts['det'])
+    parts = parts.drop(['cc'], axis=1)
 
-    # the x and y coordinates of the line's two intersections with a particle's
-    # smoothing circle.
+    # the starting and ending x coordinates of the lines intersections with a particle's smoothing circle
     parts['xstart'] = ((-parts['bb'] - parts['det']) / (2 * aa)).clip(lower=x1, upper=x2)
     parts['xend'] = ((-parts['bb'] + parts['det']) / (2 * aa)).clip(lower=x1, upper=x2)
-    parts['ystart'] = gradient * parts['xstart'] + yint
-    parts['yend'] = gradient * parts['xend'] + yint
+    parts = parts.drop(['det', 'bb'], axis=1)
 
     # the start and end distances which lie within a particle's smoothing circle.
-    parts['rstart'] = np.sqrt((parts['xstart']-x1)**2 + (parts['ystart']-y1)**2)
-    parts['rend'] = np.sqrt((parts['xend']-x1)**2 + ((parts['yend']-y1)**2))
+    parts['rstart'] = np.sqrt((parts['xstart']-x1)**2 + ((gradient * parts['xstart'] + yint)-y1)**2)
+    parts['rend'] = np.sqrt((parts['xend']-x1)**2 + (((gradient * parts['xend'] + yint)-y1)**2))
+    parts = parts.drop(['xstart', 'xend'], axis=1)
 
     # the maximum and minimum pixels that each particle contributes to.
     parts['ipixmin'] = np.rint(parts['rstart']/pixwidth).clip(lower=0, upper=pixcount)
     parts['ipixmax'] = np.rint(parts['rend']/pixwidth).clip(lower=0, upper=pixcount)
+    parts = parts.drop(['rstart', 'rend'], axis=1)
 
     # iterate through all particles.
-    for part in parts[['ipixmin', 'ipixmax', x, y, 'hi1', 'term']].itertuples():
+    for part in parts[['ipixmin', 'ipixmax', 'x', 'y', 'h', 'term']].itertuples():
         # iterate through pixels contributed to.
-        for ipix in range(int(part[1]), int(part[2])):
+        for ipix in range(int(part.ipixmin), int(part.ipixmax)):
             # determine the x & y differences between the particle and this pixel.
             xpix = x1 + (ipix+0.5)*xpixwidth
             ypix = gradient*xpix + yint
-            dy = ypix - part[4]
-            dx = xpix - part[3]
+            dy = ypix - part.y
+            dx = xpix - part.x
 
             # determine the particles contribution to this pixel, and add it to the output.
-            q2 = (dx*dx + dy*dy)*part[5]*part[5]
+            q2 = (dx*dx + dy*dy)*(1 / (part.h*part.h))
             wab = kernel.w(np.sqrt(q2))
-            output[ipix] += part[6] * wab
+            output[ipix] += part.term * wab
 
     return output
