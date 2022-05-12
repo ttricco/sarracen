@@ -36,9 +36,6 @@ class SarracenDataFrame(DataFrame):
         self._units = None
         self.units = Series([np.nan for i in range(len(self.columns))])
 
-        if 'massoftype' in self.params:
-            self['m'] = self.params['massoftype']
-
         self._identify_spacial_columns()
         self._identify_spacial_bounds()
 
@@ -62,7 +59,7 @@ class SarracenDataFrame(DataFrame):
         else:
             self._ycol = self.columns[1]
 
-        # First look for 'z', then 'rz', and then assume that data is 2 dimensional
+        # First look for 'z', then 'rz', and then assume that data is 2 dimensional.
         if 'z' in self.columns:
             self._zcol = 'z'
         elif 'rz' in self.columns:
@@ -86,10 +83,23 @@ class SarracenDataFrame(DataFrame):
             self._zmin = _snap(self.loc[:, self._zcol].min())
             self._zmax = _snap(self.loc[:, self._zcol].max())
 
+    def create_mass_column(self):
+        """
+        Create a new column in this dataframe 'm', which is copied
+        from the 'massoftype' parameter.
+        Intended for use with Phantom data dumps.
+        :return:
+        """
+        if 'massoftype' not in self.params:
+            raise ValueError("'massoftype' column does not exist in this SarracenDataFrame.")
+
+        self['m'] = self.params['massoftype']
+
     def derive_density(self):
         """
         Create a new column in this dataframe 'rho', derived from
         the existing columns 'hfact', 'h', and 'm'.
+        Intended for use with Phantom data dumps.
         """
         if not {'h', 'm'}.issubset(self.columns) or 'hfact' not in self.params:
             raise ValueError('Density cannot be derived from the columns in this SarracenDataFrame.')
