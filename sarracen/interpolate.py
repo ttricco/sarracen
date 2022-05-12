@@ -155,58 +155,53 @@ def interpolate2DCross(data: SarracenDataFrame,
     pixwidth = xlength / pixcount
     xpixwidth = (x2 - x1) / pixcount
 
-    # copy necessary data columns into a new dataframe for vectorized operations
-    parts = pd.DataFrame()
-    parts['x'] = data[x]
-    parts['y'] = data[y]
-    parts['weight'] = data['m'] / (data['rho'] * data['h'] ** 2)
-    parts['h'] = data['h']
-    parts['term'] = parts['weight'] * data[target]
-
     # filter out particles with 0 weight
-    parts = parts[parts['weight'] > 0]
-    parts = parts.drop('weight', axis=1)
+    term = data[target] * data['m'] / (data['rho'] * data['h'] ** 2)
+    filter_weight = term / data[target] > 0
 
     # the intersections between the line and a particle's 'smoothing circle' are
     # found by solving a quadratic equation with the below values of a, b, and c.
     # if the determinant is negative, the particle does not contribute to the
     # cross-section, and can be removed.
-    aa = 1 + gradient**2
-    parts['bb'] = 2 * gradient * (yint - parts[y]) - 2 * parts[x]
-    parts['cc'] = parts[x] ** 2 + parts[y] ** 2 - 2 * yint * parts[y] + yint ** 2 - (kernel.radkernel * parts['h']) ** 2
-    parts['det'] = parts['bb'] ** 2 - 4 * aa * parts['cc']
-    parts = parts[parts['det'] >= 0]
-    parts['det'] = np.sqrt(parts['det'])
-    parts = parts.drop(['cc'], axis=1)
+    aa = 1 + gradient ** 2
+    bb = 2 * gradient * (yint - data[y][filter_weight]) - 2 * data[x][filter_weight]
+    cc = data[x][filter_weight] ** 2 + data[y][filter_weight] ** 2 \
+         - 2 * yint * data[y][filter_weight] + yint ** 2 \
+         - (kernel.radkernel * data['h'][filter_weight]) ** 2
+    det = bb ** 2 - 4 * aa * cc
+
+    # create a filter for particles that do not contribute to the cross-section
+    filter_det = det >= 0
+    det = np.sqrt(det[filter_det])
+    cc = None
 
     # the starting and ending x coordinates of the lines intersections with a particle's smoothing circle
-    parts['xstart'] = ((-parts['bb'] - parts['det']) / (2 * aa)).clip(lower=x1, upper=x2)
-    parts['xend'] = ((-parts['bb'] + parts['det']) / (2 * aa)).clip(lower=x1, upper=x2)
-    parts = parts.drop(['det', 'bb'], axis=1)
+    xstart = ((-bb[filter_det] - det) / (2 * aa)).clip(lower=x1, upper=x2)
+    xend = ((-bb[filter_det] + det) / (2 * aa)).clip(lower=x1, upper=x2)
+    bb, det = None, None
 
     # the start and end distances which lie within a particle's smoothing circle.
-    parts['rstart'] = np.sqrt((parts['xstart']-x1)**2 + ((gradient * parts['xstart'] + yint)-y1)**2)
-    parts['rend'] = np.sqrt((parts['xend']-x1)**2 + (((gradient * parts['xend'] + yint)-y1)**2))
-    parts = parts.drop(['xstart', 'xend'], axis=1)
+    rstart = np.sqrt((xstart - x1) ** 2 + ((gradient * xstart + yint) - y1) ** 2)
+    rend = np.sqrt((xend - x1) ** 2 + (((gradient * xend + yint) - y1) ** 2))
+    xstart, xend = None, None
 
     # the maximum and minimum pixels that each particle contributes to.
-    parts['ipixmin'] = np.rint(parts['rstart']/pixwidth).clip(lower=0, upper=pixcount)
-    parts['ipixmax'] = np.rint(parts['rend']/pixwidth).clip(lower=0, upper=pixcount)
-    parts = parts.drop(['rstart', 'rend'], axis=1)
+    ipixmin = np.rint(rstart / pixwidth).clip(lower=0, upper=pixcount)
+    ipixmax = np.rint(rend / pixwidth).clip(lower=0, upper=pixcount)
+    rstart, rend = None, None
 
-    # iterate through all particles.
-    for part in parts[['ipixmin', 'ipixmax', 'x', 'y', 'h', 'term']].itertuples():
-        # iterate through pixels contributed to.
-        for ipix in range(int(part.ipixmin), int(part.ipixmax)):
-            # determine the x & y differences between the particle and this pixel.
-            xpix = x1 + (ipix+0.5)*xpixwidth
-            ypix = gradient*xpix + yint
-            dy = ypix - part.y
-            dx = xpix - part.x
+    # iterate through the indices of all non-filtered particles
+    for i in filter_det.to_numpy().nonzero()[0]:
+        # determine contributions to all affected pixels for this particle
+        xpix = x1 + (np.arange(int(ipixmin[i]), int(ipixmax[i])) + 0.5) * xpixwidth
+        ypix = gradient * xpix + yint
+        dy = ypix - data[y][i]
+        dx = xpix - data[x][i]
 
-            # determine the particles contribution to this pixel, and add it to the output.
-            q2 = (dx*dx + dy*dy)*(1 / (part.h*part.h))
-            wab = kernel.w(np.sqrt(q2))
-            output[ipix] += part.term * wab
+        q2 = (dx * dx + dy * dy) * (1 / (data['h'][i] * data['h'][i]))
+        wab = kernel.w(np.sqrt(q2))
+
+        # add contributions to output total, transformed by minimum/maximum pixels
+        output[int(ipixmin[i]):int(ipixmax[i])] += (wab * term[i])
 
     return output

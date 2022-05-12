@@ -17,11 +17,4 @@ class QuinticSplineKernel(BaseKernel):
 
     @staticmethod
     def _weight(q):
-        if q < 1:
-            return (3 - q) ** 5 - 6 * (2 - q) ** 5 + 15 * (1 - q) ** 5
-        elif q < 2:
-            return (3 - q) ** 5 - 6 * (2 - q) ** 5
-        elif q < 3:
-            return (3 - q) ** 5
-        else:
-            return 0
+        return (3 - q) ** 5 * (q < 3) - 6 * (2 - q) ** 5 * (q < 2) + 15 * (1 - q) ** 5 * (q < 1)
