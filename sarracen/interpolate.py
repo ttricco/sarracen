@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 
 from numpy import ndarray
-from pandas import DataFrame
 
 from sarracen.kernels import BaseKernel
 
@@ -97,7 +96,7 @@ def interpolate2D(data: 'SarracenDataFrame',
     return image
 
 
-def interpolate2DCross(data: SarracenDataFrame,
+def interpolate2DCross(data: 'SarracenDataFrame',
                        x: str,
                        y: str,
                        target: str,
@@ -195,3 +194,56 @@ def interpolate2DCross(data: SarracenDataFrame,
         output[int(ipixmin[i]):int(ipixmax[i])] += (wab * term[i])
 
     return output
+
+
+def interpolate_cross_3d(data: 'SarracenDataFrame',
+                         x: str,
+                         y: str,
+                         z: str,
+                         target: str,
+                         kernel: BaseKernel,
+                         zslice: float,
+                         pixwidthx: float,
+                         pixwidthy: float,
+                         xmin: float = 0,
+                         ymin: float = 0,
+                         pixcountx: int = 480,
+                         pixcounty: int = 480):
+    image = np.zeros((pixcountx, pixcounty))
+
+    parts = pd.DataFrame()
+    parts['x'] = data[x]
+    parts['y'] = data[y]
+    parts['h'] = data['h']
+    parts['weight'] = data['m'] / (data['rho'] * data['h'] ** 2)
+    parts['term'] = parts['weight'] * data[target]
+    parts['dz'] = zslice - data[z]
+
+    parts = parts[parts['dz'] ** 2 * (1 / parts['h'] ** 2) < kernel.radkernel * 2]
+
+    parts['ipixmin'] = np.rint((parts[x] - kernel.radkernel * parts['h'] - xmin) / pixwidthx) \
+        .clip(lower=0, upper=pixcountx)
+    parts['jpixmin'] = np.rint((parts[y] - kernel.radkernel * parts['h'] - ymin) / pixwidthy) \
+        .clip(lower=0, upper=pixcounty)
+    parts['ipixmax'] = np.rint((parts[x] + kernel.radkernel * parts['h'] - xmin) / pixwidthx) \
+        .clip(lower=0, upper=pixcountx)
+    parts['jpixmax'] = np.rint((parts[y] + kernel.radkernel * parts['h'] - ymin) / pixwidthy) \
+        .clip(lower=0, upper=pixcounty)
+
+    for part in parts.itertuples():
+        dx2i = np.zeros(pixcountx)
+        for ipix in range(int(part.ipixmin), int(part.ipixmax)):
+            dx2i[ipix] = (((xmin + (ipix + 0.5) * pixwidthx - part.x) ** 2) + part.dz ** 2) * (1 / (part.h ** 2))
+
+        for jpix in range(int(part.jpixmin), int(part.jpixmax)):
+            ypix = ymin + (jpix + 0.5) * pixwidthy
+            dy = ypix - part.y
+            dy2 = dy * dy * (1 / (part.h ** 2))
+
+            for ipix in range(int(part.ipixmin), int(part.ipixmax)):
+                q2 = dx2i[ipix] + dy2
+                if q2 < kernel.radkernel * 2:
+                    wab = kernel.w(np.sqrt(q2))
+                    image[jpix][ipix] += part.term * wab
+
+    return image
