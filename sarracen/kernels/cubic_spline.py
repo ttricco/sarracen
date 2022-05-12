@@ -17,9 +17,4 @@ class CubicSplineKernel(BaseKernel):
 
     @staticmethod
     def _weight(q):
-        if q < 1:
-            return 1 - (3. / 2.) * q ** 2 + (3. / 4.) * q ** 3
-        elif q < 2:
-            return (1. / 4.) * (2 - q) ** 3
-        else:
-            return 0
+        return (1 - (3. / 2.) * q ** 2 + (3. / 4.) * q ** 3) * (q < 1) + (1. / 4.) * (2 - q) ** 3 * (q < 2) * (q >= 1)
