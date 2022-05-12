@@ -17,11 +17,4 @@ class QuarticSplineKernel(BaseKernel):
 
     @staticmethod
     def _weight(q):
-        if q < 0.5:
-            return ((5 / 2) - q) ** 4 - 5 * ((3 / 2) - q) ** 4 + 10 * ((1 / 2) - q) ** 4
-        elif q < 1.5:
-            return ((5 / 2) - q) ** 4 - 5 * ((3 / 2) - q) ** 4
-        elif q < 2.5:
-            return ((5 / 2) - q) ** 4
-        else:
-            return 0
+        return ((5 / 2) - q) ** 4 * (q < 2.5) - 5 * ((3 / 2) - q) ** 4 * (q < 1.5) + 10 * ((1 / 2) - q) ** 4 * (q < 0.5)
