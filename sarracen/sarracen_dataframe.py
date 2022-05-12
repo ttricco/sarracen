@@ -21,13 +21,15 @@ def _snap(value: float):
 
 
 class SarracenDataFrame(DataFrame):
-    _metadata = ['_params', '_units', '_xcol', '_ycol', '_xmin', '_ymin', '_xmax', '_ymax']
+    _metadata = ['_params', '_units', '_xcol', '_ycol', '_zcol', '_xmin', '_ymin', '_zmin', '_xmax', '_ymax', '_zmax']
 
     def __init__(self, data=None, params=None, *args, **kwargs):
 
         # call pandas DataFrame contructor
         super().__init__(data, *args, **kwargs)
 
+        if params is None:
+            params = dict()
         self._params = None
         self.params = params
 
@@ -57,6 +59,14 @@ class SarracenDataFrame(DataFrame):
         else:
             self._ycol = self.columns[1]
 
+        # First look for 'z', then 'rz', and then assume that data is 2 dimensional.
+        if 'z' in self.columns:
+            self._zcol = 'z'
+        elif 'rz' in self.columns:
+            self._zcol = 'rz'
+        else:
+            self._zcol = None
+
     def _identify_spacial_bounds(self):
         """
         Identify the maximum and minimum values of the positional data, snapped
@@ -68,6 +78,33 @@ class SarracenDataFrame(DataFrame):
         self._ymin = _snap(self.loc[:, self._ycol].min())
         self._xmax = _snap(self.loc[:, self._xcol].max())
         self._ymax = _snap(self.loc[:, self._ycol].max())
+
+        if self._zcol is not None:
+            self._zmin = _snap(self.loc[:, self._zcol].min())
+            self._zmax = _snap(self.loc[:, self._zcol].max())
+
+    def create_mass_column(self):
+        """
+        Create a new column in this dataframe 'm', which is copied
+        from the 'massoftype' parameter.
+        Intended for use with Phantom data dumps.
+        :return:
+        """
+        if 'massoftype' not in self.params:
+            raise ValueError("'massoftype' column does not exist in this SarracenDataFrame.")
+
+        self['m'] = self.params['massoftype']
+
+    def derive_density(self):
+        """
+        Create a new column in this dataframe 'rho', derived from
+        the existing columns 'hfact', 'h', and 'm'.
+        Intended for use with Phantom data dumps.
+        """
+        if not {'h', 'm'}.issubset(self.columns) or 'hfact' not in self.params:
+            raise ValueError('Density cannot be derived from the columns in this SarracenDataFrame.')
+
+        self['rho'] = (self.params['hfact'] / self['h']) ** (self.get_dim()) * self['m']
 
     def render(self,
                target: str,
@@ -146,6 +183,14 @@ class SarracenDataFrame(DataFrame):
         return self._ycol
 
     @property
+    def zcol(self):
+        return self._zcol
+
+    @zcol.getter
+    def zcol(self):
+        return self._zcol
+
+    @property
     def xmin(self):
         return self._xmin
 
@@ -162,6 +207,14 @@ class SarracenDataFrame(DataFrame):
         return self._ymin
 
     @property
+    def zmin(self):
+        return self._ymin
+
+    @zmin.getter
+    def zmin(self):
+        return self._zmin
+
+    @property
     def xmax(self):
         return self._xmax
 
@@ -173,6 +226,21 @@ class SarracenDataFrame(DataFrame):
     def ymax(self):
         return self._ymax
 
-    @xmin.getter
+    @ymin.getter
     def ymax(self):
         return self._ymax
+
+    @property
+    def zmax(self):
+        return self._zmax
+
+    @zmin.getter
+    def zmax(self):
+        return self._zmax
+
+    def get_dim(self):
+        """
+        Get the dimensionality of the data in this dataframe.
+        :return: The number of dimensions.
+        """
+        return 3 if self._zcol is not None else 2
