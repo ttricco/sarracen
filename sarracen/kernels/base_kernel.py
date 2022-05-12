@@ -18,8 +18,6 @@ class BaseKernel:
         :param q: The value of q to evaluate this kernel at.
         :return:
         """
-        if q < 0:
-            raise ValueError('q cannot be lower than 0.')
 
         return self._cnormk * self._wfunc(q)
 
