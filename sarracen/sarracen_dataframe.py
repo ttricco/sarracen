@@ -4,7 +4,7 @@ from matplotlib.colors import Colormap
 from pandas import DataFrame, Series
 import numpy as np
 
-from sarracen.render import render
+from sarracen.render import render_2d, render_1d_cross
 from sarracen.kernels import CubicSplineKernel, BaseKernel
 
 
@@ -106,7 +106,7 @@ class SarracenDataFrame(DataFrame):
 
         self['rho'] = (self.params['hfact'] / self['h']) ** (self.get_dim()) * self['m']
 
-    def render(self,
+    def render_2d(self,
                target: str,
                x: str = None,
                y: str = None,
@@ -135,7 +135,34 @@ class SarracenDataFrame(DataFrame):
         :return: The completed plot.
         """
 
-        return render(self, target, x, y, kernel, xmin, ymin, xmax, ymax, pixcountx, pixcounty, cmap)
+        return render_2d(self, target, x, y, kernel, xmin, ymin, xmax, ymax, pixcountx, pixcounty, cmap)
+
+    def render_1d_cross(self,
+                       target: str,
+                       x: str = None,
+                       y: str = None,
+                       kernel: BaseKernel = CubicSplineKernel(2),
+                       x1: float = None,
+                       y1: float = None,
+                       x2: float = None,
+                       y2: float = None,
+                       pixcount: int = 500) -> ('Figure', 'Axes'):
+        """
+        Render the data within this SarracenDataFrame to a 1D matplotlib object, by taking a 1D SPH
+        cross-section of the target variable along a given line.
+        :param data: The SarracenDataFrame to render. [Required]
+        :param target: The variable to interpolate over. [Required]
+        :param x: The positional x variable.
+        :param y: The positional y variable.
+        :param kernel: The kernel to use for smoothing the target data.
+        :param x1: The starting x-coordinate of the cross-section line. (in particle data space)
+        :param y1: The starting y-coordinate of the cross-section line. (in particle data space)
+        :param x2: The ending x-coordinate of the cross-section line. (in particle data space)
+        :param y2: The ending y-coordinate of the cross-section line. (in particle data space)
+        :param pixcount: The number of pixels in the output over the entire cross-sectional line.
+        :return: The completed plot.
+        """
+        return render_1d_cross(self, target, x, y, kernel, x1, y1, x2, y2, pixcount)
 
     @property
     def params(self):

@@ -97,7 +97,7 @@ def interpolate2D(data: 'SarracenDataFrame',
     return image
 
 
-def interpolate2DCross(data: SarracenDataFrame,
+def interpolate1DCross(data: 'SarracenDataFrame',
                        x: str,
                        y: str,
                        target: str,

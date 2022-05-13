@@ -4,7 +4,7 @@ from pytest import approx
 
 from sarracen import SarracenDataFrame
 from sarracen.kernels import CubicSplineKernel
-from sarracen.interpolate import interpolate2D, interpolate2DCross
+from sarracen.interpolate import interpolate2D, interpolate1DCross
 
 
 def test_interpolate2d():
@@ -24,7 +24,7 @@ def test_interpolate2d():
     assert image[12][17] == approx(CubicSplineKernel(2).w(np.sqrt(0.75 ** 2 + 0.25 ** 2)), rel=1e-8)
 
 
-def test_interpolate2dcross():
+def test_interpolate1dcross():
     df = df = pd.DataFrame({'x': [0],
                             'y': [0],
                             'P': [1],
@@ -34,14 +34,14 @@ def test_interpolate2dcross():
     sdf = SarracenDataFrame(df, params=dict())
 
     # first, test a cross-section at y=0
-    output = interpolate2DCross(sdf, 'x', 'y', 'P', CubicSplineKernel(2), -2, 0, 2, 0, 40)
+    output = interpolate1DCross(sdf, 'x', 'y', 'P', CubicSplineKernel(2), -2, 0, 2, 0, 40)
 
     assert output[0] == approx(CubicSplineKernel(2).w(np.sqrt((-1.95) ** 2)), rel=1e-8)
     assert output[20] == approx(CubicSplineKernel(2).w(np.sqrt(0.05 ** 2)), rel=1e-8)
     assert output[17] == approx(CubicSplineKernel(2).w(np.sqrt(0.25 ** 2)), rel=1e-8)
 
     # next, test a cross-section where x=y
-    output = interpolate2DCross(sdf, 'x', 'y', 'P', CubicSplineKernel(2), -2, -2, 2, 2, 40)
+    output = interpolate1DCross(sdf, 'x', 'y', 'P', CubicSplineKernel(2), -2, -2, 2, 2, 40)
 
     assert output[0] == approx(CubicSplineKernel(2).w(np.sqrt(2*(1.95 ** 2))), rel=1e-8)
     assert output[20] == approx(CubicSplineKernel(2).w(np.sqrt(2*(0.05 ** 2))), rel=1e-8)
