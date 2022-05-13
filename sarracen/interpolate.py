@@ -61,15 +61,14 @@ def interpolate2D(data: 'SarracenDataFrame',
     parts.drop(['weight'], axis=1)
 
     # determine maximum and minimum pixels that each particle contributes to
-    parts['ipixmin'] = np.rint((parts[x] - kernel.radkernel * parts['h'] - xmin) / pixwidthx)\
+    parts['ipixmin'] = np.rint((parts[x] - kernel.radkernel * parts['h'] - xmin) / pixwidthx) \
         .clip(lower=0, upper=pixcountx)
-    parts['jpixmin'] = np.rint((parts[y] - kernel.radkernel * parts['h'] - ymin) / pixwidthy)\
+    parts['jpixmin'] = np.rint((parts[y] - kernel.radkernel * parts['h'] - ymin) / pixwidthy) \
         .clip(lower=0, upper=pixcounty)
-    parts['ipixmax'] = np.rint((parts[x] + kernel.radkernel * parts['h'] - xmin) / pixwidthx)\
+    parts['ipixmax'] = np.rint((parts[x] + kernel.radkernel * parts['h'] - xmin) / pixwidthx) \
         .clip(lower=0, upper=pixcountx)
-    parts['jpixmax'] = np.rint((parts[y] + kernel.radkernel * parts['h'] - ymin) / pixwidthy)\
+    parts['jpixmax'] = np.rint((parts[y] + kernel.radkernel * parts['h'] - ymin) / pixwidthy) \
         .clip(lower=0, upper=pixcounty)
-
 
     # iterate through all pixels
     for part in parts.itertuples():
@@ -196,54 +195,65 @@ def interpolate2DCross(data: 'SarracenDataFrame',
     return output
 
 
-def interpolate_cross_3d(data: 'SarracenDataFrame',
-                         x: str,
-                         y: str,
-                         z: str,
-                         target: str,
-                         kernel: BaseKernel,
-                         zslice: float,
-                         pixwidthx: float,
-                         pixwidthy: float,
-                         xmin: float = 0,
-                         ymin: float = 0,
-                         pixcountx: int = 480,
-                         pixcounty: int = 480):
+def interpolate3DCross(data: 'SarracenDataFrame',
+                       x: str,
+                       y: str,
+                       z: str,
+                       target: str,
+                       kernel: BaseKernel,
+                       zslice: float,
+                       pixwidthx: float,
+                       pixwidthy: float,
+                       xmin: float = 0,
+                       ymin: float = 0,
+                       pixcountx: int = 480,
+                       pixcounty: int = 480):
+    """
+    Interpolates particle data in a SarracenDataFrame across three directional axes to a 2D
+    cross-sectional slice of pixels at a fixed z-value.
+
+    :param data: The particle data, in a SarracenDataFrame.
+    :param x: The column label of the x-directional axis.
+    :param y: The column label of the y-directional axis.
+    :param z: The column label of the z-directional axis.
+    :param target: The column label of the target smoothing data.
+    :param kernel: The kernel to use for smoothing the target data.
+    :param zslice: The z-axis value to take the cross-section value at.
+    :param pixwidthx: The width that each pixel represents in particle data space.
+    :param pixwidthy: The height that each pixel represents in particle data space.
+    :param xmin: The starting x-coordinate (in particle data space).
+    :param ymin: The starting y-coordinate (in particle data space).
+    :param pixcountx: The number of pixels in the output image in the x-direction.
+    :param pixcounty: The number of pixels in the output image in the y-direction.
+    :return: The output image, in a 2-dimensional numpy array.
+    """
     image = np.zeros((pixcountx, pixcounty))
 
-    parts = pd.DataFrame()
-    parts['x'] = data[x]
-    parts['y'] = data[y]
-    parts['h'] = data['h']
-    parts['weight'] = data['m'] / (data['rho'] * data['h'] ** 2)
-    parts['term'] = parts['weight'] * data[target]
-    parts['dz'] = zslice - data[z]
+    # Filter out particles that do not contribute to this cross-section slice
+    term = data[target] * data['m'] / (data['rho'] * data['h'] ** 2)
+    dz = zslice - data[z]
+    filter_distance = dz ** 2 * (1 / data['h'] ** 2) < kernel.radkernel * 2
 
-    parts = parts[parts['dz'] ** 2 * (1 / parts['h'] ** 2) < kernel.radkernel * 2]
-
-    parts['ipixmin'] = np.rint((parts[x] - kernel.radkernel * parts['h'] - xmin) / pixwidthx) \
+    ipixmin = np.rint((data[filter_distance][x] - kernel.radkernel * data[filter_distance]['h'] - xmin) / pixwidthx) \
         .clip(lower=0, upper=pixcountx)
-    parts['jpixmin'] = np.rint((parts[y] - kernel.radkernel * parts['h'] - ymin) / pixwidthy) \
+    jpixmin = np.rint((data[filter_distance][y] - kernel.radkernel * data[filter_distance]['h'] - ymin) / pixwidthy) \
         .clip(lower=0, upper=pixcounty)
-    parts['ipixmax'] = np.rint((parts[x] + kernel.radkernel * parts['h'] - xmin) / pixwidthx) \
+    ipixmax = np.rint((data[filter_distance][x] + kernel.radkernel * data[filter_distance]['h'] - xmin) / pixwidthx) \
         .clip(lower=0, upper=pixcountx)
-    parts['jpixmax'] = np.rint((parts[y] + kernel.radkernel * parts['h'] - ymin) / pixwidthy) \
+    jpixmax = np.rint((data[filter_distance][y] + kernel.radkernel * data[filter_distance]['h'] - ymin) / pixwidthy) \
         .clip(lower=0, upper=pixcounty)
 
-    for part in parts.itertuples():
-        dx2i = np.zeros(pixcountx)
-        for ipix in range(int(part.ipixmin), int(part.ipixmax)):
-            dx2i[ipix] = (((xmin + (ipix + 0.5) * pixwidthx - part.x) ** 2) + part.dz ** 2) * (1 / (part.h ** 2))
+    for i in filter_distance.to_numpy().nonzero()[0]:
+        # precalculate differences in the x-direction
+        dx2i = (((xmin + (np.arange(int(ipixmin[i]), int(ipixmax[i])) + 0.5)
+                  * pixwidthx - data[x][i]) ** 2) + dz[i] ** 2) \
+               * (1 / (data['h'][i] ** 2))
 
-        for jpix in range(int(part.jpixmin), int(part.jpixmax)):
-            ypix = ymin + (jpix + 0.5) * pixwidthy
-            dy = ypix - part.y
-            dy2 = dy * dy * (1 / (part.h ** 2))
+        ypix = ymin + (np.arange(int(jpixmin[i]), int(jpixmax[i])) + 0.5) * pixwidthy
+        dy = ypix - data[y][i]
+        dy2 = dy * dy * (1 / (data['h'][i] ** 2))
 
-            for ipix in range(int(part.ipixmin), int(part.ipixmax)):
-                q2 = dx2i[ipix] + dy2
-                if q2 < kernel.radkernel * 2:
-                    wab = kernel.w(np.sqrt(q2))
-                    image[jpix][ipix] += part.term * wab
+        q2 = dx2i + dy2[:, np.newaxis]
+        image[int(jpixmin[i]):int(jpixmax[i]), int(ipixmin[i]):int(ipixmax[i])] += term[i] * kernel.w(np.sqrt(q2))
 
     return image
