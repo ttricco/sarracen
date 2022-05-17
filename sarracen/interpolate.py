@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 
 from numpy import ndarray
-from pandas import DataFrame
 
 from sarracen.kernels import BaseKernel
 
@@ -182,3 +181,67 @@ def interpolate2DCross(data: 'SarracenDataFrame',
         output[int(ipixmin[i]):int(ipixmax[i])] += (wab * term[i])
 
     return output
+
+
+def interpolate3DCross(data: 'SarracenDataFrame',
+                       x: str,
+                       y: str,
+                       z: str,
+                       target: str,
+                       kernel: BaseKernel,
+                       zslice: float,
+                       pixwidthx: float,
+                       pixwidthy: float,
+                       xmin: float = 0,
+                       ymin: float = 0,
+                       pixcountx: int = 480,
+                       pixcounty: int = 480):
+    """
+    Interpolates particle data in a SarracenDataFrame across three directional axes to a 2D
+    cross-sectional slice of pixels at a fixed z-value.
+
+    :param data: The particle data, in a SarracenDataFrame.
+    :param x: The column label of the x-directional axis.
+    :param y: The column label of the y-directional axis.
+    :param z: The column label of the z-directional axis.
+    :param target: The column label of the target smoothing data.
+    :param kernel: The kernel to use for smoothing the target data.
+    :param zslice: The z-axis value to take the cross-section value at.
+    :param pixwidthx: The width that each pixel represents in particle data space.
+    :param pixwidthy: The height that each pixel represents in particle data space.
+    :param xmin: The starting x-coordinate (in particle data space).
+    :param ymin: The starting y-coordinate (in particle data space).
+    :param pixcountx: The number of pixels in the output image in the x-direction.
+    :param pixcounty: The number of pixels in the output image in the y-direction.
+    :return: The output image, in a 2-dimensional numpy array.
+    """
+    image = np.zeros((pixcountx, pixcounty))
+
+    # Filter out particles that do not contribute to this cross-section slice
+    term = data[target] * data['m'] / (data['rho'] * data['h'] ** 2)
+    dz = zslice - data[z]
+    filter_distance = dz ** 2 * (1 / data['h'] ** 2) < kernel.radkernel * 2
+
+    ipixmin = np.rint((data[filter_distance][x] - kernel.radkernel * data[filter_distance]['h'] - xmin) / pixwidthx) \
+        .clip(lower=0, upper=pixcountx)
+    jpixmin = np.rint((data[filter_distance][y] - kernel.radkernel * data[filter_distance]['h'] - ymin) / pixwidthy) \
+        .clip(lower=0, upper=pixcounty)
+    ipixmax = np.rint((data[filter_distance][x] + kernel.radkernel * data[filter_distance]['h'] - xmin) / pixwidthx) \
+        .clip(lower=0, upper=pixcountx)
+    jpixmax = np.rint((data[filter_distance][y] + kernel.radkernel * data[filter_distance]['h'] - ymin) / pixwidthy) \
+        .clip(lower=0, upper=pixcounty)
+
+    for i in filter_distance.to_numpy().nonzero()[0]:
+        # precalculate differences in the x-direction
+        dx2i = (((xmin + (np.arange(int(ipixmin[i]), int(ipixmax[i])) + 0.5)
+                  * pixwidthx - data[x][i]) ** 2) + dz[i] ** 2) \
+               * (1 / (data['h'][i] ** 2))
+
+        ypix = ymin + (np.arange(int(jpixmin[i]), int(jpixmax[i])) + 0.5) * pixwidthy
+        dy = ypix - data[y][i]
+        dy2 = dy * dy * (1 / (data['h'][i] ** 2))
+
+        q2 = dx2i + dy2[:, np.newaxis]
+        image[int(jpixmin[i]):int(jpixmax[i]), int(ipixmin[i]):int(ipixmax[i])] += term[i] * kernel.w(np.sqrt(q2))
+
+    return image
