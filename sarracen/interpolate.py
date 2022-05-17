@@ -49,55 +49,42 @@ def interpolate2D(data: 'SarracenDataFrame',
 
     image = np.zeros((pixcounty, pixcountx))
 
-    # clone the necessary data columns into a new dataframe for vectorized operations
-    parts = pd.DataFrame()
-    parts['x'] = data[x]
-    parts['y'] = data[y]
-    parts['h'] = data['h']
-    parts['weight'] = data['m'] / (data['rho'] * data['h'] ** 2)
-    parts['term'] = parts['weight'] * data[target]
-
     # filter out particles with 0 weight
-    parts = parts[parts['weight'] > 0]
-    parts.drop(['weight'], axis=1)
+    term = data[target] * data['m'] / (data['rho'] * data['h'] ** 2)
+    filter_weight = term / data[target] > 0
 
     # determine maximum and minimum pixels that each particle contributes to
-    parts['ipixmin'] = np.rint((parts[x] - kernel.radkernel * parts['h'] - xmin) / pixwidthx)\
+    ipixmin = np.rint((data[filter_weight][x] - kernel.radkernel * data[filter_weight]['h'] - xmin) / pixwidthx)\
         .clip(lower=0, upper=pixcountx)
-    parts['jpixmin'] = np.rint((parts[y] - kernel.radkernel * parts['h'] - ymin) / pixwidthy)\
+    jpixmin = np.rint((data[filter_weight][y] - kernel.radkernel * data[filter_weight]['h'] - ymin) / pixwidthy)\
         .clip(lower=0, upper=pixcounty)
-    parts['ipixmax'] = np.rint((parts[x] + kernel.radkernel * parts['h'] - xmin) / pixwidthx)\
+    ipixmax = np.rint((data[filter_weight][x] + kernel.radkernel * data[filter_weight]['h'] - xmin) / pixwidthx)\
         .clip(lower=0, upper=pixcountx)
-    parts['jpixmax'] = np.rint((parts[y] + kernel.radkernel * parts['h'] - ymin) / pixwidthy)\
+    jpixmax = np.rint((data[filter_weight][y] + kernel.radkernel * data[filter_weight]['h'] - ymin) / pixwidthy)\
         .clip(lower=0, upper=pixcounty)
 
-
-    # iterate through all pixels
-    for part in parts.itertuples():
+    # iterate through the indexes of non-filtered particles
+    for i in filter_weight.to_numpy().nonzero()[0]:
         # precalculate differences in the x-direction (optimization)
-        dx2i = np.zeros(pixcountx)
-        for ipix in range(int(part.ipixmin), int(part.ipixmax)):
-            dx2i[ipix] = ((xmin + (ipix + 0.5) * pixwidthx - part.x) ** 2) * (1 / (part.h ** 2))
+        dx2i = ((xmin + (np.arange(int(ipixmin[i]), int(ipixmax[i])) + 0.5) * pixwidthx - data[x][i]) ** 2)\
+               * (1 / (data['h'][i] ** 2))
 
-        # traverse horizontally through affected pixels
-        for jpix in range(int(part.jpixmin), int(part.jpixmax)):
-            # determine differences in the y-direction
-            ypix = ymin + (jpix + 0.5) * pixwidthy
-            dy = ypix - part.y
-            dy2 = dy * dy * (1 / (part.h ** 2))
+        # determine differences in the y-direction
+        ypix = ymin + (np.arange(int(jpixmin[i]), int(jpixmax[i])) + 0.5) * pixwidthy
+        dy = ypix - data[y][i]
+        dy2 = dy * dy * (1 / (data['h'][i] ** 2))
 
-            for ipix in range(int(part.ipixmin), int(part.ipixmax)):
-                # calculate contribution at i, j due to particle at x, y
-                q2 = dx2i[ipix] + dy2
-                wab = kernel.w(np.sqrt(q2))
+        # calculate contributions at pixels i, j due to particle at x, y
+        q2 = dx2i + dy2[:, np.newaxis]
+        wab = kernel.w(np.sqrt(q2))
 
-                # add contribution to image
-                image[jpix][ipix] += part.term * wab
+        # add contributions to image
+        image[int(jpixmin[i]):int(jpixmax[i]), int(ipixmin[i]):int(ipixmax[i])] += (wab * term[i])
 
     return image
 
 
-def interpolate2DCross(data: SarracenDataFrame,
+def interpolate2DCross(data: 'SarracenDataFrame',
                        x: str,
                        y: str,
                        target: str,
