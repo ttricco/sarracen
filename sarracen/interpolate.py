@@ -50,6 +50,7 @@ def interpolate2DCross(data: 'SarracenDataFrame',
                                 data['h'].to_numpy(),
                                 data[target].to_numpy(),
                                 kernel.w,
+                                kernel.get_radius(),
                                 data['m'].to_numpy(),
                                 data['rho'].to_numpy(),
                                 data['h'].to_numpy(),
@@ -64,26 +65,24 @@ def interpolate2DCross(data: 'SarracenDataFrame',
 
 
 @numba.jit(nopython=True, parallel=True, fastmath=True)
-def fast_2d_interpolate(xparts, yparts, hparts, target, wfunc, mass, rho, h, xmin, ymin, pixwidthx, pixwidthy,
+def fast_2d_interpolate(xparts, yparts, hparts, target, wfunc, wrad, mass, rho, h, xmin, ymin, pixwidthx, pixwidthy,
                         pixcountx, pixcounty):
     image = np.zeros((pixcounty, pixcountx))
 
-    # filter out particles with 0 weight
     term = (target * mass / (rho * h ** 2))
-    filter_weight = term / target > 0
 
     # determine maximum and minimum pixels that each particle contributes to
-    ipixmin = np.rint((xparts - 2 * h - xmin) / pixwidthx) \
+    ipixmin = np.rint((xparts - wrad * h - xmin) / pixwidthx) \
         .clip(a_min=0, a_max=pixcountx)
-    jpixmin = np.rint((yparts - 2 * h - ymin) / pixwidthy) \
+    jpixmin = np.rint((yparts - wrad * h - ymin) / pixwidthy) \
         .clip(a_min=0, a_max=pixcounty)
-    ipixmax = np.rint((xparts + 2 * h - xmin) / pixwidthx) \
+    ipixmax = np.rint((xparts + wrad * h - xmin) / pixwidthx) \
         .clip(a_min=0, a_max=pixcountx)
-    jpixmax = np.rint((yparts + 2 * h - ymin) / pixwidthy) \
+    jpixmax = np.rint((yparts + wrad * h - ymin) / pixwidthy) \
         .clip(a_min=0, a_max=pixcounty)
 
     # iterate through the indexes of non-filtered particles
-    for i in prange(len(filter_weight)):
+    for i in prange(len(term)):
         # precalculate differences in the x-direction (optimization)
         dx2i = ((xmin + (np.arange(int(ipixmin[i]), int(ipixmax[i])) + 0.5) * pixwidthx - xparts[i]) ** 2) \
                * (1 / (hparts[i] ** 2))
