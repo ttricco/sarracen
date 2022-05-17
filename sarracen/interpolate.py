@@ -134,11 +134,26 @@ def interpolate1DCross(data: 'SarracenDataFrame',
     if pixcount <= 0:
         raise ValueError('pixcount must be greater than zero!')
 
-    output = np.zeros(pixcount)
+    return _fast_1d_cross1(data[x].to_numpy(),
+                           data[y].to_numpy(),
+                           data[target].to_numpy(),
+                           data['m'].to_numpy(),
+                           data['rho'].to_numpy(),
+                           data['h'].to_numpy(),
+                           kernel.get_radius(),
+                           kernel.w,
+                           x1,
+                           y1,
+                           x2,
+                           y2,
+                           pixcount)
 
+
+@numba.jit(nopython=True, parallel=True, fastmath=True)
+def _fast_1d_cross1(xterm, yterm, target, mass, rho, h, kernrad, wfunc, x1, y1, x2, y2, pixcount):
     # determine the slope of the cross-section line
     gradient = 0
-    if not np.isclose(x2, x1):
+    if not x2 - x1 == 0:
         gradient = (y2 - y1) / (x2 - x1)
     yint = y2 - gradient * x2
 
@@ -147,29 +162,37 @@ def interpolate1DCross(data: 'SarracenDataFrame',
     pixwidth = xlength / pixcount
     xpixwidth = (x2 - x1) / pixcount
 
-    # filter out particles with 0 weight
-    term = data[target] * data['m'] / (data['rho'] * data['h'] ** 2)
-    filter_weight = term / data[target] > 0
+    term = target * mass / rho * h ** 2
 
     # the intersections between the line and a particle's 'smoothing circle' are
     # found by solving a quadratic equation with the below values of a, b, and c.
     # if the determinant is negative, the particle does not contribute to the
     # cross-section, and can be removed.
     aa = 1 + gradient ** 2
-    bb = 2 * gradient * (yint - data[y][filter_weight]) - 2 * data[x][filter_weight]
-    cc = data[x][filter_weight] ** 2 + data[y][filter_weight] ** 2 \
-         - 2 * yint * data[y][filter_weight] + yint ** 2 \
-         - (kernel.get_radius() * data['h'][filter_weight]) ** 2
+    bb = 2 * gradient * (yint - yterm) - 2 * xterm
+    cc = xterm ** 2 \
+         + yterm ** 2 \
+         - 2 * yint * yterm + yint ** 2 \
+         - (kernrad * h) ** 2
     det = bb ** 2 - 4 * aa * cc
 
     # create a filter for particles that do not contribute to the cross-section
     filter_det = det >= 0
-    det = np.sqrt(det[filter_det])
+    det = np.sqrt(det)
     cc = None
 
+    return _fast_1d_cross2(xterm[filter_det], yterm[filter_det], wfunc, term[filter_det], h[filter_det], x1, y1, x2,
+                           yint, aa, bb[filter_det], det[filter_det], gradient, xpixwidth, pixwidth, pixcount)
+
+
+@numba.jit(nopython=True, parallel=True, fastmath=True)
+def _fast_1d_cross2(xterm, yterm, wfunc, term, h, x1, y1, x2, yint, aa, bb, det, gradient, xpixwidth, pixwidth,
+                    pixcount):
+    output = np.zeros(pixcount)
+
     # the starting and ending x coordinates of the lines intersections with a particle's smoothing circle
-    xstart = ((-bb[filter_det] - det) / (2 * aa)).clip(lower=x1, upper=x2)
-    xend = ((-bb[filter_det] + det) / (2 * aa)).clip(lower=x1, upper=x2)
+    xstart = ((-bb - det) / (2 * aa)).clip(a_min=x1, a_max=x2)
+    xend = ((-bb + det) / (2 * aa)).clip(a_min=x1, a_max=x2)
     bb, det = None, None
 
     # the start and end distances which lie within a particle's smoothing circle.
@@ -178,20 +201,20 @@ def interpolate1DCross(data: 'SarracenDataFrame',
     xstart, xend = None, None
 
     # the maximum and minimum pixels that each particle contributes to.
-    ipixmin = np.rint(rstart / pixwidth).clip(lower=0, upper=pixcount)
-    ipixmax = np.rint(rend / pixwidth).clip(lower=0, upper=pixcount)
+    ipixmin = np.rint(rstart / pixwidth).clip(a_min=0, a_max=pixcount)
+    ipixmax = np.rint(rend / pixwidth).clip(a_min=0, a_max=pixcount)
     rstart, rend = None, None
 
     # iterate through the indices of all non-filtered particles
-    for i in filter_det.to_numpy().nonzero()[0]:
+    for i in prange(len(xterm)):
         # determine contributions to all affected pixels for this particle
         xpix = x1 + (np.arange(int(ipixmin[i]), int(ipixmax[i])) + 0.5) * xpixwidth
         ypix = gradient * xpix + yint
-        dy = ypix - data[y][i]
-        dx = xpix - data[x][i]
+        dy = ypix - yterm[i]
+        dx = xpix - xterm[i]
 
-        q2 = (dx * dx + dy * dy) * (1 / (data['h'][i] * data['h'][i]))
-        wab = kernel.w(np.sqrt(q2), 2)
+        q2 = (dx * dx + dy * dy) * (1 / (h[i] * h[i]))
+        wab = wfunc(np.sqrt(q2), 2)
 
         # add contributions to output total, transformed by minimum/maximum pixels
         output[int(ipixmin[i]):int(ipixmax[i])] += (wab * term[i])
