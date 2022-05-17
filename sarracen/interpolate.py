@@ -162,7 +162,7 @@ def _fast_1d_cross1(xterm, yterm, target, mass, rho, h, kernrad, wfunc, x1, y1, 
     pixwidth = xlength / pixcount
     xpixwidth = (x2 - x1) / pixcount
 
-    term = target * mass / rho * h ** 2
+    term = target * mass / (rho * h ** 2)
 
     # the intersections between the line and a particle's 'smoothing circle' are
     # found by solving a quadratic equation with the below values of a, b, and c.
