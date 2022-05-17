@@ -14,7 +14,7 @@ class CubicSplineKernel(BaseKernel):
         return 2
 
     @staticmethod
-    @jit(nopython=True, parallel=True, fastmath=True)
+    @jit(fastmath=True)
     def w(q: float, ndim: int):
         norm = 2 / 3 if (ndim == 1) else 10 / (7 * np.pi) if (ndim == 2) else 1 / np.pi
 
