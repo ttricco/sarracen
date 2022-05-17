@@ -5,7 +5,7 @@ from matplotlib import pyplot as plt
 from matplotlib.colors import Colormap
 import seaborn as sns
 
-from sarracen.interpolate import interpolate2D, interpolate1DCross
+from sarracen.interpolate import interpolate2DCross, interpolate1DCross
 from sarracen.kernels import BaseKernel, CubicSplineKernel
 
 
@@ -60,7 +60,7 @@ def render_2d(data: 'SarracenDataFrame',
 
     pixwidthx = (xmax - xmin) / pixcountx
     pixwidthy = (ymax - ymin) / pixcounty
-    image = interpolate2D(data, x, y, target, kernel, pixwidthx, pixwidthy, xmin, ymin, pixcountx, pixcounty)
+    image = interpolate2DCross(data, x, y, target, kernel, pixwidthx, pixwidthy, xmin, ymin, pixcountx, pixcounty)
 
     # ensure the plot size maintains the aspect ratio of the underlying bounds of the data
     fig, ax = plt.subplots(figsize=(6.4, 4.8 * ((ymax - ymin) / (xmax - xmin))))

@@ -4,7 +4,7 @@ from pytest import approx
 
 from sarracen import SarracenDataFrame
 from sarracen.kernels import CubicSplineKernel
-from sarracen.interpolate import interpolate2D, interpolate1DCross, interpolate3DCross
+from sarracen.interpolate import interpolate2DCross, interpolate1DCross, interpolate3DCross
 
 
 def test_interpolate2d():
@@ -16,7 +16,7 @@ def test_interpolate2d():
                        'm': [1]})
     sdf = SarracenDataFrame(df, params=dict())
 
-    image = interpolate2D(sdf, 'x', 'y', 'P', CubicSplineKernel(2), 0.1, 0.1, -2, -2, 40, 40)
+    image = interpolate2DCross(sdf, 'x', 'y', 'P', CubicSplineKernel(2), 0.1, 0.1, -2, -2, 40, 40)
 
     assert image[0][0] == 0
     assert image[20][0] == approx(CubicSplineKernel(2).w(np.sqrt((-1.95) ** 2 + 0.05 ** 2)), rel=1e-8)
