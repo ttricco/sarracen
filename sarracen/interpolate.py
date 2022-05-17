@@ -254,33 +254,67 @@ def interpolate3DCross(data: 'SarracenDataFrame',
     :param pixcounty: The number of pixels in the output image in the y-direction.
     :return: The output image, in a 2-dimensional numpy array.
     """
+
+    return _fast_interpolate3d_cross1(data[x].to_numpy(),
+                                      data[y].to_numpy(),
+                                      data[z].to_numpy(),
+                                      kernel.w,
+                                      zslice,
+                                      kernel.get_radius(),
+                                      data[target].to_numpy(),
+                                      data['m'].to_numpy(),
+                                      data['rho'].to_numpy(),
+                                      data['h'].to_numpy(),
+                                      pixwidthx,
+                                      pixwidthy,
+                                      xmin,
+                                      ymin,
+                                      pixcountx,
+                                      pixcounty)
+
+
+@numba.jit(nopython=True, parallel=True, fastmath=True)
+def _fast_interpolate3d_cross1(xterm, yterm, zterm, wfunc, zslice, kernrad, target, mass, rho, h, pixwidthx, pixwidthy, xmin, ymin, pixcountx, pixcounty):
+    # Filter out particles that do not contribute to this cross-section slice
+    term = target * mass / (rho * h ** 2)
+    dz = zslice - zterm
+    filter_distance = dz ** 2 * (1 / h ** 2) < kernrad * 2
+
+    return _fast_interpolate3d_cross2(xterm[filter_distance],
+                                      yterm[filter_distance],
+                                      dz[filter_distance],
+                                      term[filter_distance],
+                                      h[filter_distance],
+                                      wfunc,
+                                      kernrad,
+                                      xmin,
+                                      ymin,
+                                      pixwidthx,
+                                      pixwidthy,
+                                      pixcountx,
+                                      pixcounty)
+
+
+@numba.jit(nopython=True, parallel=True, fastmath=True)
+def _fast_interpolate3d_cross2(xterm, yterm, dz, term, h, wfunc, kernrad, xmin, ymin, pixwidthx, pixwidthy, pixcountx, pixcounty):
+    ipixmin = np.rint((xterm - kernrad * h - xmin) / pixwidthx).clip(a_min=0, a_max=pixcountx)
+    jpixmin = np.rint((yterm - kernrad * h - ymin) / pixwidthy).clip(a_min=0, a_max=pixcounty)
+    ipixmax = np.rint((xterm + kernrad * h - xmin) / pixwidthx).clip(a_min=0, a_max=pixcountx)
+    jpixmax = np.rint((yterm + kernrad * h - ymin) / pixwidthy).clip(a_min=0, a_max=pixcounty)
+
     image = np.zeros((pixcountx, pixcounty))
 
-    # Filter out particles that do not contribute to this cross-section slice
-    term = data[target] * data['m'] / (data['rho'] * data['h'] ** 2)
-    dz = zslice - data[z]
-    filter_distance = dz ** 2 * (1 / data['h'] ** 2) < kernel.get_radius() * 2
-
-    ipixmin = np.rint((data[filter_distance][x] - kernel.get_radius() * data[filter_distance]['h'] - xmin) / pixwidthx) \
-        .clip(lower=0, upper=pixcountx)
-    jpixmin = np.rint((data[filter_distance][y] - kernel.get_radius() * data[filter_distance]['h'] - ymin) / pixwidthy) \
-        .clip(lower=0, upper=pixcounty)
-    ipixmax = np.rint((data[filter_distance][x] + kernel.get_radius() * data[filter_distance]['h'] - xmin) / pixwidthx) \
-        .clip(lower=0, upper=pixcountx)
-    jpixmax = np.rint((data[filter_distance][y] + kernel.get_radius() * data[filter_distance]['h'] - ymin) / pixwidthy) \
-        .clip(lower=0, upper=pixcounty)
-
-    for i in filter_distance.to_numpy().nonzero()[0]:
+    for i in prange(len(xterm)):
         # precalculate differences in the x-direction
         dx2i = (((xmin + (np.arange(int(ipixmin[i]), int(ipixmax[i])) + 0.5)
-                  * pixwidthx - data[x][i]) ** 2) + dz[i] ** 2) \
-               * (1 / (data['h'][i] ** 2))
+                  * pixwidthx - xterm[i]) ** 2) + dz[i] ** 2) \
+               * (1 / (h[i] ** 2))
 
         ypix = ymin + (np.arange(int(jpixmin[i]), int(jpixmax[i])) + 0.5) * pixwidthy
-        dy = ypix - data[y][i]
-        dy2 = dy * dy * (1 / (data['h'][i] ** 2))
+        dy = ypix - yterm[i]
+        dy2 = dy * dy * (1 / (h[i] ** 2))
 
-        q2 = dx2i + dy2[:, np.newaxis]
-        image[int(jpixmin[i]):int(jpixmax[i]), int(ipixmin[i]):int(ipixmax[i])] += term[i] * kernel.w(np.sqrt(q2), 2)
+        q2 = dx2i + dy2.reshape(len(dy2), 1)
+        image[int(jpixmin[i]):int(jpixmax[i]), int(ipixmin[i]):int(ipixmax[i])] += term[i] * wfunc(np.sqrt(q2), 2)
 
     return image
