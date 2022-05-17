@@ -5,4 +5,4 @@ from sarracen.io.read_phantom import read_phantom
 
 from sarracen.sarracen_dataframe import SarracenDataFrame
 
-from sarracen.interpolate import interpolate1DCross
+from sarracen.interpolate import interpolate1DCross, interpolate2DCross, interpolate3DCross
