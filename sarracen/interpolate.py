@@ -6,7 +6,7 @@ from numpy import ndarray
 from sarracen.kernels import BaseKernel
 
 
-def interpolate2D(data: 'SarracenDataFrame',
+def interpolate2DCross(data: 'SarracenDataFrame',
                   x: str,
                   y: str,
                   target: str,
@@ -83,7 +83,8 @@ def interpolate2D(data: 'SarracenDataFrame',
     return image
 
 
-def interpolate2DCross(data: 'SarracenDataFrame',
+
+def interpolate1DCross(data: 'SarracenDataFrame',
                        x: str,
                        y: str,
                        target: str,
