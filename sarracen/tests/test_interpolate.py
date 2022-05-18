@@ -49,11 +49,6 @@ def test_interpolate1dcross():
     assert output[20] == approx(CubicSplineKernel().w(np.sqrt(2*(0.05 ** 2)), 2), rel=1e-8)
     assert output[17] == approx(CubicSplineKernel().w(np.sqrt(2*(0.25 ** 2)), 2), rel=1e-8)
 
-    fig, ax = plt.subplots()
-    ax.margins(x=0, y=0)
-    sns.lineplot(x=np.linspace(0, 1, 40), y=output, ax=ax)
-    plt.show()
-
 def test_interpolate3dcross():
     df = df = pd.DataFrame({'x': [0],
                             'y': [0],

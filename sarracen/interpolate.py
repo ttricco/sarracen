@@ -45,7 +45,7 @@ def interpolate2DCross(data: 'SarracenDataFrame',
     if pixcounty <= 0:
         raise ValueError("pixcounty must be greater than zero!")
 
-    image = fast_2d_interpolate(data[x].to_numpy(),
+    return _fast_2d_interpolate(data[x].to_numpy(),
                                 data[y].to_numpy(),
                                 data['h'].to_numpy(),
                                 data[target].to_numpy(),
@@ -61,12 +61,11 @@ def interpolate2DCross(data: 'SarracenDataFrame',
                                 pixcountx,
                                 pixcounty)
 
-    return image
 
-
+# Underlying numba-compiled code for 2D interpolation
 @numba.jit(nopython=True, parallel=True, fastmath=True)
-def fast_2d_interpolate(xparts, yparts, hparts, target, wfunc, wrad, mass, rho, h, xmin, ymin, pixwidthx, pixwidthy,
-                        pixcountx, pixcounty):
+def _fast_2d_interpolate(xparts, yparts, hparts, target, wfunc, wrad, mass, rho, h, xmin, ymin, pixwidthx, pixwidthy,
+                         pixcountx, pixcounty):
     image = np.zeros((pixcounty, pixcountx))
 
     term = (target * mass / (rho * h ** 2))
@@ -134,23 +133,24 @@ def interpolate1DCross(data: 'SarracenDataFrame',
     if pixcount <= 0:
         raise ValueError('pixcount must be greater than zero!')
 
-    return _fast_1d_cross1(data[x].to_numpy(),
-                           data[y].to_numpy(),
-                           data[target].to_numpy(),
-                           data['m'].to_numpy(),
-                           data['rho'].to_numpy(),
-                           data['h'].to_numpy(),
-                           kernel.get_radius(),
-                           kernel.w,
-                           x1,
-                           y1,
-                           x2,
-                           y2,
-                           pixcount)
+    return _fast_1d_cross(data[x].to_numpy(),
+                          data[y].to_numpy(),
+                          data[target].to_numpy(),
+                          data['m'].to_numpy(),
+                          data['rho'].to_numpy(),
+                          data['h'].to_numpy(),
+                          kernel.get_radius(),
+                          kernel.w,
+                          x1,
+                          y1,
+                          x2,
+                          y2,
+                          pixcount)
 
 
+# Underlying numba-compiled code for 2D->1D cross-sections
 @numba.jit(nopython=True, parallel=True, fastmath=True)
-def _fast_1d_cross1(xterm, yterm, target, mass, rho, h, kernrad, wfunc, x1, y1, x2, y2, pixcount):
+def _fast_1d_cross(xterm, yterm, target, mass, rho, h, kernrad, wfunc, x1, y1, x2, y2, pixcount):
     # determine the slope of the cross-section line
     gradient = 0
     if not x2 - x1 == 0:
@@ -181,18 +181,11 @@ def _fast_1d_cross1(xterm, yterm, target, mass, rho, h, kernrad, wfunc, x1, y1, 
     det = np.sqrt(det)
     cc = None
 
-    return _fast_1d_cross2(xterm[filter_det], yterm[filter_det], wfunc, term[filter_det], h[filter_det], x1, y1, x2,
-                           yint, aa, bb[filter_det], det[filter_det], gradient, xpixwidth, pixwidth, pixcount)
-
-
-@numba.jit(nopython=True, parallel=True, fastmath=True)
-def _fast_1d_cross2(xterm, yterm, wfunc, term, h, x1, y1, x2, yint, aa, bb, det, gradient, xpixwidth, pixwidth,
-                    pixcount):
     output = np.zeros(pixcount)
 
     # the starting and ending x coordinates of the lines intersections with a particle's smoothing circle
-    xstart = ((-bb - det) / (2 * aa)).clip(a_min=x1, a_max=x2)
-    xend = ((-bb + det) / (2 * aa)).clip(a_min=x1, a_max=x2)
+    xstart = ((-bb[filter_det] - det[filter_det]) / (2 * aa)).clip(a_min=x1, a_max=x2)
+    xend = ((-bb[filter_det] + det[filter_det]) / (2 * aa)).clip(a_min=x1, a_max=x2)
     bb, det = None, None
 
     # the start and end distances which lie within a particle's smoothing circle.
@@ -206,18 +199,18 @@ def _fast_1d_cross2(xterm, yterm, wfunc, term, h, x1, y1, x2, yint, aa, bb, det,
     rstart, rend = None, None
 
     # iterate through the indices of all non-filtered particles
-    for i in prange(len(xterm)):
+    for i in prange(len(xterm[filter_det])):
         # determine contributions to all affected pixels for this particle
         xpix = x1 + (np.arange(int(ipixmin[i]), int(ipixmax[i])) + 0.5) * xpixwidth
         ypix = gradient * xpix + yint
-        dy = ypix - yterm[i]
-        dx = xpix - xterm[i]
+        dy = ypix - yterm[filter_det][i]
+        dx = xpix - xterm[filter_det][i]
 
-        q2 = (dx * dx + dy * dy) * (1 / (h[i] * h[i]))
+        q2 = (dx * dx + dy * dy) * (1 / (h[filter_det][i] * h[filter_det][i]))
         wab = wfunc(np.sqrt(q2), 2)
 
         # add contributions to output total, transformed by minimum/maximum pixels
-        output[int(ipixmin[i]):int(ipixmax[i])] += (wab * term[i])
+        output[int(ipixmin[i]):int(ipixmax[i])] += (wab * term[filter_det][i])
 
     return output
 
@@ -255,66 +248,57 @@ def interpolate3DCross(data: 'SarracenDataFrame',
     :return: The output image, in a 2-dimensional numpy array.
     """
 
-    return _fast_interpolate3d_cross1(data[x].to_numpy(),
-                                      data[y].to_numpy(),
-                                      data[z].to_numpy(),
-                                      kernel.w,
-                                      zslice,
-                                      kernel.get_radius(),
-                                      data[target].to_numpy(),
-                                      data['m'].to_numpy(),
-                                      data['rho'].to_numpy(),
-                                      data['h'].to_numpy(),
-                                      pixwidthx,
-                                      pixwidthy,
-                                      xmin,
-                                      ymin,
-                                      pixcountx,
-                                      pixcounty)
+    return _fast_interpolate3d_cross(data[x].to_numpy(),
+                                     data[y].to_numpy(),
+                                     data[z].to_numpy(),
+                                     kernel.w,
+                                     zslice,
+                                     kernel.get_radius(),
+                                     data[target].to_numpy(),
+                                     data['m'].to_numpy(),
+                                     data['rho'].to_numpy(),
+                                     data['h'].to_numpy(),
+                                     pixwidthx,
+                                     pixwidthy,
+                                     xmin,
+                                     ymin,
+                                     pixcountx,
+                                     pixcounty)
 
 
+# Underlying numba-compiled code for 3D->2D cross-sections
 @numba.jit(nopython=True, parallel=True, fastmath=True)
-def _fast_interpolate3d_cross1(xterm, yterm, zterm, wfunc, zslice, kernrad, target, mass, rho, h, pixwidthx, pixwidthy, xmin, ymin, pixcountx, pixcounty):
+def _fast_interpolate3d_cross(xterm, yterm, zterm, wfunc, zslice, kernrad, target, mass, rho, h, pixwidthx, pixwidthy,
+                              xmin, ymin, pixcountx, pixcounty):
     # Filter out particles that do not contribute to this cross-section slice
     term = target * mass / (rho * h ** 2)
     dz = zslice - zterm
     filter_distance = dz ** 2 * (1 / h ** 2) < kernrad * 2
 
-    return _fast_interpolate3d_cross2(xterm[filter_distance],
-                                      yterm[filter_distance],
-                                      dz[filter_distance],
-                                      term[filter_distance],
-                                      h[filter_distance],
-                                      wfunc,
-                                      kernrad,
-                                      xmin,
-                                      ymin,
-                                      pixwidthx,
-                                      pixwidthy,
-                                      pixcountx,
-                                      pixcounty)
-
-
-@numba.jit(nopython=True, parallel=True, fastmath=True)
-def _fast_interpolate3d_cross2(xterm, yterm, dz, term, h, wfunc, kernrad, xmin, ymin, pixwidthx, pixwidthy, pixcountx, pixcounty):
-    ipixmin = np.rint((xterm - kernrad * h - xmin) / pixwidthx).clip(a_min=0, a_max=pixcountx)
-    jpixmin = np.rint((yterm - kernrad * h - ymin) / pixwidthy).clip(a_min=0, a_max=pixcounty)
-    ipixmax = np.rint((xterm + kernrad * h - xmin) / pixwidthx).clip(a_min=0, a_max=pixcountx)
-    jpixmax = np.rint((yterm + kernrad * h - ymin) / pixwidthy).clip(a_min=0, a_max=pixcounty)
+    ipixmin = np.rint((xterm[filter_distance] - kernrad * h[filter_distance] - xmin) / pixwidthx).clip(a_min=0,
+                                                                                                       a_max=pixcountx)
+    jpixmin = np.rint((yterm[filter_distance] - kernrad * h[filter_distance] - ymin) / pixwidthy).clip(a_min=0,
+                                                                                                       a_max=pixcounty)
+    ipixmax = np.rint((xterm[filter_distance] + kernrad * h[filter_distance] - xmin) / pixwidthx).clip(a_min=0,
+                                                                                                       a_max=pixcountx)
+    jpixmax = np.rint((yterm[filter_distance] + kernrad * h[filter_distance] - ymin) / pixwidthy).clip(a_min=0,
+                                                                                                       a_max=pixcounty)
 
     image = np.zeros((pixcountx, pixcounty))
 
-    for i in prange(len(xterm)):
+    for i in prange(len(xterm[filter_distance])):
         # precalculate differences in the x-direction
         dx2i = (((xmin + (np.arange(int(ipixmin[i]), int(ipixmax[i])) + 0.5)
-                  * pixwidthx - xterm[i]) ** 2) + dz[i] ** 2) \
-               * (1 / (h[i] ** 2))
+                  * pixwidthx - xterm[filter_distance][i]) ** 2)
+                * (1 / (h[filter_distance][i] ** 2))) + (
+                       (dz[filter_distance][i] ** 2) * (1 / h[filter_distance][i] ** 2))
 
         ypix = ymin + (np.arange(int(jpixmin[i]), int(jpixmax[i])) + 0.5) * pixwidthy
-        dy = ypix - yterm[i]
-        dy2 = dy * dy * (1 / (h[i] ** 2))
+        dy = ypix - yterm[filter_distance][i]
+        dy2 = dy * dy * (1 / (h[filter_distance][i] ** 2))
 
         q2 = dx2i + dy2.reshape(len(dy2), 1)
-        image[int(jpixmin[i]):int(jpixmax[i]), int(ipixmin[i]):int(ipixmax[i])] += term[i] * wfunc(np.sqrt(q2), 2)
+        image[int(jpixmin[i]):int(jpixmax[i]), int(ipixmin[i]):int(ipixmax[i])] += term[filter_distance][i] * wfunc(
+            np.sqrt(q2), 3)
 
     return image
