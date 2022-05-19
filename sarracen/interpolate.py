@@ -1,6 +1,6 @@
 import numba
 import numpy as np
-import pandas as pd
+from scipy.integrate import quad
 from numba import prange
 
 from numpy import ndarray
@@ -300,5 +300,100 @@ def _fast_interpolate3d_cross(xterm, yterm, zterm, wfunc, zslice, kernrad, targe
         q2 = dx2i + dy2.reshape(len(dy2), 1)
         image[int(jpixmin[i]):int(jpixmax[i]), int(ipixmin[i]):int(ipixmax[i])] += term[filter_distance][i] * wfunc(
             np.sqrt(q2), 3)
+
+    return image
+
+
+def interpolate3D(data: 'SarracenDataFrame',
+                       x: str,
+                       y: str,
+                       z: str,
+                       target: str,
+                       kernel: BaseKernel,
+                       pixwidthx: float,
+                       pixwidthy: float,
+                       xmin: float = 0,
+                       ymin: float = 0,
+                       pixcountx: int = 480,
+                       pixcounty: int = 480):
+    """
+    Interpolates particle data in a SarracenDataFrame across three directional axes to a 2D
+    grid of pixels, by summing contributions in columns across the z-axis.
+
+    :param data: The particle data, in a SarracenDataFrame.
+    :param x: The column label of the x-directional axis.
+    :param y: The column label of the y-directional axis.
+    :param z: The column label of the z-directional axis.
+    :param target: The column label of the target smoothing data.
+    :param kernel: The kernel to use for smoothing the target data.
+    :param pixwidthx: The width that each pixel represents in particle data space.
+    :param pixwidthy: The height that each pixel represents in particle data space.
+    :param xmin: The starting x-coordinate (in particle data space).
+    :param ymin: The starting y-coordinate (in particle data space).
+    :param pixcountx: The number of pixels in the output image in the x-direction.
+    :param pixcounty: The number of pixels in the output image in the y-direction.
+    :return: The output image, in a 2-dimensional numpy array.
+    """
+    if pixwidthx <= 0:
+        raise ValueError("pixwidthx must be greater than zero!")
+    if pixwidthy <= 0:
+        raise ValueError("pixwidthy must be greater than zero!")
+    if pixcountx <= 0:
+        raise ValueError("pixcountx must be greater than zero!")
+    if pixcounty <= 0:
+        raise ValueError("pixcounty must be greater than zero!")
+
+    return _fast_3d_interpolate(data[x].to_numpy(),
+                                data[y].to_numpy(),
+                                data[z].to_numpy(),
+                                data[target].to_numpy(),
+                                2 * np.vectorize(quad)(kernel.w, a=0, b=np.sqrt(kernel.get_radius() ** 2 - np.linspace(0, kernel.get_radius(), 1000)**2), args=(3,))[0],
+                                kernel.get_radius(),
+                                data['m'].to_numpy(),
+                                data['rho'].to_numpy(),
+                                data['h'].to_numpy(),
+                                xmin,
+                                ymin,
+                                pixwidthx,
+                                pixwidthy,
+                                pixcountx,
+                                pixcounty)
+
+
+# Underlying numba-compiled code for 3D column interpolation.
+@numba.jit(nopython=True, parallel=True, fastmath=True)
+def _fast_3d_interpolate(xparts, yparts, zparts, target, wfuncint, wrad, mass, rho, h, xmin, ymin, pixwidthx, pixwidthy,
+                         pixcountx, pixcounty):
+    image = np.zeros((pixcounty, pixcountx))
+
+    term = (target * mass / (rho * h ** 3))
+
+    # determine maximum and minimum pixels that each particle contributes to
+    ipixmin = np.rint((xparts - wrad * h - xmin) / pixwidthx) \
+        .clip(a_min=0, a_max=pixcountx)
+    jpixmin = np.rint((yparts - wrad * h - ymin) / pixwidthy) \
+        .clip(a_min=0, a_max=pixcounty)
+    ipixmax = np.rint((xparts + wrad * h - xmin) / pixwidthx) \
+        .clip(a_min=0, a_max=pixcountx)
+    jpixmax = np.rint((yparts + wrad * h - ymin) / pixwidthy) \
+        .clip(a_min=0, a_max=pixcounty)
+
+    # iterate through the indexes of non-filtered particles
+    for i in prange(len(term)):
+        # precalculate differences in the x-direction (optimization)
+        dx2i = ((xmin + (np.arange(int(ipixmin[i]), int(ipixmax[i])) + 0.5) * pixwidthx - xparts[i]) ** 2) \
+               * (1 / (h[i] ** 2))
+
+        # determine differences in the y-direction
+        ypix = ymin + (np.arange(int(jpixmin[i]), int(jpixmax[i])) + 0.5) * pixwidthy
+        dy = ypix - yparts[i]
+        dy2 = dy * dy * (1 / (h[i] ** 2))
+
+        # calculate contributions at pixels i, j due to particle at x, y
+        q2 = dx2i + dy2.reshape(len(dy2), 1)
+        wab = np.interp(np.sqrt(q2), np.linspace(0, wrad, 1000), wfuncint)
+
+        # add contributions to image
+        image[int(jpixmin[i]):int(jpixmax[i]), int(ipixmin[i]):int(ipixmax[i])] += (wab * term[i])
 
     return image
