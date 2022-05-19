@@ -62,19 +62,19 @@ def test_interpolate3dcross():
     # first, test a cross-section at z=0
     image = interpolate3DCross(sdf, 'x', 'y', 'z', 'P', CubicSplineKernel(), 0, 0.1, 0.1, -2, -2, 40, 40)
 
-    # should be exactly the same as for a 2D rendering
+    # should be exactly the same as for a 2D rendering, except q values are now taken from the 3D kernel.
     assert image[0][0] == 0
-    assert image[20][0] == approx(CubicSplineKernel().w(np.sqrt((-1.95) ** 2 + 0.05 ** 2), 2), rel=1e-8)
-    assert image[20][20] == approx(CubicSplineKernel().w(np.sqrt(0.05 ** 2 + 0.05 ** 2), 2), rel=1e-8)
-    assert image[12][17] == approx(CubicSplineKernel().w(np.sqrt(0.75 ** 2 + 0.25 ** 2), 2), rel=1e-8)
+    assert image[20][0] == approx(CubicSplineKernel().w(np.sqrt((-1.95) ** 2 + 0.05 ** 2), 3), rel=1e-8)
+    assert image[20][20] == approx(CubicSplineKernel().w(np.sqrt(0.05 ** 2 + 0.05 ** 2), 3), rel=1e-8)
+    assert image[12][17] == approx(CubicSplineKernel().w(np.sqrt(0.75 ** 2 + 0.25 ** 2), 3), rel=1e-8)
 
     # next, test a cross-section at z=0.5
     image = interpolate3DCross(sdf, 'x', 'y', 'z', 'P', CubicSplineKernel(), 0.5, 0.1, 0.1, -2, -2, 40, 40)
 
     assert image[0][0] == 0
-    assert image[20][0] == approx(CubicSplineKernel().w(np.sqrt((-1.95) ** 2 + 0.05 ** 2 + (0.5 ** 2)), 2), rel=1e-8)
-    assert image[20][20] == approx(CubicSplineKernel().w(np.sqrt(2 * (0.05 ** 2) + (0.5 ** 2)), 2), rel=1e-8)
-    assert image[12][17] == approx(CubicSplineKernel().w(np.sqrt(0.75 ** 2 + 0.25 ** 2 + (0.5 ** 2)), 2), rel=1e-8)
+    assert image[20][0] == approx(CubicSplineKernel().w(np.sqrt((-1.95) ** 2 + 0.05 ** 2 + (0.5 ** 2)), 3), rel=1e-8)
+    assert image[20][20] == approx(CubicSplineKernel().w(np.sqrt(2 * (0.05 ** 2) + (0.5 ** 2)), 3), rel=1e-8)
+    assert image[12][17] == approx(CubicSplineKernel().w(np.sqrt(0.75 ** 2 + 0.25 ** 2 + (0.5 ** 2)), 3), rel=1e-8)
 
 
 def test_interpolate3d():
