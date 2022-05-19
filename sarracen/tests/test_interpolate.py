@@ -1,12 +1,11 @@
 import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
-import seaborn as sns
 from pytest import approx
 
 from sarracen import SarracenDataFrame
 from sarracen.kernels import CubicSplineKernel
-from sarracen.interpolate import interpolate2DCross, interpolate1DCross, interpolate3DCross
+from sarracen.interpolate import interpolate2DCross, interpolate1DCross, interpolate3DCross, interpolate3D
 
 
 def test_interpolate2d():
@@ -45,9 +44,10 @@ def test_interpolate1dcross():
     # next, test a cross-section where x=y
     output = interpolate1DCross(sdf, 'x', 'y', 'P', CubicSplineKernel(), -2, -2, 2, 2, 40)
 
-    assert output[0] == approx(CubicSplineKernel().w(np.sqrt(2*(1.95 ** 2)), 2), rel=1e-8)
-    assert output[20] == approx(CubicSplineKernel().w(np.sqrt(2*(0.05 ** 2)), 2), rel=1e-8)
-    assert output[17] == approx(CubicSplineKernel().w(np.sqrt(2*(0.25 ** 2)), 2), rel=1e-8)
+    assert output[0] == approx(CubicSplineKernel().w(np.sqrt(2 * (1.95 ** 2)), 2), rel=1e-8)
+    assert output[20] == approx(CubicSplineKernel().w(np.sqrt(2 * (0.05 ** 2)), 2), rel=1e-8)
+    assert output[17] == approx(CubicSplineKernel().w(np.sqrt(2 * (0.25 ** 2)), 2), rel=1e-8)
+
 
 def test_interpolate3dcross():
     df = df = pd.DataFrame({'x': [0],
@@ -75,3 +75,25 @@ def test_interpolate3dcross():
     assert image[20][0] == approx(CubicSplineKernel().w(np.sqrt((-1.95) ** 2 + 0.05 ** 2 + (0.5 ** 2)), 2), rel=1e-8)
     assert image[20][20] == approx(CubicSplineKernel().w(np.sqrt(2 * (0.05 ** 2) + (0.5 ** 2)), 2), rel=1e-8)
     assert image[12][17] == approx(CubicSplineKernel().w(np.sqrt(0.75 ** 2 + 0.25 ** 2 + (0.5 ** 2)), 2), rel=1e-8)
+
+
+def test_interpolate3d():
+    df = pd.DataFrame({'x': [0.25],
+                       'y': [0.25],
+                       'z': [0],
+                       'P': [0.5],
+                       'h': [0.125],
+                       'rho': [0.5],
+                       'm': [0.01],
+                       'A': [3]})
+    sdf = SarracenDataFrame(df, params=dict())
+
+    image = interpolate3D(sdf, 'x', 'y', 'A', CubicSplineKernel(), 0.05, 0.05, 0, 0, 10, 10, 10000)
+
+    # w = 0.01 / (0.5 * 0.125^3) = 10.24
+
+    assert image[0][0] == 0
+    # 10.24 * 0.125 * 3 * F(sqrt(0.025^2 + 0.225^2)/0.125) ~= 3.84 * 0.000409322579272
+    assert image[0][4] == approx(0.0015718842, rel=1e-4)
+    # 10.24 * 0.125 * 3 * F(sqrt(0.025^2 + 0.025^2)/0.125) ~= 3.84 * 0.427916515256
+    assert image[5][5] == approx(1.6431994186, rel=1e-4)

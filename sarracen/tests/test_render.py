@@ -2,10 +2,11 @@ import pandas as pd
 import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
+from pytest import approx
 
 from sarracen import SarracenDataFrame
 from sarracen.kernels import CubicSplineKernel
-from sarracen.render import render_2d, render_1d_cross
+from sarracen.render import render_2d, render_1d_cross, render_3d
 
 
 def test_2d_plot():
@@ -64,6 +65,34 @@ def test_1dcross_plot():
     assert ax.get_ylim() == (0, CubicSplineKernel().w(np.sqrt(41) / 1000, 2))
 
 
+def test_3d_plot():
+    df = pd.DataFrame({'rx': [0, 5],
+                       'P': [1, 1],
+                       'h': [1, 1],
+                       'rz': [3, 1],
+                       'rho': [1, 1],
+                       'y': [0, 4],
+                       'm': [1, 1]})
+    sdf = SarracenDataFrame(df)
+
+    fig, ax = sdf.render_3d('P', pixcountx=300, int_samples=10000)
+
+    assert isinstance(fig, Figure)
+    assert isinstance(ax, Axes)
+
+    assert ax.get_xlabel() == 'rx'
+    assert ax.get_ylabel() == 'y'
+    # the colorbar is contained in a second axes object inside the figure
+    assert fig.axes[1].get_ylabel() == 'column P'
+
+    assert ax.get_xlim() == (0, 5)
+    assert ax.get_ylim() == (0, 4)
+    # particle width is 1/60
+    # therefore closest pixel has q=sqrt(2*(1/120)^2)
+    # F(q) ~= 0.477372919027 (calculated externally)
+    assert fig.axes[1].get_ylim() == (0, approx(0.477372919027))
+
+
 def test_render_passthrough():
     # Basic tests that both sdf.render() and render(sdf) return the same plots
     df = pd.DataFrame({'x': [3, 6],
@@ -82,6 +111,12 @@ def test_render_passthrough():
 
     fig1, ax1 = sdf.render_1d_cross('P')
     fig2, ax2 = render_1d_cross(sdf, 'P')
+
+    assert repr(fig1) == repr(fig2)
+    assert repr(ax1) == repr(ax2)
+
+    fig1, ax1 = sdf.render_3d('P')
+    fig2, ax2 = render_3d(sdf, 'P')
 
     assert repr(fig1) == repr(fig2)
     assert repr(ax1) == repr(ax2)

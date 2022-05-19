@@ -4,7 +4,7 @@ from matplotlib.colors import Colormap
 from pandas import DataFrame, Series
 import numpy as np
 
-from sarracen.render import render_2d, render_1d_cross
+from sarracen.render import render_2d, render_1d_cross, render_3d
 from sarracen.kernels import CubicSplineKernel, BaseKernel
 
 
@@ -105,6 +105,39 @@ class SarracenDataFrame(DataFrame):
             raise ValueError('Density cannot be derived from the columns in this SarracenDataFrame.')
 
         self['rho'] = (self.params['hfact'] / self['h']) ** (self.get_dim()) * self['m']
+
+    def render_3d(self,
+               target: str,
+               x: str = None,
+               y: str = None,
+               kernel: BaseKernel = CubicSplineKernel(),
+               xmin: float = None,
+               ymin: float = None,
+               xmax: float = None,
+               ymax: float = None,
+               pixcountx: int = 256,
+               pixcounty: int = None,
+               cmap: Union[str, Colormap] = 'RdBu',
+               int_samples: int = 1000) -> ('Figure', 'Axes'):
+        """
+        Render the data within this dataframe to a 2D matplotlib object, using 3D -> 2D column interpolation of the
+        target variable.
+        :param target: The variable to interpolate over. [Required]
+        :param x: The positional x variable.
+        :param y: The positional y variable.
+        :param kernel: The smoothing kernel to use for interpolation.
+        :param xmin: The minimum bound in the x-direction.
+        :param ymin: The minimum bound in the y-direction.
+        :param xmax: The maximum bound in the x-direction.
+        :param ymax: The maximum bound in the y-direction.
+        :param pixcountx: The number of pixels in the x-direction.
+        :param pixcounty: The number of pixels in the y-direction.
+        :param cmap: The color map to use for plotting this data.
+        :param int_samples: The number of samples to use when approximating the kernel column integral.
+        :return: The completed plot.
+        """
+
+        return render_3d(self, target, x, y, kernel, xmin, ymin, xmax, ymax, pixcountx, pixcounty, cmap, int_samples)
 
     def render_2d(self,
                target: str,
