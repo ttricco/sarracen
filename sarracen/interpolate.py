@@ -305,17 +305,17 @@ def _fast_interpolate3d_cross(xterm, yterm, zterm, wfunc, zslice, kernrad, targe
 
 
 def interpolate3D(data: 'SarracenDataFrame',
-                       x: str,
-                       y: str,
-                       z: str,
-                       target: str,
-                       kernel: BaseKernel,
-                       pixwidthx: float,
-                       pixwidthy: float,
-                       xmin: float = 0,
-                       ymin: float = 0,
-                       pixcountx: int = 480,
-                       pixcounty: int = 480):
+                  x: str,
+                  y: str,
+                  target: str,
+                  kernel: BaseKernel,
+                  pixwidthx: float,
+                  pixwidthy: float,
+                  xmin: float = 0,
+                  ymin: float = 0,
+                  pixcountx: int = 480,
+                  pixcounty: int = 480,
+                  int_samples: int = 1000):
     """
     Interpolates particle data in a SarracenDataFrame across three directional axes to a 2D
     grid of pixels, by summing contributions in columns across the z-axis.
@@ -323,7 +323,6 @@ def interpolate3D(data: 'SarracenDataFrame',
     :param data: The particle data, in a SarracenDataFrame.
     :param x: The column label of the x-directional axis.
     :param y: The column label of the y-directional axis.
-    :param z: The column label of the z-directional axis.
     :param target: The column label of the target smoothing data.
     :param kernel: The kernel to use for smoothing the target data.
     :param pixwidthx: The width that each pixel represents in particle data space.
@@ -332,6 +331,7 @@ def interpolate3D(data: 'SarracenDataFrame',
     :param ymin: The starting y-coordinate (in particle data space).
     :param pixcountx: The number of pixels in the output image in the x-direction.
     :param pixcounty: The number of pixels in the output image in the y-direction.
+    :param int_samples: The number of sample points to take when approximating the 2D column kernel.
     :return: The output image, in a 2-dimensional numpy array.
     """
     if pixwidthx <= 0:
@@ -345,9 +345,9 @@ def interpolate3D(data: 'SarracenDataFrame',
 
     return _fast_3d_interpolate(data[x].to_numpy(),
                                 data[y].to_numpy(),
-                                data[z].to_numpy(),
                                 data[target].to_numpy(),
-                                2 * np.vectorize(quad)(kernel.w, a=0, b=np.sqrt(kernel.get_radius() ** 2 - np.linspace(0, kernel.get_radius(), 1000)**2), args=(3,))[0],
+                                _get_column_kernel(kernel, int_samples),
+                                int_samples,
                                 kernel.get_radius(),
                                 data['m'].to_numpy(),
                                 data['rho'].to_numpy(),
@@ -362,11 +362,11 @@ def interpolate3D(data: 'SarracenDataFrame',
 
 # Underlying numba-compiled code for 3D column interpolation.
 @numba.jit(nopython=True, parallel=True, fastmath=True)
-def _fast_3d_interpolate(xparts, yparts, zparts, target, wfuncint, wrad, mass, rho, h, xmin, ymin, pixwidthx, pixwidthy,
-                         pixcountx, pixcounty):
+def _fast_3d_interpolate(xparts, yparts, target, wfuncint, int_samples, wrad, mass, rho, h, xmin, ymin,
+                         pixwidthx, pixwidthy, pixcountx, pixcounty):
     image = np.zeros((pixcounty, pixcountx))
 
-    term = (target * mass / (rho * h ** 3))
+    term = target * mass / (rho * h ** 2)
 
     # determine maximum and minimum pixels that each particle contributes to
     ipixmin = np.rint((xparts - wrad * h - xmin) / pixwidthx) \
@@ -391,9 +391,31 @@ def _fast_3d_interpolate(xparts, yparts, zparts, target, wfuncint, wrad, mass, r
 
         # calculate contributions at pixels i, j due to particle at x, y
         q2 = dx2i + dy2.reshape(len(dy2), 1)
-        wab = np.interp(np.sqrt(q2), np.linspace(0, wrad, 1000), wfuncint)
+        wab = np.interp(np.sqrt(q2), np.linspace(0, wrad, int_samples), wfuncint)
 
         # add contributions to image
         image[int(jpixmin[i]):int(jpixmax[i]), int(ipixmin[i]):int(ipixmax[i])] += (wab * term[i])
 
     return image
+
+
+def _get_column_kernel(kernel, samples):
+    """
+    Generate a 2D column kernel approximation, by integrating a given 3D kernel over the z-axis.
+    :param kernel: The 3D kernel to integrate over.
+    :param samples: The number of samples to take of the integral.
+    :return: A ndarray of length (samples), containing the kernel approximation.
+    """
+    results = []
+    for sample in np.linspace(0, kernel.get_radius(), samples):
+        results.append(2 * quad(_int_func,
+                                a=0,
+                                b=np.sqrt(kernel.get_radius() ** 2 - sample ** 2),
+                                args=(sample, kernel))[0])
+
+    return np.array(results)
+
+
+# Internal function for performing the integral in _get_column_kernel()
+def _int_func(q, a, kernel):
+    return kernel.w(np.sqrt(q ** 2 + a ** 2), 3)
