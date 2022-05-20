@@ -1,10 +1,9 @@
 import pandas as pd
 import numpy as np
-from matplotlib import pyplot as plt
 from pytest import approx
 
 from sarracen import SarracenDataFrame
-from sarracen.kernels import CubicSplineKernel
+from sarracen.kernels import CubicSplineKernel, QuarticSplineKernel
 from sarracen.interpolate import interpolate2DCross, interpolate1DCross, interpolate3DCross, interpolate3D
 
 
@@ -87,13 +86,20 @@ def test_interpolate3d():
                        'm': [0.01],
                        'A': [3]})
     sdf = SarracenDataFrame(df, params=dict())
+    kernel = QuarticSplineKernel()
 
-    image = interpolate3D(sdf, 'x', 'y', 'A', CubicSplineKernel(), 0.05, 0.05, 0, 0, 10, 10, 10000)
+    image = interpolate3D(sdf, 'x', 'y', 'A', kernel, 0.05, 0.05, 0, 0, 10, 10, 10000)
+    column_kernel = kernel.get_column_kernel(10000)
 
     # w = 0.01 / (0.5 * 0.125^3) = 10.24
+    w = (sdf['m'] / (sdf['rho'] * sdf['h'] ** 3))[0]
 
     assert image[0][0] == 0
     # 10.24 * 0.125 * 3 * F(sqrt(0.025^2 + 0.225^2)/0.125) ~= 3.84 * 0.000409322579272
-    assert image[0][4] == approx(0.0015718842, rel=1e-4)
+    F = np.interp(np.sqrt(0.025 ** 2 + 0.225 ** 2) / df['h'][0], np.linspace(0, kernel.get_radius(), 10000),
+                  column_kernel)
+    assert image[0][4] == approx(w * sdf['h'][0] * sdf['A'][0] * F)
     # 10.24 * 0.125 * 3 * F(sqrt(0.025^2 + 0.025^2)/0.125) ~= 3.84 * 0.427916515256
-    assert image[5][5] == approx(1.6431994186, rel=1e-4)
+    F = np.interp(np.sqrt(2 * (0.025 ** 2)) / df['h'][0], np.linspace(0, kernel.get_radius(), 10000),
+                  column_kernel)
+    assert image[5][5] == approx(w * sdf['h'][0] * sdf['A'][0] * F)

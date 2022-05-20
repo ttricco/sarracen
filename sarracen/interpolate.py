@@ -316,23 +316,48 @@ def interpolate3D(data: 'SarracenDataFrame',
                   pixcountx: int = 480,
                   pixcounty: int = 480,
                   int_samples: int = 1000):
-    """
-    Interpolates particle data in a SarracenDataFrame across three directional axes to a 2D
-    grid of pixels, by summing contributions in columns across the z-axis.
+    """ Interpolate 3D particle data to a 2D grid of pixels.
 
-    :param data: The particle data, in a SarracenDataFrame.
-    :param x: The column label of the x-directional axis.
-    :param y: The column label of the y-directional axis.
-    :param target: The column label of the target smoothing data.
-    :param kernel: The kernel to use for smoothing the target data.
-    :param pixwidthx: The width that each pixel represents in particle data space.
-    :param pixwidthy: The height that each pixel represents in particle data space.
-    :param xmin: The starting x-coordinate (in particle data space).
-    :param ymin: The starting y-coordinate (in particle data space).
-    :param pixcountx: The number of pixels in the output image in the x-direction.
-    :param pixcounty: The number of pixels in the output image in the y-direction.
-    :param int_samples: The number of sample points to take when approximating the 2D column kernel.
-    :return: The output image, in a 2-dimensional numpy array.
+    Interpolates three-dimensional particle data in a SarracenDataFrame. The data
+    is interpolated to a 2D grid of pixels, by summing contributions in columns which
+    span the z-axis.
+
+    Parameters
+    ----------
+    data : SarracenDataFrame
+        The particle data, in a SarracenDataFrame.
+    x: str
+        The column label of the x-directional axis.
+    y: str
+        The column label of the y-directional axis.
+    target: str
+        The column label of the target smoothing data.
+    kernel: BaseKernel
+        The kernel to use for smoothing the target data.
+    pixwidthx: float
+        The width that each pixel represents in particle data space.
+    pixwidthy: float
+        The height that each pixel represents in particle data space.
+    xmin: float, optional
+        The starting x-coordinate (in particle data space).
+    ymin: float, optional
+        The starting y-coordinate (in particle data space).
+    pixcountx: int, optional
+        The number of pixels in the output image in the x-direction.
+    pixcounty: int, optional
+        The number of pixels in the output image in the y-direction.
+    int_samples: int, optional
+        The number of sample points to take when approximating the 2D column kernel.
+
+    Returns
+    -------
+    ndarray
+        The interpolated output image, in a 2-dimensional numpy array.
+
+    Raises
+    -------
+    ValueError
+        If `pixwidthx`, `pixwidthy`, `pixcountx`, or `pixcounty` are less than or equal to zero.
     """
     if pixwidthx <= 0:
         raise ValueError("pixwidthx must be greater than zero!")
@@ -346,7 +371,7 @@ def interpolate3D(data: 'SarracenDataFrame',
     return _fast_3d_interpolate(data[x].to_numpy(),
                                 data[y].to_numpy(),
                                 data[target].to_numpy(),
-                                _get_column_kernel(kernel, int_samples),
+                                kernel.get_column_kernel(int_samples),
                                 int_samples,
                                 kernel.get_radius(),
                                 data['m'].to_numpy(),
@@ -397,25 +422,3 @@ def _fast_3d_interpolate(xparts, yparts, target, wfuncint, int_samples, wrad, ma
         image[int(jpixmin[i]):int(jpixmax[i]), int(ipixmin[i]):int(ipixmax[i])] += (wab * term[i])
 
     return image
-
-
-def _get_column_kernel(kernel, samples):
-    """
-    Generate a 2D column kernel approximation, by integrating a given 3D kernel over the z-axis.
-    :param kernel: The 3D kernel to integrate over.
-    :param samples: The number of samples to take of the integral.
-    :return: A ndarray of length (samples), containing the kernel approximation.
-    """
-    results = []
-    for sample in np.linspace(0, kernel.get_radius(), samples):
-        results.append(2 * quad(_int_func,
-                                a=0,
-                                b=np.sqrt(kernel.get_radius() ** 2 - sample ** 2),
-                                args=(sample, kernel))[0])
-
-    return np.array(results)
-
-
-# Internal function for performing the integral in _get_column_kernel()
-def _int_func(q, a, kernel):
-    return kernel.w(np.sqrt(q ** 2 + a ** 2), 3)
