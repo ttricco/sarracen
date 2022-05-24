@@ -4,7 +4,7 @@ from matplotlib.colors import Colormap
 from pandas import DataFrame, Series
 import numpy as np
 
-from sarracen.render import render_2d, render_1d_cross, render_3d
+from sarracen.render import render_2d, render_1d_cross, render_3d, render_3d_cross
 from sarracen.kernels import CubicSplineKernel, BaseKernel
 
 
@@ -196,6 +196,70 @@ class SarracenDataFrame(DataFrame):
         :return: The completed plot.
         """
         return render_1d_cross(self, target, x, y, kernel, x1, y1, x2, y2, pixcount)
+
+    def render_3d_cross(self,
+                        target: str,
+                        zslice: float = None,
+                        x: str = None,
+                        y: str = None,
+                        z: str = None,
+                        kernel: BaseKernel = CubicSplineKernel(),
+                        xmin: float = None,
+                        ymin: float = None,
+                        xmax: float = None,
+                        ymax: float = None,
+                        pixcountx: int = 480,
+                        pixcounty: int = None,
+                        cmap: Union[str, Colormap] = 'RdBu') -> ('Figure', 'Axes'):
+        """ Render 3D particle data inside this DataFrame to a 2D grid, using a 3D cross-section.
+
+        Render the data within this SarracenDataFrame to a 2D matplotlib object, using a 3D -> 2D
+        cross-section of the target variable. The cross-section is taken of the 3D data at a specific
+        value of z, and the contributions of particles near the plane are interpolated to a 2D grid.
+
+        Parameters
+        ----------
+        target: str
+            The column label of the target smoothing data.
+        zslice: float
+            The z-axis value to take the cross-section at.
+        x: str
+            The column label of the x-directional axis.
+        y: str
+            The column label of the y-directional axis.
+        z: str
+            The column label of the z-directional axis.
+        kernel: BaseKernel
+            The kernel to use for smoothing the target data.
+        xmin: float, optional
+            The minimum bound in the x-direction. (in particle data space)
+        ymin: float, optional
+            The minimum bound in the y-direction. (in particle data space)
+        xmax: float, optional
+            The maximum bound in the x-direction. (in particle data space)
+        ymax: float, optional
+            The maximum bound in the y-direction. (in particle data space)
+        pixcountx: int, optional
+            The number of pixels in the output image in the x-direction.
+        pixcounty: int, optional
+            The number of pixels in the output image in the y-direction.
+        cmap: str or Colormap, optional
+            The color map to use when plotting this data.
+
+        Returns
+        -------
+        Figure
+            The resulting matplotlib figure, containing the 3d-cross section and
+            a color bar indicating the magnitude of the target variable.
+        Axes
+            The resulting matplotlib axes, which contains the 3d-cross section image.
+
+        Raises
+        -------
+        ValueError
+           If `pixwidthx`, `pixwidthy`, `pixcountx`, or `pixcounty` are less than or equal to zero.
+        """
+        return render_3d_cross(self, target, zslice, x, y, z, kernel, xmin, ymin, xmax, ymax, pixcountx, pixcounty, cmap)
 
     @property
     def params(self):
