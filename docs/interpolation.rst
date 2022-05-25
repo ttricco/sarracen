@@ -9,6 +9,7 @@ Interpolation
    :toctree: api/
    :template: autosummary.rst
 
-   interpolate1DCross
-   interpolate2DCross
-   interpolate3DCross
+   interpolate_2d
+   interpolate_2d_cross
+   interpolate_3d
+   interpolate_3d_cross

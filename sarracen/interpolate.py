@@ -1,24 +1,20 @@
-import numba
 import numpy as np
-from scipy.integrate import quad
-from numba import prange
-
-from numpy import ndarray
+from numba import prange, njit
 
 from sarracen.kernels import BaseKernel
 
 
-def interpolate2DCross(data: 'SarracenDataFrame',
-                       x: str,
-                       y: str,
-                       target: str,
-                       kernel: BaseKernel,
-                       pixwidthx: float,
-                       pixwidthy: float,
-                       xmin: float = 0,
-                       ymin: float = 0,
-                       pixcountx: int = 480,
-                       pixcounty: int = 480):
+def interpolate_2d(data: 'SarracenDataFrame',
+                   target: str,
+                   x: str,
+                   y: str,
+                   kernel: BaseKernel,
+                   pixwidthx: float,
+                   pixwidthy: float,
+                   xmin: float = 0,
+                   ymin: float = 0,
+                   pixcountx: int = 480,
+                   pixcounty: int = 480):
     """
     Interpolates particle data in a SarracenDataFrame across two directional axes to a 2D
     grid of pixels.
@@ -45,51 +41,39 @@ def interpolate2DCross(data: 'SarracenDataFrame',
     if pixcounty <= 0:
         raise ValueError("pixcounty must be greater than zero!")
 
-    return _fast_2d_interpolate(data[x].to_numpy(),
-                                data[y].to_numpy(),
-                                data['h'].to_numpy(),
-                                data[target].to_numpy(),
-                                kernel.w,
-                                kernel.get_radius(),
-                                data['m'].to_numpy(),
-                                data['rho'].to_numpy(),
-                                data['h'].to_numpy(),
-                                xmin,
-                                ymin,
-                                pixwidthx,
-                                pixwidthy,
-                                pixcountx,
-                                pixcounty)
+    return _fast_2d(data[target].to_numpy(), data[x].to_numpy(), data[y].to_numpy(), kernel.weight, kernel.get_radius(),
+                    data['m'].to_numpy(), data['rho'].to_numpy(), data['h'].to_numpy(), xmin, ymin, pixwidthx,
+                    pixwidthy, pixcountx, pixcounty)
 
 
 # Underlying numba-compiled code for 2D interpolation
-@numba.jit(nopython=True, parallel=True, fastmath=True)
-def _fast_2d_interpolate(xparts, yparts, hparts, target, wfunc, wrad, mass, rho, h, xmin, ymin, pixwidthx, pixwidthy,
-                         pixcountx, pixcounty):
+@njit(parallel=True, fastmath=True)
+def _fast_2d(target, x_data, y_data, wfunc, k_rad, mass, rho, h, xmin, ymin, pixwidthx, pixwidthy,
+             pixcountx, pixcounty):
     image = np.zeros((pixcounty, pixcountx))
 
     term = (target * mass / (rho * h ** 2))
 
     # determine maximum and minimum pixels that each particle contributes to
-    ipixmin = np.rint((xparts - wrad * h - xmin) / pixwidthx) \
+    ipixmin = np.rint((x_data - k_rad * h - xmin) / pixwidthx) \
         .clip(a_min=0, a_max=pixcountx)
-    jpixmin = np.rint((yparts - wrad * h - ymin) / pixwidthy) \
+    jpixmin = np.rint((y_data - k_rad * h - ymin) / pixwidthy) \
         .clip(a_min=0, a_max=pixcounty)
-    ipixmax = np.rint((xparts + wrad * h - xmin) / pixwidthx) \
+    ipixmax = np.rint((x_data + k_rad * h - xmin) / pixwidthx) \
         .clip(a_min=0, a_max=pixcountx)
-    jpixmax = np.rint((yparts + wrad * h - ymin) / pixwidthy) \
+    jpixmax = np.rint((y_data + k_rad * h - ymin) / pixwidthy) \
         .clip(a_min=0, a_max=pixcounty)
 
     # iterate through the indexes of non-filtered particles
     for i in prange(len(term)):
         # precalculate differences in the x-direction (optimization)
-        dx2i = ((xmin + (np.arange(int(ipixmin[i]), int(ipixmax[i])) + 0.5) * pixwidthx - xparts[i]) ** 2) \
-               * (1 / (hparts[i] ** 2))
+        dx2i = ((xmin + (np.arange(int(ipixmin[i]), int(ipixmax[i])) + 0.5) * pixwidthx - x_data[i]) ** 2) \
+               * (1 / (h[i] ** 2))
 
         # determine differences in the y-direction
         ypix = ymin + (np.arange(int(jpixmin[i]), int(jpixmax[i])) + 0.5) * pixwidthy
-        dy = ypix - yparts[i]
-        dy2 = dy * dy * (1 / (hparts[i] ** 2))
+        dy = ypix - y_data[i]
+        dy2 = dy * dy * (1 / (h[i] ** 2))
 
         # calculate contributions at pixels i, j due to particle at x, y
         q2 = dx2i + dy2.reshape(len(dy2), 1)
@@ -101,16 +85,16 @@ def _fast_2d_interpolate(xparts, yparts, hparts, target, wfunc, wrad, mass, rho,
     return image
 
 
-def interpolate1DCross(data: 'SarracenDataFrame',
-                       x: str,
-                       y: str,
-                       target: str,
-                       kernel: BaseKernel,
-                       x1: float = 0,
-                       y1: float = 0,
-                       x2: float = 1,
-                       y2: float = 1,
-                       pixcount: int = 500) -> ndarray:
+def interpolate_2d_cross(data: 'SarracenDataFrame',
+                         target: str,
+                         x: str,
+                         y: str,
+                         kernel: BaseKernel,
+                         x1: float = 0,
+                         y1: float = 0,
+                         x2: float = 1,
+                         y2: float = 1,
+                         pixcount: int = 500) -> np.ndarray:
     """
     Interpolates particle data in a SarracenDataFrame across two directional axes to a 1D
     cross-section line.
@@ -133,24 +117,14 @@ def interpolate1DCross(data: 'SarracenDataFrame',
     if pixcount <= 0:
         raise ValueError('pixcount must be greater than zero!')
 
-    return _fast_1d_cross(data[x].to_numpy(),
-                          data[y].to_numpy(),
-                          data[target].to_numpy(),
-                          data['m'].to_numpy(),
-                          data['rho'].to_numpy(),
-                          data['h'].to_numpy(),
-                          kernel.get_radius(),
-                          kernel.w,
-                          x1,
-                          y1,
-                          x2,
-                          y2,
-                          pixcount)
+    return _fast_2d_cross(data[target].to_numpy(), data[x].to_numpy(), data[y].to_numpy(), kernel.weight,
+                          kernel.get_radius(), data['m'].to_numpy(), data['rho'].to_numpy(), data['h'].to_numpy(), x1,
+                          y1, x2, y2, pixcount)
 
 
 # Underlying numba-compiled code for 2D->1D cross-sections
-@numba.jit(nopython=True, parallel=True, fastmath=True)
-def _fast_1d_cross(xterm, yterm, target, mass, rho, h, kernrad, wfunc, x1, y1, x2, y2, pixcount):
+@njit(parallel=True, fastmath=True)
+def _fast_2d_cross(target, x_data, y_data, wfunc, k_rad, mass, rho, h, x1, y1, x2, y2, pixcount):
     # determine the slope of the cross-section line
     gradient = 0
     if not x2 - x1 == 0:
@@ -169,11 +143,8 @@ def _fast_1d_cross(xterm, yterm, target, mass, rho, h, kernrad, wfunc, x1, y1, x
     # if the determinant is negative, the particle does not contribute to the
     # cross-section, and can be removed.
     aa = 1 + gradient ** 2
-    bb = 2 * gradient * (yint - yterm) - 2 * xterm
-    cc = xterm ** 2 \
-         + yterm ** 2 \
-         - 2 * yint * yterm + yint ** 2 \
-         - (kernrad * h) ** 2
+    bb = 2 * gradient * (yint - y_data) - 2 * x_data
+    cc = x_data ** 2 + y_data ** 2 - 2 * yint * y_data + yint ** 2 - (k_rad * h) ** 2
     det = bb ** 2 - 4 * aa * cc
 
     # create a filter for particles that do not contribute to the cross-section
@@ -199,12 +170,12 @@ def _fast_1d_cross(xterm, yterm, target, mass, rho, h, kernrad, wfunc, x1, y1, x
     rstart, rend = None, None
 
     # iterate through the indices of all non-filtered particles
-    for i in prange(len(xterm[filter_det])):
+    for i in prange(len(x_data[filter_det])):
         # determine contributions to all affected pixels for this particle
         xpix = x1 + (np.arange(int(ipixmin[i]), int(ipixmax[i])) + 0.5) * xpixwidth
         ypix = gradient * xpix + yint
-        dy = ypix - yterm[filter_det][i]
-        dx = xpix - xterm[filter_det][i]
+        dy = ypix - y_data[filter_det][i]
+        dx = xpix - x_data[filter_det][i]
 
         q2 = (dx * dx + dy * dy) * (1 / (h[filter_det][i] * h[filter_det][i]))
         wab = wfunc(np.sqrt(q2), 2)
@@ -215,19 +186,128 @@ def _fast_1d_cross(xterm, yterm, target, mass, rho, h, kernrad, wfunc, x1, y1, x
     return output
 
 
-def interpolate3DCross(data: 'SarracenDataFrame',
-                       x: str,
-                       y: str,
-                       z: str,
-                       target: str,
-                       kernel: BaseKernel,
-                       zslice: float,
-                       pixwidthx: float,
-                       pixwidthy: float,
-                       xmin: float = 0,
-                       ymin: float = 0,
-                       pixcountx: int = 480,
-                       pixcounty: int = 480):
+def interpolate_3d(data: 'SarracenDataFrame',
+                   target: str,
+                   x: str,
+                   y: str,
+                   kernel: BaseKernel,
+                   pixwidthx: float,
+                   pixwidthy: float,
+                   xmin: float = 0,
+                   ymin: float = 0,
+                   pixcountx: int = 480,
+                   pixcounty: int = 480,
+                   int_samples: int = 1000):
+    """ Interpolate 3D particle data to a 2D grid of pixels.
+
+    Interpolates three-dimensional particle data in a SarracenDataFrame. The data
+    is interpolated to a 2D grid of pixels, by summing contributions in columns which
+    span the z-axis.
+
+    Parameters
+    ----------
+    data : SarracenDataFrame
+        The particle data, in a SarracenDataFrame.
+    x: str
+        The column label of the x-directional axis.
+    y: str
+        The column label of the y-directional axis.
+    target: str
+        The column label of the target smoothing data.
+    kernel: BaseKernel
+        The kernel to use for smoothing the target data.
+    pixwidthx: float
+        The width that each pixel represents in particle data space.
+    pixwidthy: float
+        The height that each pixel represents in particle data space.
+    xmin: float, optional
+        The starting x-coordinate (in particle data space).
+    ymin: float, optional
+        The starting y-coordinate (in particle data space).
+    pixcountx: int, optional
+        The number of pixels in the output image in the x-direction.
+    pixcounty: int, optional
+        The number of pixels in the output image in the y-direction.
+    int_samples: int, optional
+        The number of sample points to take when approximating the 2D column kernel.
+
+    Returns
+    -------
+    ndarray
+        The interpolated output image, in a 2-dimensional numpy array.
+
+    Raises
+    -------
+    ValueError
+        If `pixwidthx`, `pixwidthy`, `pixcountx`, or `pixcounty` are less than or equal to zero.
+    """
+    if pixwidthx <= 0:
+        raise ValueError("pixwidthx must be greater than zero!")
+    if pixwidthy <= 0:
+        raise ValueError("pixwidthy must be greater than zero!")
+    if pixcountx <= 0:
+        raise ValueError("pixcountx must be greater than zero!")
+    if pixcounty <= 0:
+        raise ValueError("pixcounty must be greater than zero!")
+
+    return _fast_3d(data[target].to_numpy(), data[x].to_numpy(), data[y].to_numpy(),
+                    kernel.get_column_kernel(int_samples), int_samples, kernel.get_radius(), data['m'].to_numpy(),
+                    data['rho'].to_numpy(), data['h'].to_numpy(), xmin, ymin, pixwidthx, pixwidthy, pixcountx,
+                    pixcounty)
+
+
+# Underlying numba-compiled code for 3D column interpolation.
+@njit(parallel=True, fastmath=True)
+def _fast_3d(target, x_data, y_data, wfuncint, int_samples, k_rad, mass, rho, h, xmin, ymin,
+             pixwidthx, pixwidthy, pixcountx, pixcounty):
+    image = np.zeros((pixcounty, pixcountx))
+
+    term = target * mass / (rho * h ** 2)
+
+    # determine maximum and minimum pixels that each particle contributes to
+    ipixmin = np.rint((x_data - k_rad * h - xmin) / pixwidthx) \
+        .clip(a_min=0, a_max=pixcountx)
+    jpixmin = np.rint((y_data - k_rad * h - ymin) / pixwidthy) \
+        .clip(a_min=0, a_max=pixcounty)
+    ipixmax = np.rint((x_data + k_rad * h - xmin) / pixwidthx) \
+        .clip(a_min=0, a_max=pixcountx)
+    jpixmax = np.rint((y_data + k_rad * h - ymin) / pixwidthy) \
+        .clip(a_min=0, a_max=pixcounty)
+
+    # iterate through the indexes of non-filtered particles
+    for i in prange(len(term)):
+        # precalculate differences in the x-direction (optimization)
+        dx2i = ((xmin + (np.arange(int(ipixmin[i]), int(ipixmax[i])) + 0.5) * pixwidthx - x_data[i]) ** 2) \
+               * (1 / (h[i] ** 2))
+
+        # determine differences in the y-direction
+        ypix = ymin + (np.arange(int(jpixmin[i]), int(jpixmax[i])) + 0.5) * pixwidthy
+        dy = ypix - y_data[i]
+        dy2 = dy * dy * (1 / (h[i] ** 2))
+
+        # calculate contributions at pixels i, j due to particle at x, y
+        q2 = dx2i + dy2.reshape(len(dy2), 1)
+        wab = np.interp(np.sqrt(q2), np.linspace(0, k_rad, int_samples), wfuncint)
+
+        # add contributions to image
+        image[int(jpixmin[i]):int(jpixmax[i]), int(ipixmin[i]):int(ipixmax[i])] += (wab * term[i])
+
+    return image
+
+
+def interpolate_3d_cross(data: 'SarracenDataFrame',
+                         target: str,
+                         zslice: float,
+                         x: str,
+                         y: str,
+                         z: str,
+                         kernel: BaseKernel,
+                         pixwidthx: float,
+                         pixwidthy: float,
+                         xmin: float = 0,
+                         ymin: float = 0,
+                         pixcountx: int = 480,
+                         pixcounty: int = 480):
     """ Interpolate 3D particle data to a 2D grid, using a 3D cross-section.
 
     Interpolates particle data in a SarracenDataFrame across three directional axes to a 2D
@@ -283,178 +363,45 @@ def interpolate3DCross(data: 'SarracenDataFrame',
     if pixcounty <= 0:
         raise ValueError("pixcounty must be greater than zero!")
 
-    return _fast_interpolate3d_cross(data[x].to_numpy(),
-                                     data[y].to_numpy(),
-                                     data[z].to_numpy(),
-                                     kernel.w,
-                                     zslice,
-                                     kernel.get_radius(),
-                                     data[target].to_numpy(),
-                                     data['m'].to_numpy(),
-                                     data['rho'].to_numpy(),
-                                     data['h'].to_numpy(),
-                                     pixwidthx,
-                                     pixwidthy,
-                                     xmin,
-                                     ymin,
-                                     pixcountx,
-                                     pixcounty)
+    return _fast_3d_cross(data[target].to_numpy(), data[x].to_numpy(), data[y].to_numpy(), data[z].to_numpy(),
+                          kernel.weight, zslice, kernel.get_radius(), data['m'].to_numpy(), data['rho'].to_numpy(),
+                          data['h'].to_numpy(), pixwidthx, pixwidthy, xmin, ymin, pixcountx, pixcounty)
 
 
 # Underlying numba-compiled code for 3D->2D cross-sections
-# @numba.jit(nopython=True, parallel=True, fastmath=True)
-def _fast_interpolate3d_cross(xterm, yterm, zterm, wfunc, zslice, kernrad, target, mass, rho, h, pixwidthx, pixwidthy,
-                              xmin, ymin, pixcountx, pixcounty):
+@njit(parallel=True, fastmath=True)
+def _fast_3d_cross(target, x_data, y_data, z_data, wfunc, zslice, k_rad, mass, rho, h, pixwidthx, pixwidthy,
+                   xmin, ymin, pixcountx, pixcounty):
     # Filter out particles that do not contribute to this cross-section slice
     term = target * mass / (rho * h ** 3)
-    dz = zslice - zterm
+    dz = zslice - z_data
 
-    filter_distance = np.abs(dz) < kernrad * h
+    filter_distance = np.abs(dz) < k_rad * h
 
-    ipixmin = np.rint((xterm[filter_distance] - kernrad * h[filter_distance] - xmin) / pixwidthx).clip(min=0,
-                                                                                                       max=pixcountx)
-    jpixmin = np.rint((yterm[filter_distance] - kernrad * h[filter_distance] - ymin) / pixwidthy).clip(min=0,
-                                                                                                       max=pixcounty)
-    ipixmax = np.rint((xterm[filter_distance] + kernrad * h[filter_distance] - xmin) / pixwidthx).clip(min=0,
-                                                                                                       max=pixcountx)
-    jpixmax = np.rint((yterm[filter_distance] + kernrad * h[filter_distance] - ymin) / pixwidthy).clip(min=0,
-                                                                                                       max=pixcounty)
+    ipixmin = np.rint((x_data[filter_distance] - k_rad * h[filter_distance] - xmin) / pixwidthx).clip(a_min=0,
+                                                                                                      a_max=pixcountx)
+    jpixmin = np.rint((y_data[filter_distance] - k_rad * h[filter_distance] - ymin) / pixwidthy).clip(a_min=0,
+                                                                                                      a_max=pixcounty)
+    ipixmax = np.rint((x_data[filter_distance] + k_rad * h[filter_distance] - xmin) / pixwidthx).clip(a_min=0,
+                                                                                                      a_max=pixcountx)
+    jpixmax = np.rint((y_data[filter_distance] + k_rad * h[filter_distance] - ymin) / pixwidthy).clip(a_min=0,
+                                                                                                      a_max=pixcounty)
 
     image = np.zeros((pixcounty, pixcountx))
 
-    for i in prange(len(xterm[filter_distance])):
+    for i in prange(len(x_data[filter_distance])):
         # precalculate differences in the x-direction
         dx2i = (((xmin + (np.arange(int(ipixmin[i]), int(ipixmax[i])) + 0.5)
-                  * pixwidthx - xterm[filter_distance][i]) ** 2)
+                  * pixwidthx - x_data[filter_distance][i]) ** 2)
                 * (1 / (h[filter_distance][i] ** 2))) + (
                        (dz[filter_distance][i] ** 2) * (1 / h[filter_distance][i] ** 2))
 
         ypix = ymin + (np.arange(int(jpixmin[i]), int(jpixmax[i])) + 0.5) * pixwidthy
-        dy = ypix - yterm[filter_distance][i]
+        dy = ypix - y_data[filter_distance][i]
         dy2 = dy * dy * (1 / (h[filter_distance][i] ** 2))
 
         q2 = dx2i + dy2.reshape(len(dy2), 1)
         contribution = (term[filter_distance][i] * wfunc(np.sqrt(q2), 3))
         image[int(jpixmin[i]):int(jpixmax[i]), int(ipixmin[i]):int(ipixmax[i])] += contribution
-
-    return image
-
-
-def interpolate3D(data: 'SarracenDataFrame',
-                  x: str,
-                  y: str,
-                  target: str,
-                  kernel: BaseKernel,
-                  pixwidthx: float,
-                  pixwidthy: float,
-                  xmin: float = 0,
-                  ymin: float = 0,
-                  pixcountx: int = 480,
-                  pixcounty: int = 480,
-                  int_samples: int = 1000):
-    """ Interpolate 3D particle data to a 2D grid of pixels.
-
-    Interpolates three-dimensional particle data in a SarracenDataFrame. The data
-    is interpolated to a 2D grid of pixels, by summing contributions in columns which
-    span the z-axis.
-
-    Parameters
-    ----------
-    data : SarracenDataFrame
-        The particle data, in a SarracenDataFrame.
-    x: str
-        The column label of the x-directional axis.
-    y: str
-        The column label of the y-directional axis.
-    target: str
-        The column label of the target smoothing data.
-    kernel: BaseKernel
-        The kernel to use for smoothing the target data.
-    pixwidthx: float
-        The width that each pixel represents in particle data space.
-    pixwidthy: float
-        The height that each pixel represents in particle data space.
-    xmin: float, optional
-        The starting x-coordinate (in particle data space).
-    ymin: float, optional
-        The starting y-coordinate (in particle data space).
-    pixcountx: int, optional
-        The number of pixels in the output image in the x-direction.
-    pixcounty: int, optional
-        The number of pixels in the output image in the y-direction.
-    int_samples: int, optional
-        The number of sample points to take when approximating the 2D column kernel.
-
-    Returns
-    -------
-    ndarray
-        The interpolated output image, in a 2-dimensional numpy array.
-
-    Raises
-    -------
-    ValueError
-        If `pixwidthx`, `pixwidthy`, `pixcountx`, or `pixcounty` are less than or equal to zero.
-    """
-    if pixwidthx <= 0:
-        raise ValueError("pixwidthx must be greater than zero!")
-    if pixwidthy <= 0:
-        raise ValueError("pixwidthy must be greater than zero!")
-    if pixcountx <= 0:
-        raise ValueError("pixcountx must be greater than zero!")
-    if pixcounty <= 0:
-        raise ValueError("pixcounty must be greater than zero!")
-
-    return _fast_3d_interpolate(data[x].to_numpy(),
-                                data[y].to_numpy(),
-                                data[target].to_numpy(),
-                                kernel.get_column_kernel(int_samples),
-                                int_samples,
-                                kernel.get_radius(),
-                                data['m'].to_numpy(),
-                                data['rho'].to_numpy(),
-                                data['h'].to_numpy(),
-                                xmin,
-                                ymin,
-                                pixwidthx,
-                                pixwidthy,
-                                pixcountx,
-                                pixcounty)
-
-
-# Underlying numba-compiled code for 3D column interpolation.
-@numba.jit(nopython=True, parallel=True, fastmath=True)
-def _fast_3d_interpolate(xparts, yparts, target, wfuncint, int_samples, wrad, mass, rho, h, xmin, ymin,
-                         pixwidthx, pixwidthy, pixcountx, pixcounty):
-    image = np.zeros((pixcounty, pixcountx))
-
-    term = target * mass / (rho * h ** 2)
-
-    # determine maximum and minimum pixels that each particle contributes to
-    ipixmin = np.rint((xparts - wrad * h - xmin) / pixwidthx) \
-        .clip(a_min=0, a_max=pixcountx)
-    jpixmin = np.rint((yparts - wrad * h - ymin) / pixwidthy) \
-        .clip(a_min=0, a_max=pixcounty)
-    ipixmax = np.rint((xparts + wrad * h - xmin) / pixwidthx) \
-        .clip(a_min=0, a_max=pixcountx)
-    jpixmax = np.rint((yparts + wrad * h - ymin) / pixwidthy) \
-        .clip(a_min=0, a_max=pixcounty)
-
-    # iterate through the indexes of non-filtered particles
-    for i in prange(len(term)):
-        # precalculate differences in the x-direction (optimization)
-        dx2i = ((xmin + (np.arange(int(ipixmin[i]), int(ipixmax[i])) + 0.5) * pixwidthx - xparts[i]) ** 2) \
-               * (1 / (h[i] ** 2))
-
-        # determine differences in the y-direction
-        ypix = ymin + (np.arange(int(jpixmin[i]), int(jpixmax[i])) + 0.5) * pixwidthy
-        dy = ypix - yparts[i]
-        dy2 = dy * dy * (1 / (h[i] ** 2))
-
-        # calculate contributions at pixels i, j due to particle at x, y
-        q2 = dx2i + dy2.reshape(len(dy2), 1)
-        wab = np.interp(np.sqrt(q2), np.linspace(0, wrad, int_samples), wfuncint)
-
-        # add contributions to image
-        image[int(jpixmin[i]):int(jpixmax[i]), int(ipixmin[i]):int(ipixmax[i])] += (wab * term[i])
 
     return image

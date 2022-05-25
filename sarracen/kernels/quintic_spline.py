@@ -15,7 +15,7 @@ class QuinticSplineKernel(BaseKernel):
 
     @staticmethod
     @jit(fastmath=True)
-    def w(q: float, ndim: int):
+    def weight(q: float, ndim: int):
         norm = 1 / 120 if (ndim == 1) else \
             7 / (478 * np.pi) if (ndim == 2) else \
             1 / (120 * np.pi)

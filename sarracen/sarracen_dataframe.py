@@ -4,7 +4,7 @@ from matplotlib.colors import Colormap
 from pandas import DataFrame, Series
 import numpy as np
 
-from sarracen.render import render_2d, render_1d_cross, render_3d, render_3d_cross
+from sarracen.render import render_2d, render_2d_cross, render_3d, render_3d_cross
 from sarracen.kernels import CubicSplineKernel, BaseKernel
 
 
@@ -106,51 +106,18 @@ class SarracenDataFrame(DataFrame):
 
         self['rho'] = (self.params['hfact'] / self['h']) ** (self.get_dim()) * self['m']
 
-    def render_3d(self,
-               target: str,
-               x: str = None,
-               y: str = None,
-               kernel: BaseKernel = CubicSplineKernel(),
-               xmin: float = None,
-               ymin: float = None,
-               xmax: float = None,
-               ymax: float = None,
-               pixcountx: int = 256,
-               pixcounty: int = None,
-               cmap: Union[str, Colormap] = 'RdBu',
-               int_samples: int = 1000) -> ('Figure', 'Axes'):
-        """
-        Render the data within this dataframe to a 2D matplotlib object, using 3D -> 2D column interpolation of the
-        target variable.
-        :param target: The variable to interpolate over. [Required]
-        :param x: The positional x variable.
-        :param y: The positional y variable.
-        :param kernel: The smoothing kernel to use for interpolation.
-        :param xmin: The minimum bound in the x-direction.
-        :param ymin: The minimum bound in the y-direction.
-        :param xmax: The maximum bound in the x-direction.
-        :param ymax: The maximum bound in the y-direction.
-        :param pixcountx: The number of pixels in the x-direction.
-        :param pixcounty: The number of pixels in the y-direction.
-        :param cmap: The color map to use for plotting this data.
-        :param int_samples: The number of samples to use when approximating the kernel column integral.
-        :return: The completed plot.
-        """
-
-        return render_3d(self, target, x, y, kernel, xmin, ymin, xmax, ymax, pixcountx, pixcounty, cmap, int_samples)
-
     def render_2d(self,
-               target: str,
-               x: str = None,
-               y: str = None,
-               kernel: BaseKernel = CubicSplineKernel(),
-               xmin: float = None,
-               ymin: float = None,
-               xmax: float = None,
-               ymax: float = None,
-               pixcountx: int = 256,
-               pixcounty: int = None,
-               cmap: Union[str, Colormap] = 'RdBu') -> ('Figure', 'Axes'):
+                  target: str,
+                  x: str = None,
+                  y: str = None,
+                  kernel: BaseKernel = CubicSplineKernel(),
+                  xmin: float = None,
+                  ymin: float = None,
+                  xmax: float = None,
+                  ymax: float = None,
+                  pixcountx: int = 256,
+                  pixcounty: int = None,
+                  cmap: Union[str, Colormap] = 'RdBu') -> ('Figure', 'Axes'):
         """
         Render the data within this dataframe to a 2D matplotlib object, using 2D SPH Interpolation of the target
         variable.
@@ -170,16 +137,16 @@ class SarracenDataFrame(DataFrame):
 
         return render_2d(self, target, x, y, kernel, xmin, ymin, xmax, ymax, pixcountx, pixcounty, cmap)
 
-    def render_1d_cross(self,
-                       target: str,
-                       x: str = None,
-                       y: str = None,
-                       kernel: BaseKernel = CubicSplineKernel(),
-                       x1: float = None,
-                       y1: float = None,
-                       x2: float = None,
-                       y2: float = None,
-                       pixcount: int = 500) -> ('Figure', 'Axes'):
+    def render_2d_cross(self,
+                        target: str,
+                        x: str = None,
+                        y: str = None,
+                        kernel: BaseKernel = CubicSplineKernel(),
+                        x1: float = None,
+                        y1: float = None,
+                        x2: float = None,
+                        y2: float = None,
+                        pixcount: int = 500) -> ('Figure', 'Axes'):
         """
         Render the data within this SarracenDataFrame to a 1D matplotlib object, by taking a 1D SPH
         cross-section of the target variable along a given line.
@@ -195,7 +162,40 @@ class SarracenDataFrame(DataFrame):
         :param pixcount: The number of pixels in the output over the entire cross-sectional line.
         :return: The completed plot.
         """
-        return render_1d_cross(self, target, x, y, kernel, x1, y1, x2, y2, pixcount)
+        return render_2d_cross(self, target, x, y, kernel, x1, y1, x2, y2, pixcount)
+
+    def render_3d(self,
+                  target: str,
+                  x: str = None,
+                  y: str = None,
+                  kernel: BaseKernel = CubicSplineKernel(),
+                  xmin: float = None,
+                  ymin: float = None,
+                  xmax: float = None,
+                  ymax: float = None,
+                  pixcountx: int = 256,
+                  pixcounty: int = None,
+                  cmap: Union[str, Colormap] = 'RdBu',
+                  int_samples: int = 1000) -> ('Figure', 'Axes'):
+        """
+        Render the data within this dataframe to a 2D matplotlib object, using 3D -> 2D column interpolation of the
+        target variable.
+        :param target: The variable to interpolate over. [Required]
+        :param x: The positional x variable.
+        :param y: The positional y variable.
+        :param kernel: The smoothing kernel to use for interpolation.
+        :param xmin: The minimum bound in the x-direction.
+        :param ymin: The minimum bound in the y-direction.
+        :param xmax: The maximum bound in the x-direction.
+        :param ymax: The maximum bound in the y-direction.
+        :param pixcountx: The number of pixels in the x-direction.
+        :param pixcounty: The number of pixels in the y-direction.
+        :param cmap: The color map to use for plotting this data.
+        :param int_samples: The number of samples to use when approximating the kernel column integral.
+        :return: The completed plot.
+        """
+
+        return render_3d(self, target, x, y, kernel, xmin, ymin, xmax, ymax, pixcountx, pixcounty, cmap, int_samples)
 
     def render_3d_cross(self,
                         target: str,
@@ -259,7 +259,8 @@ class SarracenDataFrame(DataFrame):
         ValueError
            If `pixwidthx`, `pixwidthy`, `pixcountx`, or `pixcounty` are less than or equal to zero.
         """
-        return render_3d_cross(self, target, zslice, x, y, z, kernel, xmin, ymin, xmax, ymax, pixcountx, pixcounty, cmap)
+        return render_3d_cross(self, target, zslice, x, y, z, kernel, xmin, ymin, xmax, ymax, pixcountx, pixcounty,
+                               cmap)
 
     @property
     def params(self):
