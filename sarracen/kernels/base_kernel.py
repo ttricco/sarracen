@@ -12,7 +12,7 @@ class BaseKernel:
         return 1
 
     @staticmethod
-    def w(q: float, dim: int) -> float:
+    def weight(q: float, dim: int) -> float:
         """
         The dimensionless part of this kernel at a specific value of q.
         :param q: The value of q to evaluate this kernel at.
@@ -33,7 +33,7 @@ class BaseKernel:
             results.append(2 * quad(self._int_func,
                                     a=0,
                                     b=np.sqrt(self.get_radius() ** 2 - sample ** 2),
-                                    args=(sample, self.w))[0])
+                                    args=(sample, self.weight))[0])
 
         return np.array(results)
 

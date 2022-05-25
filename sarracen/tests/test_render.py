@@ -6,7 +6,7 @@ from pytest import approx
 
 from sarracen import SarracenDataFrame
 from sarracen.kernels import CubicSplineKernel
-from sarracen.render import render_2d, render_1d_cross, render_3d, render_3d_cross
+from sarracen.render import render_2d, render_2d_cross, render_3d, render_3d_cross
 
 
 def test_2d_plot():
@@ -37,10 +37,10 @@ def test_2d_plot():
     # both particles are in corners
     # therefore closest pixel is => sqrt((3/512)**2, (2/341)**2)
     # use default kernel to determine the max pressure value
-    assert fig.axes[1].get_ylim() == (0, CubicSplineKernel().w(np.sqrt((3/512)**2 + (2/341)**2), 2))
+    assert fig.axes[1].get_ylim() == (0, CubicSplineKernel().weight(np.sqrt((3 / 512) ** 2 + (2 / 341) ** 2), 2))
 
 
-def test_1dcross_plot():
+def test_2d_cross_plot():
     df = pd.DataFrame({'rx': [0, 5],
                        'P': [1, 1],
                        'h': [1, 1],
@@ -49,7 +49,7 @@ def test_1dcross_plot():
                        'm': [1, 1]})
     sdf = SarracenDataFrame(df)
 
-    fig, ax = sdf.render_1d_cross('P')
+    fig, ax = sdf.render_2d_cross('P')
 
     assert isinstance(fig, Figure)
     assert isinstance(ax, Axes)
@@ -62,7 +62,7 @@ def test_1dcross_plot():
     # 1000 pixels across, and both particles are in corners
     # therefore closest pixel to a particle is sqrt(41)/1000 units away
     # use default kernel to determine the max pressure value
-    assert ax.get_ylim() == (0, CubicSplineKernel().w(np.sqrt(41) / 1000, 2))
+    assert ax.get_ylim() == (0, CubicSplineKernel().weight(np.sqrt(41) / 1000, 2))
 
 
 def test_3d_plot():
@@ -93,7 +93,7 @@ def test_3d_plot():
     assert fig.axes[1].get_ylim() == (0, approx(0.477372919027))
 
 
-def test_3dcross_plot():
+def test_3d_cross_plot():
     df = pd.DataFrame({'rx': [0, 2.5, 5],
                        'P': [1, 1, 1],
                        'h': [1, 1, 1],
@@ -119,7 +119,7 @@ def test_3dcross_plot():
     assert ax.get_ylim() == (0, 4)
 
     # closest pixel/particle pair comes from the particle at (2.5, 2, 2), with r = 0.
-    assert fig.axes[1].get_ylim() == (0, approx(CubicSplineKernel().w(0, 3)))
+    assert fig.axes[1].get_ylim() == (0, approx(CubicSplineKernel().weight(0, 3)))
 
 
 def test_render_passthrough():
@@ -139,8 +139,8 @@ def test_render_passthrough():
     assert repr(fig1) == repr(fig2)
     assert repr(ax1) == repr(ax2)
 
-    fig1, ax1 = sdf.render_1d_cross('P')
-    fig2, ax2 = render_1d_cross(sdf, 'P')
+    fig1, ax1 = sdf.render_2d_cross('P')
+    fig2, ax2 = render_2d_cross(sdf, 'P')
 
     assert repr(fig1) == repr(fig2)
     assert repr(ax1) == repr(ax2)
