@@ -32,12 +32,12 @@ def test_2d_plot():
     assert ax.get_ylim() == (1, 5)
 
     # aspect ratio of data max & min is 4/3,
-    # pixel count => (256, 341)
-    # pixel width => (3/256, 4/341)
+    # pixel count => (512, 683)
+    # pixel width => (3/512, 4/638)
     # both particles are in corners
-    # therefore closest pixel is => sqrt((3/512)**2, (2/341)**2)
+    # therefore closest pixel is => sqrt((3/1024)**2, (2/683)**2)
     # use default kernel to determine the max pressure value
-    assert fig.axes[1].get_ylim() == (0, CubicSplineKernel().weight(np.sqrt((3 / 512) ** 2 + (2 / 341) ** 2), 2))
+    assert fig.axes[1].get_ylim() == (0, CubicSplineKernel().weight(np.sqrt((3 / 1024) ** 2 + (2 / 683) ** 2), 2))
 
 
 def test_2d_cross_plot():
@@ -59,10 +59,10 @@ def test_2d_cross_plot():
 
     # cross section from (0, 0) -> (5, 4), therefore x goes from 0 -> sqrt(5**2 + 4**2)
     assert ax.get_xlim() == (0, np.sqrt(41))
-    # 1000 pixels across, and both particles are in corners
-    # therefore closest pixel to a particle is sqrt(41)/1000 units away
+    # 512 pixels across (by default), and both particles are in corners
+    # therefore closest pixel to a particle is sqrt(41)/1024 units away
     # use default kernel to determine the max pressure value
-    assert ax.get_ylim() == (0, CubicSplineKernel().weight(np.sqrt(41) / 1000, 2))
+    assert ax.get_ylim() == (0, CubicSplineKernel().weight(np.sqrt(41) / 1024, 2))
 
 
 def test_3d_plot():
@@ -75,7 +75,7 @@ def test_3d_plot():
                        'm': [1, 1]})
     sdf = SarracenDataFrame(df)
 
-    fig, ax = sdf.render_3d('P', pixcountx=300, int_samples=10000)
+    fig, ax = sdf.render_3d('P', int_samples=10000, x_pixels=300)
 
     assert isinstance(fig, Figure)
     assert isinstance(ax, Axes)
@@ -105,7 +105,7 @@ def test_3d_cross_plot():
 
     # setting the pixel count to an odd number ensures that the middle particle at (2.5, 2, 2) is at the
     # exact same position as the centre pixel.
-    fig, ax = sdf.render_3d_cross('P', pixcountx=489)
+    fig, ax = sdf.render_3d_cross('P', x_pixels=489)
 
     assert isinstance(fig, Figure)
     assert isinstance(ax, Axes)
