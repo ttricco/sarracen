@@ -271,7 +271,7 @@ def interpolate3DCross(data: 'SarracenDataFrame',
 def _fast_interpolate3d_cross(xterm, yterm, zterm, wfunc, zslice, kernrad, target, mass, rho, h, pixwidthx, pixwidthy,
                               xmin, ymin, pixcountx, pixcounty):
     # Filter out particles that do not contribute to this cross-section slice
-    term = target * mass / (rho * h ** 2)
+    term = target * mass / (rho * h ** 3)
     dz = zslice - zterm
     filter_distance = dz ** 2 * (1 / h ** 2) < kernrad * 2
 
@@ -284,7 +284,7 @@ def _fast_interpolate3d_cross(xterm, yterm, zterm, wfunc, zslice, kernrad, targe
     jpixmax = np.rint((yterm[filter_distance] + kernrad * h[filter_distance] - ymin) / pixwidthy).clip(a_min=0,
                                                                                                        a_max=pixcounty)
 
-    image = np.zeros((pixcountx, pixcounty))
+    image = np.zeros((pixcounty, pixcountx))
 
     for i in prange(len(xterm[filter_distance])):
         # precalculate differences in the x-direction
@@ -298,8 +298,8 @@ def _fast_interpolate3d_cross(xterm, yterm, zterm, wfunc, zslice, kernrad, targe
         dy2 = dy * dy * (1 / (h[filter_distance][i] ** 2))
 
         q2 = dx2i + dy2.reshape(len(dy2), 1)
-        image[int(jpixmin[i]):int(jpixmax[i]), int(ipixmin[i]):int(ipixmax[i])] += term[filter_distance][i] * wfunc(
-            np.sqrt(q2), 3)
+        contribution = (term[filter_distance][i] * wfunc(np.sqrt(q2), 3))
+        image[int(jpixmin[i]):int(jpixmax[i]), int(ipixmin[i]):int(ipixmax[i])] += contribution
 
     return image
 
