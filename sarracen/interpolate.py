@@ -308,6 +308,7 @@ def _fast_interpolate3d_cross(xterm, yterm, zterm, wfunc, zslice, kernrad, targe
     # Filter out particles that do not contribute to this cross-section slice
     term = target * mass / (rho * h ** 3)
     dz = zslice - zterm
+
     filter_distance = np.abs(dz) < kernrad * h
 
     ipixmin = np.rint((xterm[filter_distance] - kernrad * h[filter_distance] - xmin) / pixwidthx).clip(min=0,
@@ -333,8 +334,8 @@ def _fast_interpolate3d_cross(xterm, yterm, zterm, wfunc, zslice, kernrad, targe
         dy2 = dy * dy * (1 / (h[filter_distance][i] ** 2))
 
         q2 = dx2i + dy2.reshape(len(dy2), 1)
-        image[int(jpixmin[i]):int(jpixmax[i]), int(ipixmin[i]):int(ipixmax[i])] += term[filter_distance][i] * wfunc(
-            np.sqrt(q2), 3)
+        contribution = (term[filter_distance][i] * wfunc(np.sqrt(q2), 3))
+        image[int(jpixmin[i]):int(jpixmax[i]), int(ipixmin[i]):int(ipixmax[i])] += contribution
 
     return image
 
