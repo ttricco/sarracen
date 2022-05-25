@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from pandas import testing as tm
-from sarracen.io import read_csv
+from sarracen.readers import read_csv
 
 
 def test_get_units():
