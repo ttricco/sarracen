@@ -228,25 +228,60 @@ def interpolate3DCross(data: 'SarracenDataFrame',
                        ymin: float = 0,
                        pixcountx: int = 480,
                        pixcounty: int = 480):
-    """
-    Interpolates particle data in a SarracenDataFrame across three directional axes to a 2D
-    cross-sectional slice of pixels at a fixed z-value.
+    """ Interpolate 3D particle data to a 2D grid, using a 3D cross-section.
 
-    :param data: The particle data, in a SarracenDataFrame.
-    :param x: The column label of the x-directional axis.
-    :param y: The column label of the y-directional axis.
-    :param z: The column label of the z-directional axis.
-    :param target: The column label of the target smoothing data.
-    :param kernel: The kernel to use for smoothing the target data.
-    :param zslice: The z-axis value to take the cross-section value at.
-    :param pixwidthx: The width that each pixel represents in particle data space.
-    :param pixwidthy: The height that each pixel represents in particle data space.
-    :param xmin: The starting x-coordinate (in particle data space).
-    :param ymin: The starting y-coordinate (in particle data space).
-    :param pixcountx: The number of pixels in the output image in the x-direction.
-    :param pixcounty: The number of pixels in the output image in the y-direction.
-    :return: The output image, in a 2-dimensional numpy array.
+    Interpolates particle data in a SarracenDataFrame across three directional axes to a 2D
+    grid of pixels. A cross-section is taken of the 3D data at a specific value of z, and
+    the contributions of particles near the plane are interpolated to a 2D grid.
+
+    Parameters
+    ----------
+    data : SarracenDataFrame
+        The particle data to interpolate over.
+    x: str
+        The column label of the x-directional axis.
+    y: str
+        The column label of the y-directional axis.
+    z: str
+        The column label of the z-directional axis.
+    target: str
+        The column label of the target smoothing data.
+    kernel: BaseKernel
+        The kernel to use for smoothing the target data.
+    zslice: float
+        The z-axis value to take the cross-section at.
+    pixwidthx: float
+        The width that each pixel represents in particle data space.
+    pixwidthy: float
+        The height that each pixel represents in particle data space.
+    xmin: float, optional
+        The starting x-coordinate (in particle data space).
+    ymin: float, optional
+        The starting y-coordinate (in particle data space).
+    pixcountx: int, optional
+        The number of pixels in the output image in the x-direction.
+    pixcounty: int, optional
+        The number of pixels in the output image in the y-direction.
+
+    Returns
+    -------
+    ndarray
+        The interpolated output image, in a 2-dimensional numpy array. Dimensions are
+        structured in reverse order, where (x, y) -> [y][x]
+
+    Raises
+    -------
+    ValueError
+        If `pixwidthx`, `pixwidthy`, `pixcountx`, or `pixcounty` are less than or equal to zero.
     """
+    if pixwidthx <= 0:
+        raise ValueError("pixwidthx must be greater than zero!")
+    if pixwidthy <= 0:
+        raise ValueError("pixwidthy must be greater than zero!")
+    if pixcountx <= 0:
+        raise ValueError("pixcountx must be greater than zero!")
+    if pixcounty <= 0:
+        raise ValueError("pixcounty must be greater than zero!")
 
     return _fast_interpolate3d_cross(data[x].to_numpy(),
                                      data[y].to_numpy(),
@@ -267,22 +302,23 @@ def interpolate3DCross(data: 'SarracenDataFrame',
 
 
 # Underlying numba-compiled code for 3D->2D cross-sections
-@numba.jit(nopython=True, parallel=True, fastmath=True)
+# @numba.jit(nopython=True, parallel=True, fastmath=True)
 def _fast_interpolate3d_cross(xterm, yterm, zterm, wfunc, zslice, kernrad, target, mass, rho, h, pixwidthx, pixwidthy,
                               xmin, ymin, pixcountx, pixcounty):
     # Filter out particles that do not contribute to this cross-section slice
     term = target * mass / (rho * h ** 3)
     dz = zslice - zterm
-    filter_distance = dz ** 2 * (1 / h ** 2) < kernrad * 2
 
-    ipixmin = np.rint((xterm[filter_distance] - kernrad * h[filter_distance] - xmin) / pixwidthx).clip(a_min=0,
-                                                                                                       a_max=pixcountx)
-    jpixmin = np.rint((yterm[filter_distance] - kernrad * h[filter_distance] - ymin) / pixwidthy).clip(a_min=0,
-                                                                                                       a_max=pixcounty)
-    ipixmax = np.rint((xterm[filter_distance] + kernrad * h[filter_distance] - xmin) / pixwidthx).clip(a_min=0,
-                                                                                                       a_max=pixcountx)
-    jpixmax = np.rint((yterm[filter_distance] + kernrad * h[filter_distance] - ymin) / pixwidthy).clip(a_min=0,
-                                                                                                       a_max=pixcounty)
+    filter_distance = np.abs(dz) < kernrad * h
+
+    ipixmin = np.rint((xterm[filter_distance] - kernrad * h[filter_distance] - xmin) / pixwidthx).clip(min=0,
+                                                                                                       max=pixcountx)
+    jpixmin = np.rint((yterm[filter_distance] - kernrad * h[filter_distance] - ymin) / pixwidthy).clip(min=0,
+                                                                                                       max=pixcounty)
+    ipixmax = np.rint((xterm[filter_distance] + kernrad * h[filter_distance] - xmin) / pixwidthx).clip(min=0,
+                                                                                                       max=pixcountx)
+    jpixmax = np.rint((yterm[filter_distance] + kernrad * h[filter_distance] - ymin) / pixwidthy).clip(min=0,
+                                                                                                       max=pixcounty)
 
     image = np.zeros((pixcounty, pixcountx))
 
