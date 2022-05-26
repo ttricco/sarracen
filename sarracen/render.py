@@ -1,19 +1,38 @@
+"""
+Provides several rendering functions which produce matplotlib plots of SPH data.
+These functions act as interfaces to interpolation functions within render.py
+
+These functions can be accessed directly, for example:
+    render_2d(data, target)
+Or, they can be accessed through a `SarracenDataFrame` object, for example:
+    data.render_2d(target)
+"""
+
 from typing import Union
 
 import numpy as np
+import seaborn as sns
 from matplotlib import pyplot as plt
 from matplotlib.colors import Colormap
-import seaborn as sns
 
 from sarracen.interpolate import interpolate_2d_cross, interpolate_2d, interpolate_3d, interpolate_3d_cross
-from sarracen.kernels import BaseKernel, CubicSplineKernel
+from sarracen.kernels import BaseKernel
 
 
 def _snap(value: float):
-    """
-    Return a number snapped to the nearest integer, with 1e-4 tolerance.
-    :param value: The number to snap.
-    :return: An integer if a close integer is detected, otherwise return 'value'.
+    """ Snap a number to the nearest integer
+
+    Return a number which is rounded to the nearest integer,
+    with a 1e-4 absolute range of tolerance.
+
+    Parameters
+    ----------
+    value: float
+        The number to snap.
+
+    Returns
+    -------
+    float: An integer (in float form) if a close integer is detected, otherwise return `value`.
     """
     if np.isclose(value, np.rint(value), atol=1e-4):
         return np.rint(value)
@@ -33,22 +52,63 @@ def render_2d(data: 'SarracenDataFrame',
               y_min: float = None,
               y_max: float = None,
               colormap: Union[str, Colormap] = 'RdBu') -> ('Figure', 'Axes'):
-    """
-    Render the data within a SarracenDataFrame to a 2D matplotlib object, using 2D SPH Interpolation
-    of the target variable.
-    :param data: The SarracenDataFrame to render. [Required]
-    :param target: The variable to interpolate over. [Required]
-    :param x: The positional x variable.
-    :param y: The positional y variable.
-    :param kernel: The smoothing kernel to use for interpolation.
-    :param x_min: The minimum bound in the x-direction.
-    :param y_min: The minimum bound in the y-direction.
-    :param x_max: The maximum bound in the x-direction.
-    :param y_max: The maximum bound in the y-direction.
-    :param x_pixels: The number of pixels in the x-direction.
-    :param y_pixels: The number of pixels in the y-direction.
-    :param colormap: The color map to use for plotting this data.
-    :return: The completed plot.
+    """ Render 2D particle data to a 2D grid, using SPH rendering of a target variable.
+
+    Render the data within a SarracenDataFrame to a 2D matplotlib object, by rendering the values
+    of a target variable. The contributions of all particles near the rendered area are summed and
+    stored in a to a 2D grid.
+
+    Parameters
+    ----------
+    data : SarracenDataFrame
+        The particle data, in a SarracenDataFrame.
+    target: str
+        The column label of the target smoothing data.
+    x: str, optional
+        The column label of the x-directional axis. Defaults to the x-column detected in `data`.
+    y: str, optional
+        The column label of the y-directional axis. Defaults to the y-column detected in `data`.
+    kernel: BaseKernel, optional
+        The kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
+    x_pixels: int, optional
+        The number of pixels in the output image in the x-direction. If both x_pixels and y_pixels are
+        None, this defaults to 256. Otherwise, this value defaults to a multiple of y_pixels which
+        preserves the aspect ratio of the data.
+    y_pixels: int, optional
+        The number of pixels in the output image in the y-direction. If both x_pixels and y_pixels are
+        None, this defaults to 256. Otherwise, this value defaults to a multiple of x_pixels which
+        preserves the aspect ratio of the data.
+    x_min: float, optional
+        The minimum bound in the x-direction (in particle data space). Defaults to the lower bound
+        of x detected in `data` snapped to the nearest integer.
+    x_max: float, optional
+        The maximum bound in the x-direction (in particle data space). Defaults to the upper bound
+        of x detected in `data` snapped to the nearest integer.
+    y_min: float, optional
+        The minimum bound in the y-direction (in particle data space). Defaults to the lower bound
+        of y detected in `data` snapped to the nearest integer.
+    y_max: float, optional
+        The maximum bound in the y-direction (in particle data space). Defaults to the upper bound
+        of y detected in `data` snapped to the nearest integer.
+    colormap: str or Colormap, optional
+        The color map to use when plotting this data.
+
+    Returns
+    -------
+    Figure
+        The resulting matplotlib figure, containing the 2d render and
+        a color bar indicating the magnitude of the target variable.
+    Axes
+        The resulting matplotlib axes, which contain the 2d rendered image.
+
+    Raises
+    -------
+    ValueError
+        If `x_pixels` or `y_pixels` are less than or equal to zero, or
+        if the specified `x` and `y` minimum and maximums result in an invalid region.
+    KeyError
+        If `target`, `x`, `y`, mass, density, or smoothing length columns do not
+        exist in `data`.
     """
     # x & y columns default to the variables determined by the SarracenDataFrame.
     if x is None:
@@ -100,20 +160,56 @@ def render_2d_cross(data: 'SarracenDataFrame',
                     x2: float = None,
                     y1: float = None,
                     y2: float = None) -> ('Figure', 'Axes'):
-    """
-    Render two-dimensional data inside a SarracenDataFrame to a 1D matplotlib object, by taking
-    a 1D SPH cross-section of the target variable along a given line.
-    :param data: The SarracenDataFrame to render. [Required]
-    :param target: The variable to interpolate over. [Required]
-    :param x: The positional x variable.
-    :param y: The positional y variable.
-    :param kernel: The kernel to use for smoothing the target data.
-    :param x1: The starting x-coordinate of the cross-section line. (in particle data space)
-    :param y1: The starting y-coordinate of the cross-section line. (in particle data space)
-    :param x2: The ending x-coordinate of the cross-section line. (in particle data space)
-    :param y2: The ending y-coordinate of the cross-section line. (in particle data space)
-    :param pixcount: The number of pixels in the output over the entire cross-sectional line.
-    :return: The completed plot.
+    """ Render 2D particle data to a 1D line, using a 2D cross-section.
+
+    Render the data within a SarracenDataFrame to a seaborn-generated line plot, by taking
+    a 2D->1D cross section of a target variable. The contributions of all particles near the
+    cross-section line are summed and stored in a 1D array.
+
+    Parameters
+    ----------
+    data : SarracenDataFrame
+        The particle data, in a SarracenDataFrame.
+    target: str
+        The column label of the target smoothing data.
+    x: str, optional
+        The column label of the x-directional axis. Defaults to the x-column detected in `data`.
+    y: str, optional
+        The column label of the y-directional axis. Defaults to the y-column detected in `data`.
+    kernel: BaseKernel
+        The kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
+    pixels: int, optional
+        The number of points in the resulting line plot in the x-direction. Defaults to 256.
+    x1: float, optional
+        The starting x-coordinate of the line (in particle data space). Defaults to the lower bound
+        of x detected in `data` snapped to the nearest integer.
+    x2: float, optional
+        The ending x-coordinate of the line (in particle data space). Defaults to the upper bound
+        of x detected in `data` snapped to the nearest integer.
+    y1: float, optional
+        The starting y-coordinate of the line (in particle data space). Defaults to the lower bound
+        of y detected in `data` snapped to the nearest integer.
+    y2: float, optional
+        The ending y-coordinate of the line (in particle data space). Defaults to the upper bound
+        of y detected in `data` snapped to the nearest integer.
+
+    Returns
+    -------
+    Figure
+        The resulting matplotlib figure, containing the seaborn-generated
+        line plot.
+    Axes
+        The resulting matplotlib axes, which contain the line plot.
+
+    Raises
+    -------
+    ValueError
+        If `x_pixels` or `y_pixels` are less than or equal to zero, or
+        if the specified `x1`, `x2`, `y1`, and `y2` are all the same
+        (indicating a zero-length cross-section).
+    KeyError
+        If `target`, `x`, `y`, mass, density, or smoothing length columns do not
+        exist in `data`.
     """
     # x & y columns default to the variables determined by the SarracenDataFrame.
     if x is None:
