@@ -156,3 +156,19 @@ def test_render_passthrough():
 
     assert repr(fig1) == repr(fig2)
     assert repr(ax1) == repr(ax2)
+
+
+def test_snap():
+    df = pd.DataFrame({'x': [0.0001, 5.2],
+                       'y': [3.00004, 0.1],
+                       'P': [1, 1],
+                       'h': [1, 1],
+                       'rho': [1, 1],
+                       'm': [1, 1]})
+    sdf = SarracenDataFrame(df)
+    fig, ax = sdf.render_2d('P')
+
+    # 0.0001 -> 0.0, 5.2 -> 5.2
+    assert ax.get_xlim() == (0.0, 5.2)
+    # 0.1 -> 0.1, 3.00004 -> 3.0
+    assert ax.get_ylim() == (0.1, 3.0)

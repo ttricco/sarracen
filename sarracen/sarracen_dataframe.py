@@ -8,24 +8,12 @@ from sarracen.render import render_2d, render_2d_cross, render_3d, render_3d_cro
 from sarracen.kernels import CubicSplineKernel, BaseKernel
 
 
-def _snap(value: float):
-    """
-    Return a number snapped to the nearest integer, with 1e-4 tolerance.
-    :param value: The number to snap.
-    :return: An integer if a close integer is detected, otherwise return 'value'.
-    """
-    if np.isclose(value, np.rint(value), atol=1e-4):
-        return np.rint(value)
-    else:
-        return value
-
-
 class SarracenDataFrame(DataFrame):
-    _metadata = ['_params', '_units', '_xcol', '_ycol', '_zcol', '_xmin', '_ymin', '_zmin', '_xmax', '_ymax', '_zmax']
+    _metadata = ['_params', '_units', '_xcol', '_ycol', '_zcol', '_hcol', '_mcol', '_rhocol']
 
     def __init__(self, data=None, params=None, *args, **kwargs):
 
-        # call pandas DataFrame contructor
+        # call pandas DataFrame constructor
         super().__init__(data, *args, **kwargs)
 
         if params is None:
@@ -34,14 +22,15 @@ class SarracenDataFrame(DataFrame):
         self.params = params
 
         self._units = None
-        self.units = Series([np.nan for i in range(len(self.columns))])
+        self.units = Series([np.nan for _ in range(len(self.columns))])
 
-        self._identify_spacial_columns()
-        self._identify_spacial_bounds()
+        self._xcol, self._ycol, self._zcol, self._hcol, self._mcol, self._rhocol = None, None, None, None, None, None
+        self._identify_special_columns()
 
-    def _identify_spacial_columns(self):
+    def _identify_special_columns(self):
         """
-        Identify which columns in this dataframe correspond to positional data.
+        Identify which columns in this dataframe correspond to important data columns commonly used in
+        analysis functions.
         """
         # First look for 'x', then 'rx', and then fallback to the first column.
         if 'x' in self.columns:
@@ -64,24 +53,22 @@ class SarracenDataFrame(DataFrame):
             self._zcol = 'z'
         elif 'rz' in self.columns:
             self._zcol = 'rz'
-        else:
-            self._zcol = None
 
-    def _identify_spacial_bounds(self):
-        """
-        Identify the maximum and minimum values of the positional data, snapped
-        to the nearest integer.
-        Must be called after _identify_spacial_columns()
-        """
-        # snap the positional bounds to the nearest integer.
-        self._xmin = _snap(self.loc[:, self._xcol].min())
-        self._ymin = _snap(self.loc[:, self._ycol].min())
-        self._xmax = _snap(self.loc[:, self._xcol].max())
-        self._ymax = _snap(self.loc[:, self._ycol].max())
+        # Look for the keyword 'h' in the data.
+        if 'h' in self.columns:
+            self._hcol = 'h'
 
-        if self._zcol is not None:
-            self._zmin = _snap(self.loc[:, self._zcol].min())
-            self._zmax = _snap(self.loc[:, self._zcol].max())
+        # Look for the keyword 'm' or 'mass' in the data.
+        if 'm' in self.columns:
+            self._mcol = 'm'
+        elif 'mass' in self.columns:
+            self._mcol = 'mass'
+
+        # Look for the keyword 'rho' or 'density' in the data.
+        if 'rho' in self.columns:
+            self._rhocol = 'rho'
+        elif 'density' in self.columns:
+            self._rhocol = 'density'
 
     def create_mass_column(self):
         """
@@ -94,6 +81,7 @@ class SarracenDataFrame(DataFrame):
             raise ValueError("'massoftype' column does not exist in this SarracenDataFrame.")
 
         self['m'] = self.params['massoftype']
+        self._mcol = 'm'
 
     def derive_density(self):
         """
@@ -105,6 +93,7 @@ class SarracenDataFrame(DataFrame):
             raise ValueError('Density cannot be derived from the columns in this SarracenDataFrame.')
 
         self['rho'] = (self.params['hfact'] / self['h']) ** (self.get_dim()) * self['m']
+        self._rhocol = 'rho'
 
     def render_2d(self,
                   target: str,
@@ -195,7 +184,8 @@ class SarracenDataFrame(DataFrame):
         :return: The completed plot.
         """
 
-        return render_3d(self, target, x, y, kernel, int_samples, x_pixels, y_pixels, x_min, x_max, y_min, y_max, colormap)
+        return render_3d(self, target, x, y, kernel, int_samples, x_pixels, y_pixels, x_min, x_max, y_min, y_max,
+                         colormap)
 
     def render_3d_cross(self,
                         target: str,
@@ -275,10 +265,6 @@ class SarracenDataFrame(DataFrame):
             raise TypeError("Parameters not a dictionary")
         self._params = new_params
 
-    @params.getter
-    def params(self):
-        return self._params
-
     @property
     def units(self):
         return self._units
@@ -287,81 +273,59 @@ class SarracenDataFrame(DataFrame):
     def units(self, new_units):
         self._units = new_units
 
-    @units.getter
-    def units(self):
-        return self._units
-
     @property
     def xcol(self):
         return self._xcol
 
-    @xcol.getter
-    def xcol(self):
-        return self._xcol
+    @xcol.setter
+    def xcol(self, new_col):
+        if new_col in self:
+            self._xcol = new_col
 
     @property
     def ycol(self):
         return self._ycol
 
-    @ycol.getter
-    def ycol(self):
-        return self._ycol
+    @ycol.setter
+    def ycol(self, new_col):
+        if new_col in self:
+            self._ycol = new_col
 
     @property
     def zcol(self):
         return self._zcol
 
-    @zcol.getter
-    def zcol(self):
-        return self._zcol
+    @zcol.setter
+    def zcol(self, new_col):
+        if new_col in self:
+            self._zcol = new_col
 
     @property
-    def xmin(self):
-        return self._xmin
+    def hcol(self):
+        return self._hcol
 
-    @xmin.getter
-    def xmin(self):
-        return self._xmin
-
-    @property
-    def ymin(self):
-        return self._ymin
-
-    @ymin.getter
-    def ymin(self):
-        return self._ymin
+    @hcol.setter
+    def hcol(self, new_col):
+        if new_col in self:
+            self._hcol = new_col
 
     @property
-    def zmin(self):
-        return self._ymin
+    def mcol(self):
+        return self._mcol
 
-    @zmin.getter
-    def zmin(self):
-        return self._zmin
-
-    @property
-    def xmax(self):
-        return self._xmax
-
-    @xmax.getter
-    def xmax(self):
-        return self._xmax
+    @mcol.setter
+    def mcol(self, new_col):
+        if new_col in self:
+            self._mcol = new_col
 
     @property
-    def ymax(self):
-        return self._ymax
+    def rhocol(self):
+        return self._rhocol
 
-    @ymin.getter
-    def ymax(self):
-        return self._ymax
-
-    @property
-    def zmax(self):
-        return self._zmax
-
-    @zmin.getter
-    def zmax(self):
-        return self._zmax
+    @rhocol.setter
+    def rhocol(self, new_col):
+        if new_col in self:
+            self._rhocol = new_col
 
     def get_dim(self):
         """
