@@ -9,7 +9,7 @@ from sarracen.kernels import CubicSplineKernel, BaseKernel
 
 
 class SarracenDataFrame(DataFrame):
-    _metadata = ['_params', '_units', '_xcol', '_ycol', '_zcol', '_hcol', '_mcol', '_rhocol']
+    _metadata = ['_params', '_units', '_xcol', '_ycol', '_zcol', '_hcol', '_mcol', '_rhocol', '_kernel']
 
     def __init__(self, data=None, params=None, *args, **kwargs):
 
@@ -26,6 +26,8 @@ class SarracenDataFrame(DataFrame):
 
         self._xcol, self._ycol, self._zcol, self._hcol, self._mcol, self._rhocol = None, None, None, None, None, None
         self._identify_special_columns()
+
+        self._kernel = CubicSplineKernel()
 
     def _identify_special_columns(self):
         """
@@ -99,12 +101,12 @@ class SarracenDataFrame(DataFrame):
                   target: str,
                   x: str = None,
                   y: str = None,
-                  kernel: BaseKernel = CubicSplineKernel(),
+                  kernel: BaseKernel = None,
                   x_pixels: int = None,
                   y_pixels: int = None,
                   x_min: float = None,
-                  y_min: float = None,
                   x_max: float = None,
+                  y_min: float = None,
                   y_max: float = None,
                   colormap: Union[str, Colormap] = 'RdBu') -> ('Figure', 'Axes'):
         """
@@ -124,13 +126,13 @@ class SarracenDataFrame(DataFrame):
         :return: The completed plot.
         """
 
-        return render_2d(self, target, x, y, kernel, x_pixels, y_pixels, x_min, y_min, x_max, y_max, colormap)
+        return render_2d(self, target, x, y, kernel, x_pixels, y_pixels, x_min, x_max, y_min, y_max, colormap)
 
     def render_2d_cross(self,
                         target: str,
                         x: str = None,
                         y: str = None,
-                        kernel: BaseKernel = CubicSplineKernel(),
+                        kernel: BaseKernel = None,
                         pixels: int = 512,
                         x1: float = None,
                         y1: float = None,
@@ -157,9 +159,9 @@ class SarracenDataFrame(DataFrame):
                   target: str,
                   x: str = None,
                   y: str = None,
-                  kernel: BaseKernel = CubicSplineKernel(),
+                  kernel: BaseKernel = None,
                   int_samples: int = 1000,
-                  x_pixels: int = 256,
+                  x_pixels: int = None,
                   y_pixels: int = None,
                   x_min: float = None,
                   x_max: float = None,
@@ -193,7 +195,7 @@ class SarracenDataFrame(DataFrame):
                         x: str = None,
                         y: str = None,
                         z: str = None,
-                        kernel: BaseKernel = CubicSplineKernel(),
+                        kernel: BaseKernel = None,
                         x_pixels: int = None,
                         y_pixels: int = None,
                         x_min: float = None,
@@ -326,6 +328,15 @@ class SarracenDataFrame(DataFrame):
     def rhocol(self, new_col):
         if new_col in self:
             self._rhocol = new_col
+
+    @property
+    def kernel(self):
+        return self._kernel
+
+    @kernel.setter
+    def kernel(self, new_kernel):
+        if isinstance(new_kernel, BaseKernel):
+            self._kernel = new_kernel
 
     def get_dim(self):
         """

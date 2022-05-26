@@ -25,12 +25,12 @@ def render_2d(data: 'SarracenDataFrame',
               target: str,
               x: str = None,
               y: str = None,
-              kernel: BaseKernel = CubicSplineKernel(),
+              kernel: BaseKernel = None,
               x_pixels: int = None,
               y_pixels: int = None,
               x_min: float = None,
-              y_min: float = None,
               x_max: float = None,
+              y_min: float = None,
               y_max: float = None,
               colormap: Union[str, Colormap] = 'RdBu') -> ('Figure', 'Axes'):
     """
@@ -74,6 +74,9 @@ def render_2d(data: 'SarracenDataFrame',
     if y_pixels is None:
         y_pixels = int(np.rint(x_pixels * ((y_max - y_min) / (x_max - x_min))))
 
+    if kernel is None:
+        kernel = data.kernel
+
     image = interpolate_2d(data, target, x, y, kernel, x_pixels, y_pixels, x_min, x_max, y_min, y_max)
 
     # ensure the plot size maintains the aspect ratio of the underlying bounds of the data
@@ -91,7 +94,7 @@ def render_2d_cross(data: 'SarracenDataFrame',
                     target: str,
                     x: str = None,
                     y: str = None,
-                    kernel: BaseKernel = CubicSplineKernel(),
+                    kernel: BaseKernel = None,
                     pixels: int = 512,
                     x1: float = None,
                     x2: float = None,
@@ -128,6 +131,9 @@ def render_2d_cross(data: 'SarracenDataFrame',
     if y2 is None:
         y2 = _snap(data.loc[:, y].max())
 
+    if kernel is None:
+        kernel = data.kernel
+
     output = interpolate_2d_cross(data, target, x, y, kernel, pixels, x1, x2, y1, y2)
 
     fig, ax = plt.subplots()
@@ -143,13 +149,13 @@ def render_3d(data: 'SarracenDataFrame',
               target: str,
               x: str = None,
               y: str = None,
-              kernel: BaseKernel = CubicSplineKernel(),
+              kernel: BaseKernel = None,
               integral_samples: int = 1000,
               x_pixels: int = None,
               y_pixels: int = None,
               x_min: float = None,
-              y_min: float = None,
               x_max: float = None,
+              y_min: float = None,
               y_max: float = None,
               colormap: Union[str, Colormap] = 'RdBu') -> ('Figure', 'Axes'):
     """
@@ -194,6 +200,9 @@ def render_3d(data: 'SarracenDataFrame',
     if y_pixels is None:
         y_pixels = int(np.rint(x_pixels * ((y_max - y_min) / (x_max - x_min))))
 
+    if kernel is None:
+        kernel = data.kernel
+
     img = interpolate_3d(data, target, x, y, kernel, integral_samples, x_pixels, y_pixels, x_min, x_max, y_min, y_max)
 
     # ensure the plot size maintains the aspect ratio of the underlying bounds of the data
@@ -213,12 +222,12 @@ def render_3d_cross(data: 'SarracenDataFrame',
                     x: str = None,
                     y: str = None,
                     z: str = None,
-                    kernel: BaseKernel = CubicSplineKernel(),
+                    kernel: BaseKernel = None,
                     x_pixels: int = None,
                     y_pixels: int = None,
                     x_min: float = None,
-                    y_min: float = None,
                     x_max: float = None,
+                    y_min: float = None,
                     y_max: float = None,
                     colormap: Union[str, Colormap] = 'RdBu') -> tuple['Figure', 'Axes']:
     """ Render 3D particle data to a 2D grid, using a 3D cross-section.
@@ -292,6 +301,9 @@ def render_3d_cross(data: 'SarracenDataFrame',
     # set default slice to be through the data's average z-value.
     if z_slice is None:
         z_slice = _snap(data.loc[:, z].mean())
+
+    if kernel is None:
+        kernel = data.kernel
 
     # set # of pixels to maintain an aspect ratio that is the same as the underlying bounds of the data.
     if x_pixels is None and y_pixels is None:
