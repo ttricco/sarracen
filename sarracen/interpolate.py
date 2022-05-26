@@ -394,21 +394,21 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',
         If `pixwidthx`, `pixwidthy`, `pixcountx`, or `pixcounty` are less than or equal to zero.
     """
     if x not in data.columns:
-        raise ValueError(f"x-directional column '{x}' does not exist in the provided dataset.")
+        raise KeyError(f"x-directional column '{x}' does not exist in the provided dataset.")
     if y not in data.columns:
-        raise ValueError(f"x-directional column '{y}' does not exist in the provided dataset.")
+        raise KeyError(f"x-directional column '{y}' does not exist in the provided dataset.")
     if z not in data.columns:
-        raise ValueError(f"z-directional column '{z}' does not exist in the provided dataset.")
+        raise KeyError(f"z-directional column '{z}' does not exist in the provided dataset.")
     if target not in data.columns:
-        raise ValueError(f"Target column '{target}' does not exist in provided dataset.")
+        raise KeyError(f"Target column '{target}' does not exist in provided dataset.")
     if data.mcol is None:
-        raise ValueError("Mass column does not exist in the provided dataset, please create it with "
+        raise KeyError("Mass column does not exist in the provided dataset, please create it with "
                          "sdf.create_mass_column().")
     if data.rhocol is None:
-        raise ValueError("Density column does not exist in the provided dataset, please create it with"
+        raise KeyError("Density column does not exist in the provided dataset, please create it with"
                          "sdf.derive_density().")
     if data.hcol is None:
-        raise ValueError("Smoothing length column does not exist in the provided dataset.")
+        raise KeyError("Smoothing length column does not exist in the provided dataset.")
 
     if x_max - x_min <= 0:
         raise ValueError("`x_max` must be greater than `x_min`!")
