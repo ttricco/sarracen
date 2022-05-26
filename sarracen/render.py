@@ -9,6 +9,18 @@ from sarracen.interpolate import interpolate_2d_cross, interpolate_2d, interpola
 from sarracen.kernels import BaseKernel, CubicSplineKernel
 
 
+def _snap(value: float):
+    """
+    Return a number snapped to the nearest integer, with 1e-4 tolerance.
+    :param value: The number to snap.
+    :return: An integer if a close integer is detected, otherwise return 'value'.
+    """
+    if np.isclose(value, np.rint(value), atol=1e-4):
+        return np.rint(value)
+    else:
+        return value
+
+
 def render_2d(data: 'SarracenDataFrame',
               target: str,
               x: str = None,
@@ -44,15 +56,15 @@ def render_2d(data: 'SarracenDataFrame',
     if y is None:
         y = data.ycol
 
-    # plot bounds default to variable determined in SarracenDataFrame
+    # boundaries of the plot default to the maximum & minimum values of the data.
     if x_min is None:
-        x_min = data.xmin
+        x_min = _snap(data.loc[:, x].min())
     if y_min is None:
-        y_min = data.ymin
+        y_min = _snap(data.loc[:, y].min())
     if x_max is None:
-        x_max = data.xmax
+        x_max = _snap(data.loc[:, x].max())
     if y_max is None:
-        y_max = data.ymax
+        y_max = _snap(data.loc[:, y].max())
 
     # set # of pixels to maintain an aspect ratio that is the same as the underlying bounds of the data.
     if x_pixels is None and y_pixels is None:
@@ -106,15 +118,15 @@ def render_2d_cross(data: 'SarracenDataFrame',
     if y is None:
         y = data.ycol
 
-    # plot bounds default to variable determined in SarracenDataFrame
+    # start and end points of the line default to the maximum & minimum values of the data.
     if x1 is None:
-        x1 = data.xmin
+        x1 = _snap(data.loc[:, x].min())
     if y1 is None:
-        y1 = data.ymin
+        y1 = _snap(data.loc[:, y].min())
     if x2 is None:
-        x2 = data.xmax
+        x2 = _snap(data.loc[:, x].max())
     if y2 is None:
-        y2 = data.ymax
+        y2 = _snap(data.loc[:, y].max())
 
     output = interpolate_2d_cross(data, target, x, y, kernel, pixels, x1, x2, y1, y2)
 
@@ -164,15 +176,15 @@ def render_3d(data: 'SarracenDataFrame',
     if y is None:
         y = data.ycol
 
-    # plot bounds default to variables determined in SarracenDataFrame
+    # boundaries of the plot default to the maximum & minimum values of the data.
     if x_min is None:
-        x_min = data.xmin
+        x_min = _snap(data.loc[:, x].min())
     if y_min is None:
-        y_min = data.ymin
+        y_min = _snap(data.loc[:, y].min())
     if x_max is None:
-        x_max = data.xmax
+        x_max = _snap(data.loc[:, x].max())
     if y_max is None:
-        y_max = data.ymax
+        y_max = _snap(data.loc[:, y].max())
 
     # set # of pixels to maintain an aspect ratio that is the same as the underlying bounds of the data.
     if x_pixels is None and y_pixels is None:
@@ -267,19 +279,19 @@ def render_3d_cross(data: 'SarracenDataFrame',
     if z is None:
         z = data.zcol
 
-    # plot bounds default to variables determined in SarracenDataFrame
+    # boundaries of the plot default to the maximum & minimum values of the data.
     if x_min is None:
-        x_min = data.xmin
+        x_min = _snap(data.loc[:, x].min())
     if y_min is None:
-        y_min = data.ymin
+        y_min = _snap(data.loc[:, y].min())
     if x_max is None:
-        x_max = data.xmax
+        x_max = _snap(data.loc[:, x].max())
     if y_max is None:
-        y_max = data.ymax
+        y_max = _snap(data.loc[:, y].max())
 
-    # set default slice to be through the middle of the data's z-axis.
+    # set default slice to be through the data's average z-value.
     if z_slice is None:
-        z_slice = (data.zmin + data.zmax) / 2
+        z_slice = _snap(data.loc[:, z].mean())
 
     # set # of pixels to maintain an aspect ratio that is the same as the underlying bounds of the data.
     if x_pixels is None and y_pixels is None:

@@ -32,6 +32,17 @@ def interpolate_2d(data: 'SarracenDataFrame',
     :param pixcounty: The number of pixels in the output image in the y-direction.
     :return: The output image, in a 2-dimensional numpy array.
     """
+    if target not in data.columns:
+        raise ValueError(f"Target column '{target}' does not exist in provided dataset.")
+    if data.mcol is None:
+        raise ValueError("Mass column does not exist in the provided dataset, please create it with "
+                         "sdf.create_mass_column().")
+    if data.rhocol is None:
+        raise ValueError("Density column does not exist in the provided dataset, please create it with"
+                         "sdf.derive_density().")
+    if data.hcol is None:
+        raise ValueError("Smoothing length column does not exist in the provided dataset.")
+
     if x_max - x_min <= 0:
         raise ValueError("`xmax` must be greater than `xmin`!")
     if y_max - y_min <= 0:
@@ -42,8 +53,8 @@ def interpolate_2d(data: 'SarracenDataFrame',
         raise ValueError("`y_pixels` must be greater than zero!")
 
     return _fast_2d(data[target].to_numpy(), data[x].to_numpy(), data[y].to_numpy(), data['m'].to_numpy(),
-                    data['rho'].to_numpy(), data['h'].to_numpy(), kernel.weight, kernel.get_radius(), x_pixels, y_pixels, x_min, x_max, y_min,
-                    y_max)
+                    data['rho'].to_numpy(), data['h'].to_numpy(), kernel.weight, kernel.get_radius(), x_pixels,
+                    y_pixels, x_min, x_max, y_min, y_max)
 
 
 # Underlying numba-compiled code for 2D interpolation
@@ -111,6 +122,21 @@ def interpolate_2d_cross(data: 'SarracenDataFrame',
     :param y2: The ending y-coordinate of the cross-section line. (in particle data space)
     :return: The interpolated output, in a 1-dimensional numpy array.
     """
+    if x not in data.columns:
+        raise ValueError(f"x-directional column '{x}' does not exist in the provided dataset.")
+    if y not in data.columns:
+        raise ValueError(f"x-directional column '{y}' does not exist in the provided dataset.")
+    if target not in data.columns:
+        raise ValueError(f"Target column '{target}' does not exist in the provided dataset.")
+    if data.mcol is None:
+        raise ValueError("Mass column does not exist in the provided dataset, please create it with "
+                         "sdf.create_mass_column().")
+    if data.rhocol is None:
+        raise ValueError("Density column does not exist in the provided dataset, please create it with"
+                         "sdf.derive_density().")
+    if data.hcol is None:
+        raise ValueError("Smoothing length column does not exist in the provided dataset.")
+
     if y2 == y1 and x2 == x1:
         raise ValueError('Zero length cross section!')
 
@@ -241,6 +267,23 @@ def interpolate_3d(data: 'SarracenDataFrame',
     ValueError
         If `pixwidthx`, `pixwidthy`, `pixcountx`, or `pixcounty` are less than or equal to zero.
     """
+    if x not in data.columns:
+        raise ValueError(f"x-directional column '{x}' does not exist in the provided dataset.")
+    if y not in data.columns:
+        raise ValueError(f"x-directional column '{y}' does not exist in the provided dataset.")
+    if data.get_dim() != 3:
+        raise ValueError(f"Dataset is not 3-dimensional.")
+    if target not in data.columns:
+        raise ValueError(f"Target column '{target}' does not exist in provided dataset.")
+    if data.mcol is None:
+        raise ValueError("Mass column does not exist in the provided dataset, please create it with "
+                         "sdf.create_mass_column().")
+    if data.rhocol is None:
+        raise ValueError("Density column does not exist in the provided dataset, please create it with"
+                         "sdf.derive_density().")
+    if data.hcol is None:
+        raise ValueError("Smoothing length column does not exist in the provided dataset.")
+
     if x_max - x_min <= 0:
         raise ValueError("`x_max` must be greater than `x_min`!")
     if y_max - y_min <= 0:
@@ -350,6 +393,23 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',
     ValueError
         If `pixwidthx`, `pixwidthy`, `pixcountx`, or `pixcounty` are less than or equal to zero.
     """
+    if x not in data.columns:
+        raise ValueError(f"x-directional column '{x}' does not exist in the provided dataset.")
+    if y not in data.columns:
+        raise ValueError(f"x-directional column '{y}' does not exist in the provided dataset.")
+    if z not in data.columns:
+        raise ValueError(f"z-directional column '{z}' does not exist in the provided dataset.")
+    if target not in data.columns:
+        raise ValueError(f"Target column '{target}' does not exist in provided dataset.")
+    if data.mcol is None:
+        raise ValueError("Mass column does not exist in the provided dataset, please create it with "
+                         "sdf.create_mass_column().")
+    if data.rhocol is None:
+        raise ValueError("Density column does not exist in the provided dataset, please create it with"
+                         "sdf.derive_density().")
+    if data.hcol is None:
+        raise ValueError("Smoothing length column does not exist in the provided dataset.")
+
     if x_max - x_min <= 0:
         raise ValueError("`x_max` must be greater than `x_min`!")
     if y_max - y_min <= 0:
