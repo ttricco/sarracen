@@ -38,7 +38,7 @@ def test_2d_plot():
     # both particles are in corners
     # therefore closest pixel is => sqrt((3/1024)**2, (2/683)**2)
     # use default kernel to determine the max pressure value
-    assert fig.axes[1].get_ylim() == (0, CubicSplineKernel().weight(np.sqrt((3 / 1024) ** 2 + (2 / 683) ** 2), 2))
+    assert fig.axes[1].get_ylim() == (0, CubicSplineKernel().w(np.sqrt((3 / 1024) ** 2 + (2 / 683) ** 2), 2))
 
 
 def test_2d_cross_plot():
@@ -63,7 +63,7 @@ def test_2d_cross_plot():
     # 512 pixels across (by default), and both particles are in corners
     # therefore closest pixel to a particle is sqrt(41)/1024 units away
     # use default kernel to determine the max pressure value
-    assert ax.get_ylim() == (0, approx(CubicSplineKernel().weight(np.sqrt(41) / 1024, 2)))
+    assert ax.get_ylim() == (0, approx(CubicSplineKernel().w(np.sqrt(41) / 1024, 2)))
 
 
 def test_3d_plot():
@@ -120,7 +120,7 @@ def test_3d_cross_plot():
     assert ax.get_ylim() == (0, 4)
 
     # closest pixel/particle pair comes from the particle at (2.5, 2, 2), with r = 0.
-    assert fig.axes[1].get_ylim() == (0, approx(CubicSplineKernel().weight(0, 3)))
+    assert fig.axes[1].get_ylim() == (0, approx(CubicSplineKernel().w(0, 3)))
 
 
 def test_render_passthrough():
