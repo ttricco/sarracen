@@ -22,9 +22,9 @@ def test_interpolate_2d():
     image = interpolate_2d(sdf, 'P', 'x', 'y', CubicSplineKernel(), 40, 40, -2, 2, -2, 2)
 
     assert image[0][0] == 0
-    assert image[20][0] == approx(CubicSplineKernel().weight(np.sqrt((-1.95) ** 2 + 0.05 ** 2), 2), rel=1e-8)
-    assert image[20][20] == approx(CubicSplineKernel().weight(np.sqrt(0.05 ** 2 + 0.05 ** 2), 2), rel=1e-8)
-    assert image[12][17] == approx(CubicSplineKernel().weight(np.sqrt(0.75 ** 2 + 0.25 ** 2), 2), rel=1e-8)
+    assert image[20][0] == approx(CubicSplineKernel().w(np.sqrt((-1.95) ** 2 + 0.05 ** 2), 2), rel=1e-8)
+    assert image[20][20] == approx(CubicSplineKernel().w(np.sqrt(0.05 ** 2 + 0.05 ** 2), 2), rel=1e-8)
+    assert image[12][17] == approx(CubicSplineKernel().w(np.sqrt(0.75 ** 2 + 0.25 ** 2), 2), rel=1e-8)
 
     # next, use a dataset where rho != 0, h != 0, m != 0.
     df = pd.DataFrame({'y': [0],
@@ -40,9 +40,9 @@ def test_interpolate_2d():
     image = interpolate_2d(sdf, 'A', 'x', 'y', kernel, 10, 15, 0, 2, 0, 3)
 
     assert image[14][8] == 0
-    assert image[14][5] == approx(w * sdf['A'][0] * kernel.weight(np.sqrt(0.1 ** 2 + 2.9 ** 2) / sdf['h'][0], 2), rel=1e-8)
-    assert image[5][1] == approx(w * sdf['A'][0] * kernel.weight(np.sqrt(0.7 ** 2 + 1.1 ** 2) / sdf['h'][0], 2), rel=1e-8)
-    assert image[0][4] == approx(w * sdf['A'][0] * kernel.weight(np.sqrt(2 * (0.1 ** 2)) / sdf['h'][0], 2), rel=1e-8)
+    assert image[14][5] == approx(w * sdf['A'][0] * kernel.w(np.sqrt(0.1 ** 2 + 2.9 ** 2) / sdf['h'][0], 2), rel=1e-8)
+    assert image[5][1] == approx(w * sdf['A'][0] * kernel.w(np.sqrt(0.7 ** 2 + 1.1 ** 2) / sdf['h'][0], 2), rel=1e-8)
+    assert image[0][4] == approx(w * sdf['A'][0] * kernel.w(np.sqrt(2 * (0.1 ** 2)) / sdf['h'][0], 2), rel=1e-8)
     assert image[0][0] == approx(image[0][9], rel=1e-8)
 
 
@@ -58,16 +58,16 @@ def test_interpolate_2d_cross():
     # first, test a cross-section at y=0
     output = interpolate_2d_cross(sdf, 'P', 'x', 'y', CubicSplineKernel(), 40, -2, 2, 0, 0)
 
-    assert output[0] == approx(CubicSplineKernel().weight(np.sqrt((-1.95) ** 2), 2), rel=1e-8)
-    assert output[20] == approx(CubicSplineKernel().weight(np.sqrt(0.05 ** 2), 2), rel=1e-8)
-    assert output[17] == approx(CubicSplineKernel().weight(np.sqrt(0.25 ** 2), 2), rel=1e-8)
+    assert output[0] == approx(CubicSplineKernel().w(np.sqrt((-1.95) ** 2), 2), rel=1e-8)
+    assert output[20] == approx(CubicSplineKernel().w(np.sqrt(0.05 ** 2), 2), rel=1e-8)
+    assert output[17] == approx(CubicSplineKernel().w(np.sqrt(0.25 ** 2), 2), rel=1e-8)
 
     # next, test a cross-section where x=y
     output = interpolate_2d_cross(sdf, 'P', 'x', 'y', CubicSplineKernel(), 40, -2, 2, -2, 2)
 
-    assert output[0] == approx(CubicSplineKernel().weight(np.sqrt(2 * (1.95 ** 2)), 2), rel=1e-8)
-    assert output[20] == approx(CubicSplineKernel().weight(np.sqrt(2 * (0.05 ** 2)), 2), rel=1e-8)
-    assert output[17] == approx(CubicSplineKernel().weight(np.sqrt(2 * (0.25 ** 2)), 2), rel=1e-8)
+    assert output[0] == approx(CubicSplineKernel().w(np.sqrt(2 * (1.95 ** 2)), 2), rel=1e-8)
+    assert output[20] == approx(CubicSplineKernel().w(np.sqrt(2 * (0.05 ** 2)), 2), rel=1e-8)
+    assert output[17] == approx(CubicSplineKernel().w(np.sqrt(2 * (0.25 ** 2)), 2), rel=1e-8)
 
     # lastly, use a dataset where rho != 0, h != 0, m != 0.
     df = pd.DataFrame({'y': [0],
@@ -86,11 +86,11 @@ def test_interpolate_2d_cross():
 
     # pixels are evenly spaced across the line, so the first pixel starts at (-3 + 5/40, 3 - 6/40)
     # difference from particle at (1, 0) -> (-3 + 5/40 - 1, 3 - 6/40)
-    assert output[0] == approx(w * sdf['A'][0] * kernel.weight(np.sqrt(3.875 ** 2 + 2.85 ** 2) / sdf['h'][0], 2), rel=1e-8)
+    assert output[0] == approx(w * sdf['A'][0] * kernel.w(np.sqrt(3.875 ** 2 + 2.85 ** 2) / sdf['h'][0], 2), rel=1e-8)
     # (-3.875 + 10 * (5/20), 2.85 - 10 * (6/20))
-    assert output[10] == approx(w * sdf['A'][0] * kernel.weight(np.sqrt(1.375 ** 2 + 0.15 ** 2) / sdf['h'][0], 2), rel=1e-8)
+    assert output[10] == approx(w * sdf['A'][0] * kernel.w(np.sqrt(1.375 ** 2 + 0.15 ** 2) / sdf['h'][0], 2), rel=1e-8)
     # (-3.875 + 19 * (5/20), 2.85 - 19 * (6/20))
-    assert output[19] == approx(w * sdf['A'][0] * kernel.weight(np.sqrt(0.875 ** 2 + 2.85 ** 2) / sdf['h'][0], 2), rel=1e-8)
+    assert output[19] == approx(w * sdf['A'][0] * kernel.w(np.sqrt(0.875 ** 2 + 2.85 ** 2) / sdf['h'][0], 2), rel=1e-8)
 
 
 def test_interpolate_3d():
@@ -168,17 +168,17 @@ def test_interpolate_3d_cross():
 
     # should be exactly the same as for a 2D rendering, except q values are now taken from the 3D kernel.
     assert image[0][0] == 0
-    assert image[20][0] == approx(CubicSplineKernel().weight(np.sqrt((-1.95) ** 2 + 0.05 ** 2), 3), rel=1e-8)
-    assert image[20][20] == approx(CubicSplineKernel().weight(np.sqrt(0.05 ** 2 + 0.05 ** 2), 3), rel=1e-8)
-    assert image[12][17] == approx(CubicSplineKernel().weight(np.sqrt(0.75 ** 2 + 0.25 ** 2), 3), rel=1e-8)
+    assert image[20][0] == approx(CubicSplineKernel().w(np.sqrt((-1.95) ** 2 + 0.05 ** 2), 3), rel=1e-8)
+    assert image[20][20] == approx(CubicSplineKernel().w(np.sqrt(0.05 ** 2 + 0.05 ** 2), 3), rel=1e-8)
+    assert image[12][17] == approx(CubicSplineKernel().w(np.sqrt(0.75 ** 2 + 0.25 ** 2), 3), rel=1e-8)
 
     # next, test a cross-section at z=0.5
     image = interpolate_3d_cross(sdf, 'P', 0.5, 'x', 'y', 'z', CubicSplineKernel(), 40, 40, -2, 2, -2, 2)
 
     assert image[0][0] == 0
-    assert image[20][0] == approx(CubicSplineKernel().weight(np.sqrt((-1.95) ** 2 + 0.05 ** 2 + (0.5 ** 2)), 3), rel=1e-8)
-    assert image[20][20] == approx(CubicSplineKernel().weight(np.sqrt(2 * (0.05 ** 2) + (0.5 ** 2)), 3), rel=1e-8)
-    assert image[12][17] == approx(CubicSplineKernel().weight(np.sqrt(0.75 ** 2 + 0.25 ** 2 + (0.5 ** 2)), 3), rel=1e-8)
+    assert image[20][0] == approx(CubicSplineKernel().w(np.sqrt((-1.95) ** 2 + 0.05 ** 2 + (0.5 ** 2)), 3), rel=1e-8)
+    assert image[20][20] == approx(CubicSplineKernel().w(np.sqrt(2 * (0.05 ** 2) + (0.5 ** 2)), 3), rel=1e-8)
+    assert image[12][17] == approx(CubicSplineKernel().w(np.sqrt(0.75 ** 2 + 0.25 ** 2 + (0.5 ** 2)), 3), rel=1e-8)
 
     # lastly, use a dataset where rho != 0, h != 0, m != 0.
     df = pd.DataFrame({'x': [0],
@@ -195,6 +195,6 @@ def test_interpolate_3d_cross():
     image = interpolate_3d_cross(sdf, 'A', 0, 'x', 'y', 'z', kernel, 15, 11, -0.75, 0.75, -0.825, 0.825)
 
     # r = sqrt(dx ** 2 + dy ** 2 + dz ** 2)
-    assert image[0][0] == approx(w * sdf['A'][0] * kernel.weight(np.sqrt(0.7 ** 2 + 0.75 ** 2 + 1) / sdf['h'][0], 3))
-    assert image[4][0] == approx(w * sdf['A'][0] * kernel.weight(np.sqrt(0.7 ** 2 + 0.15 ** 2 + 1) / sdf['h'][0], 3))
-    assert image[7][10] == approx(w * sdf['A'][0] * kernel.weight(np.sqrt(0.3 ** 2 + 0.3 ** 2 + 1) / sdf['h'][0], 3))
+    assert image[0][0] == approx(w * sdf['A'][0] * kernel.w(np.sqrt(0.7 ** 2 + 0.75 ** 2 + 1) / sdf['h'][0], 3))
+    assert image[4][0] == approx(w * sdf['A'][0] * kernel.w(np.sqrt(0.7 ** 2 + 0.15 ** 2 + 1) / sdf['h'][0], 3))
+    assert image[7][10] == approx(w * sdf['A'][0] * kernel.w(np.sqrt(0.3 ** 2 + 0.3 ** 2 + 1) / sdf['h'][0], 3))

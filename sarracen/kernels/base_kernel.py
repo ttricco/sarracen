@@ -13,7 +13,7 @@ class BaseKernel:
         return 1
 
     @staticmethod
-    def weight(q: float, dim: int) -> float:
+    def w(q: float, dim: int) -> float:
         """ Get the normalized weight of this kernel.
 
         Parameters
@@ -53,7 +53,7 @@ class BaseKernel:
             results.append(2 * quad(self._int_func,
                                     a=0,
                                     b=np.sqrt(self.get_radius() ** 2 - sample ** 2),
-                                    args=(sample, self.weight))[0])
+                                    args=(sample, self.w))[0])
 
         return np.array(results)
 

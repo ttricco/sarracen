@@ -88,7 +88,7 @@ def interpolate_2d(data: 'SarracenDataFrame',
         raise ValueError("`y_pixels` must be greater than zero!")
 
     return _fast_2d(data[target].to_numpy(), data[x].to_numpy(), data[y].to_numpy(), data['m'].to_numpy(),
-                    data['rho'].to_numpy(), data['h'].to_numpy(), kernel.weight, kernel.get_radius(), x_pixels,
+                    data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w, kernel.get_radius(), x_pixels,
                     y_pixels, x_min, x_max, y_min, y_max)
 
 
@@ -208,7 +208,7 @@ def interpolate_2d_cross(data: 'SarracenDataFrame',
         raise ValueError('pixcount must be greater than zero!')
 
     return _fast_2d_cross(data[target].to_numpy(), data[x].to_numpy(), data[y].to_numpy(), data['m'].to_numpy(),
-                          data['rho'].to_numpy(), data['h'].to_numpy(), kernel.weight, kernel.get_radius(), pixels, x1,
+                          data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w, kernel.get_radius(), pixels, x1,
                           x2, y1, y2)
 
 
@@ -503,7 +503,7 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',
         raise ValueError("`y_pixels` must be greater than zero!")
 
     return _fast_3d_cross(data[target].to_numpy(), z_slice, data[x].to_numpy(), data[y].to_numpy(), data[z].to_numpy(),
-                          data['m'].to_numpy(), data['rho'].to_numpy(), data['h'].to_numpy(), kernel.weight,
+                          data['m'].to_numpy(), data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w,
                           kernel.get_radius(), x_pixels, y_pixels, x_min, x_max, y_min, y_max)
 
 
