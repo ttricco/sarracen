@@ -36,7 +36,7 @@ class SarracenDataFrame(DataFrame):
 
         Parameters
         ----------
-        data : ndarray(structured or homogeneous), Iterable, dict, or DataFrame
+        data : ndarray (structured or homogeneous), Iterable, DataFrame, or dict.
             Raw particle data passed to the DataFrame super-initializer.
         params : dict
             Miscellaneous dataset-level parameters.

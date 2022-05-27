@@ -1,3 +1,4 @@
+"""pytest unit tests for render.py functions."""
 import pandas as pd
 import numpy as np
 from matplotlib.axes import Axes

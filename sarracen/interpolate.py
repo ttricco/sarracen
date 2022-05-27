@@ -1,3 +1,6 @@
+"""
+Contains several interpolation functions which produce interpolated 2D or 1D arrays of SPH data.
+"""
 import numpy as np
 from numba import prange, njit
 
@@ -14,34 +17,66 @@ def interpolate_2d(data: 'SarracenDataFrame',
                    x_min: float = 0,
                    x_max: float = 1,
                    y_min: float = 0,
-                   y_max: float = 1):
-    """
-    Interpolates particle data in a SarracenDataFrame across two directional axes to a 2D
-    grid of pixels.
+                   y_max: float = 1) -> np.ndarray:
+    """ Interpolate particle data across two directional axes to a 2D grid of pixels.
 
-    :param data: The particle data, in a SarracenDataFrame.
-    :param x: The column label of the x-directional axis.
-    :param y: The column label of the y-directional axis.
-    :param target: The column label of the target smoothing data.
-    :param kernel: The kernel to use for smoothing the target data.
-    :param pixwidthx: The width that each pixel represents in particle data space.
-    :param pixwidthy: The height that each pixel represents in particle data space.
-    :param xmin: The starting x-coordinate (in particle data space).
-    :param ymin: The starting y-coordinate (in particle data space).
-    :param pixcountx: The number of pixels in the output image in the x-direction.
-    :param pixcounty: The number of pixels in the output image in the y-direction.
-    :return: The output image, in a 2-dimensional numpy array.
+    Interpolate the data within a SarracenDataFrame to a 2D grid, by interpolating the values
+    of a target variable. The contributions of all particles near the interpolation area are
+    summed and stored to a 2D grid.
+
+    Parameters
+    ----------
+    data : SarracenDataFrame
+        Particle data, in a SarracenDataFrame.
+    target: str
+        Column label of the target smoothing data.
+    x: str
+        Column label of the x-directional axis.
+    y: str
+        Column label of the y-directional axis.
+    kernel: BaseKernel
+        Kernel to use for smoothing the target data.
+    x_pixels: int, optional
+        Number of pixels in the output image in the x-direction.
+    y_pixels: int, optional
+        Number of pixels in the output image in the y-direction.
+    x_min: float, optional
+        Minimum bound in the x-direction (in particle data space).
+    x_max: float, optional
+        Maximum bound in the x-direction (in particle data space).
+    y_min: float, optional
+        Minimum bound in the y-direction (in particle data space).
+    y_max: float, optional
+        Maximum bound in the y-direction (in particle data space).
+
+    Returns
+    -------
+    np.ndarray (2-Dimensional)
+        The resulting interpolated grid.
+
+    Raises
+    -------
+    ValueError
+        If `x_pixels` or `y_pixels` are less than or equal to zero, or
+        if the specified `x` and `y` minimum and maximum values result in an invalid region.
+    KeyError
+        If `target`, `x`, `y`, mass, density, or smoothing length columns do not
+        exist in `data`.
     """
+    if x not in data.columns:
+        raise KeyError(f"x-directional column '{x}' does not exist in the provided dataset.")
+    if y not in data.columns:
+        raise KeyError(f"x-directional column '{y}' does not exist in the provided dataset.")
     if target not in data.columns:
-        raise ValueError(f"Target column '{target}' does not exist in provided dataset.")
+        raise KeyError(f"Target column '{target}' does not exist in provided dataset.")
     if data.mcol is None:
-        raise ValueError("Mass column does not exist in the provided dataset, please create it with "
-                         "sdf.create_mass_column().")
+        raise KeyError("Mass column does not exist in the provided dataset, please create it with "
+                       "sdf.create_mass_column().")
     if data.rhocol is None:
-        raise ValueError("Density column does not exist in the provided dataset, please create it with"
-                         "sdf.derive_density().")
+        raise KeyError("Density column does not exist in the provided dataset, please create it with"
+                       "sdf.derive_density().")
     if data.hcol is None:
-        raise ValueError("Smoothing length column does not exist in the provided dataset.")
+        raise KeyError("Smoothing length column does not exist in the provided dataset.")
 
     if x_max - x_min <= 0:
         raise ValueError("`xmax` must be greater than `xmin`!")
@@ -59,7 +94,8 @@ def interpolate_2d(data: 'SarracenDataFrame',
 
 # Underlying numba-compiled code for 2D interpolation
 @njit(parallel=True, fastmath=True)
-def _fast_2d(target, x_data, y_data, mass_data, rho_data, h_data, weight_function, kernel_radius, x_pixels, y_pixels, x_min, x_max, y_min, y_max):
+def _fast_2d(target, x_data, y_data, mass_data, rho_data, h_data, weight_function, kernel_radius, x_pixels, y_pixels,
+             x_min, x_max, y_min, y_max):
     image = np.zeros((y_pixels, x_pixels))
     pixwidthx = (x_max - x_min) / x_pixels
     pixwidthy = (y_max - y_min) / y_pixels
@@ -107,39 +143,67 @@ def interpolate_2d_cross(data: 'SarracenDataFrame',
                          x2: float = 1,
                          y1: float = 0,
                          y2: float = 1) -> np.ndarray:
-    """
-    Interpolates particle data in a SarracenDataFrame across two directional axes to a 1D
-    cross-section line.
+    """ Interpolate particle data across two directional axes to a 1D cross-section line.
 
-    :param data: The particle data, in a SarracenDataFrame.
-    :param x: The column label of the x-directional axis.
-    :param y: The column label of the y-directional axis.
-    :param target: The column label of the target smoothing data.
-    :param kernel: The kernel to use for smoothing the target data.
-    :param x1: The starting x-coordinate of the cross-section line. (in particle data space)
-    :param y1: The starting y-coordinate of the cross-section line. (in particle data space)
-    :param x2: The ending x-coordinate of the cross-section line. (in particle data space)
-    :param y2: The ending y-coordinate of the cross-section line. (in particle data space)
-    :return: The interpolated output, in a 1-dimensional numpy array.
+    Interpolate the data within a SarracenDataFrame to a 1D line, by interpolating the values
+    of a target variable. The contributions of all particles near the specified line are
+    summed and stored to a 1-dimensional array.
+
+    Parameters
+    ----------
+    data : SarracenDataFrame
+        Particle data, in a SarracenDataFrame.
+    target: str
+         Column label of the target smoothing data.
+    x: str
+        Column label of the x-directional axis.
+    y: str
+        Column label of the y-directional axis.
+    kernel: BaseKernel
+        Kernel to use for smoothing the target data.
+    pixels: int, optional
+        Number of points in the resulting line plot in the x-direction.
+    x1: float, optional
+        Starting x-coordinate of the line (in particle data space).
+    x2: float, optional
+        Ending x-coordinate of the line (in particle data space).
+    y1: float, optional
+        Starting y-coordinate of the line (in particle data space).
+    y2: float, optional
+        Ending y-coordinate of the line (in particle data space).
+
+    Returns
+    -------
+    np.ndarray (1-Dimensional)
+        The resulting interpolated output.
+
+    Raises
+    -------
+    ValueError
+        If `x_pixels` or `y_pixels` are less than or equal to zero, or
+        if the specified `x1`, `x2`, `y1`, and `y2` are all the same
+        (indicating a zero-length cross-section).
+    KeyError
+        If `target`, `x`, `y`, mass, density, or smoothing length columns do not
+        exist in `data`.
     """
     if x not in data.columns:
-        raise ValueError(f"x-directional column '{x}' does not exist in the provided dataset.")
+        raise KeyError(f"x-directional column '{x}' does not exist in the provided dataset.")
     if y not in data.columns:
-        raise ValueError(f"x-directional column '{y}' does not exist in the provided dataset.")
+        raise KeyError(f"x-directional column '{y}' does not exist in the provided dataset.")
     if target not in data.columns:
-        raise ValueError(f"Target column '{target}' does not exist in the provided dataset.")
+        raise KeyError(f"Target column '{target}' does not exist in the provided dataset.")
     if data.mcol is None:
-        raise ValueError("Mass column does not exist in the provided dataset, please create it with "
-                         "sdf.create_mass_column().")
+        raise KeyError("Mass column does not exist in the provided dataset, please create it with "
+                       "sdf.create_mass_column().")
     if data.rhocol is None:
-        raise ValueError("Density column does not exist in the provided dataset, please create it with"
-                         "sdf.derive_density().")
+        raise KeyError("Density column does not exist in the provided dataset, please create it with"
+                       "sdf.derive_density().")
     if data.hcol is None:
         raise ValueError("Smoothing length column does not exist in the provided dataset.")
 
     if y2 == y1 and x2 == x1:
         raise ValueError('Zero length cross section!')
-
     if pixels <= 0:
         raise ValueError('pixcount must be greater than zero!')
 
@@ -150,7 +214,8 @@ def interpolate_2d_cross(data: 'SarracenDataFrame',
 
 # Underlying numba-compiled code for 2D->1D cross-sections
 @njit(parallel=True, fastmath=True)
-def _fast_2d_cross(target, x_data, y_data, mass_data, rho_data, h_data, weight_function, kernel_radius, pixels, x1, x2, y1, y2):
+def _fast_2d_cross(target, x_data, y_data, mass_data, rho_data, h_data, weight_function, kernel_radius, pixels, x1, x2,
+                   y1, y2):
     # determine the slope of the cross-section line
     gradient = 0
     if not x2 - x1 == 0:
@@ -233,29 +298,29 @@ def interpolate_3d(data: 'SarracenDataFrame',
     Parameters
     ----------
     data : SarracenDataFrame
-        The particle data, in a SarracenDataFrame.
+        Particle data, in a SarracenDataFrame.
     x: str
-        The column label of the x-directional axis.
+        Column label of the x-directional axis.
     y: str
         The column label of the y-directional axis.
     target: str
         The column label of the target smoothing data.
     kernel: BaseKernel
         The kernel to use for smoothing the target data.
-    pixwidthx: float
-        The width that each pixel represents in particle data space.
-    pixwidthy: float
-        The height that each pixel represents in particle data space.
-    xmin: float, optional
-        The starting x-coordinate (in particle data space).
-    ymin: float, optional
-        The starting y-coordinate (in particle data space).
-    x_pixels: int, optional
-        The number of pixels in the output image in the x-direction.
-    y_pixels: int, optional
-        The number of pixels in the output image in the y-direction.
-    int_samples: int, optional
+    integral_samples: int, optional
         The number of sample points to take when approximating the 2D column kernel.
+    x_pixels: int, optional
+        Number of pixels in the output image in the x-direction.
+    y_pixels: int, optional
+        Number of pixels in the output image in the y-direction.
+    x_min: float, optional
+        Minimum bound in the x-direction (in particle data space).
+    x_max: float, optional
+        Maximum bound in the x-direction (in particle data space).
+    y_min: float, optional
+        Minimum bound in the y-direction (in particle data space).
+    y_max: float, optional
+        Maximum bound in the y-direction (in particle data space).
 
     Returns
     -------
@@ -265,25 +330,35 @@ def interpolate_3d(data: 'SarracenDataFrame',
     Raises
     -------
     ValueError
-        If `pixwidthx`, `pixwidthy`, `pixcountx`, or `pixcounty` are less than or equal to zero.
+        If `x_pixels` or `y_pixels` are less than or equal to zero, or
+        if the specified `x` and `y` minimum and maximums result in an invalid region, or
+        if the provided data is not 3-dimensional.
+    KeyError
+        If `target`, `x`, `y`, mass, density, or smoothing length columns do not
+        exist in `data`.
+
+    Notes
+    -----
+    Since the direction of integration is assumed to be straight across the z-axis, the z-axis column
+    is not required for this type of interpolation.
     """
     if x not in data.columns:
-        raise ValueError(f"x-directional column '{x}' does not exist in the provided dataset.")
+        raise KeyError(f"x-directional column '{x}' does not exist in the provided dataset.")
     if y not in data.columns:
-        raise ValueError(f"x-directional column '{y}' does not exist in the provided dataset.")
+        raise KeyError(f"x-directional column '{y}' does not exist in the provided dataset.")
+    if target not in data.columns:
+        raise KeyError(f"Target column '{target}' does not exist in provided dataset.")
+    if data.mcol is None:
+        raise KeyError("Mass column does not exist in the provided dataset, please create it with "
+                       "sdf.create_mass_column().")
+    if data.rhocol is None:
+        raise KeyError("Density column does not exist in the provided dataset, please create it with"
+                       "sdf.derive_density().")
+    if data.hcol is None:
+        raise KeyError("Smoothing length column does not exist in the provided dataset.")
+
     if data.get_dim() != 3:
         raise ValueError(f"Dataset is not 3-dimensional.")
-    if target not in data.columns:
-        raise ValueError(f"Target column '{target}' does not exist in provided dataset.")
-    if data.mcol is None:
-        raise ValueError("Mass column does not exist in the provided dataset, please create it with "
-                         "sdf.create_mass_column().")
-    if data.rhocol is None:
-        raise ValueError("Density column does not exist in the provided dataset, please create it with"
-                         "sdf.derive_density().")
-    if data.hcol is None:
-        raise ValueError("Smoothing length column does not exist in the provided dataset.")
-
     if x_max - x_min <= 0:
         raise ValueError("`x_max` must be greater than `x_min`!")
     if y_max - y_min <= 0:
@@ -300,7 +375,8 @@ def interpolate_3d(data: 'SarracenDataFrame',
 
 # Underlying numba-compiled code for 3D column interpolation.
 @njit(parallel=True, fastmath=True)
-def _fast_3d(target, x_data, y_data, mass_data, rho_data, h_data, integrated_kernel, kernel_rad, int_samples, x_pixels, y_pixels, x_min, x_max, y_min, y_max):
+def _fast_3d(target, x_data, y_data, mass_data, rho_data, h_data, integrated_kernel, kernel_rad, int_samples, x_pixels,
+             y_pixels, x_min, x_max, y_min, y_max):
     image = np.zeros((y_pixels, x_pixels))
     pixwidthx = (x_max - x_min) / x_pixels
     pixwidthy = (y_max - y_min) / y_pixels
@@ -357,30 +433,30 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',
     ----------
     data : SarracenDataFrame
         The particle data to interpolate over.
+    target: str
+        The column label of the target smoothing data.
+    z_slice: float
+        The z-axis value to take the cross-section at.
     x: str
         The column label of the x-directional axis.
     y: str
         The column label of the y-directional axis.
     z: str
         The column label of the z-directional axis.
-    target: str
-        The column label of the target smoothing data.
     kernel: BaseKernel
         The kernel to use for smoothing the target data.
-    zslice: float
-        The z-axis value to take the cross-section at.
-    pixwidthx: float
-        The width that each pixel represents in particle data space.
-    xmax: float
-        The height that each pixel represents in particle data space.
-    xmin: float, optional
-        The starting x-coordinate (in particle data space).
-    ymin: float, optional
-        The starting y-coordinate (in particle data space).
-    pixcountx: int, optional
-        The number of pixels in the output image in the x-direction.
-    pixcounty: int, optional
-        The number of pixels in the output image in the y-direction.
+    x_pixels: int, optional
+        Number of pixels in the output image in the x-direction.
+    y_pixels: int, optional
+        Number of pixels in the output image in the y-direction.
+    x_min: float, optional
+        Minimum bound in the x-direction (in particle data space).
+    x_max: float, optional
+        Maximum bound in the x-direction (in particle data space).
+    y_min: float, optional
+        Minimum bound in the y-direction (in particle data space).
+    y_max: float, optional
+        Maximum bound in the y-direction (in particle data space).
 
     Returns
     -------
@@ -391,7 +467,12 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',
     Raises
     -------
     ValueError
-        If `pixwidthx`, `pixwidthy`, `pixcountx`, or `pixcounty` are less than or equal to zero.
+        If `pixwidthx`, `pixwidthy`, `pixcountx`, or `pixcounty` are less than or equal to zero, or
+        if the specified `x` and `y` minimum and maximums result in an invalid region, or
+        if the provided data is not 3-dimensional.
+    KeyError
+        If `target`, `x`, `y`, mass, density, or smoothing length columns do not
+        exist in `data`.
     """
     if x not in data.columns:
         raise KeyError(f"x-directional column '{x}' does not exist in the provided dataset.")
@@ -403,13 +484,15 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',
         raise KeyError(f"Target column '{target}' does not exist in provided dataset.")
     if data.mcol is None:
         raise KeyError("Mass column does not exist in the provided dataset, please create it with "
-                         "sdf.create_mass_column().")
+                       "sdf.create_mass_column().")
     if data.rhocol is None:
         raise KeyError("Density column does not exist in the provided dataset, please create it with"
-                         "sdf.derive_density().")
+                       "sdf.derive_density().")
     if data.hcol is None:
         raise KeyError("Smoothing length column does not exist in the provided dataset.")
 
+    if data.get_dim() != 3:
+        raise ValueError(f"Dataset is not 3-dimensional.")
     if x_max - x_min <= 0:
         raise ValueError("`x_max` must be greater than `x_min`!")
     if y_max - y_min <= 0:
@@ -436,14 +519,18 @@ def _fast_3d_cross(target, z_slice, x_data, y_data, z_data, mass_data, rho_data,
 
     filter_distance = np.abs(dz) < kernel_radius * h_data
 
-    ipixmin = np.rint((x_data[filter_distance] - kernel_radius * h_data[filter_distance] - x_min) / pixwidthx).clip(a_min=0,
-                                                                                                                    a_max=x_pixels)
-    jpixmin = np.rint((y_data[filter_distance] - kernel_radius * h_data[filter_distance] - y_min) / pixwidthy).clip(a_min=0,
-                                                                                                                    a_max=y_pixels)
-    ipixmax = np.rint((x_data[filter_distance] + kernel_radius * h_data[filter_distance] - x_min) / pixwidthx).clip(a_min=0,
-                                                                                                                    a_max=x_pixels)
-    jpixmax = np.rint((y_data[filter_distance] + kernel_radius * h_data[filter_distance] - y_min) / pixwidthy).clip(a_min=0,
-                                                                                                                    a_max=y_pixels)
+    ipixmin = np.rint((x_data[filter_distance] - kernel_radius * h_data[filter_distance] - x_min) / pixwidthx).clip(
+        a_min=0,
+        a_max=x_pixels)
+    jpixmin = np.rint((y_data[filter_distance] - kernel_radius * h_data[filter_distance] - y_min) / pixwidthy).clip(
+        a_min=0,
+        a_max=y_pixels)
+    ipixmax = np.rint((x_data[filter_distance] + kernel_radius * h_data[filter_distance] - x_min) / pixwidthx).clip(
+        a_min=0,
+        a_max=x_pixels)
+    jpixmax = np.rint((y_data[filter_distance] + kernel_radius * h_data[filter_distance] - y_min) / pixwidthy).clip(
+        a_min=0,
+        a_max=y_pixels)
 
     image = np.zeros((y_pixels, x_pixels))
 

@@ -1,3 +1,4 @@
+"""pytest unit tests for sarracen_dataframe.py functionality."""
 import pandas as pd
 
 from sarracen import SarracenDataFrame

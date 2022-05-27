@@ -1,3 +1,6 @@
+"""
+pytest unit tests for interpolate.py functions.
+"""
 import pandas as pd
 import numpy as np
 from pytest import approx
@@ -66,6 +69,7 @@ def test_interpolate_2d_cross():
     assert output[20] == approx(CubicSplineKernel().weight(np.sqrt(2 * (0.05 ** 2)), 2), rel=1e-8)
     assert output[17] == approx(CubicSplineKernel().weight(np.sqrt(2 * (0.25 ** 2)), 2), rel=1e-8)
 
+    # lastly, use a dataset where rho != 0, h != 0, m != 0.
     df = pd.DataFrame({'y': [0],
                        'x': [1],
                        'A': [2.1],
@@ -176,6 +180,7 @@ def test_interpolate_3d_cross():
     assert image[20][20] == approx(CubicSplineKernel().weight(np.sqrt(2 * (0.05 ** 2) + (0.5 ** 2)), 3), rel=1e-8)
     assert image[12][17] == approx(CubicSplineKernel().weight(np.sqrt(0.75 ** 2 + 0.25 ** 2 + (0.5 ** 2)), 3), rel=1e-8)
 
+    # lastly, use a dataset where rho != 0, h != 0, m != 0.
     df = pd.DataFrame({'x': [0],
                             'y': [0],
                             'z': [-1],
