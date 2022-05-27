@@ -5,9 +5,7 @@ from sarracen.kernels import BaseKernel
 
 
 class QuinticSplineKernel(BaseKernel):
-    """
-    An implementation of the Quintic Spline kernel, in 1, 2, and 3 dimensions.
-    """
+    """An implementation of the Quintic Spline kernel."""
 
     @staticmethod
     def get_radius() -> float:
