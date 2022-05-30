@@ -1,31 +1,51 @@
-from typing import Union
+from typing import Union, Callable
 
 from matplotlib.colors import Colormap
 from pandas import DataFrame, Series
 import numpy as np
 
-from sarracen.render import render_2d, render_1d_cross, render_3d, render_3d_cross
+from sarracen.render import render_2d, render_2d_cross, render_3d, render_3d_cross
 from sarracen.kernels import CubicSplineKernel, BaseKernel
 
 
-def _snap(value: float):
-    """
-    Return a number snapped to the nearest integer, with 1e-4 tolerance.
-    :param value: The number to snap.
-    :return: An integer if a close integer is detected, otherwise return 'value'.
-    """
-    if np.isclose(value, np.rint(value), atol=1e-4):
-        return np.rint(value)
-    else:
-        return value
+def _copy_doc(copy_func: Callable) -> Callable:
+    """Copy documentation from another function to this function."""
+    def wrapper(func: Callable) -> Callable:
+        func.__doc__ = copy_func.__doc__
+        return func
+    return wrapper
 
 
 class SarracenDataFrame(DataFrame):
-    _metadata = ['_params', '_units', '_xcol', '_ycol', '_zcol', '_xmin', '_ymin', '_zmin', '_xmax', '_ymax', '_zmax']
+    """ A pandas DataFrame which contains relevant data for SPH data visualizations.
+
+    This is an extended version of the pandas DataFrame class, which contains several
+    derived parameters used in the `render.py` and `interpolate.py` modules. The labels
+    of columns containing x, y, and z directional data, and the labels of columns containing
+    mass, density, and smoothing length information are all stored. As well, the kernel
+    used for all interpolation operations, and the units for each data column.
+
+    See Also
+    --------
+    readers : Functions for creating SarracenDataFrame objects from exported SPH data.
+    """
+    _metadata = ['_params', '_units', '_xcol', '_ycol', '_zcol', '_hcol', '_mcol', '_rhocol', '_kernel']
 
     def __init__(self, data=None, params=None, *args, **kwargs):
+        """ Create a new `SarracenDataFrame`, and automatically detect important columns.
 
-        # call pandas DataFrame contructor
+        Parameters
+        ----------
+        data : ndarray (structured or homogeneous), Iterable, DataFrame, or dict.
+            Raw particle data passed to the DataFrame super-initializer.
+        params : dict
+            Miscellaneous dataset-level parameters.
+        *args : tuple
+            Additional arguments to the DataFrame super-initializer.
+        **kwargs : dict, optional
+            Additional keyword arguments to the DataFrame super-initializer.
+        """
+        # call pandas DataFrame constructor
         super().__init__(data, *args, **kwargs)
 
         if params is None:
@@ -34,14 +54,24 @@ class SarracenDataFrame(DataFrame):
         self.params = params
 
         self._units = None
-        self.units = Series([np.nan for i in range(len(self.columns))])
+        self.units = Series([np.nan for _ in range(len(self.columns))])
 
-        self._identify_spacial_columns()
-        self._identify_spacial_bounds()
+        self._xcol, self._ycol, self._zcol, self._hcol, self._mcol, self._rhocol = None, None, None, None, None, None
+        self._identify_special_columns()
 
-    def _identify_spacial_columns(self):
-        """
-        Identify which columns in this dataframe correspond to positional data.
+        self._kernel = CubicSplineKernel()
+
+    def _identify_special_columns(self):
+        """ Identify special columns commonly used in analysis functions.
+
+        Identify which columns in this dataset correspond to important data columns commonly used in
+        analysis functions. The columns which contain x, y, and z positional values are detected and
+        set to the `xcol`, `ycol`, and `zcol` values. As well, the columns containing smoothing length,
+        mass, and density information are identified and set to the `hcol`, `mcol`, and `rhocol`.
+
+        If the x or y columns cannot be found, they are set to be the first two columns by default.
+        If the z, smoothing length, mass, or density columns cannot be sound, the corresponding column
+        label is set to `None`.
         """
         # First look for 'x', then 'rx', and then fallback to the first column.
         if 'x' in self.columns:
@@ -64,205 +94,131 @@ class SarracenDataFrame(DataFrame):
             self._zcol = 'z'
         elif 'rz' in self.columns:
             self._zcol = 'rz'
-        else:
-            self._zcol = None
 
-    def _identify_spacial_bounds(self):
-        """
-        Identify the maximum and minimum values of the positional data, snapped
-        to the nearest integer.
-        Must be called after _identify_spacial_columns()
-        """
-        # snap the positional bounds to the nearest integer.
-        self._xmin = _snap(self.loc[:, self._xcol].min())
-        self._ymin = _snap(self.loc[:, self._ycol].min())
-        self._xmax = _snap(self.loc[:, self._xcol].max())
-        self._ymax = _snap(self.loc[:, self._ycol].max())
+        # Look for the keyword 'h' in the data.
+        if 'h' in self.columns:
+            self._hcol = 'h'
 
-        if self._zcol is not None:
-            self._zmin = _snap(self.loc[:, self._zcol].min())
-            self._zmax = _snap(self.loc[:, self._zcol].max())
+        # Look for the keyword 'm' or 'mass' in the data.
+        if 'm' in self.columns:
+            self._mcol = 'm'
+        elif 'mass' in self.columns:
+            self._mcol = 'mass'
+
+        # Look for the keyword 'rho' or 'density' in the data.
+        if 'rho' in self.columns:
+            self._rhocol = 'rho'
+        elif 'density' in self.columns:
+            self._rhocol = 'density'
 
     def create_mass_column(self):
-        """
-        Create a new column in this dataframe 'm', which is copied
-        from the 'massoftype' parameter.
+        """ Create a new column 'm', copied from the 'massoftype' dataset parameter.
+
         Intended for use with Phantom data dumps.
-        :return:
+
+        Raises
+        ------
+        KeyError
+            If the 'massoftype' column does not exist in `params`.
         """
         if 'massoftype' not in self.params:
-            raise ValueError("'massoftype' column does not exist in this SarracenDataFrame.")
+            raise KeyError("'massoftype' column does not exist in this SarracenDataFrame.")
 
         self['m'] = self.params['massoftype']
+        self._mcol = 'm'
 
     def derive_density(self):
-        """
-        Create a new column in this dataframe 'rho', derived from
-        the existing columns 'hfact', 'h', and 'm'.
+        """ Create a new column 'rho', derived from columns 'hfact', 'h', and 'm'.
+
         Intended for use with Phantom data dumps.
+
+        Raises
+        ------
+        KeyError
+            If the `hcol` and `mcol` columns do not exist, or 'hfact' does not exist in `params`.
         """
-        if not {'h', 'm'}.issubset(self.columns) or 'hfact' not in self.params:
-            raise ValueError('Density cannot be derived from the columns in this SarracenDataFrame.')
+        if not {self.hcol, self.mcol}.issubset(self.columns) or 'hfact' not in self.params:
+            raise KeyError('Density cannot be derived from the columns in this SarracenDataFrame.')
 
         self['rho'] = (self.params['hfact'] / self['h']) ** (self.get_dim()) * self['m']
+        self._rhocol = 'rho'
 
-    def render_3d(self,
-               target: str,
-               x: str = None,
-               y: str = None,
-               kernel: BaseKernel = CubicSplineKernel(),
-               xmin: float = None,
-               ymin: float = None,
-               xmax: float = None,
-               ymax: float = None,
-               pixcountx: int = 256,
-               pixcounty: int = None,
-               cmap: Union[str, Colormap] = 'RdBu',
-               int_samples: int = 1000) -> ('Figure', 'Axes'):
-        """
-        Render the data within this dataframe to a 2D matplotlib object, using 3D -> 2D column interpolation of the
-        target variable.
-        :param target: The variable to interpolate over. [Required]
-        :param x: The positional x variable.
-        :param y: The positional y variable.
-        :param kernel: The smoothing kernel to use for interpolation.
-        :param xmin: The minimum bound in the x-direction.
-        :param ymin: The minimum bound in the y-direction.
-        :param xmax: The maximum bound in the x-direction.
-        :param ymax: The maximum bound in the y-direction.
-        :param pixcountx: The number of pixels in the x-direction.
-        :param pixcounty: The number of pixels in the y-direction.
-        :param cmap: The color map to use for plotting this data.
-        :param int_samples: The number of samples to use when approximating the kernel column integral.
-        :return: The completed plot.
-        """
-
-        return render_3d(self, target, x, y, kernel, xmin, ymin, xmax, ymax, pixcountx, pixcounty, cmap, int_samples)
-
+    @_copy_doc(render_2d)
     def render_2d(self,
-               target: str,
-               x: str = None,
-               y: str = None,
-               kernel: BaseKernel = CubicSplineKernel(),
-               xmin: float = None,
-               ymin: float = None,
-               xmax: float = None,
-               ymax: float = None,
-               pixcountx: int = 256,
-               pixcounty: int = None,
-               cmap: Union[str, Colormap] = 'RdBu') -> ('Figure', 'Axes'):
-        """
-        Render the data within this dataframe to a 2D matplotlib object, using 2D SPH Interpolation of the target
-        variable.
-        :param target: The variable to interpolate over. [Required]
-        :param x: The positional x variable.
-        :param y: The positional y variable.
-        :param kernel: The smoothing kernel to use for interpolation.
-        :param xmin: The minimum bound in the x-direction.
-        :param ymin: The minimum bound in the y-direction.
-        :param xmax: The maximum bound in the x-direction.
-        :param ymax: The maximum bound in the y-direction.
-        :param pixcountx: The number of pixels in the x-direction.
-        :param pixcounty: The number of pixels in the y-direction.
-        :param cmap: The color map to use for plotting this data.
-        :return: The completed plot.
-        """
+                  target: str,
+                  x: str = None,
+                  y: str = None,
+                  kernel: BaseKernel = None,
+                  x_pixels: int = None,
+                  y_pixels: int = None,
+                  x_min: float = None,
+                  x_max: float = None,
+                  y_min: float = None,
+                  y_max: float = None,
+                  colormap: Union[str, Colormap] = 'RdBu') -> ('Figure', 'Axes'):
 
-        return render_2d(self, target, x, y, kernel, xmin, ymin, xmax, ymax, pixcountx, pixcounty, cmap)
+        return render_2d(self, target, x, y, kernel, x_pixels, y_pixels, x_min, x_max, y_min, y_max, colormap)
 
-    def render_1d_cross(self,
-                       target: str,
-                       x: str = None,
-                       y: str = None,
-                       kernel: BaseKernel = CubicSplineKernel(),
-                       x1: float = None,
-                       y1: float = None,
-                       x2: float = None,
-                       y2: float = None,
-                       pixcount: int = 500) -> ('Figure', 'Axes'):
-        """
-        Render the data within this SarracenDataFrame to a 1D matplotlib object, by taking a 1D SPH
-        cross-section of the target variable along a given line.
-        :param data: The SarracenDataFrame to render. [Required]
-        :param target: The variable to interpolate over. [Required]
-        :param x: The positional x variable.
-        :param y: The positional y variable.
-        :param kernel: The kernel to use for smoothing the target data.
-        :param x1: The starting x-coordinate of the cross-section line. (in particle data space)
-        :param y1: The starting y-coordinate of the cross-section line. (in particle data space)
-        :param x2: The ending x-coordinate of the cross-section line. (in particle data space)
-        :param y2: The ending y-coordinate of the cross-section line. (in particle data space)
-        :param pixcount: The number of pixels in the output over the entire cross-sectional line.
-        :return: The completed plot.
-        """
-        return render_1d_cross(self, target, x, y, kernel, x1, y1, x2, y2, pixcount)
+    @_copy_doc(render_2d_cross)
+    def render_2d_cross(self,
+                        target: str,
+                        x: str = None,
+                        y: str = None,
+                        kernel: BaseKernel = None,
+                        pixels: int = 512,
+                        x1: float = None,
+                        y1: float = None,
+                        x2: float = None,
+                        y2: float = None) -> ('Figure', 'Axes'):
 
+        return render_2d_cross(self, target, x, y, kernel, pixels, x1, x2, y1, y2)
+
+    @_copy_doc(render_3d)
+    def render_3d(self,
+                  target: str,
+                  x: str = None,
+                  y: str = None,
+                  kernel: BaseKernel = None,
+                  int_samples: int = 1000,
+                  x_pixels: int = None,
+                  y_pixels: int = None,
+                  x_min: float = None,
+                  x_max: float = None,
+                  y_min: float = None,
+                  y_max: float = None,
+                  colormap: Union[str, Colormap] = 'RdBu') -> ('Figure', 'Axes'):
+
+        return render_3d(self, target, x, y, kernel, int_samples, x_pixels, y_pixels, x_min, x_max, y_min, y_max,
+                         colormap)
+
+    @_copy_doc(render_3d_cross)
     def render_3d_cross(self,
                         target: str,
-                        zslice: float = None,
+                        z_slice: float = None,
                         x: str = None,
                         y: str = None,
                         z: str = None,
-                        kernel: BaseKernel = CubicSplineKernel(),
-                        xmin: float = None,
-                        ymin: float = None,
-                        xmax: float = None,
-                        ymax: float = None,
-                        pixcountx: int = 480,
-                        pixcounty: int = None,
-                        cmap: Union[str, Colormap] = 'RdBu') -> ('Figure', 'Axes'):
-        """ Render 3D particle data inside this DataFrame to a 2D grid, using a 3D cross-section.
+                        kernel: BaseKernel = None,
+                        x_pixels: int = None,
+                        y_pixels: int = None,
+                        x_min: float = None,
+                        x_max: float = None,
+                        y_min: float = None,
+                        y_max: float = None,
+                        colormap: Union[str, Colormap] = 'RdBu') -> ('Figure', 'Axes'):
 
-        Render the data within this SarracenDataFrame to a 2D matplotlib object, using a 3D -> 2D
-        cross-section of the target variable. The cross-section is taken of the 3D data at a specific
-        value of z, and the contributions of particles near the plane are interpolated to a 2D grid.
-
-        Parameters
-        ----------
-        target: str
-            The column label of the target smoothing data.
-        zslice: float
-            The z-axis value to take the cross-section at.
-        x: str
-            The column label of the x-directional axis.
-        y: str
-            The column label of the y-directional axis.
-        z: str
-            The column label of the z-directional axis.
-        kernel: BaseKernel
-            The kernel to use for smoothing the target data.
-        xmin: float, optional
-            The minimum bound in the x-direction. (in particle data space)
-        ymin: float, optional
-            The minimum bound in the y-direction. (in particle data space)
-        xmax: float, optional
-            The maximum bound in the x-direction. (in particle data space)
-        ymax: float, optional
-            The maximum bound in the y-direction. (in particle data space)
-        pixcountx: int, optional
-            The number of pixels in the output image in the x-direction.
-        pixcounty: int, optional
-            The number of pixels in the output image in the y-direction.
-        cmap: str or Colormap, optional
-            The color map to use when plotting this data.
-
-        Returns
-        -------
-        Figure
-            The resulting matplotlib figure, containing the 3d-cross section and
-            a color bar indicating the magnitude of the target variable.
-        Axes
-            The resulting matplotlib axes, which contains the 3d-cross section image.
-
-        Raises
-        -------
-        ValueError
-           If `pixwidthx`, `pixwidthy`, `pixcountx`, or `pixcounty` are less than or equal to zero.
-        """
-        return render_3d_cross(self, target, zslice, x, y, z, kernel, xmin, ymin, xmax, ymax, pixcountx, pixcounty, cmap)
+        return render_3d_cross(self, target, z_slice, x, y, z, kernel, x_pixels, y_pixels, x_min, x_max, y_min, y_max,
+                               colormap)
 
     @property
     def params(self):
+        """dict: Miscellaneous dataset-level parameters.
+
+        Raises
+        ------
+        TypeError
+            If `params` is set to a non-dictionary or non-None object.
+        """
         return self._params
 
     @params.setter
@@ -274,97 +230,119 @@ class SarracenDataFrame(DataFrame):
             raise TypeError("Parameters not a dictionary")
         self._params = new_params
 
-    @params.getter
-    def params(self):
-        return self._params
-
     @property
     def units(self):
+        """Series: Units for each column of this dataset."""
         return self._units
 
     @units.setter
-    def units(self, new_units):
+    def units(self, new_units: Series):
         self._units = new_units
 
-    @units.getter
-    def units(self):
-        return self._units
-
     @property
     def xcol(self):
+        """str : Label of the column which contains x-positional data.
+
+        If this is set to a column which does not exist in the dataset, the column
+        label will remain set to the old value.
+        """
         return self._xcol
 
-    @xcol.getter
-    def xcol(self):
-        return self._xcol
+    @xcol.setter
+    def xcol(self, new_col: str):
+        if new_col in self:
+            self._xcol = new_col
 
     @property
     def ycol(self):
+        """str : Label of the column which contains y-positional data.
+
+        If this is set to a column which does not exist in the dataset, the column
+        label will remain set to the old value.
+        """
         return self._ycol
 
-    @ycol.getter
-    def ycol(self):
-        return self._ycol
+    @ycol.setter
+    def ycol(self, new_col: str):
+        if new_col in self:
+            self._ycol = new_col
 
     @property
     def zcol(self):
+        """str : Label of the column which contains z-positional data.
+
+        If this is set to a column which does not exist in the dataset, the column
+        label will remain set to the old value.
+        """
         return self._zcol
 
-    @zcol.getter
-    def zcol(self):
-        return self._zcol
+    @zcol.setter
+    def zcol(self, new_col: str):
+        if new_col in self:
+            self._zcol = new_col
 
     @property
-    def xmin(self):
-        return self._xmin
+    def hcol(self):
+        """str : Label of the column which contains smoothing length data.
 
-    @xmin.getter
-    def xmin(self):
-        return self._xmin
+        If this is set to a column which does not exist in the dataset, the column
+        label will remain set to the old value.
+        """
+        return self._hcol
 
-    @property
-    def ymin(self):
-        return self._ymin
-
-    @ymin.getter
-    def ymin(self):
-        return self._ymin
+    @hcol.setter
+    def hcol(self, new_col: str):
+        if new_col in self:
+            self._hcol = new_col
 
     @property
-    def zmin(self):
-        return self._ymin
+    def mcol(self):
+        """str : Label of the column which contains particle mass data.
 
-    @zmin.getter
-    def zmin(self):
-        return self._zmin
+        If this is set to a column which does not exist in the dataset, the column
+        label will remain set to the old value.
+        """
+        return self._mcol
 
-    @property
-    def xmax(self):
-        return self._xmax
-
-    @xmax.getter
-    def xmax(self):
-        return self._xmax
+    @mcol.setter
+    def mcol(self, new_col: str):
+        if new_col in self:
+            self._mcol = new_col
 
     @property
-    def ymax(self):
-        return self._ymax
+    def rhocol(self):
+        """str : Label of the column which contains particle density data.
 
-    @ymin.getter
-    def ymax(self):
-        return self._ymax
+        If this is set to a column which does not exist in the dataset, the column
+        label will remain set to the old value.
+        """
+        return self._rhocol
+
+    @rhocol.setter
+    def rhocol(self, new_col: str):
+        if new_col in self:
+            self._rhocol = new_col
 
     @property
-    def zmax(self):
-        return self._zmax
+    def kernel(self):
+        """BaseKernel : The default kernel to use for interpolation operations with this dataset.
 
-    @zmin.getter
-    def zmax(self):
-        return self._zmax
+        If this is set to an object which is not a BaseKernel, the kernel will remain set as
+        the old value.
+        """
+        return self._kernel
+
+    @kernel.setter
+    def kernel(self, new_kernel: BaseKernel):
+        if isinstance(new_kernel, BaseKernel):
+            self._kernel = new_kernel
 
     def get_dim(self):
-        """
-        Get the dimensionality of the data in this dataframe.
-        :return: The number of dimensions.
+        """ Get the dimensionality of the data in this dataframe.
+
+        Returns
+        -------
+        int
+            The number of positional dimensions.
         """
         return 3 if self._zcol is not None else 2

@@ -1,3 +1,4 @@
+"""pytest unit tests for render.py functions."""
 import pandas as pd
 import numpy as np
 from matplotlib.axes import Axes
@@ -6,7 +7,7 @@ from pytest import approx
 
 from sarracen import SarracenDataFrame
 from sarracen.kernels import CubicSplineKernel
-from sarracen.render import render_2d, render_1d_cross, render_3d, render_3d_cross
+from sarracen.render import render_2d, render_2d_cross, render_3d, render_3d_cross
 
 
 def test_2d_plot():
@@ -32,15 +33,15 @@ def test_2d_plot():
     assert ax.get_ylim() == (1, 5)
 
     # aspect ratio of data max & min is 4/3,
-    # pixel count => (256, 341)
-    # pixel width => (3/256, 4/341)
+    # pixel count => (512, 683)
+    # pixel width => (3/512, 4/638)
     # both particles are in corners
-    # therefore closest pixel is => sqrt((3/512)**2, (2/341)**2)
+    # therefore closest pixel is => sqrt((3/1024)**2, (2/683)**2)
     # use default kernel to determine the max pressure value
-    assert fig.axes[1].get_ylim() == (0, CubicSplineKernel().w(np.sqrt((3/512)**2 + (2/341)**2), 2))
+    assert fig.axes[1].get_ylim() == (0, CubicSplineKernel().w(np.sqrt((3 / 1024) ** 2 + (2 / 683) ** 2), 2))
 
 
-def test_1dcross_plot():
+def test_2d_cross_plot():
     df = pd.DataFrame({'rx': [0, 5],
                        'P': [1, 1],
                        'h': [1, 1],
@@ -49,7 +50,7 @@ def test_1dcross_plot():
                        'm': [1, 1]})
     sdf = SarracenDataFrame(df)
 
-    fig, ax = sdf.render_1d_cross('P')
+    fig, ax = sdf.render_2d_cross('P')
 
     assert isinstance(fig, Figure)
     assert isinstance(ax, Axes)
@@ -59,10 +60,10 @@ def test_1dcross_plot():
 
     # cross section from (0, 0) -> (5, 4), therefore x goes from 0 -> sqrt(5**2 + 4**2)
     assert ax.get_xlim() == (0, np.sqrt(41))
-    # 1000 pixels across, and both particles are in corners
-    # therefore closest pixel to a particle is sqrt(41)/1000 units away
+    # 512 pixels across (by default), and both particles are in corners
+    # therefore closest pixel to a particle is sqrt(41)/1024 units away
     # use default kernel to determine the max pressure value
-    assert ax.get_ylim() == (0, CubicSplineKernel().w(np.sqrt(41) / 1000, 2))
+    assert ax.get_ylim() == (0, approx(CubicSplineKernel().w(np.sqrt(41) / 1024, 2)))
 
 
 def test_3d_plot():
@@ -75,7 +76,7 @@ def test_3d_plot():
                        'm': [1, 1]})
     sdf = SarracenDataFrame(df)
 
-    fig, ax = sdf.render_3d('P', pixcountx=300, int_samples=10000)
+    fig, ax = sdf.render_3d('P', int_samples=10000, x_pixels=300)
 
     assert isinstance(fig, Figure)
     assert isinstance(ax, Axes)
@@ -93,7 +94,7 @@ def test_3d_plot():
     assert fig.axes[1].get_ylim() == (0, approx(0.477372919027))
 
 
-def test_3dcross_plot():
+def test_3d_cross_plot():
     df = pd.DataFrame({'rx': [0, 2.5, 5],
                        'P': [1, 1, 1],
                        'h': [1, 1, 1],
@@ -105,7 +106,7 @@ def test_3dcross_plot():
 
     # setting the pixel count to an odd number ensures that the middle particle at (2.5, 2, 2) is at the
     # exact same position as the centre pixel.
-    fig, ax = sdf.render_3d_cross('P', pixcountx=489)
+    fig, ax = sdf.render_3d_cross('P', x_pixels=489)
 
     assert isinstance(fig, Figure)
     assert isinstance(ax, Axes)
@@ -139,8 +140,8 @@ def test_render_passthrough():
     assert repr(fig1) == repr(fig2)
     assert repr(ax1) == repr(ax2)
 
-    fig1, ax1 = sdf.render_1d_cross('P')
-    fig2, ax2 = render_1d_cross(sdf, 'P')
+    fig1, ax1 = sdf.render_2d_cross('P')
+    fig2, ax2 = render_2d_cross(sdf, 'P')
 
     assert repr(fig1) == repr(fig2)
     assert repr(ax1) == repr(ax2)
@@ -156,3 +157,19 @@ def test_render_passthrough():
 
     assert repr(fig1) == repr(fig2)
     assert repr(ax1) == repr(ax2)
+
+
+def test_snap():
+    df = pd.DataFrame({'x': [0.0001, 5.2],
+                       'y': [3.00004, 0.1],
+                       'P': [1, 1],
+                       'h': [1, 1],
+                       'rho': [1, 1],
+                       'm': [1, 1]})
+    sdf = SarracenDataFrame(df)
+    fig, ax = sdf.render_2d('P')
+
+    # 0.0001 -> 0.0, 5.2 -> 5.2
+    assert ax.get_xlim() == (0.0, 5.2)
+    # 0.1 -> 0.1, 3.00004 -> 3.0
+    assert ax.get_ylim() == (0.1, 3.0)

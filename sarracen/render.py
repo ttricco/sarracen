@@ -1,42 +1,114 @@
+"""
+Provides several rendering functions which produce matplotlib plots of SPH data.
+These functions act as interfaces to interpolation functions within interpolate.py.
+
+These functions can be accessed directly, for example:
+    render_2d(data, target)
+Or, they can be accessed through a `SarracenDataFrame` object, for example:
+    data.render_2d(target)
+"""
+
 from typing import Union
 
 import numpy as np
+import seaborn as sns
 from matplotlib import pyplot as plt
 from matplotlib.colors import Colormap
-import seaborn as sns
 
-from sarracen.interpolate import interpolate2DCross, interpolate1DCross, interpolate3D, interpolate3DCross
-from sarracen.kernels import BaseKernel, CubicSplineKernel
+from sarracen.interpolate import interpolate_2d_cross, interpolate_2d, interpolate_3d, interpolate_3d_cross
+from sarracen.kernels import BaseKernel
+
+
+def _snap(value: float):
+    """ Snap a number to the nearest integer
+
+    Return a number which is rounded to the nearest integer,
+    with a 1e-4 absolute range of tolerance.
+
+    Parameters
+    ----------
+    value: float
+        The number to snap.
+
+    Returns
+    -------
+    float: An integer (in float form) if a close integer is detected, otherwise return `value`.
+    """
+    if np.isclose(value, np.rint(value), atol=1e-4):
+        return np.rint(value)
+    else:
+        return value
 
 
 def render_2d(data: 'SarracenDataFrame',
               target: str,
               x: str = None,
               y: str = None,
-              kernel: BaseKernel = CubicSplineKernel(),
-              xmin: float = None,
-              ymin: float = None,
-              xmax: float = None,
-              ymax: float = None,
-              pixcountx: int = 256,
-              pixcounty: int = None,
-              cmap: Union[str, Colormap] = 'RdBu') -> ('Figure', 'Axes'):
-    """
-    Render the data within a SarracenDataFrame to a 2D matplotlib object, using 2D SPH Interpolation
-    of the target variable.
-    :param data: The SarracenDataFrame to render. [Required]
-    :param target: The variable to interpolate over. [Required]
-    :param x: The positional x variable.
-    :param y: The positional y variable.
-    :param kernel: The smoothing kernel to use for interpolation.
-    :param xmin: The minimum bound in the x-direction.
-    :param ymin: The minimum bound in the y-direction.
-    :param xmax: The maximum bound in the x-direction.
-    :param ymax: The maximum bound in the y-direction.
-    :param pixcountx: The number of pixels in the x-direction.
-    :param pixcounty: The number of pixels in the y-direction.
-    :param cmap: The color map to use for plotting this data.
-    :return: The completed plot.
+              kernel: BaseKernel = None,
+              x_pixels: int = None,
+              y_pixels: int = None,
+              x_min: float = None,
+              x_max: float = None,
+              y_min: float = None,
+              y_max: float = None,
+              colormap: Union[str, Colormap] = 'RdBu') -> ('Figure', 'Axes'):
+    """ Render 2D particle data to a 2D grid, using SPH rendering of a target variable.
+
+    Render the data within a SarracenDataFrame to a 2D matplotlib object, by rendering the values
+    of a target variable. The contributions of all particles near the rendered area are summed and
+    stored to a 2D grid.
+
+    Parameters
+    ----------
+    data : SarracenDataFrame
+        Particle data, in a SarracenDataFrame.
+    target: str
+        Column label of the target smoothing data.
+    x: str, optional
+        Column label of the x-directional axis. Defaults to the x-column detected in `data`.
+    y: str, optional
+        Column label of the y-directional axis. Defaults to the y-column detected in `data`.
+    kernel: BaseKernel, optional
+        Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
+    x_pixels: int, optional
+        Number of pixels in the output image in the x-direction. If both x_pixels and y_pixels are
+        None, this defaults to 256. Otherwise, this value defaults to a multiple of y_pixels which
+        preserves the aspect ratio of the data.
+    y_pixels: int, optional
+        Number of pixels in the output image in the y-direction. If both x_pixels and y_pixels are
+        None, this defaults to 256. Otherwise, this value defaults to a multiple of x_pixels which
+        preserves the aspect ratio of the data.
+    x_min: float, optional
+        Minimum bound in the x-direction (in particle data space). Defaults to the lower bound
+        of x detected in `data` snapped to the nearest integer.
+    x_max: float, optional
+        Maximum bound in the x-direction (in particle data space). Defaults to the upper bound
+        of x detected in `data` snapped to the nearest integer.
+    y_min: float, optional
+        Minimum bound in the y-direction (in particle data space). Defaults to the lower bound
+        of y detected in `data` snapped to the nearest integer.
+    y_max: float, optional
+        Maximum bound in the y-direction (in particle data space). Defaults to the upper bound
+        of y detected in `data` snapped to the nearest integer.
+    colormap: str or Colormap, optional
+        The color map to use when plotting this data.
+
+    Returns
+    -------
+    Figure
+        The resulting matplotlib figure, containing the 2d render and
+        a color bar indicating the magnitude of the target variable.
+    Axes
+        The resulting matplotlib axes, which contain the 2d rendered image.
+
+    Raises
+    -------
+    ValueError
+        If `x_pixels` or `y_pixels` are less than or equal to zero, or
+        if the specified `x` and `y` minimum and maximums result in an invalid region.
+    KeyError
+        If `target`, `x`, `y`, mass, density, or smoothing length columns do not
+        exist in `data`.
     """
     # x & y columns default to the variables determined by the SarracenDataFrame.
     if x is None:
@@ -44,27 +116,32 @@ def render_2d(data: 'SarracenDataFrame',
     if y is None:
         y = data.ycol
 
-    # plot bounds default to variable determined in SarracenDataFrame
-    if xmin is None:
-        xmin = data.xmin
-    if ymin is None:
-        ymin = data.ymin
-    if xmax is None:
-        xmax = data.xmax
-    if ymax is None:
-        ymax = data.ymax
+    # boundaries of the plot default to the maximum & minimum values of the data.
+    if x_min is None:
+        x_min = _snap(data.loc[:, x].min())
+    if y_min is None:
+        y_min = _snap(data.loc[:, y].min())
+    if x_max is None:
+        x_max = _snap(data.loc[:, x].max())
+    if y_max is None:
+        y_max = _snap(data.loc[:, y].max())
 
-    # set pixcounty to maintain an aspect ratio that is the same as the underlying bounds of the data.
-    if pixcounty is None:
-        pixcounty = int(np.rint(pixcountx * ((ymax - ymin) / (xmax - xmin))))
+    # set # of pixels to maintain an aspect ratio that is the same as the underlying bounds of the data.
+    if x_pixels is None and y_pixels is None:
+        x_pixels = 512
+    if x_pixels is None:
+        x_pixels = int(np.rint(y_pixels * ((x_max - x_min) / (y_max - y_min))))
+    if y_pixels is None:
+        y_pixels = int(np.rint(x_pixels * ((y_max - y_min) / (x_max - x_min))))
 
-    pixwidthx = (xmax - xmin) / pixcountx
-    pixwidthy = (ymax - ymin) / pixcounty
-    image = interpolate2DCross(data, x, y, target, kernel, pixwidthx, pixwidthy, xmin, ymin, pixcountx, pixcounty)
+    if kernel is None:
+        kernel = data.kernel
+
+    image = interpolate_2d(data, target, x, y, kernel, x_pixels, y_pixels, x_min, x_max, y_min, y_max)
 
     # ensure the plot size maintains the aspect ratio of the underlying bounds of the data
-    fig, ax = plt.subplots(figsize=(6.4, 4.8 * ((ymax - ymin) / (xmax - xmin))))
-    img = ax.imshow(image, cmap=cmap, origin='lower', extent=[xmin, xmax, ymin, ymax])
+    fig, ax = plt.subplots(figsize=(6.4, 4.8 * ((y_max - y_min) / (x_max - x_min))))
+    img = ax.imshow(image, cmap=colormap, origin='lower', extent=[x_min, x_max, y_min, y_max])
     ax.set_xlabel(x)
     ax.set_ylabel(y)
     cbar = fig.colorbar(img, ax=ax)
@@ -73,30 +150,66 @@ def render_2d(data: 'SarracenDataFrame',
     return fig, ax
 
 
-def render_1d_cross(data: 'SarracenDataFrame',
+def render_2d_cross(data: 'SarracenDataFrame',
                     target: str,
                     x: str = None,
                     y: str = None,
-                    kernel: BaseKernel = CubicSplineKernel(),
+                    kernel: BaseKernel = None,
+                    pixels: int = 512,
                     x1: float = None,
-                    y1: float = None,
                     x2: float = None,
-                    y2: float = None,
-                    pixcount: int = 256) -> ('Figure', 'Axes'):
-    """
-    Render the data within a SarracenDataFrame to a 1D matplotlib object, by taking a 1D SPH
-    cross-section of the target variable along a given line.
-    :param data: The SarracenDataFrame to render. [Required]
-    :param target: The variable to interpolate over. [Required]
-    :param x: The positional x variable.
-    :param y: The positional y variable.
-    :param kernel: The kernel to use for smoothing the target data.
-    :param x1: The starting x-coordinate of the cross-section line. (in particle data space)
-    :param y1: The starting y-coordinate of the cross-section line. (in particle data space)
-    :param x2: The ending x-coordinate of the cross-section line. (in particle data space)
-    :param y2: The ending y-coordinate of the cross-section line. (in particle data space)
-    :param pixcount: The number of pixels in the output over the entire cross-sectional line.
-    :return: The completed plot.
+                    y1: float = None,
+                    y2: float = None) -> ('Figure', 'Axes'):
+    """ Render 2D particle data to a 1D line, using a 2D cross-section.
+
+    Render the data within a SarracenDataFrame to a seaborn-generated line plot, by taking
+    a 2D->1D cross section of a target variable. The contributions of all particles near the
+    cross-section line are summed and stored in a 1D array.
+
+    Parameters
+    ----------
+    data : SarracenDataFrame
+        Particle data, in a SarracenDataFrame.
+    target: str
+        Column label of the target smoothing data.
+    x: str, optional
+        Column label of the x-directional axis. Defaults to the x-column detected in `data`.
+    y: str, optional
+        Column label of the y-directional axis. Defaults to the y-column detected in `data`.
+    kernel: BaseKernel
+        Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
+    pixels: int, optional
+        Number of points in the resulting line plot in the x-direction.
+    x1: float, optional
+        Starting x-coordinate of the line (in particle data space). Defaults to the lower bound
+        of x detected in `data` snapped to the nearest integer.
+    x2: float, optional
+        Ending x-coordinate of the line (in particle data space). Defaults to the upper bound
+        of x detected in `data` snapped to the nearest integer.
+    y1: float, optional
+        Starting y-coordinate of the line (in particle data space). Defaults to the lower bound
+        of y detected in `data` snapped to the nearest integer.
+    y2: float, optional
+        Ending y-coordinate of the line (in particle data space). Defaults to the upper bound
+        of y detected in `data` snapped to the nearest integer.
+
+    Returns
+    -------
+    Figure
+        The resulting matplotlib figure, containing the seaborn-generated
+        line plot.
+    Axes
+        The resulting matplotlib axes, which contain the line plot.
+
+    Raises
+    -------
+    ValueError
+        If `x_pixels` or `y_pixels` are less than or equal to zero, or
+        if the specified `x1`, `x2`, `y1`, and `y2` are all the same
+        (indicating a zero-length cross-section).
+    KeyError
+        If `target`, `x`, `y`, mass, density, or smoothing length columns do not
+        exist in `data`.
     """
     # x & y columns default to the variables determined by the SarracenDataFrame.
     if x is None:
@@ -104,41 +217,163 @@ def render_1d_cross(data: 'SarracenDataFrame',
     if y is None:
         y = data.ycol
 
-    # plot bounds default to variable determined in SarracenDataFrame
+    # start and end points of the line default to the maximum & minimum values of the data.
     if x1 is None:
-        x1 = data.xmin
+        x1 = _snap(data.loc[:, x].min())
     if y1 is None:
-        y1 = data.ymin
+        y1 = _snap(data.loc[:, y].min())
     if x2 is None:
-        x2 = data.xmax
+        x2 = _snap(data.loc[:, x].max())
     if y2 is None:
-        y2 = data.ymax
+        y2 = _snap(data.loc[:, y].max())
 
-    output = interpolate1DCross(data, x, y, target, kernel, x1, y1, x2, y2, pixcount)
+    if kernel is None:
+        kernel = data.kernel
+
+    output = interpolate_2d_cross(data, target, x, y, kernel, pixels, x1, x2, y1, y2)
 
     fig, ax = plt.subplots()
     ax.margins(x=0, y=0)
-    sns.lineplot(x=np.linspace(0, np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2), pixcount), y=output, ax=ax)
+    sns.lineplot(x=np.linspace(0, np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2), pixels), y=output, ax=ax)
     ax.set_xlabel(f'cross-section ({x}, {y})')
     ax.set_ylabel(target)
 
     return fig, ax
 
 
+def render_3d(data: 'SarracenDataFrame',
+              target: str,
+              x: str = None,
+              y: str = None,
+              kernel: BaseKernel = None,
+              integral_samples: int = 1000,
+              x_pixels: int = None,
+              y_pixels: int = None,
+              x_min: float = None,
+              x_max: float = None,
+              y_min: float = None,
+              y_max: float = None,
+              colormap: Union[str, Colormap] = 'RdBu') -> ('Figure', 'Axes'):
+    """ Render 3D particle data to a 2D grid, using SPH column rendering of a target variable.
+
+    Render the data within a SarracenDataFrame to a 2D matplotlib object, by rendering the values
+    of a target variable. The contributions of all particles near columns across the z-axis are
+    summed and stored in a to a 2D grid.
+
+    Parameters
+    ----------
+    data : SarracenDataFrame
+        Particle data, in a SarracenDataFrame.
+    target: str
+        Column label of the target smoothing data.
+    x: str, optional
+        Column label of the x-directional axis. Defaults to the x-column detected in `data`.
+    y: str, optional
+        Column label of the y-directional axis. Defaults to the y-column detected in `data`.
+    kernel: BaseKernel, optional
+        Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
+    integral_samples: int, optional
+        The number of sample points to take when approximating the 2D column kernel.
+    x_pixels: int, optional
+        Number of pixels in the output image in the x-direction. If both x_pixels and y_pixels are
+        None, this defaults to 256. Otherwise, this value defaults to a multiple of y_pixels which
+        preserves the aspect ratio of the data.
+    y_pixels: int, optional
+        Number of pixels in the output image in the y-direction. If both x_pixels and y_pixels are
+        None, this defaults to 256. Otherwise, this value defaults to a multiple of x_pixels which
+        preserves the aspect ratio of the data.
+    x_min: float, optional
+        Minimum bound in the x-direction (in particle data space). Defaults to the lower bound
+        of x detected in `data` snapped to the nearest integer.
+    x_max: float, optional
+        Maximum bound in the x-direction (in particle data space). Defaults to the upper bound
+        of x detected in `data` snapped to the nearest integer.
+    y_min: float, optional
+        Minimum bound in the y-direction (in particle data space). Defaults to the lower bound
+        of y detected in `data` snapped to the nearest integer.
+    y_max: float, optional
+        Maximum bound in the y-direction (in particle data space). Defaults to the upper bound
+        of y detected in `data` snapped to the nearest integer.
+    colormap: str or Colormap, optional
+        The color map to use when plotting this data.
+
+    Returns
+    -------
+    Figure
+        The resulting matplotlib figure, containing the 2d render and
+        a color bar indicating the magnitude of the target variable.
+    Axes
+        The resulting matplotlib axes, which contain the 2d rendered image.
+
+    Raises
+    -------
+    ValueError
+        If `x_pixels` or `y_pixels` are less than or equal to zero, or
+        if the specified `x` and `y` minimum and maximums result in an invalid region, or
+        if the provided data is not 3-dimensional.
+    KeyError
+        If `target`, `x`, `y`, mass, density, or smoothing length columns do not
+        exist in `data`.
+
+    Notes
+    -----
+    Since the direction of integration is assumed to be straight across the z-axis, the z-axis column
+    is not required for this type of rendering.
+    """
+    # x & y columns default to the variables determined by the SarracenDataFrame.
+    if x is None:
+        x = data.xcol
+    if y is None:
+        y = data.ycol
+
+    # boundaries of the plot default to the maximum & minimum values of the data.
+    if x_min is None:
+        x_min = _snap(data.loc[:, x].min())
+    if y_min is None:
+        y_min = _snap(data.loc[:, y].min())
+    if x_max is None:
+        x_max = _snap(data.loc[:, x].max())
+    if y_max is None:
+        y_max = _snap(data.loc[:, y].max())
+
+    # set # of pixels to maintain an aspect ratio that is the same as the underlying bounds of the data.
+    if x_pixels is None and y_pixels is None:
+        x_pixels = 512
+    if x_pixels is None:
+        x_pixels = int(np.rint(y_pixels * ((x_max - x_min) / (y_max - y_min))))
+    if y_pixels is None:
+        y_pixels = int(np.rint(x_pixels * ((y_max - y_min) / (x_max - x_min))))
+
+    if kernel is None:
+        kernel = data.kernel
+
+    img = interpolate_3d(data, target, x, y, kernel, integral_samples, x_pixels, y_pixels, x_min, x_max, y_min, y_max)
+
+    # ensure the plot size maintains the aspect ratio of the underlying bounds of the data
+    fig, ax = plt.subplots(figsize=(6.4, 4.8 * ((y_max - y_min) / (x_max - x_min))))
+    graphic = ax.imshow(img, cmap=colormap, origin='lower', extent=[x_min, x_max, y_min, y_max])
+    ax.set_xlabel(x)
+    ax.set_ylabel(y)
+    cbar = fig.colorbar(graphic, ax=ax)
+    cbar.ax.set_ylabel(f"column {target}")
+
+    return fig, ax
+
+
 def render_3d_cross(data: 'SarracenDataFrame',
                     target: str,
-                    zslice: float = None,
+                    z_slice: float = None,
                     x: str = None,
                     y: str = None,
                     z: str = None,
-                    kernel: BaseKernel = CubicSplineKernel(),
-                    xmin: float = None,
-                    ymin: float = None,
-                    xmax: float = None,
-                    ymax: float = None,
-                    pixcountx: int = 480,
-                    pixcounty: int = None,
-                    cmap: Union[str, Colormap] = 'RdBu') -> tuple['Figure', 'Axes']:
+                    kernel: BaseKernel = None,
+                    x_pixels: int = None,
+                    y_pixels: int = None,
+                    x_min: float = None,
+                    x_max: float = None,
+                    y_min: float = None,
+                    y_max: float = None,
+                    colormap: Union[str, Colormap] = 'RdBu') -> tuple['Figure', 'Axes']:
     """ Render 3D particle data to a 2D grid, using a 3D cross-section.
 
     Render the data within a SarracenDataFrame to a 2D matplotlib object, using a 3D -> 2D
@@ -148,32 +383,40 @@ def render_3d_cross(data: 'SarracenDataFrame',
     Parameters
     ----------
     data : SarracenDataFrame
-        The particle data, in a SarracenDataFrame.
+        Particle data, in a SarracenDataFrame.
     target: str
-        The column label of the target smoothing data.
-    zslice: float
-        The z-axis value to take the cross-section at.
-    x: str
-        The column label of the x-directional axis.
-    y: str
-        The column label of the y-directional axis.
+        Column label of the target smoothing data.
+    z_slice: float, optional
+        Z-axis value to take the cross-section at. Defaults to the average z position in `data`.
+    x: str, optional
+        Column label of the x-directional axis. Defaults to the x-column detected in `data`.
+    y: str, optional
+        Column label of the y-directional axis. Defaults to the y-column detected in `data`.
     z: str
         The column label of the z-directional axis.
-    kernel: BaseKernel
-        The kernel to use for smoothing the target data.
-    xmin: float, optional
-        The minimum bound in the x-direction. (in particle data space)
-    ymin: float, optional
-        The minimum bound in the y-direction. (in particle data space)
-    xmax: float, optional
-        The maximum bound in the x-direction. (in particle data space)
-    ymax: float, optional
-        The maximum bound in the y-direction. (in particle data space)
-    pixcountx: int, optional
-        The number of pixels in the output image in the x-direction.
-    pixcounty: int, optional
-        The number of pixels in the output image in the y-direction.
-    cmap: str or Colormap, optional
+    kernel: BaseKernel, optional
+        Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
+    x_pixels: int, optional
+        Number of pixels in the output image in the x-direction. If both x_pixels and y_pixels are
+        None, this defaults to 256. Otherwise, this value defaults to a multiple of y_pixels which
+        preserves the aspect ratio of the data.
+    y_pixels: int, optional
+        Number of pixels in the output image in the y-direction. If both x_pixels and y_pixels are
+        None, this defaults to 256. Otherwise, this value defaults to a multiple of x_pixels which
+        preserves the aspect ratio of the data.
+    x_min: float, optional
+        Minimum bound in the x-direction (in particle data space). Defaults to the lower bound
+        of x detected in `data` snapped to the nearest integer.
+    x_max: float, optional
+        Maximum bound in the x-direction (in particle data space). Defaults to the upper bound
+        of x detected in `data` snapped to the nearest integer.
+    y_min: float, optional
+        Minimum bound in the y-direction (in particle data space). Defaults to the lower bound
+        of y detected in `data` snapped to the nearest integer.
+    y_max: float, optional
+        Maximum bound in the y-direction (in particle data space). Defaults to the upper bound
+        of y detected in `data` snapped to the nearest integer.
+    colormap: str or Colormap, optional
         The color map to use when plotting this data.
 
     Returns
@@ -197,100 +440,39 @@ def render_3d_cross(data: 'SarracenDataFrame',
     if z is None:
         z = data.zcol
 
-    # plot bounds default to variables determined in SarracenDataFrame
-    if xmin is None:
-        xmin = data.xmin
-    if ymin is None:
-        ymin = data.ymin
-    if xmax is None:
-        xmax = data.xmax
-    if ymax is None:
-        ymax = data.ymax
+    # boundaries of the plot default to the maximum & minimum values of the data.
+    if x_min is None:
+        x_min = _snap(data.loc[:, x].min())
+    if y_min is None:
+        y_min = _snap(data.loc[:, y].min())
+    if x_max is None:
+        x_max = _snap(data.loc[:, x].max())
+    if y_max is None:
+        y_max = _snap(data.loc[:, y].max())
 
-    # set default slice to be through the middle of the data's z-axis.
-    if zslice is None:
-        zslice = (data.zmin + data.zmax) / 2
+    # set default slice to be through the data's average z-value.
+    if z_slice is None:
+        z_slice = _snap(data.loc[:, z].mean())
 
-    # set pixcounty to maintain an aspect ratio that is the same as the underlying bounds of the data.
-    if pixcounty is None:
-        pixcounty = int(np.rint(pixcountx * ((ymax - ymin) / (xmax - xmin))))
+    if kernel is None:
+        kernel = data.kernel
 
-    pixwidthx = (xmax - xmin) / pixcountx
-    pixwidthy = (ymax - ymin) / pixcounty
-    img = interpolate3DCross(data, x, y, z, target, kernel, zslice, pixwidthx, pixwidthy, xmin, ymin, pixcountx, pixcounty)
+    # set # of pixels to maintain an aspect ratio that is the same as the underlying bounds of the data.
+    if x_pixels is None and y_pixels is None:
+        x_pixels = 512
+    if x_pixels is None:
+        x_pixels = int(np.rint(y_pixels * ((x_max - x_min) / (y_max - y_min))))
+    if y_pixels is None:
+        y_pixels = int(np.rint(x_pixels * ((y_max - y_min) / (x_max - x_min))))
+
+    img = interpolate_3d_cross(data, target, z_slice, x, y, z, kernel, x_pixels, y_pixels, x_min, x_max, y_min, y_max)
 
     # ensure the plot size maintains the aspect ratio of the underlying bounds of the data
-    fig, ax = plt.subplots(figsize=(6.4, 4.8 * ((ymax - ymin) / (xmax - xmin))))
-    graphic = ax.imshow(img, cmap=cmap, origin='lower', extent=[xmin, xmax, ymin, ymax])
+    fig, ax = plt.subplots(figsize=(6.4, 4.8 * ((y_max - y_min) / (x_max - x_min))))
+    graphic = ax.imshow(img, cmap=colormap, origin='lower', extent=[x_min, x_max, y_min, y_max])
     ax.set_xlabel(x)
     ax.set_ylabel(y)
     cbar = fig.colorbar(graphic, ax=ax)
     cbar.ax.set_ylabel(f"{target}")
-
-    return fig, ax
-
-
-def render_3d(data: 'SarracenDataFrame',
-              target: str,
-              x: str = None,
-              y: str = None,
-              kernel: BaseKernel = CubicSplineKernel(),
-              xmin: float = None,
-              ymin: float = None,
-              xmax: float = None,
-              ymax: float = None,
-              pixcountx: int = 256,
-              pixcounty: int = None,
-              cmap: Union[str, Colormap] = 'RdBu',
-              int_samples: int = 1000) -> ('Figure', 'Axes'):
-    """
-    Render the data within a SarracenDataFrame to a 2D matplotlib object, using 3D -> 2D column interpolation of the
-    target variable.
-    :param data: The SarracenDataFrame to render. [Required]
-    :param target: The variable to interpolate over. [Required]
-    :param x: The positional x variable.
-    :param y: The positional y variable.
-    :param kernel: The smoothing kernel to use for interpolation.
-    :param xmin: The minimum bound in the x-direction.
-    :param ymin: The minimum bound in the y-direction.
-    :param xmax: The maximum bound in the x-direction.
-    :param ymax: The maximum bound in the y-direction.
-    :param pixcountx: The number of pixels in the x-direction.
-    :param pixcounty: The number of pixels in the y-direction.
-    :param cmap: The color map to use for plotting this data.
-    :param int_samples: The number of samples to use when approximating the kernel column integral.
-    :return: The completed plot.
-    """
-    # x & y columns default to the variables determined by the SarracenDataFrame.
-    if x is None:
-        x = data.xcol
-    if y is None:
-        y = data.ycol
-
-    # plot bounds default to variable determined in SarracenDataFrame
-    if xmin is None:
-        xmin = data.xmin
-    if ymin is None:
-        ymin = data.ymin
-    if xmax is None:
-        xmax = data.xmax
-    if ymax is None:
-        ymax = data.ymax
-
-    # set pixcounty to maintain an aspect ratio that is the same as the underlying bounds of the data.
-    if pixcounty is None:
-        pixcounty = int(np.rint(pixcountx * ((ymax - ymin) / (xmax - xmin))))
-
-    pixwidthx = (xmax - xmin) / pixcountx
-    pixwidthy = (ymax - ymin) / pixcounty
-    img = interpolate3D(data, x, y, target, kernel, pixwidthx, pixwidthy, xmin, ymin, pixcountx, pixcounty, int_samples)
-
-    # ensure the plot size maintains the aspect ratio of the underlying bounds of the data
-    fig, ax = plt.subplots(figsize=(6.4, 4.8 * ((ymax - ymin) / (xmax - xmin))))
-    graphic = ax.imshow(img, cmap=cmap, origin='lower', extent=[xmin, xmax, ymin, ymax])
-    ax.set_xlabel(x)
-    ax.set_ylabel(y)
-    cbar = fig.colorbar(graphic, ax=ax)
-    cbar.ax.set_ylabel(f"column {target}")
 
     return fig, ax

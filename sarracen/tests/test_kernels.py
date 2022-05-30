@@ -1,3 +1,4 @@
+"""pytest unit tests for kernel functionality."""
 from pytest import approx
 from scipy.integrate import quad, dblquad, tplquad
 import numpy as np
