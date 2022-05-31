@@ -1,12 +1,13 @@
-from typing import Callable
-
 import numpy as np
-from numba import jit
-from scipy.integrate import quad
+from numba import njit, prange
 
 
 class BaseKernel:
     """A generic kernel used for data interpolation."""
+
+    def __init__(self):
+        self._column_cache = None
+
     @staticmethod
     def get_radius() -> float:
         """Get the smoothing radius of this kernel."""
@@ -31,7 +32,7 @@ class BaseKernel:
 
         return 1
 
-    def get_column_kernel(self, samples: int) -> np.ndarray:
+    def get_column_kernel(self, samples: int = 1000) -> np.ndarray:
         """ Generate a 2D column kernel approximation, by integrating a given 3D kernel over the z-axis.
 
         Parameters
@@ -48,17 +49,28 @@ class BaseKernel:
         Use np.linspace and np.interp to use this column kernel approximation:
             np.interp(q, np.linspace(0, kernel.get_radius(), samples), column_kernel)
         """
-        results = []
-        for sample in np.linspace(0, self.get_radius(), samples):
-            results.append(2 * quad(self._int_func,
-                                    a=0,
-                                    b=np.sqrt(self.get_radius() ** 2 - sample ** 2),
-                                    args=(sample, self.w))[0])
+        if samples == 1000 and self._column_cache is not None:
+            return self._column_cache
 
-        return np.array(results)
+        c_kernel = self._int_func(self.get_radius(), samples, self.w)
+
+        if samples == 1000:
+            self._column_cache = c_kernel
+
+        return c_kernel
 
     # Internal function for performing the integral in _get_column_kernel()
     @staticmethod
-    @jit(fastmath=True)
-    def _int_func(q, a, wfunc):
-        return wfunc(np.sqrt(q ** 2 + a ** 2), 3)
+    @njit(fastmath=True, parallel=True)
+    def _int_func(radius, samples, wfunc):
+        result = np.zeros(samples)
+
+        for i in prange(samples):
+            q_xy = radius * i / (samples - 1)
+            bounds = np.sqrt(radius ** 2 - q_xy ** 2)
+            q_z = np.linspace(0, bounds, samples)
+            q = np.sqrt(q_xy ** 2 + q_z ** 2)
+            y = wfunc(q, 3)
+            result[i] = 2 * np.trapz(y, x=q_z)
+
+        return result
