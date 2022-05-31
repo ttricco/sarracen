@@ -389,6 +389,8 @@ def _fast_3d(target, x_data, y_data, mass_data, rho_data, h_data, integrated_ker
     ipixmax = np.rint((x_data + kernel_rad * h_data - x_min) / pixwidthx).clip(a_min=0, a_max=x_pixels)
     jpixmax = np.rint((y_data + kernel_rad * h_data - y_min) / pixwidthy).clip(a_min=0, a_max=y_pixels)
 
+    sample_space = np.linspace(0, kernel_rad, int_samples)
+
     # iterate through the indexes of non-filtered particles
     for i in prange(len(term)):
         # precalculate differences in the x-direction (optimization)
@@ -402,7 +404,7 @@ def _fast_3d(target, x_data, y_data, mass_data, rho_data, h_data, integrated_ker
 
         # calculate contributions at pixels i, j due to particle at x, y
         q2 = dx2i + dy2.reshape(len(dy2), 1)
-        wab = np.interp(np.sqrt(q2), np.linspace(0, kernel_rad, int_samples), integrated_kernel)
+        wab = np.interp(np.sqrt(q2), sample_space, integrated_kernel)
 
         # add contributions to image
         image[int(jpixmin[i]):int(jpixmax[i]), int(ipixmin[i]):int(ipixmax[i])] += (wab * term[i])
