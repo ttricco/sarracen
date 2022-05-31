@@ -245,8 +245,11 @@ def render_3d(data: 'SarracenDataFrame',
               target: str,
               x: str = None,
               y: str = None,
+              z: str = None,
               kernel: BaseKernel = None,
               integral_samples: int = 1000,
+              rotation: np.ndarray = None,
+              origin: np.ndarray = None,
               x_pixels: int = None,
               y_pixels: int = None,
               x_min: float = None,
@@ -314,17 +317,14 @@ def render_3d(data: 'SarracenDataFrame',
     KeyError
         If `target`, `x`, `y`, mass, density, or smoothing length columns do not
         exist in `data`.
-
-    Notes
-    -----
-    Since the direction of integration is assumed to be straight across the z-axis, the z-axis column
-    is not required for this type of rendering.
     """
     # x & y columns default to the variables determined by the SarracenDataFrame.
     if x is None:
         x = data.xcol
     if y is None:
         y = data.ycol
+    if z is None:
+        z = data.zcol
 
     # boundaries of the plot default to the maximum & minimum values of the data.
     if x_min is None:
@@ -347,13 +347,20 @@ def render_3d(data: 'SarracenDataFrame',
     if kernel is None:
         kernel = data.kernel
 
-    img = interpolate_3d(data, target, x, y, kernel, integral_samples, x_pixels, y_pixels, x_min, x_max, y_min, y_max)
+    img = interpolate_3d(data, target, x, y, z, kernel, integral_samples, rotation, origin, x_pixels, y_pixels, x_min,
+                         x_max, y_min, y_max)
 
     # ensure the plot size maintains the aspect ratio of the underlying bounds of the data
     fig, ax = plt.subplots(figsize=(6.4, 4.8 * ((y_max - y_min) / (x_max - x_min))))
     graphic = ax.imshow(img, cmap=colormap, origin='lower', extent=[x_min, x_max, y_min, y_max])
-    ax.set_xlabel(x)
-    ax.set_ylabel(y)
+
+    if rotation is not None:
+        ax.set_xticks([])
+        ax.set_yticks([])
+    else:
+        ax.set_xlabel(x)
+        ax.set_ylabel(y)
+
     cbar = fig.colorbar(graphic, ax=ax)
     cbar.ax.set_ylabel(f"column {target}")
 
@@ -367,6 +374,8 @@ def render_3d_cross(data: 'SarracenDataFrame',
                     y: str = None,
                     z: str = None,
                     kernel: BaseKernel = None,
+                    rotation: np.ndarray = None,
+                    origin: np.ndarray = None,
                     x_pixels: int = None,
                     y_pixels: int = None,
                     x_min: float = None,
@@ -382,6 +391,8 @@ def render_3d_cross(data: 'SarracenDataFrame',
 
     Parameters
     ----------
+    rotation
+    origin
     data : SarracenDataFrame
         Particle data, in a SarracenDataFrame.
     target: str
@@ -465,7 +476,8 @@ def render_3d_cross(data: 'SarracenDataFrame',
     if y_pixels is None:
         y_pixels = int(np.rint(x_pixels * ((y_max - y_min) / (x_max - x_min))))
 
-    img = interpolate_3d_cross(data, target, z_slice, x, y, z, kernel, x_pixels, y_pixels, x_min, x_max, y_min, y_max)
+    img = interpolate_3d_cross(data, target, z_slice, x, y, z, kernel, rotation, origin, x_pixels, y_pixels, x_min,
+                               x_max, y_min, y_max)
 
     # ensure the plot size maintains the aspect ratio of the underlying bounds of the data
     fig, ax = plt.subplots(figsize=(6.4, 4.8 * ((y_max - y_min) / (x_max - x_min))))
