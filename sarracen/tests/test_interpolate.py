@@ -105,7 +105,7 @@ def test_interpolate_3d():
     sdf = SarracenDataFrame(df, params=dict())
     kernel = QuarticSplineKernel()
 
-    image = interpolate_3d(sdf, 'A', 'x', 'y', kernel, 10000, 10, 10, 0, 0.5, 0, 0.5)
+    image = interpolate_3d(sdf, 'A', 'x', 'y', 'z', kernel, 10000, None, None, 10, 10, 0, 0.5, 0, 0.5)
     column_kernel = kernel.get_column_kernel(10000)
 
     # w = 0.01 / (0.5 * 0.125^3) = 10.24
@@ -131,7 +131,7 @@ def test_interpolate_3d():
     sdf = SarracenDataFrame(df, params=dict())
     kernel = QuinticSplineKernel()
 
-    image = interpolate_3d(sdf, 'A', 'x', 'y', kernel, 10000, 20, 15, 0, 2, 0, 0.9)
+    image = interpolate_3d(sdf, 'A', 'x', 'y', 'z', kernel, 10000, None, None, 20, 15, 0, 2, 0, 0.9)
     column_kernel = kernel.get_column_kernel(10000)
 
     # w = 0.15 / (0.21 * 1.5^3) = 0.21164
@@ -164,7 +164,8 @@ def test_interpolate_3d_cross():
     sdf = SarracenDataFrame(df, params=dict())
 
     # first, test a cross-section at z=0
-    image = interpolate_3d_cross(sdf, 'P', 0, 'x', 'y', 'z', CubicSplineKernel(), 40, 40, -2, 2, -2, 2)
+    image = interpolate_3d_cross(sdf, 'P', 0, 'x', 'y', 'z', CubicSplineKernel(), None, None, 40, 40, -2, 2, -2,
+                                 2)
 
     # should be exactly the same as for a 2D rendering, except q values are now taken from the 3D kernel.
     assert image[0][0] == 0
@@ -173,7 +174,8 @@ def test_interpolate_3d_cross():
     assert image[12][17] == approx(CubicSplineKernel().w(np.sqrt(0.75 ** 2 + 0.25 ** 2), 3), rel=1e-8)
 
     # next, test a cross-section at z=0.5
-    image = interpolate_3d_cross(sdf, 'P', 0.5, 'x', 'y', 'z', CubicSplineKernel(), 40, 40, -2, 2, -2, 2)
+    image = interpolate_3d_cross(sdf, 'P', 0.5, 'x', 'y', 'z', CubicSplineKernel(), None, None, 40, 40, -2, 2, -2,
+                                 2)
 
     assert image[0][0] == 0
     assert image[20][0] == approx(CubicSplineKernel().w(np.sqrt((-1.95) ** 2 + 0.05 ** 2 + (0.5 ** 2)), 3), rel=1e-8)
@@ -192,7 +194,8 @@ def test_interpolate_3d_cross():
 
     w = sdf['m'][0] / (sdf['rho'][0] * sdf['h'][0] ** 3)
     kernel = QuarticSplineKernel()
-    image = interpolate_3d_cross(sdf, 'A', 0, 'x', 'y', 'z', kernel, 15, 11, -0.75, 0.75, -0.825, 0.825)
+    image = interpolate_3d_cross(sdf, 'A', 0, 'x', 'y', 'z', kernel, None, None, 15, 11, -0.75, 0.75, -0.825,
+                                 0.825)
 
     # r = sqrt(dx ** 2 + dy ** 2 + dz ** 2)
     assert image[0][0] == approx(w * sdf['A'][0] * kernel.w(np.sqrt(0.7 ** 2 + 0.75 ** 2 + 1) / sdf['h'][0], 3))
