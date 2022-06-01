@@ -401,8 +401,6 @@ def render_3d_cross(data: 'SarracenDataFrame',
 
     Parameters
     ----------
-    rotation
-    origin
     data : SarracenDataFrame
         Particle data, in a SarracenDataFrame.
     target: str
