@@ -273,10 +273,18 @@ def render_3d(data: 'SarracenDataFrame',
         Column label of the x-directional axis. Defaults to the x-column detected in `data`.
     y: str, optional
         Column label of the y-directional axis. Defaults to the y-column detected in `data`.
+    z: str, optional
+        Column label of the z-directional axis. Defaults to the z-column detected in `data`.
     kernel: BaseKernel, optional
         Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
     integral_samples: int, optional
         The number of sample points to take when approximating the 2D column kernel.
+    rotation: array_like, optional
+        Defines the rotation in degrees to apply to the data before interpolation. The
+        order of rotations is [z, y, x].
+    origin: array_like, optional
+        Point of rotation of the data, in [x, y, z] form. Defaults to the centre
+        point of the bounds of the data.
     x_pixels: int, optional
         Number of pixels in the output image in the x-direction. If both x_pixels and y_pixels are
         None, this defaults to 256. Otherwise, this value defaults to a multiple of y_pixels which
@@ -315,7 +323,7 @@ def render_3d(data: 'SarracenDataFrame',
         if the specified `x` and `y` minimum and maximums result in an invalid region, or
         if the provided data is not 3-dimensional.
     KeyError
-        If `target`, `x`, `y`, mass, density, or smoothing length columns do not
+        If `target`, `x`, `y`, `z`, mass, density, or smoothing length columns do not
         exist in `data`.
     """
     # x & y columns default to the variables determined by the SarracenDataFrame.
@@ -354,6 +362,8 @@ def render_3d(data: 'SarracenDataFrame',
     fig, ax = plt.subplots(figsize=(6.4, 4.8 * ((y_max - y_min) / (x_max - x_min))))
     graphic = ax.imshow(img, cmap=colormap, origin='lower', extent=[x_min, x_max, y_min, y_max])
 
+    # remove the x & y ticks if the data is rotated, since these no longer have physical
+    # relevance to the displayed data.
     if rotation is not None:
         ax.set_xticks([])
         ax.set_yticks([])
@@ -404,9 +414,15 @@ def render_3d_cross(data: 'SarracenDataFrame',
     y: str, optional
         Column label of the y-directional axis. Defaults to the y-column detected in `data`.
     z: str
-        The column label of the z-directional axis.
+        Column label of the z-directional axis. Defaults to the z-column detected in `data`.
     kernel: BaseKernel, optional
         Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
+    rotation: array_like, optional
+        Defines the rotation in degrees to apply to the data before interpolation. The
+        order of rotations is [z, y, x].
+    origin: array_like, optional
+        Point of rotation of the data, in [x, y, z] form. Defaults to the centre
+        point of the bounds of the data.
     x_pixels: int, optional
         Number of pixels in the output image in the x-direction. If both x_pixels and y_pixels are
         None, this defaults to 256. Otherwise, this value defaults to a multiple of y_pixels which
@@ -441,7 +457,12 @@ def render_3d_cross(data: 'SarracenDataFrame',
     Raises
     -------
     ValueError
-        If `pixwidthx`, `pixwidthy`, `pixcountx`, or `pixcounty` are less than or equal to zero.
+        If `pixwidthx`, `pixwidthy`, `pixcountx`, or `pixcounty` are less than or equal to zero, or
+        if the specified `x` and `y` minimum and maximums result in an invalid region, or
+        if the provided data is not 3-dimensional.
+    KeyError
+        If `target`, `x`, `y`, mass, density, or smoothing length columns do not
+        exist in `data`.
     """
     # x & y columns default to the variables determined by the SarracenDataFrame.
     if x is None:
@@ -482,8 +503,16 @@ def render_3d_cross(data: 'SarracenDataFrame',
     # ensure the plot size maintains the aspect ratio of the underlying bounds of the data
     fig, ax = plt.subplots(figsize=(6.4, 4.8 * ((y_max - y_min) / (x_max - x_min))))
     graphic = ax.imshow(img, cmap=colormap, origin='lower', extent=[x_min, x_max, y_min, y_max])
-    ax.set_xlabel(x)
-    ax.set_ylabel(y)
+
+    # remove the x & y ticks if the data is rotated, since these no longer have physical
+    # relevance to the displayed data.
+    if rotation is not None:
+        ax.set_xticks([])
+        ax.set_yticks([])
+    else:
+        ax.set_xlabel(x)
+        ax.set_ylabel(y)
+
     cbar = fig.colorbar(graphic, ax=ax)
     cbar.ax.set_ylabel(f"{target}")
 

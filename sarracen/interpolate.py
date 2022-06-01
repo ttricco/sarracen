@@ -309,13 +309,21 @@ def interpolate_3d(data: 'SarracenDataFrame',
     x: str
         Column label of the x-directional axis.
     y: str
-        The column label of the y-directional axis.
+        Column label of the y-directional axis.
+    z: str
+        Column label of the z-directional axis.
     target: str
-        The column label of the target smoothing data.
+        Column label of the target smoothing data.
     kernel: BaseKernel
-        The kernel to use for smoothing the target data.
+        Kernel to use for smoothing the target data.
     integral_samples: int, optional
-        The number of sample points to take when approximating the 2D column kernel.
+        Number of sample points to take when approximating the 2D column kernel.
+    rotation: array_like, optional
+        Defines the rotation in degrees to apply to the data before interpolation. The
+        order of rotations is [z, y, x].
+    origin: array_like, optional
+        Point of rotation of the data, in [x, y, z] form. Defaults to the centre
+        point of the bounds of the data.
     x_pixels: int, optional
         Number of pixels in the output image in the x-direction.
     y_pixels: int, optional
@@ -386,9 +394,9 @@ def interpolate_3d(data: 'SarracenDataFrame',
         if origin is None:
             origin = (vectors[:, 0].min() + vectors[:, 0].max()) / 2
 
-        vectors -= origin
+        vectors = vectors - origin
         vectors = rot.apply(vectors)
-        vectors += origin
+        vectors = vectors + origin
 
         x_data = vectors[:, 0]
         y_data = vectors[:, 1]
@@ -458,8 +466,6 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',
 
     Parameters
     ----------
-    rotation
-    origin
     data : SarracenDataFrame
         The particle data to interpolate over.
     target: str
@@ -474,6 +480,12 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',
         The column label of the z-directional axis.
     kernel: BaseKernel
         The kernel to use for smoothing the target data.
+    rotation: array_like, optional
+        Defines the rotation in degrees to apply to the data before interpolation. The
+        order of rotations is [z, y, x].
+    origin: array_like, optional
+        Point of rotation of the data, in [x, y, z] form. Defaults to the centre
+        point of the bounds of the data.
     x_pixels: int, optional
         Number of pixels in the output image in the x-direction.
     y_pixels: int, optional
@@ -541,9 +553,9 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',
         if origin is None:
             origin = (vectors[:, 0].min() + vectors[:, 0].max()) / 2
 
-        vectors -= origin
+        vectors = vectors - origin
         vectors = rot.apply(vectors)
-        vectors += origin
+        vectors = vectors + origin
 
         x_data = vectors[:, 0]
         y_data = vectors[:, 1]
