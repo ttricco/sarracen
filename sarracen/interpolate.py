@@ -301,9 +301,6 @@ def interpolate_3d(data: 'SarracenDataFrame',
 
     Parameters
     ----------
-    z
-    rotation
-    origin
     data : SarracenDataFrame
         Particle data, in a SarracenDataFrame.
     x: str
