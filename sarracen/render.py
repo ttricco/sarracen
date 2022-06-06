@@ -270,18 +270,16 @@ def render_3d(data: 'SarracenDataFrame',
     target: str
         Column label of the target smoothing data.
     x: str, optional
-        Column label of the x-directional axis. Defaults to the x-column detected in `data`.
+        Column label of the x-directional axis to interpolate over. Defaults to the x-column detected in `data`.
     y: str, optional
-        Column label of the y-directional axis. Defaults to the y-column detected in `data`.
-    z: str, optional
-        Column label of the z-directional axis. Defaults to the z-column detected in `data`.
+        Column label of the y-directional axis to interpolate over. Defaults to the y-column detected in `data`.
     kernel: BaseKernel, optional
         Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
     integral_samples: int, optional
         The number of sample points to take when approximating the 2D column kernel.
-    rotation: array_like, optional
-        Defines the rotation in degrees to apply to the data before interpolation. The
-        order of rotations is [z, y, x].
+    rotation: array_like or Rotation, optional
+        The rotation to apply to the data before interpolation. If defined as an array, the
+        order of rotations is [z, y, x] in degrees.
     origin: array_like, optional
         Point of rotation of the data, in [x, y, z] form. Defaults to the centre
         point of the bounds of the data.
@@ -331,8 +329,6 @@ def render_3d(data: 'SarracenDataFrame',
         x = data.xcol
     if y is None:
         y = data.ycol
-    if z is None:
-        z = data.zcol
 
     # boundaries of the plot default to the maximum & minimum values of the data.
     if x_min is None:
@@ -355,7 +351,7 @@ def render_3d(data: 'SarracenDataFrame',
     if kernel is None:
         kernel = data.kernel
 
-    img = interpolate_3d(data, target, x, y, z, kernel, integral_samples, rotation, origin, x_pixels, y_pixels, x_min,
+    img = interpolate_3d(data, target, x, y, kernel, integral_samples, rotation, origin, x_pixels, y_pixels, x_min,
                          x_max, y_min, y_max)
 
     # ensure the plot size maintains the aspect ratio of the underlying bounds of the data
@@ -415,9 +411,9 @@ def render_3d_cross(data: 'SarracenDataFrame',
         Column label of the z-directional axis. Defaults to the z-column detected in `data`.
     kernel: BaseKernel, optional
         Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
-    rotation: array_like, optional
-        Defines the rotation in degrees to apply to the data before interpolation. The
-        order of rotations is [z, y, x].
+    rotation: array_like or Rotation, optional
+        The rotation to apply to the data before interpolation. If defined as an array, the
+        order of rotations is [z, y, x] in degrees.
     origin: array_like, optional
         Point of rotation of the data, in [x, y, z] form. Defaults to the centre
         point of the bounds of the data.
@@ -459,7 +455,7 @@ def render_3d_cross(data: 'SarracenDataFrame',
         if the specified `x` and `y` minimum and maximums result in an invalid region, or
         if the provided data is not 3-dimensional.
     KeyError
-        If `target`, `x`, `y`, mass, density, or smoothing length columns do not
+        If `target`, `x`, `y`, `z`, mass, density, or smoothing length columns do not
         exist in `data`.
     """
     # x & y columns default to the variables determined by the SarracenDataFrame.

@@ -106,7 +106,7 @@ def test_interpolate_3d():
     sdf = SarracenDataFrame(df, params=dict())
     kernel = QuarticSplineKernel()
 
-    image = interpolate_3d(sdf, 'A', 'x', 'y', 'z', kernel, 10000, None, None, 10, 10, 0, 0.5, 0, 0.5)
+    image = interpolate_3d(sdf, 'A', 'x', 'y', kernel, 10000, None, None, 10, 10, 0, 0.5, 0, 0.5)
     column_kernel = kernel.get_column_kernel(10000)
 
     # w = 0.01 / (0.5 * 0.125^3) = 10.24
@@ -132,7 +132,7 @@ def test_interpolate_3d():
     sdf = SarracenDataFrame(df, params=dict())
     kernel = QuinticSplineKernel()
 
-    image = interpolate_3d(sdf, 'A', 'x', 'y', 'z', kernel, 10000, None, None, 20, 15, 0, 2, 0, 0.9)
+    image = interpolate_3d(sdf, 'A', 'x', 'y', kernel, 10000, None, None, 20, 15, 0, 2, 0, 0.9)
     column_kernel = kernel.get_column_kernel(10000)
 
     # w = 0.15 / (0.21 * 1.5^3) = 0.21164
@@ -166,7 +166,7 @@ def test_interpolate_3d():
     kernel = CubicSplineKernel()
 
     # With no rotation, both particles are directly on top of each other.
-    image = interpolate_3d(sdf, 'A', 'x', 'y', 'z', kernel, 10000, None, None, 25, 25, -0.5, 0.5, -0.5, 0.5)
+    image = interpolate_3d(sdf, 'A', 'x', 'y', kernel, 10000, None, None, 25, 25, -0.5, 0.5, -0.5, 0.5)
     column_kernel = kernel.get_column_kernel(10000)
     w = (sdf['m'] / (sdf['rho'] * sdf['h'] ** 3))
 
@@ -182,7 +182,7 @@ def test_interpolate_3d():
     assert image[1][22] == approx((w * sdf['h'] * sdf['A'] * F).sum())
 
     # With this rotation, both particles are now at opposite corners, at x & y distances of (1/sqrt(2)) from the centre.
-    image = interpolate_3d(sdf, 'A', 'x', 'y', 'z', kernel, 10000, [0, 45, 90], None, 25, 25, -0.5, 0.5, -0.5, 0.5)
+    image = interpolate_3d(sdf, 'A', 'x', 'y', kernel, 10000, [0, 45, 90], None, 25, 25, -0.5, 0.5, -0.5, 0.5)
 
     # At the centre square, both particles are 1 unit away.
     F = np.interp(1 / df['h'], np.linspace(0, kernel.get_radius(), 10000),
