@@ -179,7 +179,6 @@ class SarracenDataFrame(DataFrame):
                   target: str,
                   x: str = None,
                   y: str = None,
-                  z: str = None,
                   kernel: BaseKernel = None,
                   int_samples: int = 1000,
                   rotation: np.ndarray = None,
@@ -192,7 +191,7 @@ class SarracenDataFrame(DataFrame):
                   y_max: float = None,
                   colormap: Union[str, Colormap] = 'RdBu') -> ('Figure', 'Axes'):
 
-        return render_3d(self, target, x, y, z, kernel, int_samples, rotation, origin, x_pixels, y_pixels, x_min, x_max, y_min, y_max,
+        return render_3d(self, target, x, y, kernel, int_samples, rotation, origin, x_pixels, y_pixels, x_min, x_max, y_min, y_max,
                          colormap)
 
     @_copy_doc(render_3d_cross)
