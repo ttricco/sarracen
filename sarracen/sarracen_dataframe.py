@@ -3,6 +3,7 @@ from typing import Union, Callable
 from matplotlib.colors import Colormap
 from pandas import DataFrame, Series
 import numpy as np
+from scipy.spatial.transform import Rotation as R
 
 from sarracen.render import render_2d, render_2d_cross, render_3d, render_3d_cross
 from sarracen.kernels import CubicSplineKernel, BaseKernel
@@ -180,6 +181,8 @@ class SarracenDataFrame(DataFrame):
                   y: str = None,
                   kernel: BaseKernel = None,
                   int_samples: int = 1000,
+                  rotation: np.ndarray = None,
+                  origin: np.ndarray = None,
                   x_pixels: int = None,
                   y_pixels: int = None,
                   x_min: float = None,
@@ -188,7 +191,7 @@ class SarracenDataFrame(DataFrame):
                   y_max: float = None,
                   colormap: Union[str, Colormap] = 'RdBu') -> ('Figure', 'Axes'):
 
-        return render_3d(self, target, x, y, kernel, int_samples, x_pixels, y_pixels, x_min, x_max, y_min, y_max,
+        return render_3d(self, target, x, y, kernel, int_samples, rotation, origin, x_pixels, y_pixels, x_min, x_max, y_min, y_max,
                          colormap)
 
     @_copy_doc(render_3d_cross)
@@ -199,6 +202,8 @@ class SarracenDataFrame(DataFrame):
                         y: str = None,
                         z: str = None,
                         kernel: BaseKernel = None,
+                        rotation: np.ndarray = None,
+                        origin: np.ndarray = None,
                         x_pixels: int = None,
                         y_pixels: int = None,
                         x_min: float = None,
@@ -207,8 +212,8 @@ class SarracenDataFrame(DataFrame):
                         y_max: float = None,
                         colormap: Union[str, Colormap] = 'RdBu') -> ('Figure', 'Axes'):
 
-        return render_3d_cross(self, target, z_slice, x, y, z, kernel, x_pixels, y_pixels, x_min, x_max, y_min, y_max,
-                               colormap)
+        return render_3d_cross(self, target, z_slice, x, y, z, kernel, rotation, origin, x_pixels, y_pixels, x_min,
+                               x_max, y_min, y_max, colormap)
 
     @property
     def params(self):
