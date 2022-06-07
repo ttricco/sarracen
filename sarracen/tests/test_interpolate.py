@@ -182,7 +182,7 @@ def test_interpolate_3d():
     assert image[1][22] == approx((w * sdf['h'] * sdf['A'] * F).sum())
 
     # With this rotation, both particles are now at opposite corners, at x & y distances of (1/sqrt(2)) from the centre.
-    image = interpolate_3d(sdf, 'A', 'x', 'y', kernel, 10000, [0, 45, 90], None, 25, 25, -0.5, 0.5, -0.5, 0.5)
+    image = interpolate_3d(sdf, 'A', 'x', 'y', kernel, 10000, [0, 45, 270], None, 25, 25, -0.5, 0.5, -0.5, 0.5)
 
     # At the centre square, both particles are 1 unit away.
     F = np.interp(1 / df['h'], np.linspace(0, kernel.get_radius(), 10000),
@@ -276,7 +276,7 @@ def test_interpolate_3d_cross():
 
     # With this rotation, both particles are now at opposite corners, at x & y distances of (1/sqrt(2)) from the centre,
     # and a z-value of z=0.
-    image = interpolate_3d_cross(sdf, 'A', 0, 'x', 'y', 'z', kernel, [0, 45, 90], None, 25, 25, -0.5, 0.5, -0.5, 0.5)
+    image = interpolate_3d_cross(sdf, 'A', 0, 'x', 'y', 'z', kernel, [0, 45, 270], None, 25, 25, -0.5, 0.5, -0.5, 0.5)
 
     # Same as above (no rotation), since the particles are still 1 unit away from the centre point.
     assert image[12][12] == approx((w * sdf['A'] * kernel.w(1 / sdf['h'], 3)).sum())
