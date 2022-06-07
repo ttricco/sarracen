@@ -475,7 +475,6 @@ def interpolate_3d(data: 'SarracenDataFrame',
     y_data = data[y].to_numpy()
     if rotation is not None:
         if not isinstance(rotation, Rotation):
-            rotation *= np.array([-1, 1, -1])
             rotation = R.from_euler('zyx', rotation, degrees=True)
 
         vectors = data[[data.xcol, data.ycol, data.zcol]].to_numpy()
@@ -673,7 +672,6 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',
     z_data = data[z].to_numpy()
     if rotation is not None:
         if not isinstance(rotation, Rotation):
-            rotation *= np.array([-1, 1, -1])
             rotation = R.from_euler('zyx', rotation, degrees=True)
 
         vectors = data[[data.xcol, data.ycol, data.zcol]].to_numpy()
