@@ -3,6 +3,7 @@ pytest unit tests for interpolate.py functions.
 """
 import pandas as pd
 import numpy as np
+from matplotlib import pyplot as plt
 from pytest import approx
 
 from sarracen import SarracenDataFrame
@@ -105,7 +106,7 @@ def test_interpolate_3d():
     sdf = SarracenDataFrame(df, params=dict())
     kernel = QuarticSplineKernel()
 
-    image = interpolate_3d(sdf, 'A', 'x', 'y', kernel, 10000, 10, 10, 0, 0.5, 0, 0.5)
+    image = interpolate_3d(sdf, 'A', 'x', 'y', kernel, 10000, None, None, 10, 10, 0, 0.5, 0, 0.5)
     column_kernel = kernel.get_column_kernel(10000)
 
     # w = 0.01 / (0.5 * 0.125^3) = 10.24
@@ -131,7 +132,7 @@ def test_interpolate_3d():
     sdf = SarracenDataFrame(df, params=dict())
     kernel = QuinticSplineKernel()
 
-    image = interpolate_3d(sdf, 'A', 'x', 'y', kernel, 10000, 20, 15, 0, 2, 0, 0.9)
+    image = interpolate_3d(sdf, 'A', 'x', 'y', kernel, 10000, None, None, 20, 15, 0, 2, 0, 0.9)
     column_kernel = kernel.get_column_kernel(10000)
 
     # w = 0.15 / (0.21 * 1.5^3) = 0.21164
@@ -152,6 +153,55 @@ def test_interpolate_3d():
                   column_kernel)
     assert image[9][14] == approx(w * sdf['h'][0] * sdf['A'][0] * F)
 
+    # Next, use a dataset with two particles.
+    df = pd.DataFrame({'y': [0, 0],
+                       'x': [0, 0],
+                       'A': [4.5, 3.5],
+                       'h': [1.6, 1.5],
+                       'z': [1, -1],
+                       'rho': [0.55, 0.75],
+                       'm': [0.3, 0.2]})
+
+    sdf = SarracenDataFrame(df)
+    kernel = CubicSplineKernel()
+
+    # With no rotation, both particles are directly on top of each other.
+    image = interpolate_3d(sdf, 'A', 'x', 'y', kernel, 10000, None, None, 25, 25, -0.5, 0.5, -0.5, 0.5)
+    column_kernel = kernel.get_column_kernel(10000)
+    w = (sdf['m'] / (sdf['rho'] * sdf['h'] ** 3))
+
+    F = column_kernel[0]
+    assert image[12][12] == approx((w * sdf['h'] * sdf['A'] * F).sum())
+
+    F = np.interp(np.sqrt(0.48 ** 2) / df['h'], np.linspace(0, kernel.get_radius(), 10000),
+                  column_kernel)
+    assert image[12][0] == approx((w * sdf['h'] * sdf['A'] * F).sum())
+
+    F = np.interp(np.sqrt(0.4 ** 2 + 0.44 ** 2) / df['h'], np.linspace(0, kernel.get_radius(), 10000),
+                  column_kernel)
+    assert image[1][22] == approx((w * sdf['h'] * sdf['A'] * F).sum())
+
+    # With this rotation, both particles are now at opposite corners, at x & y distances of (1/sqrt(2)) from the centre.
+    image = interpolate_3d(sdf, 'A', 'x', 'y', kernel, 10000, [0, 45, 270], None, 25, 25, -0.5, 0.5, -0.5, 0.5)
+
+    # At the centre square, both particles are 1 unit away.
+    F = np.interp(1 / df['h'], np.linspace(0, kernel.get_radius(), 10000),
+                  column_kernel)
+    assert image[12][12] == approx((w * sdf['h'] * sdf['A'] * F).sum())
+
+    # At a grid corner, each particle is 1/sqrt(2) + 0.48 away from the square in one direction, and
+    # 1/sqrt(2) - 0.48 away in the other direction.
+    F = np.interp(np.sqrt(((1 / np.sqrt(2)) + 0.48) ** 2 + ((1 / np.sqrt(2)) - 0.48) ** 2) / df['h'],
+                  np.linspace(0, kernel.get_radius(), 10000), column_kernel)
+    assert image[0][24] == approx((w * sdf['h'] * sdf['A'] * F).sum())
+
+    # At the top square of the grid, one particle is closer than the other.
+    F1 = np.interp(np.sqrt((1/2) + ((1 / np.sqrt(2)) + 0.48) ** 2) / df['h'][0],
+                   np.linspace(0, kernel.get_radius(), 10000), column_kernel)
+    F2 = np.interp(np.sqrt((1/2) + ((1 / np.sqrt(2)) - 0.48) ** 2) / df['h'][1],
+                   np.linspace(0, kernel.get_radius(), 10000), column_kernel)
+    assert image[12][0] == approx(w[0] * sdf['h'][0] * sdf['A'][0] * F1 + w[1] * sdf['h'][1] * sdf['A'][1] * F2)
+
 
 def test_interpolate_3d_cross():
     df = df = pd.DataFrame({'x': [0],
@@ -164,7 +214,8 @@ def test_interpolate_3d_cross():
     sdf = SarracenDataFrame(df, params=dict())
 
     # first, test a cross-section at z=0
-    image = interpolate_3d_cross(sdf, 'P', 0, 'x', 'y', 'z', CubicSplineKernel(), 40, 40, -2, 2, -2, 2)
+    image = interpolate_3d_cross(sdf, 'P', 0, 'x', 'y', 'z', CubicSplineKernel(), None, None, 40, 40, -2, 2, -2,
+                                 2)
 
     # should be exactly the same as for a 2D rendering, except q values are now taken from the 3D kernel.
     assert image[0][0] == 0
@@ -173,14 +224,15 @@ def test_interpolate_3d_cross():
     assert image[12][17] == approx(CubicSplineKernel().w(np.sqrt(0.75 ** 2 + 0.25 ** 2), 3), rel=1e-8)
 
     # next, test a cross-section at z=0.5
-    image = interpolate_3d_cross(sdf, 'P', 0.5, 'x', 'y', 'z', CubicSplineKernel(), 40, 40, -2, 2, -2, 2)
+    image = interpolate_3d_cross(sdf, 'P', 0.5, 'x', 'y', 'z', CubicSplineKernel(), None, None, 40, 40, -2, 2, -2,
+                                 2)
 
     assert image[0][0] == 0
     assert image[20][0] == approx(CubicSplineKernel().w(np.sqrt((-1.95) ** 2 + 0.05 ** 2 + (0.5 ** 2)), 3), rel=1e-8)
     assert image[20][20] == approx(CubicSplineKernel().w(np.sqrt(2 * (0.05 ** 2) + (0.5 ** 2)), 3), rel=1e-8)
     assert image[12][17] == approx(CubicSplineKernel().w(np.sqrt(0.75 ** 2 + 0.25 ** 2 + (0.5 ** 2)), 3), rel=1e-8)
 
-    # lastly, use a dataset where rho != 0, h != 0, m != 0.
+    # next, use a dataset where rho != 0, h != 0, m != 0.
     df = pd.DataFrame({'x': [0],
                             'y': [0],
                             'z': [-1],
@@ -192,9 +244,49 @@ def test_interpolate_3d_cross():
 
     w = sdf['m'][0] / (sdf['rho'][0] * sdf['h'][0] ** 3)
     kernel = QuarticSplineKernel()
-    image = interpolate_3d_cross(sdf, 'A', 0, 'x', 'y', 'z', kernel, 15, 11, -0.75, 0.75, -0.825, 0.825)
+    image = interpolate_3d_cross(sdf, 'A', 0, 'x', 'y', 'z', kernel, None, None, 15, 11, -0.75, 0.75, -0.825,
+                                 0.825)
 
     # r = sqrt(dx ** 2 + dy ** 2 + dz ** 2)
     assert image[0][0] == approx(w * sdf['A'][0] * kernel.w(np.sqrt(0.7 ** 2 + 0.75 ** 2 + 1) / sdf['h'][0], 3))
     assert image[4][0] == approx(w * sdf['A'][0] * kernel.w(np.sqrt(0.7 ** 2 + 0.15 ** 2 + 1) / sdf['h'][0], 3))
     assert image[7][10] == approx(w * sdf['A'][0] * kernel.w(np.sqrt(0.3 ** 2 + 0.3 ** 2 + 1) / sdf['h'][0], 3))
+
+    # now, use a dataset with multiple particles.
+    df = pd.DataFrame({'y': [0, 0],
+                       'x': [0, 0],
+                       'A': [4.5, 3.5],
+                       'h': [1.6, 1.5],
+                       'z': [1, -1],
+                       'rho': [0.55, 0.75],
+                       'm': [0.3, 0.2]})
+
+    sdf = SarracenDataFrame(df)
+    kernel = QuarticSplineKernel()
+    w = (sdf['m'] / (sdf['rho'] * sdf['h'] ** 3))
+
+    # With no rotation, both particles are directly on top of each other.
+    image = interpolate_3d_cross(sdf, 'A', 0, 'x', 'y', 'z', kernel, None, None, 25, 25, -0.5, 0.5, -0.5, 0.5)
+
+    # Each particle is one unit away from the centre point in the z-direction.
+    assert image[12][12] == approx((w * sdf['A'] * kernel.w(1 / sdf['h'], 3)).sum())
+
+    F = kernel.w(np.sqrt(2 * (0.48 ** 2) + 1) / sdf['h'], 3)
+    assert image[24][0] == approx((w * sdf['A'] * F).sum())
+
+    # With this rotation, both particles are now at opposite corners, at x & y distances of (1/sqrt(2)) from the centre,
+    # and a z-value of z=0.
+    image = interpolate_3d_cross(sdf, 'A', 0, 'x', 'y', 'z', kernel, [0, 45, 270], None, 25, 25, -0.5, 0.5, -0.5, 0.5)
+
+    # Same as above (no rotation), since the particles are still 1 unit away from the centre point.
+    assert image[12][12] == approx((w * sdf['A'] * kernel.w(1 / sdf['h'], 3)).sum())
+
+    # At a grid corner, each particle is 1/sqrt(2) + 0.48 away from the square in one direction, and
+    # 1/sqrt(2) - 0.48 away in the other direction.
+    F = kernel.w(np.sqrt(((1 / np.sqrt(2)) + 0.48) ** 2 + ((1 / np.sqrt(2)) - 0.48) ** 2) / df['h'], 3)
+    assert image[0][24] == approx((w * sdf['A'] * F).sum())
+
+    # At the top grid square, each particle is at a different distance.
+    F1 = kernel.w(np.sqrt((1/2) + ((1 / np.sqrt(2)) + 0.48) ** 2) / df['h'][0], 3)
+    F2 = kernel.w(np.sqrt((1/2) + ((1 / np.sqrt(2)) - 0.48) ** 2) / df['h'][1], 3)
+    assert image[12][0] == approx(w[0] * sdf['A'][0] * F1 + w[1] * sdf['A'][1] * F2)

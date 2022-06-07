@@ -3,6 +3,7 @@ Contains several interpolation functions which produce interpolated 2D or 1D arr
 """
 import numpy as np
 from numba import prange, njit
+from scipy.spatial.transform import Rotation as R, Rotation
 
 from sarracen.kernels import BaseKernel
 
@@ -283,6 +284,8 @@ def interpolate_3d(data: 'SarracenDataFrame',
                    y: str,
                    kernel: BaseKernel,
                    integral_samples: int = 1000,
+                   rotation: np.ndarray = None,
+                   origin: np.ndarray = None,
                    x_pixels: int = 512,
                    y_pixels: int = 512,
                    x_min: float = 0,
@@ -302,13 +305,19 @@ def interpolate_3d(data: 'SarracenDataFrame',
     x: str
         Column label of the x-directional axis.
     y: str
-        The column label of the y-directional axis.
+        Column label of the y-directional axis.
     target: str
-        The column label of the target smoothing data.
+        Column label of the target smoothing data.
     kernel: BaseKernel
-        The kernel to use for smoothing the target data.
+        Kernel to use for smoothing the target data.
     integral_samples: int, optional
-        The number of sample points to take when approximating the 2D column kernel.
+        Number of sample points to take when approximating the 2D column kernel.
+    rotation: array_like or Rotation, optional
+        The rotation to apply to the data before interpolation. If defined as an array, the
+        order of rotations is [z, y, x] in degrees
+    origin: array_like, optional
+        Point of rotation of the data, in [x, y, z] form. Defaults to the centre
+        point of the bounds of the data.
     x_pixels: int, optional
         Number of pixels in the output image in the x-direction.
     y_pixels: int, optional
@@ -345,7 +354,7 @@ def interpolate_3d(data: 'SarracenDataFrame',
     if x not in data.columns:
         raise KeyError(f"x-directional column '{x}' does not exist in the provided dataset.")
     if y not in data.columns:
-        raise KeyError(f"x-directional column '{y}' does not exist in the provided dataset.")
+        raise KeyError(f"y-directional column '{y}' does not exist in the provided dataset.")
     if target not in data.columns:
         raise KeyError(f"Target column '{target}' does not exist in provided dataset.")
     if data.mcol is None:
@@ -368,7 +377,28 @@ def interpolate_3d(data: 'SarracenDataFrame',
     if y_pixels <= 0:
         raise ValueError("`y_pixels` must be greater than zero!")
 
-    return _fast_3d(data[target].to_numpy(), data[x].to_numpy(), data[y].to_numpy(), data['m'].to_numpy(),
+    x_data = data[x].to_numpy()
+    y_data = data[y].to_numpy()
+    if rotation is not None:
+        if not isinstance(rotation, Rotation):
+            rotation = R.from_euler('zyx', rotation, degrees=True)
+
+        vectors = data[[data.xcol, data.ycol, data.zcol]].to_numpy()
+        if origin is None:
+            origin = (vectors[:, 0].min() + vectors[:, 0].max()) / 2
+
+        vectors = vectors - origin
+        vectors = rotation.apply(vectors)
+        vectors = vectors + origin
+
+        x_data = vectors[:, 0] if x == data.xcol else \
+                 vectors[:, 1] if x == data.ycol else \
+                 vectors[:, 2] if x == data.zcol else x_data
+        y_data = vectors[:, 0] if y == data.xcol else \
+                 vectors[:, 1] if y == data.ycol else \
+                 vectors[:, 2] if y == data.zcol else y_data
+
+    return _fast_3d(data[target].to_numpy(), x_data, y_data, data['m'].to_numpy(),
                     data['rho'].to_numpy(), data['h'].to_numpy(), kernel.get_column_kernel(integral_samples),
                     kernel.get_radius(), integral_samples, x_pixels, y_pixels, x_min, x_max, y_min, y_max)
 
@@ -419,6 +449,8 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',
                          y: str,
                          z: str,
                          kernel: BaseKernel,
+                         rotation: np.ndarray = None,
+                         origin: np.ndarray = None,
                          x_pixels: int = 512,
                          y_pixels: int = 512,
                          x_min: float = 0,
@@ -440,13 +472,19 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',
     z_slice: float
         The z-axis value to take the cross-section at.
     x: str
-        The column label of the x-directional axis.
+        The column label of the x-directional data to interpolate over.
     y: str
-        The column label of the y-directional axis.
+        The column label of the y-directional data to interpolate over.
     z: str
-        The column label of the z-directional axis.
+        The column label of the z-directional data to interpolate over.
     kernel: BaseKernel
         The kernel to use for smoothing the target data.
+    rotation: array_like or Rotation, optional
+        The rotation to apply to the data before interpolation. If defined as an array, the
+        order of rotations is [z, y, x] in degrees.
+    origin: array_like, optional
+        Point of rotation of the data, in [x, y, z] form. Defaults to the centre
+        point of the bounds of the data.
     x_pixels: int, optional
         Number of pixels in the output image in the x-direction.
     y_pixels: int, optional
@@ -504,7 +542,32 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',
     if y_pixels <= 0:
         raise ValueError("`y_pixels` must be greater than zero!")
 
-    return _fast_3d_cross(data[target].to_numpy(), z_slice, data[x].to_numpy(), data[y].to_numpy(), data[z].to_numpy(),
+    x_data = data[x].to_numpy()
+    y_data = data[y].to_numpy()
+    z_data = data[z].to_numpy()
+    if rotation is not None:
+        if not isinstance(rotation, Rotation):
+            rotation = R.from_euler('zyx', rotation, degrees=True)
+
+        vectors = data[[data.xcol, data.ycol, data.zcol]].to_numpy()
+        if origin is None:
+            origin = (vectors[:, 0].min() + vectors[:, 0].max()) / 2
+
+        vectors = vectors - origin
+        vectors = rotation.apply(vectors)
+        vectors = vectors + origin
+
+        x_data = vectors[:, 0] if x == data.xcol else \
+                 vectors[:, 1] if x == data.ycol else \
+                 vectors[:, 2] if x == data.zcol else x_data
+        y_data = vectors[:, 0] if y == data.xcol else \
+                 vectors[:, 1] if y == data.ycol else \
+                 vectors[:, 2] if y == data.zcol else y_data
+        z_data = vectors[:, 0] if z == data.xcol else \
+                 vectors[:, 1] if z == data.ycol else \
+                 vectors[:, 2] if z == data.zcol else z_data
+
+    return _fast_3d_cross(data[target].to_numpy(), z_slice, x_data, y_data, z_data,
                           data['m'].to_numpy(), data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w,
                           kernel.get_radius(), x_pixels, y_pixels, x_min, x_max, y_min, y_max)
 
