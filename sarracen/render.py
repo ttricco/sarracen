@@ -13,6 +13,7 @@ from typing import Union
 import numpy as np
 import seaborn as sns
 from matplotlib import pyplot as plt
+from matplotlib.axes import Axes
 from matplotlib.colors import Colormap
 
 from sarracen.interpolate import interpolate_2d_cross, interpolate_2d, interpolate_3d, interpolate_3d_cross
@@ -51,7 +52,8 @@ def render_2d(data: 'SarracenDataFrame',
               x_max: float = None,
               y_min: float = None,
               y_max: float = None,
-              colormap: Union[str, Colormap] = 'RdBu') -> ('Figure', 'Axes'):
+              colormap: Union[str, Colormap] = 'RdBu',
+              ax: Axes = None) -> Axes:
     """ Render 2D particle data to a 2D grid, using SPH rendering of a target variable.
 
     Render the data within a SarracenDataFrame to a 2D matplotlib object, by rendering the values
@@ -110,6 +112,11 @@ def render_2d(data: 'SarracenDataFrame',
         If `target`, `x`, `y`, mass, density, or smoothing length columns do not
         exist in `data`.
     """
+    image = interpolate_2d(data, target, x, y, kernel, x_pixels, y_pixels, x_min, x_max, y_min, y_max)
+
+    if ax is None:
+        ax = plt.gca()
+
     # x & y columns default to the variables determined by the SarracenDataFrame.
     if x is None:
         x = data.xcol
@@ -126,28 +133,13 @@ def render_2d(data: 'SarracenDataFrame',
     if y_max is None:
         y_max = _snap(data.loc[:, y].max())
 
-    # set # of pixels to maintain an aspect ratio that is the same as the underlying bounds of the data.
-    if x_pixels is None and y_pixels is None:
-        x_pixels = 512
-    if x_pixels is None:
-        x_pixels = int(np.rint(y_pixels * ((x_max - x_min) / (y_max - y_min))))
-    if y_pixels is None:
-        y_pixels = int(np.rint(x_pixels * ((y_max - y_min) / (x_max - x_min))))
-
-    if kernel is None:
-        kernel = data.kernel
-
-    image = interpolate_2d(data, target, x, y, kernel, x_pixels, y_pixels, x_min, x_max, y_min, y_max)
-
-    # ensure the plot size maintains the aspect ratio of the underlying bounds of the data
-    fig, ax = plt.subplots(figsize=(6.4, 4.8 * ((y_max - y_min) / (x_max - x_min))))
     img = ax.imshow(image, cmap=colormap, origin='lower', extent=[x_min, x_max, y_min, y_max])
     ax.set_xlabel(x)
     ax.set_ylabel(y)
-    cbar = fig.colorbar(img, ax=ax)
+    cbar = plt.colorbar(img, ax=ax)
     cbar.ax.set_ylabel(target)
 
-    return fig, ax
+    return ax
 
 
 def render_2d_cross(data: 'SarracenDataFrame',
@@ -159,7 +151,8 @@ def render_2d_cross(data: 'SarracenDataFrame',
                     x1: float = None,
                     x2: float = None,
                     y1: float = None,
-                    y2: float = None) -> ('Figure', 'Axes'):
+                    y2: float = None,
+                    ax: Axes = None) -> Axes:
     """ Render 2D particle data to a 1D line, using a 2D cross-section.
 
     Render the data within a SarracenDataFrame to a seaborn-generated line plot, by taking
@@ -211,6 +204,11 @@ def render_2d_cross(data: 'SarracenDataFrame',
         If `target`, `x`, `y`, mass, density, or smoothing length columns do not
         exist in `data`.
     """
+    output = interpolate_2d_cross(data, target, x, y, kernel, pixels, x1, x2, y1, y2)
+
+    if ax is None:
+        ax = plt.gca()
+
     # x & y columns default to the variables determined by the SarracenDataFrame.
     if x is None:
         x = data.xcol
@@ -227,18 +225,12 @@ def render_2d_cross(data: 'SarracenDataFrame',
     if y2 is None:
         y2 = _snap(data.loc[:, y].max())
 
-    if kernel is None:
-        kernel = data.kernel
-
-    output = interpolate_2d_cross(data, target, x, y, kernel, pixels, x1, x2, y1, y2)
-
-    fig, ax = plt.subplots()
-    ax.margins(x=0, y=0)
     sns.lineplot(x=np.linspace(0, np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2), pixels), y=output, ax=ax)
+    ax.margins(x=0, y=0)
     ax.set_xlabel(f'cross-section ({x}, {y})')
     ax.set_ylabel(target)
 
-    return fig, ax
+    return ax
 
 
 def render_3d(data: 'SarracenDataFrame',
@@ -255,7 +247,8 @@ def render_3d(data: 'SarracenDataFrame',
               x_max: float = None,
               y_min: float = None,
               y_max: float = None,
-              colormap: Union[str, Colormap] = 'RdBu') -> ('Figure', 'Axes'):
+              cmap: Union[str, Colormap] = 'RdBu',
+              ax: Axes = None) -> Axes:
     """ Render 3D particle data to a 2D grid, using SPH column rendering of a target variable.
 
     Render the data within a SarracenDataFrame to a 2D matplotlib object, by rendering the values
@@ -323,6 +316,12 @@ def render_3d(data: 'SarracenDataFrame',
         If `target`, `x`, `y`, `z`, mass, density, or smoothing length columns do not
         exist in `data`.
     """
+    img = interpolate_3d(data, target, x, y, kernel, integral_samples, rotation, origin, x_pixels, y_pixels, x_min,
+                         x_max, y_min, y_max)
+
+    if ax is None:
+        ax = plt.gca()
+
     # x & y columns default to the variables determined by the SarracenDataFrame.
     if x is None:
         x = data.xcol
@@ -339,23 +338,8 @@ def render_3d(data: 'SarracenDataFrame',
     if y_max is None:
         y_max = _snap(data.loc[:, y].max())
 
-    # set # of pixels to maintain an aspect ratio that is the same as the underlying bounds of the data.
-    if x_pixels is None and y_pixels is None:
-        x_pixels = 512
-    if x_pixels is None:
-        x_pixels = int(np.rint(y_pixels * ((x_max - x_min) / (y_max - y_min))))
-    if y_pixels is None:
-        y_pixels = int(np.rint(x_pixels * ((y_max - y_min) / (x_max - x_min))))
-
-    if kernel is None:
-        kernel = data.kernel
-
-    img = interpolate_3d(data, target, x, y, kernel, integral_samples, rotation, origin, x_pixels, y_pixels, x_min,
-                         x_max, y_min, y_max)
-
-    # ensure the plot size maintains the aspect ratio of the underlying bounds of the data
-    fig, ax = plt.subplots(figsize=(6.4, 4.8 * ((y_max - y_min) / (x_max - x_min))))
-    graphic = ax.imshow(img, cmap=colormap, origin='lower', extent=[x_min, x_max, y_min, y_max])
+    # ensure the plotted image is scaled to data space
+    graphic = ax.imshow(img, cmap=cmap, origin='lower', extent=[x_min, x_max, y_min, y_max])
 
     # remove the x & y ticks if the data is rotated, since these no longer have physical
     # relevance to the displayed data.
@@ -366,10 +350,10 @@ def render_3d(data: 'SarracenDataFrame',
         ax.set_xlabel(x)
         ax.set_ylabel(y)
 
-    cbar = fig.colorbar(graphic, ax=ax)
+    cbar = plt.colorbar(graphic, ax=ax)
     cbar.ax.set_ylabel(f"column {target}")
 
-    return fig, ax
+    return ax
 
 
 def render_3d_cross(data: 'SarracenDataFrame',
@@ -387,7 +371,8 @@ def render_3d_cross(data: 'SarracenDataFrame',
                     x_max: float = None,
                     y_min: float = None,
                     y_max: float = None,
-                    colormap: Union[str, Colormap] = 'RdBu') -> tuple['Figure', 'Axes']:
+                    cmap: Union[str, Colormap] = 'RdBu',
+                    ax: Axes = None) -> Axes:
     """ Render 3D particle data to a 2D grid, using a 3D cross-section.
 
     Render the data within a SarracenDataFrame to a 2D matplotlib object, using a 3D -> 2D
@@ -457,13 +442,17 @@ def render_3d_cross(data: 'SarracenDataFrame',
         If `target`, `x`, `y`, `z`, mass, density, or smoothing length columns do not
         exist in `data`.
     """
+    img = interpolate_3d_cross(data, target, z_slice, x, y, z, kernel, rotation, origin, x_pixels, y_pixels, x_min,
+                               x_max, y_min, y_max)
+
+    if ax is None:
+        ax = plt.gca()
+
     # x & y columns default to the variables determined by the SarracenDataFrame.
     if x is None:
         x = data.xcol
     if y is None:
         y = data.ycol
-    if z is None:
-        z = data.zcol
 
     # boundaries of the plot default to the maximum & minimum values of the data.
     if x_min is None:
@@ -475,27 +464,8 @@ def render_3d_cross(data: 'SarracenDataFrame',
     if y_max is None:
         y_max = _snap(data.loc[:, y].max())
 
-    # set default slice to be through the data's average z-value.
-    if z_slice is None:
-        z_slice = _snap(data.loc[:, z].mean())
-
-    if kernel is None:
-        kernel = data.kernel
-
-    # set # of pixels to maintain an aspect ratio that is the same as the underlying bounds of the data.
-    if x_pixels is None and y_pixels is None:
-        x_pixels = 512
-    if x_pixels is None:
-        x_pixels = int(np.rint(y_pixels * ((x_max - x_min) / (y_max - y_min))))
-    if y_pixels is None:
-        y_pixels = int(np.rint(x_pixels * ((y_max - y_min) / (x_max - x_min))))
-
-    img = interpolate_3d_cross(data, target, z_slice, x, y, z, kernel, rotation, origin, x_pixels, y_pixels, x_min,
-                               x_max, y_min, y_max)
-
-    # ensure the plot size maintains the aspect ratio of the underlying bounds of the data
-    fig, ax = plt.subplots(figsize=(6.4, 4.8 * ((y_max - y_min) / (x_max - x_min))))
-    graphic = ax.imshow(img, cmap=colormap, origin='lower', extent=[x_min, x_max, y_min, y_max])
+    # ensure the plotted image is scaled to data space
+    graphic = ax.imshow(img, cmap=cmap, origin='lower', extent=[x_min, x_max, y_min, y_max])
 
     # remove the x & y ticks if the data is rotated, since these no longer have physical
     # relevance to the displayed data.
@@ -506,7 +476,7 @@ def render_3d_cross(data: 'SarracenDataFrame',
         ax.set_xlabel(x)
         ax.set_ylabel(y)
 
-    cbar = fig.colorbar(graphic, ax=ax)
+    cbar = plt.colorbar(graphic, ax=ax)
     cbar.ax.set_ylabel(f"{target}")
 
-    return fig, ax
+    return ax

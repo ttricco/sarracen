@@ -8,17 +8,38 @@ from scipy.spatial.transform import Rotation as R, Rotation
 from sarracen.kernels import BaseKernel
 
 
+def _snap(value: float):
+    """ Snap a number to the nearest integer
+
+    Return a number which is rounded to the nearest integer,
+    with a 1e-4 absolute range of tolerance.
+
+    Parameters
+    ----------
+    value: float
+        The number to snap.
+
+    Returns
+    -------
+    float: An integer (in float form) if a close integer is detected, otherwise return `value`.
+    """
+    if np.isclose(value, np.rint(value), atol=1e-4):
+        return np.rint(value)
+    else:
+        return value
+
+
 def interpolate_2d(data: 'SarracenDataFrame',
                    target: str,
-                   x: str,
-                   y: str,
-                   kernel: BaseKernel,
-                   x_pixels: int = 512,
-                   y_pixels: int = 512,
-                   x_min: float = 0,
-                   x_max: float = 1,
-                   y_min: float = 0,
-                   y_max: float = 1) -> np.ndarray:
+                   x: str = None,
+                   y: str = None,
+                   kernel: BaseKernel = None,
+                   x_pixels: int = None,
+                   y_pixels: int = None,
+                   x_min: float = None,
+                   x_max: float = None,
+                   y_min: float = None,
+                   y_max: float = None) -> np.ndarray:
     """ Interpolate particle data across two directional axes to a 2D grid of pixels.
 
     Interpolate the data within a SarracenDataFrame to a 2D grid, by interpolating the values
@@ -64,6 +85,33 @@ def interpolate_2d(data: 'SarracenDataFrame',
         If `target`, `x`, `y`, mass, density, or smoothing length columns do not
         exist in `data`.
     """
+    # x & y columns default to the variables determined by the SarracenDataFrame.
+    if x is None:
+        x = data.xcol
+    if y is None:
+        y = data.ycol
+
+    # boundaries of the plot default to the maximum & minimum values of the data.
+    if x_min is None:
+        x_min = _snap(data.loc[:, x].min())
+    if y_min is None:
+        y_min = _snap(data.loc[:, y].min())
+    if x_max is None:
+        x_max = _snap(data.loc[:, x].max())
+    if y_max is None:
+        y_max = _snap(data.loc[:, y].max())
+
+    # set # of pixels to maintain an aspect ratio that is the same as the underlying bounds of the data.
+    if x_pixels is None and y_pixels is None:
+        x_pixels = 512
+    if x_pixels is None:
+        x_pixels = int(np.rint(y_pixels * ((x_max - x_min) / (y_max - y_min))))
+    if y_pixels is None:
+        y_pixels = int(np.rint(x_pixels * ((y_max - y_min) / (x_max - x_min))))
+
+    if kernel is None:
+        kernel = data.kernel
+
     if x not in data.columns:
         raise KeyError(f"x-directional column '{x}' does not exist in the provided dataset.")
     if y not in data.columns:
@@ -136,14 +184,14 @@ def _fast_2d(target, x_data, y_data, mass_data, rho_data, h_data, weight_functio
 
 def interpolate_2d_cross(data: 'SarracenDataFrame',
                          target: str,
-                         x: str,
-                         y: str,
-                         kernel: BaseKernel,
-                         pixels: int = 512,
-                         x1: float = 0,
-                         x2: float = 1,
-                         y1: float = 0,
-                         y2: float = 1) -> np.ndarray:
+                         x: str = None,
+                         y: str = None,
+                         kernel: BaseKernel = None,
+                         pixels: int = None,
+                         x1: float = None,
+                         x2: float = None,
+                         y1: float = None,
+                         y2: float = None) -> np.ndarray:
     """ Interpolate particle data across two directional axes to a 1D cross-section line.
 
     Interpolate the data within a SarracenDataFrame to a 1D line, by interpolating the values
@@ -188,6 +236,25 @@ def interpolate_2d_cross(data: 'SarracenDataFrame',
         If `target`, `x`, `y`, mass, density, or smoothing length columns do not
         exist in `data`.
     """
+    # x & y columns default to the variables determined by the SarracenDataFrame.
+    if x is None:
+        x = data.xcol
+    if y is None:
+        y = data.ycol
+
+    # start and end points of the line default to the maximum & minimum values of the data.
+    if x1 is None:
+        x1 = _snap(data.loc[:, x].min())
+    if y1 is None:
+        y1 = _snap(data.loc[:, y].min())
+    if x2 is None:
+        x2 = _snap(data.loc[:, x].max())
+    if y2 is None:
+        y2 = _snap(data.loc[:, y].max())
+
+    if kernel is None:
+        kernel = data.kernel
+
     if x not in data.columns:
         raise KeyError(f"x-directional column '{x}' does not exist in the provided dataset.")
     if y not in data.columns:
@@ -280,18 +347,18 @@ def _fast_2d_cross(target, x_data, y_data, mass_data, rho_data, h_data, weight_f
 
 def interpolate_3d(data: 'SarracenDataFrame',
                    target: str,
-                   x: str,
-                   y: str,
-                   kernel: BaseKernel,
+                   x: str = None,
+                   y: str = None,
+                   kernel: BaseKernel = None,
                    integral_samples: int = 1000,
                    rotation: np.ndarray = None,
                    origin: np.ndarray = None,
-                   x_pixels: int = 512,
-                   y_pixels: int = 512,
-                   x_min: float = 0,
-                   x_max: float = 1,
-                   y_min: float = 0,
-                   y_max: float = 1):
+                   x_pixels: int = None,
+                   y_pixels: int = None,
+                   x_min: float = None,
+                   x_max: float = None,
+                   y_min: float = None,
+                   y_max: float = None):
     """ Interpolate 3D particle data to a 2D grid of pixels.
 
     Interpolates three-dimensional particle data in a SarracenDataFrame. The data
@@ -351,6 +418,33 @@ def interpolate_3d(data: 'SarracenDataFrame',
     Since the direction of integration is assumed to be straight across the z-axis, the z-axis column
     is not required for this type of interpolation.
     """
+    # x & y columns default to the variables determined by the SarracenDataFrame.
+    if x is None:
+        x = data.xcol
+    if y is None:
+        y = data.ycol
+
+    # boundaries of the plot default to the maximum & minimum values of the data.
+    if x_min is None:
+        x_min = _snap(data.loc[:, x].min())
+    if y_min is None:
+        y_min = _snap(data.loc[:, y].min())
+    if x_max is None:
+        x_max = _snap(data.loc[:, x].max())
+    if y_max is None:
+        y_max = _snap(data.loc[:, y].max())
+
+    # set # of pixels to maintain an aspect ratio that is the same as the underlying bounds of the data.
+    if x_pixels is None and y_pixels is None:
+        x_pixels = 512
+    if x_pixels is None:
+        x_pixels = int(np.rint(y_pixels * ((x_max - x_min) / (y_max - y_min))))
+    if y_pixels is None:
+        y_pixels = int(np.rint(x_pixels * ((y_max - y_min) / (x_max - x_min))))
+
+    if kernel is None:
+        kernel = data.kernel
+
     if x not in data.columns:
         raise KeyError(f"x-directional column '{x}' does not exist in the provided dataset.")
     if y not in data.columns:
@@ -443,19 +537,19 @@ def _fast_3d(target, x_data, y_data, mass_data, rho_data, h_data, integrated_ker
 
 def interpolate_3d_cross(data: 'SarracenDataFrame',
                          target: str,
-                         z_slice: float,
-                         x: str,
-                         y: str,
-                         z: str,
-                         kernel: BaseKernel,
+                         z_slice: float = None,
+                         x: str = None,
+                         y: str = None,
+                         z: str = None,
+                         kernel: BaseKernel = None,
                          rotation: np.ndarray = None,
                          origin: np.ndarray = None,
-                         x_pixels: int = 512,
-                         y_pixels: int = 512,
-                         x_min: float = 0,
-                         x_max: float = 1,
-                         y_min: float = 0,
-                         y_max: float = 1):
+                         x_pixels: int = None,
+                         y_pixels: int = None,
+                         x_min: float = None,
+                         x_max: float = None,
+                         y_min: float = None,
+                         y_max: float = None):
     """ Interpolate 3D particle data to a 2D grid, using a 3D cross-section.
 
     Interpolates particle data in a SarracenDataFrame across three directional axes to a 2D
@@ -513,6 +607,39 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',
         If `target`, `x`, `y`, mass, density, or smoothing length columns do not
         exist in `data`.
     """
+    # x & y columns default to the variables determined by the SarracenDataFrame.
+    if x is None:
+        x = data.xcol
+    if y is None:
+        y = data.ycol
+    if z is None:
+        z = data.zcol
+
+    # boundaries of the plot default to the maximum & minimum values of the data.
+    if x_min is None:
+        x_min = _snap(data.loc[:, x].min())
+    if y_min is None:
+        y_min = _snap(data.loc[:, y].min())
+    if x_max is None:
+        x_max = _snap(data.loc[:, x].max())
+    if y_max is None:
+        y_max = _snap(data.loc[:, y].max())
+
+    # set default slice to be through the data's average z-value.
+    if z_slice is None:
+        z_slice = _snap(data.loc[:, z].mean())
+
+    if kernel is None:
+        kernel = data.kernel
+
+    # set # of pixels to maintain an aspect ratio that is the same as the underlying bounds of the data.
+    if x_pixels is None and y_pixels is None:
+        x_pixels = 512
+    if x_pixels is None:
+        x_pixels = int(np.rint(y_pixels * ((x_max - x_min) / (y_max - y_min))))
+    if y_pixels is None:
+        y_pixels = int(np.rint(x_pixels * ((y_max - y_min) / (x_max - x_min))))
+
     if x not in data.columns:
         raise KeyError(f"x-directional column '{x}' does not exist in the provided dataset.")
     if y not in data.columns:
