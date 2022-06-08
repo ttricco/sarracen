@@ -42,7 +42,20 @@ def _snap(value: float):
 
 
 def _default_axes(data, x, y):
-    # x & y columns default to the variables determined by the SarracenDataFrame.
+    """Utility function to determine the x & y columns to use for rendering.
+
+    Parameters
+    ----------
+    data: SarracenDataFrame
+        The particle dataset to render.
+    x, y: str
+        The x and y directional column labels passed to the render function.
+
+    Returns
+    -------
+    x, y: str
+        The directional column labels to use for rendering. Defaults to the x-column detected in `data`
+    """
     if x is None:
         x = data.xcol
     if y is None:
@@ -52,7 +65,23 @@ def _default_axes(data, x, y):
 
 
 def _default_bounds(data, x, y, x_min, x_max, y_min, y_max):
-    # boundaries of the plot default to the maximum & minimum values of the data.
+    """Utility function to determine the 2-dimensional boundaries to use in 2D rendering.
+
+    Parameters
+    ----------
+    data: SarracenDataFrame
+        The particle dataset to render.
+    x, y: str
+        The directional column labels that will be used for rendering.
+    x_min, x_max, y_min, y_max: float
+        The minimum and maximum values passed to the render function, in particle data space.
+
+    Returns
+    -------
+    x_min, x_max, y_min, y_max: float
+        The minimum and maximum values to use for rendering, in particle data space. Defaults
+        to the maximum and minimum values of `x` and `y`, snapped to the nearest integer.
+    """
     if x_min is None:
         x_min = _snap(data.loc[:, x].min())
     if y_min is None:
@@ -94,40 +123,31 @@ def render_2d(data: 'SarracenDataFrame',
         Particle data, in a SarracenDataFrame.
     target: str
         Column label of the target smoothing data.
-    x: str, optional
-        Column label of the x-directional axis. Defaults to the x-column detected in `data`.
-    y: str, optional
+    x, y: str, optional
         Column label of the y-directional axis. Defaults to the y-column detected in `data`.
     kernel: BaseKernel, optional
         Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
-    x_pixels: int, optional
-        Number of pixels in the output image in the x-direction. If both x_pixels and y_pixels are
-        None, this defaults to 256. Otherwise, this value defaults to a multiple of y_pixels which
-        preserves the aspect ratio of the data.
-    y_pixels: int, optional
-        Number of pixels in the output image in the y-direction. If both x_pixels and y_pixels are
-        None, this defaults to 256. Otherwise, this value defaults to a multiple of x_pixels which
-        preserves the aspect ratio of the data.
-    x_min: float, optional
-        Minimum bound in the x-direction (in particle data space). Defaults to the lower bound
-        of x detected in `data` snapped to the nearest integer.
-    x_max: float, optional
-        Maximum bound in the x-direction (in particle data space). Defaults to the upper bound
-        of x detected in `data` snapped to the nearest integer.
-    y_min: float, optional
-        Minimum bound in the y-direction (in particle data space). Defaults to the lower bound
-        of y detected in `data` snapped to the nearest integer.
-    y_max: float, optional
-        Maximum bound in the y-direction (in particle data space). Defaults to the upper bound
-        of y detected in `data` snapped to the nearest integer.
+    x_pixels, y_pixels: int, optional
+        Number of pixels in the output image in the x & y directions. Default values are chosen to keep
+        a consistent aspect ratio.
+    x_min, x_max, y_min, y_max: float, optional
+        The minimum and maximum values to use in interpolation, in particle data space. Defaults
+        to the minimum and maximum values of `x` and `y`.
     cmap: str or Colormap, optional
         The color map to use when plotting this data.
+    cbar: bool, optional
+        True if a colorbar should be drawn.
+    cbar_kws: dict, optional
+        Keyword arguments to pass to matplotlib.figure.Figure.colorbar()
+    cbar_ax: Axes
+        Axes to draw the colorbar in, if not provided then space will be taken from the main Axes.
+    ax: Axes
+        The main axes in which to draw the rendered image.
+    kwargs: other keyword arguments
+        Keyword arguments to pass to matplotlib.axes.Axes.imshow().
 
     Returns
     -------
-    Figure
-        The resulting matplotlib figure, containing the 2d render and
-        a color bar indicating the magnitude of the target variable.
     Axes
         The resulting matplotlib axes, which contain the 2d rendered image.
 
@@ -185,34 +205,24 @@ def render_2d_cross(data: 'SarracenDataFrame',
         Particle data, in a SarracenDataFrame.
     target: str
         Column label of the target smoothing data.
-    x: str, optional
-        Column label of the x-directional axis. Defaults to the x-column detected in `data`.
-    y: str, optional
-        Column label of the y-directional axis. Defaults to the y-column detected in `data`.
-    kernel: BaseKernel
+    x, y: str
+        Column labels of the directional axes. Defaults to the x & y columns detected in `data`.
+    kernel: BaseKernel, optional
         Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
     pixels: int, optional
         Number of points in the resulting line plot in the x-direction.
-    x1: float, optional
-        Starting x-coordinate of the line (in particle data space). Defaults to the lower bound
-        of x detected in `data` snapped to the nearest integer.
-    x2: float, optional
-        Ending x-coordinate of the line (in particle data space). Defaults to the upper bound
-        of x detected in `data` snapped to the nearest integer.
-    y1: float, optional
-        Starting y-coordinate of the line (in particle data space). Defaults to the lower bound
-        of y detected in `data` snapped to the nearest integer.
-    y2: float, optional
-        Ending y-coordinate of the line (in particle data space). Defaults to the upper bound
-        of y detected in `data` snapped to the nearest integer.
+    x1, x2, y1, y2: float, optional
+        Starting and ending coordinates of the cross-section line (in particle data space). Defaults to
+        the minimum and maximum values of `x` and `y`.
+    ax: Axes
+        The main axes in which to draw the rendered image.
+    kwargs: other keyword arguments
+        Keyword arguments to pass to seaborn.lineplot().
 
     Returns
     -------
-    Figure
-        The resulting matplotlib figure, containing the seaborn-generated
-        line plot.
     Axes
-        The resulting matplotlib axes, which contain the line plot.
+        The resulting matplotlib axes, which contains the 1d cross-sectional plot.
 
     Raises
     -------
@@ -272,10 +282,8 @@ def render_3d(data: 'SarracenDataFrame',
         Particle data, in a SarracenDataFrame.
     target: str
         Column label of the target smoothing data.
-    x: str, optional
-        Column label of the x-directional axis to interpolate over. Defaults to the x-column detected in `data`.
-    y: str, optional
-        Column label of the y-directional axis to interpolate over. Defaults to the y-column detected in `data`.
+    x, y: str
+        Column labels of the directional axes. Defaults to the x & y columns detected in `data`.
     kernel: BaseKernel, optional
         Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
     integral_samples: int, optional
@@ -286,36 +294,29 @@ def render_3d(data: 'SarracenDataFrame',
     origin: array_like, optional
         Point of rotation of the data, in [x, y, z] form. Defaults to the centre
         point of the bounds of the data.
-    x_pixels: int, optional
-        Number of pixels in the output image in the x-direction. If both x_pixels and y_pixels are
-        None, this defaults to 256. Otherwise, this value defaults to a multiple of y_pixels which
-        preserves the aspect ratio of the data.
-    y_pixels: int, optional
-        Number of pixels in the output image in the y-direction. If both x_pixels and y_pixels are
-        None, this defaults to 256. Otherwise, this value defaults to a multiple of x_pixels which
-        preserves the aspect ratio of the data.
-    x_min: float, optional
-        Minimum bound in the x-direction (in particle data space). Defaults to the lower bound
-        of x detected in `data` snapped to the nearest integer.
-    x_max: float, optional
-        Maximum bound in the x-direction (in particle data space). Defaults to the upper bound
-        of x detected in `data` snapped to the nearest integer.
-    y_min: float, optional
-        Minimum bound in the y-direction (in particle data space). Defaults to the lower bound
-        of y detected in `data` snapped to the nearest integer.
-    y_max: float, optional
-        Maximum bound in the y-direction (in particle data space). Defaults to the upper bound
-        of y detected in `data` snapped to the nearest integer.
+    x_pixels, y_pixels: int, optional
+        Number of pixels in the output image in the x & y directions. Default values are chosen to keep
+        a consistent aspect ratio.
+    x_min, x_max, y_min, y_max: float, optional
+        The minimum and maximum values to render over, in particle data space. Defaults
+        to the minimum and maximum values of `x` and `y`.
     cmap: str or Colormap, optional
         The color map to use when plotting this data.
+    cbar: bool, optional
+        True if a colorbar should be drawn.
+    cbar_kws: dict, optional
+        Keyword arguments to pass to matplotlib.figure.Figure.colorbar()
+    cbar_ax: Axes
+        Axes to draw the colorbar in, if not provided then space will be taken from the main Axes.
+    ax: Axes
+        The main axes in which to draw the rendered image.
+    kwargs: other keyword arguments
+        Keyword arguments to pass to matplotlib.axes.Axes.imshow().
 
     Returns
     -------
-    Figure
-        The resulting matplotlib figure, containing the 2d render and
-        a color bar indicating the magnitude of the target variable.
     Axes
-        The resulting matplotlib axes, which contain the 2d rendered image.
+        The resulting matplotlib axes, which contains the 2d rendered image.
 
     Raises
     -------
@@ -324,11 +325,11 @@ def render_3d(data: 'SarracenDataFrame',
         if the specified `x` and `y` minimum and maximums result in an invalid region, or
         if the provided data is not 3-dimensional.
     KeyError
-        If `target`, `x`, `y`, `z`, mass, density, or smoothing length columns do not
+        If `target`, `x`, `y`, mass, density, or smoothing length columns do not
         exist in `data`.
     """
     image = interpolate_3d(data, target, x, y, kernel, integral_samples, rotation, origin, x_pixels, y_pixels, x_min,
-                         x_max, y_min, y_max)
+                           x_max, y_min, y_max)
 
     if ax is None:
         ax = plt.gca()
@@ -386,60 +387,50 @@ def render_3d_cross(data: 'SarracenDataFrame',
     Parameters
     ----------
     data : SarracenDataFrame
-        Particle data, in a SarracenDataFrame.
+        The particle data to render.
     target: str
-        Column label of the target smoothing data.
-    z_slice: float, optional
-        Z-axis value to take the cross-section at. Defaults to the average z position in `data`.
-    x: str, optional
-        Column label of the x-directional axis. Defaults to the x-column detected in `data`.
-    y: str, optional
-        Column label of the y-directional axis. Defaults to the y-column detected in `data`.
-    z: str
-        Column label of the z-directional axis. Defaults to the z-column detected in `data`.
-    kernel: BaseKernel, optional
-        Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
+        The column label of the target smoothing data.
+    z_slice: float
+        The z-axis value to take the cross-section at. Defaults to the midpoint of the z-directional data.
+    x, y, z: str
+        The column labels of the directional data to render. Defaults to the x, y, and z columns
+        detected in `data`.
+    kernel: BaseKernel
+        The kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
     rotation: array_like or Rotation, optional
-        The rotation to apply to the data before interpolation. If defined as an array, the
+        The rotation to apply to the data before rendering. If defined as an array, the
         order of rotations is [z, y, x] in degrees.
     origin: array_like, optional
         Point of rotation of the data, in [x, y, z] form. Defaults to the centre
         point of the bounds of the data.
-    x_pixels: int, optional
-        Number of pixels in the output image in the x-direction. If both x_pixels and y_pixels are
-        None, this defaults to 256. Otherwise, this value defaults to a multiple of y_pixels which
-        preserves the aspect ratio of the data.
-    y_pixels: int, optional
-        Number of pixels in the output image in the y-direction. If both x_pixels and y_pixels are
-        None, this defaults to 256. Otherwise, this value defaults to a multiple of x_pixels which
-        preserves the aspect ratio of the data.
-    x_min: float, optional
-        Minimum bound in the x-direction (in particle data space). Defaults to the lower bound
-        of x detected in `data` snapped to the nearest integer.
-    x_max: float, optional
-        Maximum bound in the x-direction (in particle data space). Defaults to the upper bound
-        of x detected in `data` snapped to the nearest integer.
-    y_min: float, optional
-        Minimum bound in the y-direction (in particle data space). Defaults to the lower bound
-        of y detected in `data` snapped to the nearest integer.
-    y_max: float, optional
-        Maximum bound in the y-direction (in particle data space). Defaults to the upper bound
-        of y detected in `data` snapped to the nearest integer.
+    x_pixels, y_pixels: int, optional
+        Number of pixels in the output image in the x & y directions. Default values are chosen to keep
+        a consistent aspect ratio.
+    x_min, x_max, y_min, y_max: float, optional
+        The minimum and maximum values to render over, in particle data space. Defaults
+        to the minimum and maximum values of `x` and `y`.
     cmap: str or Colormap, optional
         The color map to use when plotting this data.
+    cbar: bool, optional
+        True if a colorbar should be drawn.
+    cbar_kws: dict, optional
+        Keyword arguments to pass to matplotlib.figure.Figure.colorbar()
+    cbar_ax: Axes
+        Axes to draw the colorbar in, if not provided then space will be taken from the main Axes.
+    ax: Axes
+        The main axes in which to draw the rendered image.
+    kwargs: other keyword arguments
+        Keyword arguments to pass to matplotlib.axes.Axes.imshow().
 
     Returns
     -------
-    Figure
-        The resulting matplotlib figure, containing the 3d-cross section and
-        a color bar indicating the magnitude of the target variable.
     Axes
-        The resulting matplotlib axes, which contains the 3d-cross section image.
+        The resulting matplotlib axes object, containing the 3d cross-section image.
 
     Raises
     -------
     ValueError
-        If `pixwidthx`, `pixwidthy`, `pixcountx`, or `pixcounty` are less than or equal to zero, or
+        If `x_pixels` or `y_pixels` are less than or equal to zero, or
         if the specified `x` and `y` minimum and maximums result in an invalid region, or
         if the provided data is not 3-dimensional.
     KeyError
@@ -447,7 +438,7 @@ def render_3d_cross(data: 'SarracenDataFrame',
         exist in `data`.
     """
     image = interpolate_3d_cross(data, target, z_slice, x, y, z, kernel, rotation, origin, x_pixels, y_pixels, x_min,
-                               x_max, y_min, y_max)
+                                 x_max, y_min, y_max)
 
     if ax is None:
         ax = plt.gca()
