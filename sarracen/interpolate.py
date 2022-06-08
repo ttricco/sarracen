@@ -53,7 +53,7 @@ def _snap_boundaries(data, x, y, x_min, x_max, y_min, y_max):
     return x_min, x_max, y_min, y_max
 
 
-def _set_pixels(data, x_pixels, y_pixels, x_min, x_max, y_min, y_max):
+def _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max):
     # set # of pixels to maintain an aspect ratio that is the same as the underlying bounds of the data.
     if x_pixels is None and y_pixels is None:
         x_pixels = 512
@@ -102,6 +102,7 @@ def _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max):
 def _check_dimension(data, dim):
     if data.get_dim() != dim:
         raise ValueError(f"Dataset is not {dim}-dimensional.")
+    return
 
 
 def _rotate_data(data, x, y, z, rotation, origin):
@@ -122,13 +123,13 @@ def _rotate_data(data, x, y, z, rotation, origin):
 
         x_data = vectors[:, 0] if x == data.xcol else \
             vectors[:, 1] if x == data.ycol else \
-                vectors[:, 2] if x == data.zcol else x_data
+            vectors[:, 2] if x == data.zcol else x_data
         y_data = vectors[:, 0] if y == data.xcol else \
             vectors[:, 1] if y == data.ycol else \
-                vectors[:, 2] if y == data.zcol else y_data
+            vectors[:, 2] if y == data.zcol else y_data
         z_data = vectors[:, 0] if z == data.xcol else \
             vectors[:, 1] if z == data.ycol else \
-                vectors[:, 2] if z == data.zcol else z_data
+            vectors[:, 2] if z == data.zcol else z_data
 
     return x_data, y_data, z_data
 
@@ -193,15 +194,15 @@ def interpolate_2d(data: 'SarracenDataFrame',
     _verify_columns(data, x, y, target)
 
     x_min, x_max, y_min, y_max = _snap_boundaries(data, x, y, x_min, x_max, y_min, y_max)
-    x_pixels, y_pixels = _set_pixels(data, x_pixels, y_pixels, x_min, x_max, y_min, y_max)
+    x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
     _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
 
     kernel = _default_kernel(data, kernel)
     _check_dimension(data, 2)
 
-    return _fast_2d(data[target].to_numpy(), data[x].to_numpy(), data[y].to_numpy(), data['m'].to_numpy(),
-                    data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w, kernel.get_radius(), x_pixels,
-                    y_pixels, x_min, x_max, y_min, y_max)
+    return _fast_2d(data[target].to_numpy(), 0, data[x].to_numpy(), data[y].to_numpy(), np.zeros(len(data)),
+                    data['m'].to_numpy(), data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w, kernel.get_radius(),
+                    x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2)
 
 
 def interpolate_2d_cross(data: 'SarracenDataFrame',
@@ -353,16 +354,16 @@ def interpolate_3d(data: 'SarracenDataFrame',
     _verify_columns(data, x, y, target)
 
     x_min, x_max, y_min, y_max = _snap_boundaries(data, x, y, x_min, x_max, y_min, y_max)
-    x_pixels, y_pixels = _set_pixels(data, x_pixels, y_pixels, x_min, x_max, y_min, y_max)
+    x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
     _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
 
     x_data, y_data, _ = _rotate_data(data, x, y, data.zcol, rotation, origin)
     kernel = _default_kernel(data, kernel)
     _check_dimension(data, 3)
 
-    return _fast_3d(data[target].to_numpy(), x_data, y_data, data['m'].to_numpy(),
-                    data['rho'].to_numpy(), data['h'].to_numpy(), kernel.get_column_kernel(integral_samples),
-                    kernel.get_radius(), integral_samples, x_pixels, y_pixels, x_min, x_max, y_min, y_max)
+    return _fast_2d(data[target].to_numpy(), 0, x_data, y_data, np.zeros(len(data)), data['m'].to_numpy(),
+                    data['rho'].to_numpy(), data['h'].to_numpy(), kernel.get_column_kernel_func(integral_samples),
+                    kernel.get_radius(), x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2)
 
 
 def interpolate_3d_cross(data: 'SarracenDataFrame',
@@ -452,7 +453,7 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',
 
     # boundaries of the plot default to the maximum & minimum values of the data.
     x_min, x_max, y_min, y_max = _snap_boundaries(data, x, y, x_min, x_max, y_min, y_max)
-    x_pixels, y_pixels = _set_pixels(data, x_pixels, y_pixels, x_min, x_max, y_min, y_max)
+    x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
     _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
 
     kernel = _default_kernel(data, kernel)
@@ -461,48 +462,62 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',
 
     x_data, y_data, z_data = _rotate_data(data, x, y, z, rotation, origin)
 
-    return _fast_3d_cross(data[target].to_numpy(), z_slice, x_data, y_data, z_data,
-                          data['m'].to_numpy(), data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w,
-                          kernel.get_radius(), x_pixels, y_pixels, x_min, x_max, y_min, y_max)
+    return _fast_2d(data[target].to_numpy(), z_slice, x_data, y_data, z_data,
+                    data['m'].to_numpy(), data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w,
+                    kernel.get_radius(), x_pixels, y_pixels, x_min, x_max, y_min, y_max, 3)
 
 
 # Underlying numba-compiled code for 2D interpolation
 @njit(parallel=True, fastmath=True)
-def _fast_2d(target, x_data, y_data, mass_data, rho_data, h_data, weight_function, kernel_radius, x_pixels, y_pixels,
-             x_min, x_max, y_min, y_max):
+def _fast_2d(target, z_slice, x_data, y_data, z_data, mass_data, rho_data, h_data, weight_function, kernel_radius,
+             x_pixels, y_pixels, x_min, x_max, y_min, y_max, n_dims):
     image = np.zeros((y_pixels, x_pixels))
     pixwidthx = (x_max - x_min) / x_pixels
     pixwidthy = (y_max - y_min) / y_pixels
+    if not n_dims == 2:
+        dz = np.float64(z_slice) - z_data
+    else:
+        dz = np.zeros(target.size)
 
-    term = (target * mass_data / (rho_data * h_data ** 2))
-
-    # determine maximum and minimum pixels that each particle contributes to
-    ipixmin = np.rint((x_data - kernel_radius * h_data - x_min) / pixwidthx) \
-        .clip(a_min=0, a_max=x_pixels)
-    jpixmin = np.rint((y_data - kernel_radius * h_data - y_min) / pixwidthy) \
-        .clip(a_min=0, a_max=y_pixels)
-    ipixmax = np.rint((x_data + kernel_radius * h_data - x_min) / pixwidthx) \
-        .clip(a_min=0, a_max=x_pixels)
-    jpixmax = np.rint((y_data + kernel_radius * h_data - y_min) / pixwidthy) \
-        .clip(a_min=0, a_max=y_pixels)
+    term = (target * mass_data / (rho_data * h_data ** n_dims))
 
     # iterate through the indexes of non-filtered particles
-    for i in prange(len(term)):
+    for i in prange(term.size):
+        if np.abs(dz[i]) >= kernel_radius * h_data[i]:
+            continue
+
+        # determine maximum and minimum pixels that this particle contributes to
+        ipixmin = int(np.rint((x_data[i] - kernel_radius * h_data[i] - x_min) / pixwidthx))
+        jpixmin = int(np.rint((y_data[i] - kernel_radius * h_data[i] - y_min) / pixwidthy))
+        ipixmax = int(np.rint((x_data[i] + kernel_radius * h_data[i] - x_min) / pixwidthx))
+        jpixmax = int(np.rint((y_data[i] + kernel_radius * h_data[i] - y_min) / pixwidthy))
+
+        if ipixmax < 0 or ipixmin > x_pixels or jpixmax < 0 or jpixmin > y_pixels:
+            continue
+        if ipixmin < 0:
+            ipixmin = 0
+        if ipixmax > x_pixels:
+            ipixmax = x_pixels
+        if jpixmin < 0:
+            jpixmin = 0
+        if jpixmax > y_pixels:
+            jpixmax = y_pixels
+
         # precalculate differences in the x-direction (optimization)
-        dx2i = ((x_min + (np.arange(int(ipixmin[i]), int(ipixmax[i])) + 0.5) * pixwidthx - x_data[i]) ** 2) \
-               * (1 / (h_data[i] ** 2))
+        dx2i = ((x_min + (np.arange(ipixmin, ipixmax) + 0.5) * pixwidthx - x_data[i]) ** 2) \
+               * (1 / (h_data[i] ** 2)) + ((dz[i] ** 2) * (1 / h_data[i] ** 2))
 
         # determine differences in the y-direction
-        ypix = y_min + (np.arange(int(jpixmin[i]), int(jpixmax[i])) + 0.5) * pixwidthy
+        ypix = y_min + (np.arange(jpixmin, jpixmax) + 0.5) * pixwidthy
         dy = ypix - y_data[i]
         dy2 = dy * dy * (1 / (h_data[i] ** 2))
 
         # calculate contributions at pixels i, j due to particle at x, y
         q2 = dx2i + dy2.reshape(len(dy2), 1)
-        wab = weight_function(np.sqrt(q2), 2)
+        wab = weight_function(np.sqrt(q2), n_dims)
 
         # add contributions to image
-        image[int(jpixmin[i]):int(jpixmax[i]), int(ipixmin[i]):int(ipixmax[i])] += (wab * term[i])
+        image[jpixmin:jpixmax, ipixmin:ipixmax] += (wab * term[i])
 
     return image
 
@@ -570,85 +585,3 @@ def _fast_2d_cross(target, x_data, y_data, mass_data, rho_data, h_data, weight_f
         output[int(ipixmin[i]):int(ipixmax[i])] += (wab * term[filter_det][i])
 
     return output
-
-
-# Underlying numba-compiled code for 3D column interpolation.
-@njit(parallel=True, fastmath=True)
-def _fast_3d(target, x_data, y_data, mass_data, rho_data, h_data, integrated_kernel, kernel_rad, int_samples, x_pixels,
-             y_pixels, x_min, x_max, y_min, y_max):
-    image = np.zeros((y_pixels, x_pixels))
-    pixwidthx = (x_max - x_min) / x_pixels
-    pixwidthy = (y_max - y_min) / y_pixels
-
-    term = target * mass_data / (rho_data * h_data ** 2)
-
-    # determine maximum and minimum pixels that each particle contributes to
-    ipixmin = np.rint((x_data - kernel_rad * h_data - x_min) / pixwidthx).clip(a_min=0, a_max=x_pixels)
-    jpixmin = np.rint((y_data - kernel_rad * h_data - y_min) / pixwidthy).clip(a_min=0, a_max=y_pixels)
-    ipixmax = np.rint((x_data + kernel_rad * h_data - x_min) / pixwidthx).clip(a_min=0, a_max=x_pixels)
-    jpixmax = np.rint((y_data + kernel_rad * h_data - y_min) / pixwidthy).clip(a_min=0, a_max=y_pixels)
-
-    # iterate through the indexes of non-filtered particles
-    for i in prange(len(term)):
-        # precalculate differences in the x-direction (optimization)
-        dx2i = ((x_min + (np.arange(int(ipixmin[i]), int(ipixmax[i])) + 0.5) * pixwidthx - x_data[i]) ** 2) \
-               * (1 / (h_data[i] ** 2))
-
-        # determine differences in the y-direction
-        ypix = y_min + (np.arange(int(jpixmin[i]), int(jpixmax[i])) + 0.5) * pixwidthy
-        dy = ypix - y_data[i]
-        dy2 = dy * dy * (1 / (h_data[i] ** 2))
-
-        # calculate contributions at pixels i, j due to particle at x, y
-        q2 = dx2i + dy2.reshape(len(dy2), 1)
-        wab = np.interp(np.sqrt(q2), np.linspace(0, kernel_rad, int_samples), integrated_kernel)
-
-        # add contributions to image
-        image[int(jpixmin[i]):int(jpixmax[i]), int(ipixmin[i]):int(ipixmax[i])] += (wab * term[i])
-
-    return image
-
-
-# Underlying numba-compiled code for 3D->2D cross-sections
-@njit(parallel=True, fastmath=True)
-def _fast_3d_cross(target, z_slice, x_data, y_data, z_data, mass_data, rho_data, h_data, weight_function, kernel_radius,
-                   x_pixels, y_pixels, x_min, x_max, y_min, y_max):
-    # Filter out particles that do not contribute to this cross-section slice
-    term = target * mass_data / (rho_data * h_data ** 3)
-    pixwidthx = (x_max - x_min) / x_pixels
-    pixwidthy = (y_max - y_min) / y_pixels
-    dz = z_slice - z_data
-
-    filter_distance = np.abs(dz) < kernel_radius * h_data
-
-    ipixmin = np.rint((x_data[filter_distance] - kernel_radius * h_data[filter_distance] - x_min) / pixwidthx).clip(
-        a_min=0,
-        a_max=x_pixels)
-    jpixmin = np.rint((y_data[filter_distance] - kernel_radius * h_data[filter_distance] - y_min) / pixwidthy).clip(
-        a_min=0,
-        a_max=y_pixels)
-    ipixmax = np.rint((x_data[filter_distance] + kernel_radius * h_data[filter_distance] - x_min) / pixwidthx).clip(
-        a_min=0,
-        a_max=x_pixels)
-    jpixmax = np.rint((y_data[filter_distance] + kernel_radius * h_data[filter_distance] - y_min) / pixwidthy).clip(
-        a_min=0,
-        a_max=y_pixels)
-
-    image = np.zeros((y_pixels, x_pixels))
-
-    for i in prange(len(x_data[filter_distance])):
-        # precalculate differences in the x-direction
-        dx2i = (((x_min + (np.arange(int(ipixmin[i]), int(ipixmax[i])) + 0.5)
-                  * pixwidthx - x_data[filter_distance][i]) ** 2)
-                * (1 / (h_data[filter_distance][i] ** 2))) + (
-                       (dz[filter_distance][i] ** 2) * (1 / h_data[filter_distance][i] ** 2))
-
-        ypix = y_min + (np.arange(int(jpixmin[i]), int(jpixmax[i])) + 0.5) * pixwidthy
-        dy = ypix - y_data[filter_distance][i]
-        dy2 = dy * dy * (1 / (h_data[filter_distance][i] ** 2))
-
-        q2 = dx2i + dy2.reshape(len(dy2), 1)
-        contribution = (term[filter_distance][i] * weight_function(np.sqrt(q2), 3))
-        image[int(jpixmin[i]):int(jpixmax[i]), int(ipixmin[i]):int(ipixmax[i])] += contribution
-
-    return image
