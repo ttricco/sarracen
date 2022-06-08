@@ -30,7 +30,20 @@ def _snap(value: float):
 
 
 def _default_xy(data, x, y):
-    # x & y columns default to the variables determined by the SarracenDataFrame.
+    """Utility function to determine the x & y columns to use during interpolation.
+
+    Parameters
+    ----------
+    data: SarracenDataFrame
+        The particle dataset to interpolate over.
+    x, y: str
+        The x and y directional column labels passed to the interpolation function.
+
+    Returns
+    -------
+    x, y: str
+        The directional column labels to use in interpolation. Defaults to the x-column detected in `data`
+    """
     if x is None:
         x = data.xcol
     if y is None:
@@ -40,6 +53,23 @@ def _default_xy(data, x, y):
 
 
 def _snap_boundaries(data, x, y, x_min, x_max, y_min, y_max):
+    """Utility function to determine the 2-dimensional boundaries to use in 2D interpolation.
+
+    Parameters
+    ----------
+    data: SarracenDataFrame
+        The particle dataset to interpolate over.
+    x, y: str
+        The directional column labels that will be used in interpolation.
+    x_min, x_max, y_min, y_max: float
+        The minimum and maximum values passed to the interpolation function, in particle data space.
+
+    Returns
+    -------
+    x_min, x_max, y_min, y_max: float
+        The minimum and maximum values to use in interpolation, in particle data space. Defaults
+        to the maximum and minimum values of `x` and `y`, snapped to the nearest integer.
+    """
     # boundaries of the plot default to the maximum & minimum values of the data.
     if x_min is None:
         x_min = _snap(data.loc[:, x].min())
@@ -54,6 +84,20 @@ def _snap_boundaries(data, x, y, x_min, x_max, y_min, y_max):
 
 
 def _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max):
+    """Utility function to determine the number of pixels to interpolate over in 2D interpolation.
+
+    Parameters
+    ----------
+    x_pixels, y_pixels: int
+        The number of pixels in the x & y directions passed to the interpolation function.
+    x_min, x_max, y_min, y_max: float
+        The minimum and maximum values to use in interpolation, in particle data space.
+
+    Returns
+    -------
+    x_pixels, y_pixels
+        The number of pixels in the x & y directions to use in 2D interpolation.
+    """
     # set # of pixels to maintain an aspect ratio that is the same as the underlying bounds of the data.
     if x_pixels is None and y_pixels is None:
         x_pixels = 512
@@ -66,6 +110,23 @@ def _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max):
 
 
 def _verify_columns(data, target, x, y):
+    """ Verify that columns required for 2D interpolation exist in `data`.
+
+    Parameters
+    ----------
+    data: SarracenDataFrame
+        The particle dataset to interpolate over.
+    target:
+        Column label of the target variable to interpolate over.
+    x, y: str
+        The directional column labels that will be used in interpolation.
+
+    Raises
+    -------
+    KeyError
+        If `target`, `x`, `y`, mass, density, or smoothing length columns do not
+        exist in `data`.
+    """
     if x not in data.columns:
         raise KeyError(f"x-directional column '{x}' does not exist in the provided dataset.")
     if y not in data.columns:
@@ -82,13 +143,22 @@ def _verify_columns(data, target, x, y):
         raise KeyError("Smoothing length column does not exist in the provided dataset.")
 
 
-def _default_kernel(data, kernel):
-    if kernel is None:
-        return data.kernel
-    return kernel
-
-
 def _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max):
+    """ Verify that the pixel count and boundaries of a 2D plot describe a valid region.
+
+    Parameters
+    ----------
+    x_pixels, y_pixels: int
+        The number of pixels in the x & y directions passed to the interpolation function.
+    x_min, x_max, y_min, y_max: float
+        The minimum and maximum values to use in interpolation, in particle data space.
+
+    Raises
+    ------
+    ValueError
+        If `x_pixels` or `y_pixels` are less than or equal to zero, or
+        if the specified `x` and `y` minimum and maximum values result in an invalid region.
+    """
     if x_max - x_min <= 0:
         raise ValueError("`xmax` must be greater than `xmin`!")
     if y_max - y_min <= 0:
@@ -100,12 +170,44 @@ def _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max):
 
 
 def _check_dimension(data, dim):
+    """ Verify that a given dataset describes data with a required number of dimensions.
+
+    Parameters
+    ----------
+    data: SarracenDataFrame
+        The particle dataset to interpolate over.
+    dim: [2, 3]
+        The number of required dimensions.
+
+    Returns
+    -------
+    ValueError
+        If the dataset is not `dim`-dimensional.
+    """
     if data.get_dim() != dim:
         raise ValueError(f"Dataset is not {dim}-dimensional.")
-    return
 
 
 def _rotate_data(data, x, y, z, rotation, origin):
+    """ Rotate vector data in a particle dataset.
+
+    Parameters
+    ----------
+    data: SarracenDataFrame
+        The particle dataset to interpolate over.
+    x, y, z: str
+        Directional column labels containing each dimension of the vector data.
+    rotation: array_like or Rotation, optional
+        The rotation to apply to the vector data. If defined as an array, the
+        order of rotations is [z, y, x] in degrees
+    origin: array_like, optional
+        Point of rotation of the data, in [x, y, z] form.
+
+    Returns
+    -------
+    x_data, y_data, z_data: ndarray
+        The rotated x, y, and z directional data.
+    """
     x_data = data[x].to_numpy()
     y_data = data[y].to_numpy()
     z_data = data[z].to_numpy()
@@ -134,17 +236,9 @@ def _rotate_data(data, x, y, z, rotation, origin):
     return x_data, y_data, z_data
 
 
-def interpolate_2d(data: 'SarracenDataFrame',
-                   target: str,
-                   x: str = None,
-                   y: str = None,
-                   kernel: BaseKernel = None,
-                   x_pixels: int = None,
-                   y_pixels: int = None,
-                   x_min: float = None,
-                   x_max: float = None,
-                   y_min: float = None,
-                   y_max: float = None) -> np.ndarray:
+def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
+                   x_pixels: int = None, y_pixels: int = None,  x_min: float = None, x_max: float = None,
+                   y_min: float = None, y_max: float = None) -> np.ndarray:
     """ Interpolate particle data across two directional axes to a 2D grid of pixels.
 
     Interpolate the data within a SarracenDataFrame to a 2D grid, by interpolating the values
@@ -157,35 +251,29 @@ def interpolate_2d(data: 'SarracenDataFrame',
         Particle data, in a SarracenDataFrame.
     target: str
         Column label of the target smoothing data.
-    x: str
-        Column label of the x-directional axis.
-    y: str
-        Column label of the y-directional axis.
-    kernel: BaseKernel
-        Kernel to use for smoothing the target data.
-    x_pixels: int, optional
-        Number of pixels in the output image in the x-direction.
-    y_pixels: int, optional
-        Number of pixels in the output image in the y-direction.
-    x_min: float, optional
-        Minimum bound in the x-direction (in particle data space).
-    x_max: float, optional
-        Maximum bound in the x-direction (in particle data space).
-    y_min: float, optional
-        Minimum bound in the y-direction (in particle data space).
-    y_max: float, optional
-        Maximum bound in the y-direction (in particle data space).
+    x, y: str
+        Column labels of the directional axes. Defaults to the x & y columns detected in `data`.
+    kernel: BaseKernel, optional
+        Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
+    x_pixels, y_pixels: int, optional
+        Number of pixels in the output image in the x & y directions. Default values are chosen to keep
+        a consistent aspect ratio.
+    x_min, x_max, y_min, y_max: float, optional
+        The minimum and maximum values to use in interpolation, in particle data space. Defaults
+        to the minimum and maximum values of `x` and `y`.
 
     Returns
     -------
-    np.ndarray (2-Dimensional)
-        The resulting interpolated grid.
+    ndarray (2-Dimensional)
+        The interpolated output image, in a 2-dimensional numpy array. Dimensions are
+        structured in reverse order, where (x, y) -> [y, x].
 
     Raises
     -------
     ValueError
         If `x_pixels` or `y_pixels` are less than or equal to zero, or
-        if the specified `x` and `y` minimum and maximum values result in an invalid region.
+        if the specified `x` and `y` minimum and maximum values result in an invalid region, or
+        if `data` is not 2-dimensional.
     KeyError
         If `target`, `x`, `y`, mass, density, or smoothing length columns do not
         exist in `data`.
@@ -197,7 +285,7 @@ def interpolate_2d(data: 'SarracenDataFrame',
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
     _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
 
-    kernel = _default_kernel(data, kernel)
+    kernel = kernel if kernel is not None else data.kernel
     _check_dimension(data, 2)
 
     return _fast_2d(data[target].to_numpy(), 0, data[x].to_numpy(), data[y].to_numpy(), np.zeros(len(data)),
@@ -227,22 +315,15 @@ def interpolate_2d_cross(data: 'SarracenDataFrame',
         Particle data, in a SarracenDataFrame.
     target: str
          Column label of the target smoothing data.
-    x: str
-        Column label of the x-directional axis.
-    y: str
-        Column label of the y-directional axis.
-    kernel: BaseKernel
-        Kernel to use for smoothing the target data.
+    x, y: str
+        Column labels of the directional axes. Defaults to the x & y columns detected in `data`.
+    kernel: BaseKernel, optional
+        Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
     pixels: int, optional
         Number of points in the resulting line plot in the x-direction.
-    x1: float, optional
-        Starting x-coordinate of the line (in particle data space).
-    x2: float, optional
-        Ending x-coordinate of the line (in particle data space).
-    y1: float, optional
-        Starting y-coordinate of the line (in particle data space).
-    y2: float, optional
-        Ending y-coordinate of the line (in particle data space).
+    x1, x2, y1, y2: float, optional
+        Starting and ending coordinates of the cross-section line (in particle data space). Defaults to
+        the minimum and maximum values of `x` and `y`.
 
     Returns
     -------
@@ -253,8 +334,8 @@ def interpolate_2d_cross(data: 'SarracenDataFrame',
     -------
     ValueError
         If `x_pixels` or `y_pixels` are less than or equal to zero, or
-        if the specified `x1`, `x2`, `y1`, and `y2` are all the same
-        (indicating a zero-length cross-section).
+        if the specified `x1`, `x2`, `y1`, and `y2` are all the same (indicating a zero-length cross-section), or
+        if `data` is not 2-dimensional.
     KeyError
         If `target`, `x`, `y`, mass, density, or smoothing length columns do not
         exist in `data`.
@@ -266,7 +347,7 @@ def interpolate_2d_cross(data: 'SarracenDataFrame',
     if y2 == y1 and x2 == x1:
         raise ValueError('Zero length cross section!')
 
-    kernel = _default_kernel(data, kernel)
+    kernel = kernel if kernel is not None else data.kernel
     _check_dimension(data, 2)
 
     if pixels <= 0:
@@ -301,39 +382,32 @@ def interpolate_3d(data: 'SarracenDataFrame',
     ----------
     data : SarracenDataFrame
         Particle data, in a SarracenDataFrame.
-    x: str
-        Column label of the x-directional axis.
-    y: str
-        Column label of the y-directional axis.
     target: str
         Column label of the target smoothing data.
-    kernel: BaseKernel
-        Kernel to use for smoothing the target data.
+    x, y: str
+        Column labels of the directional axes. Defaults to the x & y columns detected in `data`.
+    kernel: BaseKernel, optional
+        Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
     integral_samples: int, optional
         Number of sample points to take when approximating the 2D column kernel.
     rotation: array_like or Rotation, optional
         The rotation to apply to the data before interpolation. If defined as an array, the
-        order of rotations is [z, y, x] in degrees
+        order of rotations is [z, y, x] in degrees.
     origin: array_like, optional
         Point of rotation of the data, in [x, y, z] form. Defaults to the centre
         point of the bounds of the data.
-    x_pixels: int, optional
-        Number of pixels in the output image in the x-direction.
-    y_pixels: int, optional
-        Number of pixels in the output image in the y-direction.
-    x_min: float, optional
-        Minimum bound in the x-direction (in particle data space).
-    x_max: float, optional
-        Maximum bound in the x-direction (in particle data space).
-    y_min: float, optional
-        Minimum bound in the y-direction (in particle data space).
-    y_max: float, optional
-        Maximum bound in the y-direction (in particle data space).
+    x_pixels, y_pixels: int, optional
+        Number of pixels in the output image in the x & y directions. Default values are chosen to keep
+        a consistent aspect ratio.
+    x_min, x_max, y_min, y_max: float, optional
+        The minimum and maximum values to use in interpolation, in particle data space. Defaults
+        to the minimum and maximum values of `x` and `y`.
 
     Returns
     -------
-    ndarray
-        The interpolated output image, in a 2-dimensional numpy array.
+    ndarray (2-Dimensional)
+        The interpolated output image, in a 2-dimensional numpy array. Dimensions are
+        structured in reverse order, where (x, y) -> [y, x].
 
     Raises
     -------
@@ -358,7 +432,7 @@ def interpolate_3d(data: 'SarracenDataFrame',
     _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
 
     x_data, y_data, _ = _rotate_data(data, x, y, data.zcol, rotation, origin)
-    kernel = _default_kernel(data, kernel)
+    kernel = kernel if kernel is not None else data.kernel
     _check_dimension(data, 3)
 
     return _fast_2d(data[target].to_numpy(), 0, x_data, y_data, np.zeros(len(data)), data['m'].to_numpy(),
@@ -394,39 +468,30 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',
     target: str
         The column label of the target smoothing data.
     z_slice: float
-        The z-axis value to take the cross-section at.
-    x: str
-        The column label of the x-directional data to interpolate over.
-    y: str
-        The column label of the y-directional data to interpolate over.
-    z: str
-        The column label of the z-directional data to interpolate over.
+        The z-axis value to take the cross-section at. Defaults to the midpoint of the z-directional data.
+    x, y, z: str
+        The column labels of the directional data to interpolate over. Defaults to the x, y, and z columns
+        detected in `data`.
     kernel: BaseKernel
-        The kernel to use for smoothing the target data.
+        The kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
     rotation: array_like or Rotation, optional
         The rotation to apply to the data before interpolation. If defined as an array, the
         order of rotations is [z, y, x] in degrees.
     origin: array_like, optional
         Point of rotation of the data, in [x, y, z] form. Defaults to the centre
         point of the bounds of the data.
-    x_pixels: int, optional
-        Number of pixels in the output image in the x-direction.
-    y_pixels: int, optional
-        Number of pixels in the output image in the y-direction.
-    x_min: float, optional
-        Minimum bound in the x-direction (in particle data space).
-    x_max: float, optional
-        Maximum bound in the x-direction (in particle data space).
-    y_min: float, optional
-        Minimum bound in the y-direction (in particle data space).
-    y_max: float, optional
-        Maximum bound in the y-direction (in particle data space).
+    x_pixels, y_pixels: int, optional
+        Number of pixels in the output image in the x & y directions. Default values are chosen to keep
+        a consistent aspect ratio.
+    x_min, x_max, y_min, y_max: float, optional
+        The minimum and maximum values to use in interpolation, in particle data space. Defaults
+        to the minimum and maximum values of `x` and `y`.
 
     Returns
     -------
-    ndarray
+    ndarray (2-Dimensional)
         The interpolated output image, in a 2-dimensional numpy array. Dimensions are
-        structured in reverse order, where (x, y) -> [y][x]
+        structured in reverse order, where (x, y) -> [y, x].
 
     Raises
     -------
@@ -435,7 +500,7 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',
         if the specified `x` and `y` minimum and maximums result in an invalid region, or
         if the provided data is not 3-dimensional.
     KeyError
-        If `target`, `x`, `y`, mass, density, or smoothing length columns do not
+        If `target`, `x`, `y`, `z`, mass, density, or smoothing length columns do not
         exist in `data`.
     """
     # x & y columns default to the variables determined by the SarracenDataFrame.
@@ -456,7 +521,7 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
     _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
 
-    kernel = _default_kernel(data, kernel)
+    kernel = kernel if kernel is not None else data.kernel
 
     _check_dimension(data, 3)
 
@@ -467,7 +532,8 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',
                     kernel.get_radius(), x_pixels, y_pixels, x_min, x_max, y_min, y_max, 3)
 
 
-# Underlying numba-compiled code for 2D interpolation
+# Underlying numba-compiled code for interpolation to a 2D grid. Used in interpolation of 2D data,
+# and column integration / cross-sections of 3D data.
 @njit(parallel=True, fastmath=True)
 def _fast_2d(target, z_slice, x_data, y_data, z_data, mass_data, rho_data, h_data, weight_function, kernel_radius,
              x_pixels, y_pixels, x_min, x_max, y_min, y_max, n_dims):
