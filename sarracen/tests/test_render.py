@@ -126,11 +126,12 @@ def test_3d_cross_plot():
 
 def test_render_passthrough():
     # Basic tests that both sdf.render() and render(sdf) return the same plots
+
+    # 2D dataset
     df = pd.DataFrame({'x': [3, 6],
                        'y': [5, 1],
                        'P': [1, 1],
                        'h': [1, 1],
-                       'z': [6, 3],
                        'rho': [1, 1],
                        'm': [1, 1]})
     sdf = SarracenDataFrame(df)
@@ -148,6 +149,16 @@ def test_render_passthrough():
     ax2 = render_2d_cross(sdf, 'P', ax=ax2)
 
     assert repr(ax1) == repr(ax2)
+
+    # 3D dataset
+    df = pd.DataFrame({'x': [3, 6],
+                       'y': [5, 1],
+                       'z': [2, 1],
+                       'P': [1, 1],
+                       'h': [1, 1],
+                       'rho': [1, 1],
+                       'm': [1, 1]})
+    sdf = SarracenDataFrame(df)
 
     fig1, ax1 = plt.subplots()
     fig2, ax2 = plt.subplots()
