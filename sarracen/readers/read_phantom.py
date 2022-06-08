@@ -82,27 +82,38 @@ def _read_capture_pattern(fp):
 
 def _read_file_identifier(fp):
     """ Read the 100 character file identifier. Contains code version and date information. """
-    return _read_fortran_block(fp, 100).decode('ascii')
+    return _read_fortran_block(fp, 100).decode('ascii').strip()
 
+
+
+def _rename_duplicates(keys):
+    seen = dict()
+
+    for i, key in enumerate(keys):
+        if key not in seen:
+            seen[key] = 1
+        else:
+            seen[key] += 1
+            keys[i] += f'_{seen[key]}'
+
+    return keys
 
 
 def _read_global_header_block(fp, dtype):
     nvars = np.frombuffer(_read_fortran_block(fp, 4), dtype=np.int32)[0]
 
-    header_vars = dict()
+    keys = []
+    data = []
 
     if (nvars > 0):
         # each tag is 16 characters in length
         keys = _read_fortran_block(fp, 16*nvars).decode('ascii')
-        keys = [keys[i:i+16] for i in range(0, len(keys), 16)]
+        keys = [keys[i:i+16].strip() for i in range(0, len(keys), 16)]
 
         data = _read_fortran_block(fp, dtype().itemsize*nvars)
         data = np.frombuffer(data, count=nvars, dtype=dtype)
 
-        for i in range(0, nvars):
-            header_vars[keys[i].strip()] = data[i]
-
-    return header_vars
+    return keys, data
 
 
 def _read_global_header(fp, def_int_dtype, def_real_dtype):
@@ -111,9 +122,19 @@ def _read_global_header(fp, def_int_dtype, def_real_dtype):
     dtypes = [def_int_dtype, np.int8, np.int16, np.int32, np.int64,
                     def_real_dtype, np.float32, np.float64]
 
-    global_vars = dict()
+    keys = []
+    data = []
     for dtype in dtypes:
-        global_vars.update(_read_global_header_block(fp, dtype))
+        new_keys, new_data = _read_global_header_block(fp, dtype)
+
+        keys += new_keys
+        data = np.append(data, new_data)
+
+    keys = _rename_duplicates(keys)
+
+    global_vars = dict()
+    for i in range(len(keys)):
+        global_vars[keys[i]] = data[i]
 
     return global_vars
 
@@ -123,20 +144,18 @@ def _read_array_block(fp, df, n, nums, def_int_dtype, def_real_dtype):
     dtypes = [def_int_dtype, np.int8, np.int16, np.int32, np.int64,
               def_real_dtype, np.float32, np.float64]
 
-
     for i in range(len(nums)):
         dtype = dtypes[i]
         for j in range(nums[i]):
 
             tag = _read_fortran_block(fp, 16).decode('ascii').strip()
             data = np.frombuffer(_read_fortran_block(fp, dtype().itemsize * n), dtype=dtype)
-
             df[tag] = data
 
     return df
 
 def _read_array_blocks(fp, def_int_dtype, def_real_dtype):
-    """ Read particle data. """
+    """ Read particle data. Block 2 is always for sink particles?"""
     nblocks = np.frombuffer(_read_fortran_block(fp, 4), dtype=np.int32)[0]
 
     n = []
@@ -152,10 +171,17 @@ def _read_array_blocks(fp, def_int_dtype, def_real_dtype):
             raise AssertionError("Fortran tags mismatch in array blocks.")
 
     df = pd.DataFrame()
+    df_sinks = pd.DataFrame()
     for i in range(0, nblocks):
-        df = _read_array_block(fp, df, n[i], nums[i], def_int_dtype, def_real_dtype)
+        # This assumes the second block is only for sink particles.
+        # I believe this is a valid assumption as I think this is what splash assumes.
+        # For now we will just append sinks to the end of the data frame.
+        if i == 1:
+            df_sinks = _read_array_block(fp, df_sinks, n[i], nums[i], def_int_dtype, def_real_dtype)
+        else:
+            df = _read_array_block(fp, df, n[i], nums[i], def_int_dtype, def_real_dtype)
 
-    return df
+    return pd.concat([df, df_sinks], ignore_index=True)
 
 
 
