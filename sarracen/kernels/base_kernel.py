@@ -1,11 +1,17 @@
 from typing import Callable
 
 import numpy as np
-from numba import jit
+from numba import jit, njit
+from numba.core.registry import CPUDispatcher
 from scipy.integrate import quad
 
 
 class BaseKernel:
+
+    def __init__(self):
+        self._ckernel_func_cache = None
+        self._ckernel_func_samples = 0
+
     """A generic kernel used for data interpolation."""
     @staticmethod
     def get_radius() -> float:
@@ -57,8 +63,22 @@ class BaseKernel:
 
         return np.array(results)
 
+    def get_column_kernel_func(self, samples) -> CPUDispatcher:
+        if self._ckernel_func_cache is not None and self._ckernel_func_samples == samples:
+            return self._ckernel_func_cache
+        column_kernel = self.get_column_kernel(samples)
+        radius = self.get_radius()
+
+        @njit(fastmath=True)
+        def func(q, dim):
+            return np.interp(q, np.linspace(0, radius, samples), column_kernel)
+
+        self._ckernel_func_cache = func
+        self._ckernel_func_samples = samples
+        return func
+
     # Internal function for performing the integral in _get_column_kernel()
     @staticmethod
-    @jit(fastmath=True)
+    @njit(fastmath=True)
     def _int_func(q, a, wfunc):
         return wfunc(np.sqrt(q ** 2 + a ** 2), 3)
