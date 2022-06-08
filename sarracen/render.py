@@ -41,6 +41,30 @@ def _snap(value: float):
         return value
 
 
+def _default_axes(data, x, y):
+    # x & y columns default to the variables determined by the SarracenDataFrame.
+    if x is None:
+        x = data.xcol
+    if y is None:
+        y = data.ycol
+
+    return x, y
+
+
+def _default_bounds(data, x, y, x_min, x_max, y_min, y_max):
+    # boundaries of the plot default to the maximum & minimum values of the data.
+    if x_min is None:
+        x_min = _snap(data.loc[:, x].min())
+    if y_min is None:
+        y_min = _snap(data.loc[:, y].min())
+    if x_max is None:
+        x_max = _snap(data.loc[:, x].max())
+    if y_max is None:
+        y_max = _snap(data.loc[:, y].max())
+
+    return x_min, x_max, y_min, y_max
+
+
 def render_2d(data: 'SarracenDataFrame',
               target: str,
               x: str = None,
@@ -52,8 +76,12 @@ def render_2d(data: 'SarracenDataFrame',
               x_max: float = None,
               y_min: float = None,
               y_max: float = None,
-              colormap: Union[str, Colormap] = 'RdBu',
-              ax: Axes = None) -> Axes:
+              cmap: Union[str, Colormap] = 'RdBu',
+              cbar: bool = True,
+              cbar_kws: dict = {},
+              cbar_ax: Axes = None,
+              ax: Axes = None,
+              **kwargs) -> Axes:
     """ Render 2D particle data to a 2D grid, using SPH rendering of a target variable.
 
     Render the data within a SarracenDataFrame to a 2D matplotlib object, by rendering the values
@@ -92,7 +120,7 @@ def render_2d(data: 'SarracenDataFrame',
     y_max: float, optional
         Maximum bound in the y-direction (in particle data space). Defaults to the upper bound
         of y detected in `data` snapped to the nearest integer.
-    colormap: str or Colormap, optional
+    cmap: str or Colormap, optional
         The color map to use when plotting this data.
 
     Returns
@@ -117,27 +145,18 @@ def render_2d(data: 'SarracenDataFrame',
     if ax is None:
         ax = plt.gca()
 
-    # x & y columns default to the variables determined by the SarracenDataFrame.
-    if x is None:
-        x = data.xcol
-    if y is None:
-        y = data.ycol
+    x, y = _default_axes(data, x, y)
+    x_min, x_max, y_min, y_max = _default_bounds(data, x, y, x_min, x_max, y_min, y_max)
 
-    # boundaries of the plot default to the maximum & minimum values of the data.
-    if x_min is None:
-        x_min = _snap(data.loc[:, x].min())
-    if y_min is None:
-        y_min = _snap(data.loc[:, y].min())
-    if x_max is None:
-        x_max = _snap(data.loc[:, x].max())
-    if y_max is None:
-        y_max = _snap(data.loc[:, y].max())
-
-    img = ax.imshow(image, cmap=colormap, origin='lower', extent=[x_min, x_max, y_min, y_max])
+    kwargs.setdefault("origin", 'lower')
+    kwargs.setdefault("extent", [x_min, x_max, y_min, y_max])
+    graphic = ax.imshow(image, cmap=cmap, **kwargs)
     ax.set_xlabel(x)
     ax.set_ylabel(y)
-    cbar = plt.colorbar(img, ax=ax)
-    cbar.ax.set_ylabel(target)
+
+    if cbar:
+        colorbar = ax.figure.colorbar(graphic, cbar_ax, ax, **cbar_kws)
+        colorbar.ax.set_ylabel(target)
 
     return ax
 
@@ -152,7 +171,8 @@ def render_2d_cross(data: 'SarracenDataFrame',
                     x2: float = None,
                     y1: float = None,
                     y2: float = None,
-                    ax: Axes = None) -> Axes:
+                    ax: Axes = None,
+                    **kwargs) -> Axes:
     """ Render 2D particle data to a 1D line, using a 2D cross-section.
 
     Render the data within a SarracenDataFrame to a seaborn-generated line plot, by taking
@@ -209,23 +229,10 @@ def render_2d_cross(data: 'SarracenDataFrame',
     if ax is None:
         ax = plt.gca()
 
-    # x & y columns default to the variables determined by the SarracenDataFrame.
-    if x is None:
-        x = data.xcol
-    if y is None:
-        y = data.ycol
+    x, y = _default_axes(data, x, y)
+    x1, x2, y1, y2 = _default_bounds(data, x, y, x1, x2, y1, y2)
 
-    # start and end points of the line default to the maximum & minimum values of the data.
-    if x1 is None:
-        x1 = _snap(data.loc[:, x].min())
-    if y1 is None:
-        y1 = _snap(data.loc[:, y].min())
-    if x2 is None:
-        x2 = _snap(data.loc[:, x].max())
-    if y2 is None:
-        y2 = _snap(data.loc[:, y].max())
-
-    sns.lineplot(x=np.linspace(0, np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2), pixels), y=output, ax=ax)
+    sns.lineplot(x=np.linspace(0, np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2), pixels), y=output, ax=ax, **kwargs)
     ax.margins(x=0, y=0)
     ax.set_xlabel(f'cross-section ({x}, {y})')
     ax.set_ylabel(target)
@@ -248,7 +255,11 @@ def render_3d(data: 'SarracenDataFrame',
               y_min: float = None,
               y_max: float = None,
               cmap: Union[str, Colormap] = 'RdBu',
-              ax: Axes = None) -> Axes:
+              cbar: bool = True,
+              cbar_kws: dict = {},
+              cbar_ax: Axes = None,
+              ax: Axes = None,
+              **kwargs) -> Axes:
     """ Render 3D particle data to a 2D grid, using SPH column rendering of a target variable.
 
     Render the data within a SarracenDataFrame to a 2D matplotlib object, by rendering the values
@@ -295,7 +306,7 @@ def render_3d(data: 'SarracenDataFrame',
     y_max: float, optional
         Maximum bound in the y-direction (in particle data space). Defaults to the upper bound
         of y detected in `data` snapped to the nearest integer.
-    colormap: str or Colormap, optional
+    cmap: str or Colormap, optional
         The color map to use when plotting this data.
 
     Returns
@@ -316,30 +327,18 @@ def render_3d(data: 'SarracenDataFrame',
         If `target`, `x`, `y`, `z`, mass, density, or smoothing length columns do not
         exist in `data`.
     """
-    img = interpolate_3d(data, target, x, y, kernel, integral_samples, rotation, origin, x_pixels, y_pixels, x_min,
+    image = interpolate_3d(data, target, x, y, kernel, integral_samples, rotation, origin, x_pixels, y_pixels, x_min,
                          x_max, y_min, y_max)
 
     if ax is None:
         ax = plt.gca()
 
-    # x & y columns default to the variables determined by the SarracenDataFrame.
-    if x is None:
-        x = data.xcol
-    if y is None:
-        y = data.ycol
+    x, y = _default_axes(data, x, y)
+    x_min, x_max, y_min, y_max = _default_bounds(data, x, y, x_min, x_max, y_min, y_max)
 
-    # boundaries of the plot default to the maximum & minimum values of the data.
-    if x_min is None:
-        x_min = _snap(data.loc[:, x].min())
-    if y_min is None:
-        y_min = _snap(data.loc[:, y].min())
-    if x_max is None:
-        x_max = _snap(data.loc[:, x].max())
-    if y_max is None:
-        y_max = _snap(data.loc[:, y].max())
-
-    # ensure the plotted image is scaled to data space
-    graphic = ax.imshow(img, cmap=cmap, origin='lower', extent=[x_min, x_max, y_min, y_max])
+    kwargs.setdefault("origin", 'lower')
+    kwargs.setdefault("extent", [x_min, x_max, y_min, y_max])
+    graphic = ax.imshow(image, cmap=cmap, **kwargs)
 
     # remove the x & y ticks if the data is rotated, since these no longer have physical
     # relevance to the displayed data.
@@ -350,8 +349,9 @@ def render_3d(data: 'SarracenDataFrame',
         ax.set_xlabel(x)
         ax.set_ylabel(y)
 
-    cbar = plt.colorbar(graphic, ax=ax)
-    cbar.ax.set_ylabel(f"column {target}")
+    if cbar:
+        colorbar = ax.figure.colorbar(graphic, cbar_ax, ax, **cbar_kws)
+        colorbar.ax.set_ylabel(f"column {target}")
 
     return ax
 
@@ -372,7 +372,11 @@ def render_3d_cross(data: 'SarracenDataFrame',
                     y_min: float = None,
                     y_max: float = None,
                     cmap: Union[str, Colormap] = 'RdBu',
-                    ax: Axes = None) -> Axes:
+                    cbar: bool = True,
+                    cbar_kws: dict = {},
+                    cbar_ax: Axes = None,
+                    ax: Axes = None,
+                    **kwargs) -> Axes:
     """ Render 3D particle data to a 2D grid, using a 3D cross-section.
 
     Render the data within a SarracenDataFrame to a 2D matplotlib object, using a 3D -> 2D
@@ -421,7 +425,7 @@ def render_3d_cross(data: 'SarracenDataFrame',
     y_max: float, optional
         Maximum bound in the y-direction (in particle data space). Defaults to the upper bound
         of y detected in `data` snapped to the nearest integer.
-    colormap: str or Colormap, optional
+    cmap: str or Colormap, optional
         The color map to use when plotting this data.
 
     Returns
@@ -442,30 +446,18 @@ def render_3d_cross(data: 'SarracenDataFrame',
         If `target`, `x`, `y`, `z`, mass, density, or smoothing length columns do not
         exist in `data`.
     """
-    img = interpolate_3d_cross(data, target, z_slice, x, y, z, kernel, rotation, origin, x_pixels, y_pixels, x_min,
+    image = interpolate_3d_cross(data, target, z_slice, x, y, z, kernel, rotation, origin, x_pixels, y_pixels, x_min,
                                x_max, y_min, y_max)
 
     if ax is None:
         ax = plt.gca()
 
-    # x & y columns default to the variables determined by the SarracenDataFrame.
-    if x is None:
-        x = data.xcol
-    if y is None:
-        y = data.ycol
+    x, y = _default_axes(data, x, y)
+    x_min, x_max, y_min, y_max = _default_bounds(data, x, y, x_min, x_max, y_min, y_max)
 
-    # boundaries of the plot default to the maximum & minimum values of the data.
-    if x_min is None:
-        x_min = _snap(data.loc[:, x].min())
-    if y_min is None:
-        y_min = _snap(data.loc[:, y].min())
-    if x_max is None:
-        x_max = _snap(data.loc[:, x].max())
-    if y_max is None:
-        y_max = _snap(data.loc[:, y].max())
-
-    # ensure the plotted image is scaled to data space
-    graphic = ax.imshow(img, cmap=cmap, origin='lower', extent=[x_min, x_max, y_min, y_max])
+    kwargs.setdefault("origin", 'lower')
+    kwargs.setdefault("extent", [x_min, x_max, y_min, y_max])
+    graphic = ax.imshow(image, cmap=cmap, **kwargs)
 
     # remove the x & y ticks if the data is rotated, since these no longer have physical
     # relevance to the displayed data.
@@ -476,7 +468,8 @@ def render_3d_cross(data: 'SarracenDataFrame',
         ax.set_xlabel(x)
         ax.set_ylabel(y)
 
-    cbar = plt.colorbar(graphic, ax=ax)
-    cbar.ax.set_ylabel(f"{target}")
+    if cbar:
+        colorbar = ax.figure.colorbar(graphic, cbar_ax, ax, **cbar_kws)
+        colorbar.ax.set_ylabel(target)
 
     return ax

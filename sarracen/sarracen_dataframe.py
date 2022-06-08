@@ -158,9 +158,13 @@ class SarracenDataFrame(DataFrame):
                   y_min: float = None,
                   y_max: float = None,
                   cmap: Union[str, Colormap] = 'RdBu',
-                  ax: Axes = None) -> Axes:
+                  cbar: bool = True,
+                  cbar_kws: dict = {},
+                  cbar_ax: Axes = None,
+                  ax: Axes = None,
+                  **kwargs) -> Axes:
 
-        return render_2d(self, target, x, y, kernel, x_pixels, y_pixels, x_min, x_max, y_min, y_max, cmap, ax)
+        return render_2d(self, target, x, y, kernel, x_pixels, y_pixels, x_min, x_max, y_min, y_max, cmap, cbar, cbar_kws, cbar_ax, ax, **kwargs)
 
     @_copy_doc(render_2d_cross)
     def render_2d_cross(self,
@@ -173,9 +177,10 @@ class SarracenDataFrame(DataFrame):
                         y1: float = None,
                         x2: float = None,
                         y2: float = None,
-                        ax: Axes = None) -> Axes:
+                        ax: Axes = None,
+                        **kwargs) -> Axes:
 
-        return render_2d_cross(self, target, x, y, kernel, pixels, x1, x2, y1, y2, ax)
+        return render_2d_cross(self, target, x, y, kernel, pixels, x1, x2, y1, y2, ax, **kwargs)
 
     @_copy_doc(render_3d)
     def render_3d(self,
@@ -193,10 +198,14 @@ class SarracenDataFrame(DataFrame):
                   y_min: float = None,
                   y_max: float = None,
                   cmap: Union[str, Colormap] = 'RdBu',
-                  ax: Axes = None) -> Axes:
+                  cbar: bool = True,
+                  cbar_kws: dict = {},
+                  cbar_ax: Axes = None,
+                  ax: Axes = None,
+                  **kwargs) -> Axes:
 
         return render_3d(self, target, x, y, kernel, int_samples, rotation, origin, x_pixels, y_pixels, x_min, x_max, y_min, y_max,
-                         cmap, ax)
+                         cmap, cbar, cbar_kws, cbar_ax, ax, **kwargs)
 
     @_copy_doc(render_3d_cross)
     def render_3d_cross(self,
@@ -215,10 +224,14 @@ class SarracenDataFrame(DataFrame):
                         y_min: float = None,
                         y_max: float = None,
                         cmap: Union[str, Colormap] = 'RdBu',
-                        ax: Axes = None) -> Axes:
+                        cbar: bool = True,
+                        cbar_kws: dict = {},
+                        cbar_ax: Axes = None,
+                        ax: Axes = None,
+                        **kwargs) -> Axes:
 
         return render_3d_cross(self, target, z_slice, x, y, z, kernel, rotation, origin, x_pixels, y_pixels, x_min,
-                               x_max, y_min, y_max, cmap, ax)
+                               x_max, y_min, y_max, cmap, cbar, cbar_kws, cbar_ax, ax, **kwargs)
 
     @property
     def params(self):
