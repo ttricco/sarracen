@@ -62,6 +62,20 @@ class BaseKernel:
         return c_kernel
 
     def get_column_kernel_func(self, samples) -> CPUDispatcher:
+        """ Generate a numba-accelerated column kernel function.
+
+        Creates a numba-accelerated function for column kernel weights. This function
+        can be utilized similarly to kernel.w.
+
+        Parameters
+        ----------
+        samples: int
+            Number of sample points to calculate when approximating the kernel.
+
+        Returns
+        -------
+        A numba-accelerated weight function.
+        """
         if self._ckernel_func_cache is not None and samples == 1000:
             return self._ckernel_func_cache
         column_kernel = self.get_column_kernel(samples)
