@@ -1,8 +1,7 @@
 import math
 
 import numpy as np
-from numba import jit, njit, prange, cuda
-from numba.core.registry import CPUDispatcher
+from numba import njit, prange
 
 
 class BaseKernel:
@@ -56,7 +55,7 @@ class BaseKernel:
         if samples == 1000 and self._column_cache is not None:
             return self._column_cache
 
-        c_kernel = self._int_func(self.get_radius(), samples, self.w)
+        c_kernel = BaseKernel._int_func(self.get_radius(), samples, self.w)
 
         if samples == 1000:
             self._column_cache = c_kernel
@@ -85,6 +84,8 @@ class BaseKernel:
 
         @njit(fastmath=True)
         def func(q, dim):
+            # using np.linspace() would break compatibility with the GPU backend,
+            # so the calculation here is performed manually.
             wab_index = q * (samples - 1) / radius
             index = int(math.floor(wab_index))
             index1 = int(math.ceil(wab_index))

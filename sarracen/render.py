@@ -97,7 +97,7 @@ def _default_bounds(data, x, y, x_min, x_max, y_min, y_max):
 def render_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
               x_pixels: int = None, y_pixels: int = None, x_min: float = None, x_max: float = None, y_min: float = None,
               y_max: float = None, cmap: Union[str, Colormap] = 'RdBu', cbar: bool = True, cbar_kws: dict = {},
-              cbar_ax: Axes = None, ax: Axes = None, backend: str = 'cpu', **kwargs) -> Axes:
+              cbar_ax: Axes = None, ax: Axes = None, backend: str = None, **kwargs) -> Axes:
     """ Render 2D particle data to a 2D grid, using SPH rendering of a target variable.
 
     Render the data within a SarracenDataFrame to a 2D matplotlib object, by rendering the values
@@ -130,6 +130,8 @@ def render_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = No
         Axes to draw the colorbar in, if not provided then space will be taken from the main Axes.
     ax: Axes
         The main axes in which to draw the rendered image.
+    backend: ['cpu', 'gpu']
+        The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
     kwargs: other keyword arguments
         Keyword arguments to pass to matplotlib.axes.Axes.imshow().
 
@@ -170,7 +172,7 @@ def render_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = No
 
 def render_2d_cross(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
                     pixels: int = 512, x1: float = None, x2: float = None, y1: float = None, y2: float = None,
-                    ax: Axes = None, backend: str = 'cpu', **kwargs) -> Axes:
+                    ax: Axes = None, backend: str = None, **kwargs) -> Axes:
     """ Render 2D particle data to a 1D line, using a 2D cross-section.
 
     Render the data within a SarracenDataFrame to a seaborn-generated line plot, by taking
@@ -194,6 +196,8 @@ def render_2d_cross(data: 'SarracenDataFrame', target: str, x: str = None, y: st
         the minimum and maximum values of `x` and `y`.
     ax: Axes
         The main axes in which to draw the rendered image.
+    backend: ['cpu', 'gpu']
+        The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
     kwargs: other keyword arguments
         Keyword arguments to pass to seaborn.lineplot().
 
@@ -232,7 +236,7 @@ def render_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = No
               integral_samples: int = 1000, rotation: np.ndarray = None, origin: np.ndarray = None,
               x_pixels: int = None, y_pixels: int = None, x_min: float = None, x_max: float = None, y_min: float = None,
               y_max: float = None, cmap: Union[str, Colormap] = 'RdBu', cbar: bool = True, cbar_kws: dict = {},
-              cbar_ax: Axes = None, ax: Axes = None, backend: str = 'cpu', **kwargs) -> Axes:
+              cbar_ax: Axes = None, ax: Axes = None, backend: str = None, **kwargs) -> Axes:
     """ Render 3D particle data to a 2D grid, using SPH column rendering of a target variable.
 
     Render the data within a SarracenDataFrame to a 2D matplotlib object, by rendering the values
@@ -273,6 +277,8 @@ def render_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = No
         Axes to draw the colorbar in, if not provided then space will be taken from the main Axes.
     ax: Axes
         The main axes in which to draw the rendered image.
+    backend: ['cpu', 'gpu']
+        The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
     kwargs: other keyword arguments
         Keyword arguments to pass to matplotlib.axes.Axes.imshow().
 
@@ -324,7 +330,7 @@ def render_3d_cross(data: 'SarracenDataFrame', target: str, z_slice: float = Non
                     z: str = None, kernel: BaseKernel = None, rotation: np.ndarray = None, origin: np.ndarray = None,
                     x_pixels: int = None, y_pixels: int = None, x_min: float = None, x_max: float = None,
                     y_min: float = None, y_max: float = None, cmap: Union[str, Colormap] = 'RdBu', cbar: bool = True,
-                    cbar_kws: dict = {}, cbar_ax: Axes = None, ax: Axes = None, backend: str = 'cpu', **kwargs) -> Axes:
+                    cbar_kws: dict = {}, cbar_ax: Axes = None, ax: Axes = None, backend: str = None, **kwargs) -> Axes:
     """ Render 3D particle data to a 2D grid, using a 3D cross-section.
 
     Render the data within a SarracenDataFrame to a 2D matplotlib object, using a 3D -> 2D
@@ -366,6 +372,8 @@ def render_3d_cross(data: 'SarracenDataFrame', target: str, z_slice: float = Non
         Axes to draw the colorbar in, if not provided then space will be taken from the main Axes.
     ax: Axes
         The main axes in which to draw the rendered image.
+    backend: ['cpu', 'gpu']
+        The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
     kwargs: other keyword arguments
         Keyword arguments to pass to matplotlib.axes.Axes.imshow().
 

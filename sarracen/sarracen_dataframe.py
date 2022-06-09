@@ -61,6 +61,7 @@ class SarracenDataFrame(DataFrame):
         self._identify_special_columns()
 
         self._kernel = CubicSplineKernel()
+        self._backend = 'cpu'
 
     def _identify_special_columns(self):
         """ Identify special columns commonly used in analysis functions.
@@ -148,7 +149,7 @@ class SarracenDataFrame(DataFrame):
     def render_2d(self, target: str, x: str = None, y: str = None, kernel: BaseKernel = None, x_pixels: int = None,
                   y_pixels: int = None, x_min: float = None, x_max: float = None, y_min: float = None,
                   y_max: float = None, cmap: Union[str, Colormap] = 'RdBu', cbar: bool = True, cbar_kws: dict = {},
-                  cbar_ax: Axes = None, ax: Axes = None, backend: str = 'cpu', **kwargs) -> Axes:
+                  cbar_ax: Axes = None, ax: Axes = None, backend: str = None, **kwargs) -> Axes:
 
         return render_2d(self, target, x, y, kernel, x_pixels, y_pixels, x_min, x_max, y_min, y_max, cmap, cbar,
                          cbar_kws, cbar_ax, ax, backend, **kwargs)
@@ -156,7 +157,7 @@ class SarracenDataFrame(DataFrame):
     @_copy_doc(render_2d_cross)
     def render_2d_cross(self, target: str, x: str = None, y: str = None, kernel: BaseKernel = None, pixels: int = 512,
                         x1: float = None, y1: float = None, x2: float = None, y2: float = None, ax: Axes = None,
-                        backend: str = 'cpu', **kwargs) -> Axes:
+                        backend: str = None, **kwargs) -> Axes:
 
         return render_2d_cross(self, target, x, y, kernel, pixels, x1, x2, y1, y2, ax, backend, **kwargs)
 
@@ -165,7 +166,7 @@ class SarracenDataFrame(DataFrame):
                   rotation: np.ndarray = None, origin: np.ndarray = None, x_pixels: int = None, y_pixels: int = None,
                   x_min: float = None, x_max: float = None, y_min: float = None, y_max: float = None,
                   cmap: Union[str, Colormap] = 'RdBu', cbar: bool = True, cbar_kws: dict = {}, cbar_ax: Axes = None,
-                  ax: Axes = None, backend: str = 'cpu', **kwargs) -> Axes:
+                  ax: Axes = None, backend: str = None, **kwargs) -> Axes:
 
         return render_3d(self, target, x, y, kernel, int_samples, rotation, origin, x_pixels, y_pixels, x_min, x_max,
                          y_min, y_max, cmap, cbar, cbar_kws, cbar_ax, ax, backend, **kwargs)
@@ -176,7 +177,7 @@ class SarracenDataFrame(DataFrame):
                         x_pixels: int = None, y_pixels: int = None, x_min: float = None, x_max: float = None,
                         y_min: float = None, y_max: float = None, cmap: Union[str, Colormap] = 'RdBu',
                         cbar: bool = True, cbar_kws: dict = {}, cbar_ax: Axes = None, ax: Axes = None,
-                        backend: str = 'cpu', **kwargs) -> Axes:
+                        backend: str = None, **kwargs) -> Axes:
 
         return render_3d_cross(self, target, z_slice, x, y, z, kernel, rotation, origin, x_pixels, y_pixels, x_min,
                                x_max, y_min, y_max, cmap, cbar, cbar_kws, cbar_ax, ax, backend, **kwargs)
@@ -307,6 +308,19 @@ class SarracenDataFrame(DataFrame):
     def kernel(self, new_kernel: BaseKernel):
         if isinstance(new_kernel, BaseKernel):
             self._kernel = new_kernel
+
+    @property
+    def backend(self):
+        """['cpu', 'gpu'] : The default backend to use for interpolation operations with this dataset.
+
+        'cpu' - Best for small datasets, or cases where a GPU is not available.
+        'gpu' - Best for large datasets, with a CUDA-enabled GPU.
+        """
+        return self._backend
+
+    @backend.setter
+    def backend(self, new_backend: str):
+        self._backend = new_backend
 
     def get_dim(self):
         """ Get the dimensionality of the data in this dataframe.

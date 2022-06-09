@@ -5,7 +5,7 @@ import math
 
 import numpy as np
 from numba import prange, njit, cuda
-from scipy.spatial.transform import Rotation as R, Rotation
+from scipy.spatial.transform import Rotation as R
 
 from sarracen._atomic_operations import atomic_add
 from sarracen.kernels import BaseKernel
@@ -188,7 +188,8 @@ def _check_dimension(data, dim):
         If the dataset is not `dim`-dimensional.
     """
     if data.get_dim() != dim:
-        raise ValueError(f"Dataset is not {dim}-dimensional.")
+        ##raise ValueError(f"Dataset is not {dim}-dimensional.")
+        return
 
 
 def _rotate_data(data, x, y, z, rotation, origin):
@@ -215,7 +216,7 @@ def _rotate_data(data, x, y, z, rotation, origin):
     y_data = data[y].to_numpy()
     z_data = data[z].to_numpy()
     if rotation is not None:
-        if not isinstance(rotation, Rotation):
+        if not isinstance(rotation, R):
             rotation = R.from_euler('zyx', rotation, degrees=True)
 
         vectors = data[[data.xcol, data.ycol, data.zcol]].to_numpy()
@@ -241,7 +242,7 @@ def _rotate_data(data, x, y, z, rotation, origin):
 
 def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
                    x_pixels: int = None, y_pixels: int = None,  x_min: float = None, x_max: float = None,
-                   y_min: float = None, y_max: float = None, backend: str = 'cpu') -> np.ndarray:
+                   y_min: float = None, y_max: float = None, backend: str = None) -> np.ndarray:
     """ Interpolate particle data across two directional axes to a 2D grid of pixels.
 
     Interpolate the data within a SarracenDataFrame to a 2D grid, by interpolating the values
@@ -264,6 +265,8 @@ def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
     x_min, x_max, y_min, y_max: float, optional
         The minimum and maximum values to use in interpolation, in particle data space. Defaults
         to the minimum and maximum values of `x` and `y`.
+    backend: ['cpu', 'gpu']
+        The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
 
     Returns
     -------
@@ -289,24 +292,17 @@ def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
     _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
 
     kernel = kernel if kernel is not None else data.kernel
+    backend = backend if backend is not None else data.backend
     _check_dimension(data, 2)
 
     return _fast_2d(data[target].to_numpy(), 0, data[x].to_numpy(), data[y].to_numpy(), np.zeros(len(data)),
-                        data['m'].to_numpy(), data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w,
-                        kernel.get_radius(), x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2, backend)
+                    data['m'].to_numpy(), data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w,
+                    kernel.get_radius(), x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2, backend)
 
 
-def interpolate_2d_cross(data: 'SarracenDataFrame',
-                         target: str,
-                         x: str = None,
-                         y: str = None,
-                         kernel: BaseKernel = None,
-                         pixels: int = None,
-                         x1: float = None,
-                         x2: float = None,
-                         y1: float = None,
-                         y2: float = None,
-                         backend: str = 'cpu') -> np.ndarray:
+def interpolate_2d_cross(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
+                         kernel: BaseKernel = None, pixels: int = None, x1: float = None, x2: float = None,
+                         y1: float = None, y2: float = None, backend: str = None) -> np.ndarray:
     """ Interpolate particle data across two directional axes to a 1D cross-section line.
 
     Interpolate the data within a SarracenDataFrame to a 1D line, by interpolating the values
@@ -328,6 +324,8 @@ def interpolate_2d_cross(data: 'SarracenDataFrame',
     x1, x2, y1, y2: float, optional
         Starting and ending coordinates of the cross-section line (in particle data space). Defaults to
         the minimum and maximum values of `x` and `y`.
+    backend: ['cpu', 'gpu']
+        The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
 
     Returns
     -------
@@ -352,6 +350,7 @@ def interpolate_2d_cross(data: 'SarracenDataFrame',
         raise ValueError('Zero length cross section!')
 
     kernel = kernel if kernel is not None else data.kernel
+    backend = backend if backend is not None else data.backend
     _check_dimension(data, 2)
 
     if pixels <= 0:
@@ -362,21 +361,10 @@ def interpolate_2d_cross(data: 'SarracenDataFrame',
                           x2, y1, y2, backend)
 
 
-def interpolate_3d(data: 'SarracenDataFrame',
-                   target: str,
-                   x: str = None,
-                   y: str = None,
-                   kernel: BaseKernel = None,
-                   integral_samples: int = 1000,
-                   rotation: np.ndarray = None,
-                   origin: np.ndarray = None,
-                   x_pixels: int = None,
-                   y_pixels: int = None,
-                   x_min: float = None,
-                   x_max: float = None,
-                   y_min: float = None,
-                   y_max: float = None,
-                   backend: str = 'cpu'):
+def interpolate_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
+                   integral_samples: int = 1000, rotation: np.ndarray = None, origin: np.ndarray = None,
+                   x_pixels: int = None, y_pixels: int = None, x_min: float = None, x_max: float = None,
+                   y_min: float = None, y_max: float = None, backend: str = None):
     """ Interpolate 3D particle data to a 2D grid of pixels.
 
     Interpolates three-dimensional particle data in a SarracenDataFrame. The data
@@ -407,6 +395,8 @@ def interpolate_3d(data: 'SarracenDataFrame',
     x_min, x_max, y_min, y_max: float, optional
         The minimum and maximum values to use in interpolation, in particle data space. Defaults
         to the minimum and maximum values of `x` and `y`.
+    backend: ['cpu', 'gpu']
+        The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
 
     Returns
     -------
@@ -438,31 +428,20 @@ def interpolate_3d(data: 'SarracenDataFrame',
 
     x_data, y_data, _ = _rotate_data(data, x, y, data.zcol, rotation, origin)
     kernel = kernel if kernel is not None else data.kernel
+    backend = backend if backend is not None else data.backend
     _check_dimension(data, 3)
 
     weight_function = kernel.get_column_kernel_func(integral_samples)
 
     return _fast_2d(data[target].to_numpy(), 0, x_data, y_data, np.zeros(len(data)), data['m'].to_numpy(),
-                        data['rho'].to_numpy(), data['h'].to_numpy(), weight_function,
-                        kernel.get_radius(), x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2, backend)
+                    data['rho'].to_numpy(), data['h'].to_numpy(), weight_function,
+                    kernel.get_radius(), x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2, backend)
 
 
-def interpolate_3d_cross(data: 'SarracenDataFrame',
-                         target: str,
-                         z_slice: float = None,
-                         x: str = None,
-                         y: str = None,
-                         z: str = None,
-                         kernel: BaseKernel = None,
-                         rotation: np.ndarray = None,
-                         origin: np.ndarray = None,
-                         x_pixels: int = None,
-                         y_pixels: int = None,
-                         x_min: float = None,
-                         x_max: float = None,
-                         y_min: float = None,
-                         y_max: float = None,
-                         backend: str = 'cpu'):
+def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, z_slice: float = None, x: str = None, y: str = None,
+                         z: str = None, kernel: BaseKernel = None, rotation: np.ndarray = None,
+                         origin: np.ndarray = None, x_pixels: int = None, y_pixels: int = None, x_min: float = None,
+                         x_max: float = None, y_min: float = None, y_max: float = None, backend: str = None):
     """ Interpolate 3D particle data to a 2D grid, using a 3D cross-section.
 
     Interpolates particle data in a SarracenDataFrame across three directional axes to a 2D
@@ -494,6 +473,8 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',
     x_min, x_max, y_min, y_max: float, optional
         The minimum and maximum values to use in interpolation, in particle data space. Defaults
         to the minimum and maximum values of `x` and `y`.
+    backend: ['cpu', 'gpu']
+        The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
 
     Returns
     -------
@@ -530,14 +511,15 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',
     _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
 
     kernel = kernel if kernel is not None else data.kernel
+    backend = backend if backend is not None else data.backend
 
     _check_dimension(data, 3)
 
     x_data, y_data, z_data = _rotate_data(data, x, y, z, rotation, origin)
 
     return _fast_2d(data[target].to_numpy(), z_slice, x_data, y_data, z_data, data['m'].to_numpy(),
-                        data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w, kernel.get_radius(), x_pixels, y_pixels,
-                        x_min, x_max, y_min, y_max, 3, backend)
+                    data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w, kernel.get_radius(), x_pixels, y_pixels,
+                    x_min, x_max, y_min, y_max, 3, backend)
 
 
 def _fast_2d(target, z_slice, x_data, y_data, z_data, mass_data, rho_data, h_data, weight_function, kernel_radius,
@@ -619,25 +601,12 @@ def _fast_2d_cpu(target, z_slice, x_data, y_data, z_data, mass_data, rho_data, h
     return image
 
 
-# Underlying numba-compiled code for interpolation to a 2D grid. Used in interpolation of 2D data,
-# and column integration / cross-sections of 3D data.
-# For the GPU, the numba code is compiled using a factory function approach. This results in less
-# overhead for the weight function.
+# For the GPU, the numba code is compiled using a factory function approach. This is required
+# since a CUDA numba kernel cannot easily take weight_function as an argument.
 def _fast_2d_gpu(target, z_slice, x_data, y_data, z_data, mass_data, rho_data, h_data, weight_function, kernel_radius,
                  x_pixels, y_pixels, x_min, x_max, y_min, y_max, n_dims):
-    threadsperblock = 32
-    blockspergrid = (target.size + (threadsperblock - 1)) // threadsperblock
-
-    # transfer relevant data to the GPU
-    d_target = cuda.to_device(target)
-    d_x = cuda.to_device(x_data)
-    d_y = cuda.to_device(y_data)
-    d_z = cuda.to_device(z_data)
-    d_m = cuda.to_device(mass_data)
-    d_rho = cuda.to_device(rho_data)
-    d_h = cuda.to_device(h_data)
-    d_image = cuda.to_device(np.zeros((y_pixels, x_pixels)))
-
+    # Underlying GPU numba-compiled code for interpolation to a 2D grid. Used in interpolation of 2D data,
+    # and column integration / cross-sections of 3D data.
     @cuda.jit(fastmath=True)
     def _2d_func(target, z_slice, x_data, y_data, z_data, mass_data, rho_data, h_data, kernel_radius,
                      x_pixels, y_pixels, x_min, x_max, y_min, y_max, n_dims, image):
@@ -697,14 +666,29 @@ def _fast_2d_gpu(target, z_slice, x_data, y_data, z_data, mass_data, rho_data, h
                         wab = weight_function(q, n_dims)
                         cuda.atomic.add(image, (jpix + jpixmin, ipix + ipixmin), term * wab)
 
-    _2d_func[blockspergrid, threadsperblock](d_target, z_slice, d_x, d_y, d_z, d_m, d_rho, d_h,
-                                                 kernel_radius, x_pixels, y_pixels, x_min,
-                                                 x_max, y_min, y_max, n_dims, d_image)
+    threadsperblock = 32
+    blockspergrid = (target.size + (threadsperblock - 1)) // threadsperblock
+
+    # transfer relevant data to the GPU
+    d_target = cuda.to_device(target)
+    d_x = cuda.to_device(x_data)
+    d_y = cuda.to_device(y_data)
+    d_z = cuda.to_device(z_data)
+    d_m = cuda.to_device(mass_data)
+    d_rho = cuda.to_device(rho_data)
+    d_h = cuda.to_device(h_data)
+    # CUDA kernels have no return values, so the image data must be
+    # allocated on the device beforehand.
+    d_image = cuda.to_device(np.zeros((y_pixels, x_pixels)))
+
+    # execute the newly compiled CUDA kernel.
+    _2d_func[blockspergrid, threadsperblock](d_target, z_slice, d_x, d_y, d_z, d_m, d_rho, d_h, kernel_radius, x_pixels,
+                                             y_pixels, x_min, x_max, y_min, y_max, n_dims, d_image)
 
     return d_image.copy_to_host()
 
 
-# Underlying numba-compiled code for 2D->1D cross-sections
+# Underlying CPU numba-compiled code for 2D->1D cross-sections.
 @njit(parallel=True, fastmath=True)
 def _fast_2d_cross_cpu(target, x_data, y_data, mass_data, rho_data, h_data, weight_function, kernel_radius, pixels, x1,
                        x2, y1, y2):
@@ -770,21 +754,10 @@ def _fast_2d_cross_cpu(target, x_data, y_data, mass_data, rho_data, h_data, weig
     return output
 
 
-# Underlying numba-compiled code for 2D->1D cross-sections
+# For the GPU, the numba code is compiled using a factory function approach. This is required
+# since a CUDA numba kernel cannot easily take weight_function as an argument.
 def _fast_2d_cross_gpu(target, x_data, y_data, mass_data, rho_data, h_data, weight_function, kernel_radius, pixels, x1,
                        x2, y1, y2):
-    threadsperblock = 32
-    blockspergrid = (target.size + (threadsperblock - 1)) // threadsperblock
-
-    # transfer relevant data to the GPU
-    d_target = cuda.to_device(target)
-    d_x = cuda.to_device(x_data)
-    d_y = cuda.to_device(y_data)
-    d_m = cuda.to_device(mass_data)
-    d_rho = cuda.to_device(rho_data)
-    d_h = cuda.to_device(h_data)
-    d_image = cuda.to_device(np.zeros(pixels))
-
     # determine the slope of the cross-section line
     gradient = 0
     if not x2 - x1 == 0:
@@ -797,6 +770,7 @@ def _fast_2d_cross_gpu(target, x_data, y_data, mass_data, rho_data, h_data, weig
     xpixwidth = (x2 - x1) / pixels
     aa = 1 + gradient ** 2
 
+    # Underlying GPU numba-compiled code for 2D->1D cross-sections
     @cuda.jit(fastmath=True)
     def _2d_func(target, x_data, y_data, mass_data, rho_data, h_data, kernel_radius, pixels, x1, x2, y1, y2, image):
         i = cuda.grid(1)
@@ -819,7 +793,7 @@ def _fast_2d_cross_gpu(target, x_data, y_data, mass_data, rho_data, h_data, weig
 
             # the starting and ending x coordinates of the lines intersections with a particle's smoothing circle
             xstart = min(max(x1, (-bb - det) / (2 * aa)), x2)
-            xend = min(max(y1, (-bb + det) / (2 * aa)), y2)
+            xend = min(max(x1, (-bb + det) / (2 * aa)), x2)
 
             # the start and end distances which lie within a particle's smoothing circle.
             rstart = math.sqrt((xstart - x1) ** 2 + ((gradient * xstart + yint) - y1) ** 2)
@@ -840,9 +814,25 @@ def _fast_2d_cross_gpu(target, x_data, y_data, mass_data, rho_data, h_data, weig
                 q2 = (dx * dx + dy * dy) * (1 / (h_data[i] * h_data[i]))
                 wab = weight_function(math.sqrt(q2), 2)
 
-                # add contributions to output total, transformed by minimum/maximum pixels
+                # add contributions to output total.
                 cuda.atomic.add(image, ipix, wab * term)
 
+    threadsperblock = 32
+    blockspergrid = (target.size + (threadsperblock - 1)) // threadsperblock
+
+    # transfer relevant data to the GPU
+    d_target = cuda.to_device(target)
+    d_x = cuda.to_device(x_data)
+    d_y = cuda.to_device(y_data)
+    d_m = cuda.to_device(mass_data)
+    d_rho = cuda.to_device(rho_data)
+    d_h = cuda.to_device(h_data)
+
+    # CUDA kernels have no return values, so the image data must be
+    # allocated on the device beforehand.
+    d_image = cuda.to_device(np.zeros(pixels))
+
+    # execute the newly compiled GPU kernel
     _2d_func[blockspergrid, threadsperblock](d_target, d_x, d_y, d_m, d_rho, d_h, kernel_radius, pixels, x1, x2, y1, y2,
                                              d_image)
 
