@@ -1,11 +1,13 @@
 import numpy as np
-from numba import njit, prange
+from numba import jit, njit, prange
+from numba.core.registry import CPUDispatcher
 
 
 class BaseKernel:
     """A generic kernel used for data interpolation."""
 
     def __init__(self):
+        self._ckernel_func_cache = None
         self._column_cache = None
 
     @staticmethod
@@ -58,6 +60,33 @@ class BaseKernel:
             self._column_cache = c_kernel
 
         return c_kernel
+
+    def get_column_kernel_func(self, samples) -> CPUDispatcher:
+        """ Generate a numba-accelerated column kernel function.
+
+        Creates a numba-accelerated function for column kernel weights. This function
+        can be utilized similarly to kernel.w.
+
+        Parameters
+        ----------
+        samples: int
+            Number of sample points to calculate when approximating the kernel.
+
+        Returns
+        -------
+        A numba-accelerated weight function.
+        """
+        if self._ckernel_func_cache is not None and samples == 1000:
+            return self._ckernel_func_cache
+        column_kernel = self.get_column_kernel(samples)
+        radius = self.get_radius()
+
+        @njit(fastmath=True)
+        def func(q, dim):
+            return np.interp(q, np.linspace(0, radius, samples), column_kernel)
+
+        self._ckernel_func_cache = func
+        return func
 
     # Internal function for performing the integral in _get_column_kernel()
     @staticmethod
