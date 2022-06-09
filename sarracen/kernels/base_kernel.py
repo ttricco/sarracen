@@ -1,5 +1,7 @@
+import math
+
 import numpy as np
-from numba import jit, njit, prange
+from numba import jit, njit, prange, cuda
 from numba.core.registry import CPUDispatcher
 
 
@@ -61,7 +63,7 @@ class BaseKernel:
 
         return c_kernel
 
-    def get_column_kernel_func(self, samples) -> CPUDispatcher:
+    def get_column_kernel_func(self, samples):
         """ Generate a numba-accelerated column kernel function.
 
         Creates a numba-accelerated function for column kernel weights. This function
@@ -83,9 +85,12 @@ class BaseKernel:
 
         @njit(fastmath=True)
         def func(q, dim):
-            return np.interp(q, np.linspace(0, radius, samples), column_kernel)
+            wab_index = q * (samples - 1) / radius
+            index = int(math.floor(wab_index))
+            index1 = int(math.ceil(wab_index))
+            t = wab_index - index
+            return column_kernel[index] * (1 - t) + column_kernel[index1] * t
 
-        self._ckernel_func_cache = func
         return func
 
     # Internal function for performing the integral in _get_column_kernel()

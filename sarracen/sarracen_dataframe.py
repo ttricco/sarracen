@@ -4,7 +4,6 @@ from matplotlib.axes import Axes
 from matplotlib.colors import Colormap
 from pandas import DataFrame, Series
 import numpy as np
-from scipy.spatial.transform import Rotation as R
 
 from sarracen.render import render_2d, render_2d_cross, render_3d, render_3d_cross
 from sarracen.kernels import CubicSplineKernel, BaseKernel
@@ -146,92 +145,41 @@ class SarracenDataFrame(DataFrame):
         self._rhocol = 'rho'
 
     @_copy_doc(render_2d)
-    def render_2d(self,
-                  target: str,
-                  x: str = None,
-                  y: str = None,
-                  kernel: BaseKernel = None,
-                  x_pixels: int = None,
-                  y_pixels: int = None,
-                  x_min: float = None,
-                  x_max: float = None,
-                  y_min: float = None,
-                  y_max: float = None,
-                  cmap: Union[str, Colormap] = 'RdBu',
-                  cbar: bool = True,
-                  cbar_kws: dict = {},
-                  cbar_ax: Axes = None,
-                  ax: Axes = None,
-                  **kwargs) -> Axes:
+    def render_2d(self, target: str, x: str = None, y: str = None, kernel: BaseKernel = None, x_pixels: int = None,
+                  y_pixels: int = None, x_min: float = None, x_max: float = None, y_min: float = None,
+                  y_max: float = None, cmap: Union[str, Colormap] = 'RdBu', cbar: bool = True, cbar_kws: dict = {},
+                  cbar_ax: Axes = None, ax: Axes = None, backend: str = 'cpu', **kwargs) -> Axes:
 
-        return render_2d(self, target, x, y, kernel, x_pixels, y_pixels, x_min, x_max, y_min, y_max, cmap, cbar, cbar_kws, cbar_ax, ax, **kwargs)
+        return render_2d(self, target, x, y, kernel, x_pixels, y_pixels, x_min, x_max, y_min, y_max, cmap, cbar,
+                         cbar_kws, cbar_ax, ax, backend, **kwargs)
 
     @_copy_doc(render_2d_cross)
-    def render_2d_cross(self,
-                        target: str,
-                        x: str = None,
-                        y: str = None,
-                        kernel: BaseKernel = None,
-                        pixels: int = 512,
-                        x1: float = None,
-                        y1: float = None,
-                        x2: float = None,
-                        y2: float = None,
-                        ax: Axes = None,
-                        **kwargs) -> Axes:
+    def render_2d_cross(self, target: str, x: str = None, y: str = None, kernel: BaseKernel = None, pixels: int = 512,
+                        x1: float = None, y1: float = None, x2: float = None, y2: float = None, ax: Axes = None,
+                        backend: str = 'cpu', **kwargs) -> Axes:
 
-        return render_2d_cross(self, target, x, y, kernel, pixels, x1, x2, y1, y2, ax, **kwargs)
+        return render_2d_cross(self, target, x, y, kernel, pixels, x1, x2, y1, y2, ax, backend, **kwargs)
 
     @_copy_doc(render_3d)
-    def render_3d(self,
-                  target: str,
-                  x: str = None,
-                  y: str = None,
-                  kernel: BaseKernel = None,
-                  int_samples: int = 1000,
-                  rotation: np.ndarray = None,
-                  origin: np.ndarray = None,
-                  x_pixels: int = None,
-                  y_pixels: int = None,
-                  x_min: float = None,
-                  x_max: float = None,
-                  y_min: float = None,
-                  y_max: float = None,
-                  cmap: Union[str, Colormap] = 'RdBu',
-                  cbar: bool = True,
-                  cbar_kws: dict = {},
-                  cbar_ax: Axes = None,
-                  ax: Axes = None,
-                  **kwargs) -> Axes:
+    def render_3d(self, target: str, x: str = None, y: str = None, kernel: BaseKernel = None, int_samples: int = 1000,
+                  rotation: np.ndarray = None, origin: np.ndarray = None, x_pixels: int = None, y_pixels: int = None,
+                  x_min: float = None, x_max: float = None, y_min: float = None, y_max: float = None,
+                  cmap: Union[str, Colormap] = 'RdBu', cbar: bool = True, cbar_kws: dict = {}, cbar_ax: Axes = None,
+                  ax: Axes = None, backend: str = 'cpu', **kwargs) -> Axes:
 
-        return render_3d(self, target, x, y, kernel, int_samples, rotation, origin, x_pixels, y_pixels, x_min, x_max, y_min, y_max,
-                         cmap, cbar, cbar_kws, cbar_ax, ax, **kwargs)
+        return render_3d(self, target, x, y, kernel, int_samples, rotation, origin, x_pixels, y_pixels, x_min, x_max,
+                         y_min, y_max, cmap, cbar, cbar_kws, cbar_ax, ax, backend, **kwargs)
 
     @_copy_doc(render_3d_cross)
-    def render_3d_cross(self,
-                        target: str,
-                        z_slice: float = None,
-                        x: str = None,
-                        y: str = None,
-                        z: str = None,
-                        kernel: BaseKernel = None,
-                        rotation: np.ndarray = None,
-                        origin: np.ndarray = None,
-                        x_pixels: int = None,
-                        y_pixels: int = None,
-                        x_min: float = None,
-                        x_max: float = None,
-                        y_min: float = None,
-                        y_max: float = None,
-                        cmap: Union[str, Colormap] = 'RdBu',
-                        cbar: bool = True,
-                        cbar_kws: dict = {},
-                        cbar_ax: Axes = None,
-                        ax: Axes = None,
-                        **kwargs) -> Axes:
+    def render_3d_cross(self, target: str, z_slice: float = None, x: str = None, y: str = None, z: str = None,
+                        kernel: BaseKernel = None, rotation: np.ndarray = None, origin: np.ndarray = None,
+                        x_pixels: int = None, y_pixels: int = None, x_min: float = None, x_max: float = None,
+                        y_min: float = None, y_max: float = None, cmap: Union[str, Colormap] = 'RdBu',
+                        cbar: bool = True, cbar_kws: dict = {}, cbar_ax: Axes = None, ax: Axes = None,
+                        backend: str = 'cpu', **kwargs) -> Axes:
 
         return render_3d_cross(self, target, z_slice, x, y, z, kernel, rotation, origin, x_pixels, y_pixels, x_min,
-                               x_max, y_min, y_max, cmap, cbar, cbar_kws, cbar_ax, ax, **kwargs)
+                               x_max, y_min, y_max, cmap, cbar, cbar_kws, cbar_ax, ax, backend, **kwargs)
 
     @property
     def params(self):
