@@ -253,10 +253,10 @@ class SarracenDataFrame(DataFrame):
 
     @_copy_doc(render_3d_cross_vec)
     def render_3d_cross_vec(self, target_x: str, target_y: str, target_z: str, z_slice: float = None, x: str = None,
-                      y: str = None, z: str = None, kernel: BaseKernel = None, rotation: np.ndarray = None,
-                      origin: np.ndarray = None, x_pixels: int = None, y_pixels: int = None, x_min: float = None,
-                      x_max: float = None, y_min: float = None, y_max: float = None, plot_type: str = 'stream',
-                      ax: Axes = None, backend: str = None, **kwargs) -> Axes:
+                            y: str = None, z: str = None, kernel: BaseKernel = None, rotation: np.ndarray = None,
+                            origin: np.ndarray = None, x_pixels: int = None, y_pixels: int = None, x_min: float = None,
+                            x_max: float = None, y_min: float = None, y_max: float = None, plot_type: str = 'stream',
+                            ax: Axes = None, backend: str = None, **kwargs) -> Axes:
         return render_3d_cross_vec(self, target_x, target_y, target_z, z_slice, x, y, z, kernel, rotation, origin,
                                    x_pixels, y_pixels, x_min, x_max, y_min, y_max, plot_type, ax, backend, **kwargs)
 
