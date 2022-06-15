@@ -7,7 +7,6 @@ import numpy as np
 from numba import prange, njit, cuda
 from scipy.spatial.transform import Rotation as R
 
-from sarracen._atomic_operations import atomic_add
 from sarracen.kernels import BaseKernel
 
 
@@ -595,7 +594,7 @@ def _fast_2d_cpu(target, z_slice, x_data, y_data, z_data, mass_data, rho_data, h
                 if np.sqrt(q2[jpix][ipix]) > kernel_radius:
                     continue
                 wab = weight_function(np.sqrt(q2[jpix][ipix]), n_dims)
-                atomic_add(image, (jpix + jpixmin, ipix + ipixmin), term[i] * wab)
+                image[jpix + jpixmin, ipix + ipixmin] += term[i] * wab
 
     return image
 
@@ -748,7 +747,7 @@ def _fast_2d_cross_cpu(target, x_data, y_data, mass_data, rho_data, h_data, weig
 
         # add contributions to output total
         for ipix in prange(int(ipixmax[i]) - int(ipixmin[i])):
-            atomic_add(output, ipix + int(ipixmin[i]), term[i] * wab[ipix])
+            output[ipix + int(ipixmin[i])] += term[i] * wab[ipix]
 
     return output
 
