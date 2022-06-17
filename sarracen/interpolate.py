@@ -130,7 +130,7 @@ def _verify_columns(data, target, x, y):
     if x not in data.columns:
         raise KeyError(f"x-directional column '{x}' does not exist in the provided dataset.")
     if y not in data.columns:
-        raise KeyError(f"x-directional column '{y}' does not exist in the provided dataset.")
+        raise KeyError(f"y-directional column '{y}' does not exist in the provided dataset.")
     if target not in data.columns:
         raise KeyError(f"Target column '{target}' does not exist in provided dataset.")
     if data.mcol is None:
@@ -160,9 +160,9 @@ def _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max):
         if the specified `x` and `y` minimum and maximum values result in an invalid region.
     """
     if x_max - x_min <= 0:
-        raise ValueError("`xmax` must be greater than `xmin`!")
+        raise ValueError("`x_max` must be greater than `x_min`!")
     if y_max - y_min <= 0:
-        raise ValueError("`ymax` must be greater than `ymin`!")
+        raise ValueError("`y_max` must be greater than `y_min`!")
     if x_pixels <= 0:
         raise ValueError("`x_pixels` must be greater than zero!")
     if y_pixels <= 0:

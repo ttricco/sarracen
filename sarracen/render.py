@@ -149,7 +149,7 @@ def render_2d(data: 'SarracenDataFrame',
     target: str
         Column label of the target smoothing data.
     x, y: str, optional
-        Column label of the y-directional axis. Defaults to the y-column detected in `data`.
+        Column label of the x & y directional axes. Defaults to the columns detected in `data`.
     kernel: BaseKernel, optional
         Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
     x_pixels, y_pixels: int, optional
@@ -211,6 +211,61 @@ def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[
                 rotation: np.ndarray = None, origin: np.ndarray = None, x_pixels: int = None, y_pixels: int = None,
                 x_min: float = None, x_max: float = None, y_min: float = None, y_max: float = None, ax: Axes = None,
                 backend: str='cpu', **kwargs) -> Axes:
+    """ Create an SPH interpolated streamline plot of a target vector.
+
+    Render the data within a SarracenDataFrame to a 2D matplotlib object, by rendering the values
+    of a target vector. The contributions of all particles near the rendered area are summed and
+    stored to a 2D grid for the x & y axes of the target vector. This data is then used to create
+    a streamline plot using ax.streamlines().
+
+    Parameters
+    ----------
+    data : SarracenDataFrame
+        Particle data, in a SarracenDataFrame.
+    target: str tuple of shape (2) or (3).
+        Column label of the target vector. Shape must match the # of dimensions in `data`.
+    z_slice: float
+        The z to take a cross-section at. If none, column interpolation is performed.
+    x, y, z: str, optional
+        Column label of the x, y & z directional axes. Defaults to the columns detected in `data`.
+    kernel: BaseKernel, optional
+        Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
+    integral_samples: int, optional
+        If using column interpolation, the number of sample points to take when approximating the 2D column kernel.
+    rotation: array_like or Rotation, optional
+        The rotation to apply to the data before interpolation. If defined as an array, the
+        order of rotations is [z, y, x] in degrees.
+    origin: array_like, optional
+        Point of rotation of the data, in [x, y, z] form. Defaults to the centre
+        point of the bounds of the data.
+    x_pixels, y_pixels: int, optional
+        Number of interpolation samples to pass to ax.streamlines(). Default values are chosen to keep
+        a consistent aspect ratio.
+    x_min, x_max, y_min, y_max: float, optional
+        The minimum and maximum values to use in interpolation, in particle data space. Defaults
+        to the minimum and maximum values of `x` and `y`.
+    ax: Axes
+        The main axes in which to draw the rendered image.
+    kwargs: other keyword arguments
+        Keyword arguments to pass to ax.streamlines()
+
+    Returns
+    -------
+    Axes
+        The resulting matplotlib axes, which contains the streamline plot.
+
+    Raises
+    ------
+    ValueError
+        If `x_pixels` or `y_pixels` are less than or equal to zero, or
+        if the specified `x` and `y` minimum and maximums result in an invalid region, or
+        if the number of dimensions in the target vector does not match the data, or
+        if `data` is not 2 or 3 dimensional.
+    KeyError
+        If `target`, `x`, `y`, `z` (for 3-dimensional data), mass, density, or smoothing length columns do not
+        exist in `data`.
+    """
+    # Choose between the various interpolation functions available, based on initial data passed to this function.
     if data.get_dim() == 2:
         if not len(target) == 2:
             raise ValueError('Target vector is not 2-dimensional.')
@@ -254,10 +309,63 @@ def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[
 
 
 def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[str, str, str]], z_slice: int = None,
-                x: str = None, y: str = None, z: str = None, kernel: BaseKernel = None, integral_samples: int = 1000,
-                rotation: np.ndarray = None, origin: np.ndarray = None, x_arrows: int = None, y_arrows: int = None,
-                x_min: float = None, x_max: float = None, y_min: float = None, y_max: float = None, ax: Axes = None,
-                backend: str='cpu', **kwargs) -> Axes:
+              x: str = None, y: str = None, z: str = None, kernel: BaseKernel = None, integral_samples: int = 1000,
+              rotation: np.ndarray = None, origin: np.ndarray = None, x_arrows: int = None, y_arrows: int = None,
+              x_min: float = None, x_max: float = None, y_min: float = None, y_max: float = None, ax: Axes = None,
+              backend: str='cpu', **kwargs) -> Axes:
+    """ Create an SPH interpolated vector field plot of a target vector.
+
+    Render the data within a SarracenDataFrame to a 2D matplotlib object, by rendering the values
+    of a target vector. The contributions of all particles near the rendered area are summed and
+    stored to a 2D grid for the x & y axes of the target vector. This data is then used to create
+    an arrow plot using ax.quiver().
+
+    Parameters
+    ----------
+    data : SarracenDataFrame
+        Particle data, in a SarracenDataFrame.
+    target: str tuple of shape (2) or (3).
+        Column label of the target vector. Shape must match the # of dimensions in `data`.
+    z_slice: float
+        The z to take a cross-section at. If none, column interpolation is performed.
+    x, y, z: str, optional
+        Column label of the x, y & z directional axes. Defaults to the columns detected in `data`.
+    kernel: BaseKernel, optional
+        Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
+    integral_samples: int, optional
+        If using column interpolation, the number of sample points to take when approximating the 2D column kernel.
+    rotation: array_like or Rotation, optional
+        The rotation to apply to the data before interpolation. If defined as an array, the order of rotations
+        is [z, y, x] in degrees.
+    origin: array_like, optional
+        Point of rotation of the data, in [x, y, z] form. Defaults to the centre point of the bounds of the data.
+    x_arrows, y_arrows: int, optional
+        Number of arrows in the output image in the x & y directions. Default values are chosen to keep
+        a consistent aspect ratio.
+    x_min, x_max, y_min, y_max: float, optional
+        The minimum and maximum values to use in interpolation, in particle data space. Defaults
+        to the minimum and maximum values of `x` and `y`.
+    ax: Axes
+        The main axes in which to draw the rendered image.
+    kwargs: other keyword arguments
+        Keyword arguments to pass to ax.quiver()
+
+    Returns
+    -------
+    Axes
+        The resulting matplotlib axes, which contains the arrow plot.
+
+    Raises
+    ------
+    ValueError
+        If `x_arrows` or `y_arrows` are less than or equal to zero, or
+        if the specified `x` and `y` minimum and maximums result in an invalid region, or
+        if the number of dimensions in the target vector does not match the data, or
+        if `data` is not 2 or 3 dimensional.
+    KeyError
+        If `target`, `x`, `y`, `z` (for 3-dimensional data), mass, density, or smoothing length columns do not
+        exist in `data`.
+    """
     x, y = _default_axes(data, x, y)
     x_min, x_max, y_min, y_max = _default_bounds(data, x, y, x_min, x_max, y_min, y_max)
     x_arrows, y_arrows = _set_pixels(x_arrows, y_arrows, x_min, x_max, y_min, y_max, 20)
