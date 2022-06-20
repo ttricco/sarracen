@@ -8,7 +8,8 @@ from pytest import approx
 
 from sarracen import SarracenDataFrame
 from sarracen.kernels import CubicSplineKernel, QuarticSplineKernel, QuinticSplineKernel
-from sarracen.interpolate import interpolate_2d, interpolate_2d_cross, interpolate_3d_cross, interpolate_3d
+from sarracen.interpolate import interpolate_2d, interpolate_2d_cross, interpolate_3d_cross, interpolate_3d, \
+    interpolate_2d_vec, interpolate_3d_vec, interpolate_3d_cross_vec
 
 
 def test_interpolate_2d():
@@ -45,6 +46,39 @@ def test_interpolate_2d():
     assert image[5][1] == approx(w * sdf['A'][0] * kernel.w(np.sqrt(0.7 ** 2 + 1.1 ** 2) / sdf['h'][0], 2), rel=1e-8)
     assert image[0][4] == approx(w * sdf['A'][0] * kernel.w(np.sqrt(2 * (0.1 ** 2)) / sdf['h'][0], 2), rel=1e-8)
     assert image[0][0] == approx(image[0][9], rel=1e-8)
+
+
+def test_interpolate_2d_vec():
+    df = pd.DataFrame({'x': [0],
+                       'y': [0],
+                       'Px': [1],
+                       'Py': [2],
+                       'Pz': [3],
+                       'h': [0.35],
+                       'rho': [0.3],
+                       'm': [0.1]})
+    sdf = SarracenDataFrame(df, params=dict())
+    w = sdf['m'][0] / (sdf['rho'][0] * sdf['h'] ** 2)
+    kernel = QuarticSplineKernel()
+    sdf.kernel = kernel
+
+    image = interpolate_2d_vec(sdf, 'Px', 'Py', x_pixels=20, y_pixels=20, x_min=0, y_min=0, x_max=1, y_max=1)
+
+    # X-dimension of vector field
+    assert image[0][19][19] == 0
+    assert image[0][0][0] == approx(w * sdf['Px'][0] * kernel.w(np.sqrt(0.025 ** 2 + 0.025 ** 2) / sdf['h'][0], 2))
+    assert image[0][15][12] == approx(w * sdf['Px'][0] * kernel.w(np.sqrt(0.775 ** 2 + 0.625 ** 2) / sdf['h'][0], 2))
+
+    # Y-dimension of vector field
+    assert image[1][19][19] == 0
+    assert image[1][0][0] == approx(w * sdf['Py'][0] * kernel.w(np.sqrt(0.025 ** 2 + 0.025 ** 2) / sdf['h'][0], 2))
+    assert image[1][15][12] == approx(w * sdf['Py'][0] * kernel.w(np.sqrt(0.775 ** 2 + 0.625 ** 2) / sdf['h'][0], 2))
+
+    # Result of interpolate_2d_vec should be equivalent to the result of interpolate_2d performed on both x & y.
+    assert np.array_equal(image[0], interpolate_2d(sdf, 'Px', x_pixels=20, y_pixels=20, x_min=0, y_min=0, x_max=1,
+                                                   y_max=1))
+    assert np.array_equal(image[1], interpolate_2d(sdf, 'Py', x_pixels=20, y_pixels=20, x_min=0, y_min=0, x_max=1,
+                                                   y_max=1))
 
 
 def test_interpolate_2d_cross():
@@ -203,6 +237,47 @@ def test_interpolate_3d():
     assert image[12][0] == approx(w[0] * sdf['h'][0] * sdf['A'][0] * F1 + w[1] * sdf['h'][1] * sdf['A'][1] * F2)
 
 
+def test_interpolate_3d_vec():
+    df = pd.DataFrame({'x': [0], 'y': [0], 'z': [1], 'Px': [1], 'Py': [2], 'Pz': [3], 'h': [0.35], 'rho': [0.3], 'm': [0.1]})
+    sdf = SarracenDataFrame(df, params=dict())
+    w = sdf['m'][0] / (sdf['rho'][0] * sdf['h'][0] ** 2)
+    kernel = QuarticSplineKernel()
+    sdf.kernel = kernel
+
+    image = interpolate_3d_vec(sdf, 'Px', 'Py', 'Pz', integral_samples=1000, x_pixels=20, y_pixels=20, x_min=0, y_min=0,
+                               x_max=1, y_max=1)
+    column_function = kernel.get_column_kernel_func(1000)
+
+    # X-dimension of vector field
+    assert image[0][19][19] == 0
+    assert image[0][0][0] == approx(w * sdf['Px'][0] * column_function(np.sqrt(0.025 ** 2 + 0.025 ** 2) / sdf['h'][0], 0))
+    assert image[0][15][12] == approx(w * sdf['Px'][0] * column_function(np.sqrt(0.775 ** 2 + 0.625 ** 2) / sdf['h'][0], 0))
+
+    # Y-dimension of vector field
+    assert image[1][19][19] == 0
+    assert image[1][0][0] == approx(w * sdf['Py'][0] * column_function(np.sqrt(0.025 ** 2 + 0.025 ** 2) / sdf['h'][0], 0))
+    assert image[1][15][12] == approx(w * sdf['Py'][0] * column_function(np.sqrt(0.775 ** 2 + 0.625 ** 2) / sdf['h'][0], 0))
+
+    # Result of interpolate_3d_vec should be equivalent to the result of interpolate_3d performed on both x & y.
+    assert np.array_equal(image[0], interpolate_3d(sdf, 'Px', integral_samples=1000, x_pixels=20, y_pixels=20, x_min=0,
+                                                   y_min=0, x_max=1, y_max=1))
+    assert np.array_equal(image[1], interpolate_3d(sdf, 'Py', integral_samples=1000, x_pixels=20, y_pixels=20, x_min=0,
+                                                   y_min=0, x_max=1, y_max=1))
+
+    # After this rotation, the particle will be at (1/sqrt(2), 1/sqrt(2), 0)
+    # The target vector will be (4/sqrt(2), 2/sqrt(2), -2)
+    image = interpolate_3d_vec(sdf, 'Px', 'Py', 'Pz', integral_samples=1000, x_pixels=20, y_pixels=20, x_min=0, y_min=0,
+                               x_max=1, y_max=1, rotation=[0, 45, -90], origin=[0, 0, 0])
+
+    # X-dimension of vector field
+    assert image[0][0][0] == 0
+    assert image[0][19][19] == approx(w * (4 / np.sqrt(2)) * column_function((np.sqrt(2) - 1 - np.sqrt(2) * 0.025) / sdf['h'][0], 0))
+
+    # Y-dimension of vector field
+    assert image[1][0][0] == 0
+    assert image[1][19][19] == approx(w * (2 / np.sqrt(2)) * column_function((np.sqrt(2) - 1 - np.sqrt(2) * 0.025) / sdf['h'][0], 0))
+
+
 def test_interpolate_3d_cross():
     df = df = pd.DataFrame({'x': [0],
                             'y': [0],
@@ -290,3 +365,46 @@ def test_interpolate_3d_cross():
     F1 = kernel.w(np.sqrt((1/2) + ((1 / np.sqrt(2)) + 0.48) ** 2) / df['h'][0], 3)
     F2 = kernel.w(np.sqrt((1/2) + ((1 / np.sqrt(2)) - 0.48) ** 2) / df['h'][1], 3)
     assert image[12][0] == approx(w[0] * sdf['A'][0] * F1 + w[1] * sdf['A'][1] * F2)
+
+
+def test_interpolate_3d_cross_vec():
+    df = pd.DataFrame({'x': [0], 'y': [0], 'z': [1], 'Px': [1], 'Py': [2], 'Pz': [3], 'h': [0.35], 'rho': [0.3], 'm': [0.1]})
+    sdf = SarracenDataFrame(df, params=dict())
+    w = sdf['m'][0] / (sdf['rho'][0] * sdf['h'][0] ** 3)
+    kernel = QuarticSplineKernel()
+    sdf.kernel = kernel
+
+    image = interpolate_3d_cross_vec(sdf, 'Px', 'Py', 'Pz', z_slice=0, x_pixels=20, y_pixels=20, x_min=0, y_min=0,
+                                     x_max=1, y_max=1)
+
+    # X-dimension of vector field
+    assert image[0][19][19] == 0
+    assert image[0][0][0] == approx(w * sdf['Px'][0] * kernel.w(np.sqrt(0.025 ** 2 + 0.025 ** 2 + 1) / sdf['h'][0], 3))
+    assert image[0][15][12] == approx(w * sdf['Px'][0] * kernel.w(np.sqrt(0.775 ** 2 + 0.625 ** 2 + 1) / sdf['h'][0], 3))
+
+    # Y-dimension of vector field
+    assert image[1][19][19] == 0
+    assert image[1][0][0] == approx(w * sdf['Py'][0] * kernel.w(np.sqrt(0.025 ** 2 + 0.025 ** 2 + 1) / sdf['h'][0], 3))
+    assert image[1][15][12] == approx(
+        w * sdf['Py'][0] * kernel.w(np.sqrt(0.775 ** 2 + 0.625 ** 2 + 1) / sdf['h'][0], 3))
+
+    # Result of interpolate_3d_cross_vec should be equivalent to the result of interpolate_3d_cross performed on both x & y.
+    assert np.array_equal(image[0], interpolate_3d_cross(sdf, 'Px', z_slice=0, x_pixels=20, y_pixels=20, x_min=0,
+                                                   y_min=0, x_max=1, y_max=1))
+    assert np.array_equal(image[1], interpolate_3d_cross(sdf, 'Py', z_slice=0, x_pixels=20,
+                                                         y_pixels=20, x_min=0, y_min=0, x_max=1, y_max=1))
+
+    # After this rotation, the particle will be at (1/sqrt(2), 1/sqrt(2), 0)
+    # The target vector will be (4/sqrt(2), 2/sqrt(2), -2)
+    image = interpolate_3d_cross_vec(sdf, 'Px', 'Py', 'Pz', z_slice=0, x_pixels=20, y_pixels=20, x_min=0, y_min=0,
+                               x_max=1, y_max=1, rotation=[0, 45, -90], origin=[0, 0, 0])
+
+    # X-dimension of vector field
+    assert image[0][0][0] == 0
+    assert image[0][19][19] == approx(
+        w * (4 / np.sqrt(2)) * kernel.w((np.sqrt(2) - 1 - np.sqrt(2) * 0.025) / sdf['h'][0], 3))
+
+    # Y-dimension of vector field
+    assert image[1][0][0] == 0
+    assert image[1][19][19] == approx(
+        w * (2 / np.sqrt(2)) * kernel.w((np.sqrt(2) - 1 - np.sqrt(2) * 0.025) / sdf['h'][0], 3))

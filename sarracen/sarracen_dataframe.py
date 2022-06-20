@@ -1,4 +1,4 @@
-from typing import Union, Callable
+from typing import Union, Callable, Tuple
 
 from matplotlib.axes import Axes
 from matplotlib.colors import Colormap
@@ -6,7 +6,7 @@ from pandas import DataFrame, Series
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
-from sarracen.render import render_2d, render_2d_cross, render_3d, render_3d_cross
+from sarracen.render import render_2d, render_2d_cross, render_3d, render_3d_cross, streamlines, arrowplot
 from sarracen.kernels import CubicSplineKernel, BaseKernel
 
 
@@ -232,6 +232,24 @@ class SarracenDataFrame(DataFrame):
 
         return render_3d_cross(self, target, z_slice, x, y, z, kernel, rotation, origin, x_pixels, y_pixels, x_min,
                                x_max, y_min, y_max, cmap, cbar, cbar_kws, cbar_ax, ax, **kwargs)
+
+    @_copy_doc(streamlines)
+    def streamlines(self, target: Union[Tuple[str, str], Tuple[str, str, str]], z_slice: int = None, x: str = None,
+                    y: str = None, z: str = None, kernel: BaseKernel = None, integral_samples: int = 1000,
+                    rotation: np.ndarray = None, origin: np.ndarray = None, x_pixels: int = None, y_pixels: int = None,
+                    x_min: float = None, x_max: float = None, y_min: float = None, y_max: float = None, ax: Axes = None,
+                    backend: str='cpu', **kwargs) -> Axes:
+        return streamlines(self, target, z_slice, x, y, z, kernel, integral_samples, rotation, origin, x_pixels,
+                           y_pixels, x_min, x_max, y_min, y_max, ax, backend, **kwargs)
+
+    @_copy_doc(arrowplot)
+    def arrowplot(self, target: Union[Tuple[str, str], Tuple[str, str, str]], z_slice: int = None, x: str = None,
+                  y: str = None, z: str = None, kernel: BaseKernel = None, integral_samples: int = 1000,
+                  rotation: np.ndarray = None, origin: np.ndarray = None, x_arrows: int = None, y_arrows: int = None,
+                  x_min: float = None, x_max: float = None, y_min: float = None, y_max: float = None, ax: Axes = None,
+                  backend: str='cpu', **kwargs) -> Axes:
+        return arrowplot(self, target, z_slice, x, y, z, kernel, integral_samples, rotation, origin, x_arrows, y_arrows,
+                         x_min, x_max, y_min, y_max, ax, backend, **kwargs)
 
     @property
     def params(self):
