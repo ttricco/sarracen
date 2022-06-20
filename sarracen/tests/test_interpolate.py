@@ -3,12 +3,34 @@ pytest unit tests for interpolate.py functions.
 """
 import pandas as pd
 import numpy as np
-from matplotlib import pyplot as plt
 from pytest import approx
 
 from sarracen import SarracenDataFrame
 from sarracen.kernels import CubicSplineKernel, QuarticSplineKernel, QuinticSplineKernel
 from sarracen.interpolate import interpolate_2d, interpolate_2d_cross, interpolate_3d_cross, interpolate_3d
+
+
+def test_single_particle():
+    df = pd.DataFrame({'x': [0], 'y': [0], 'A': [4], 'h': [0.9], 'rho': [0.4], 'm': [0.03]})
+    sdf = SarracenDataFrame(df, params=dict())
+    kernel = CubicSplineKernel()
+    sdf.kernel = kernel
+    w = sdf['m'] / (sdf['rho'] * sdf['h'] ** 2)
+
+    image = interpolate_2d(sdf, 'A', x_pixels=25,  y_pixels=25, x_min=-kernel.get_radius(), x_max=kernel.get_radius(),
+                           y_min=-kernel.get_radius(), y_max=kernel.get_radius())
+
+    real = -kernel.get_radius() + (np.arange(0, 25) + 0.5) * (2 * kernel.get_radius() / 25)
+
+    for y in range(25):
+        for x in range(25):
+            assert image[y][x] == approx(w[0] * sdf['A'][0] * kernel.w(np.sqrt(real[x] ** 2 + real[y] ** 2) / sdf['h'][0], 2))
+
+    image = interpolate_2d_cross(sdf, 'A', pixels=25, x1=-kernel.get_radius(), x2=kernel.get_radius(),
+                                 y1=-kernel.get_radius(), y2=kernel.get_radius())
+
+    for x in range(25):
+        assert image[x] == approx(w[0] * sdf['A'][0] * kernel.w(np.sqrt(2) * np.abs(real[x]) / sdf['h'][0], 2))
 
 
 def test_interpolate_2d():
