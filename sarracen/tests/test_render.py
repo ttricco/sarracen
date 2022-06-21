@@ -3,12 +3,11 @@ import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
-from matplotlib.figure import Figure
 from pytest import approx
 
 from sarracen import SarracenDataFrame
 from sarracen.kernels import CubicSplineKernel
-from sarracen.render import render_2d, render_2d_cross, render_3d, render_3d_cross, render_3d_cross_vec
+from sarracen.render import render_2d, render_2d_cross, render_3d, render_3d_cross, streamlines, arrowplot
 
 
 def test_2d_plot():
@@ -166,15 +165,15 @@ def test_render_passthrough():
 
     fig1, ax1 = plt.subplots()
     fig2, ax2 = plt.subplots()
-    ax1 = sdf.render_3d_cross_vec('Ax', 'Ay', 'Az', ax=ax1)
-    ax2 = render_3d_cross_vec(sdf, 'Ax', 'Ay', 'Az', ax=ax2)
+    ax1 = sdf.streamlines(('Ax', 'Ay', 'Az'), ax=ax1)
+    ax2 = streamlines(sdf, ('Ax', 'Ay', 'Az'), ax=ax2)
 
     assert repr(ax1) == repr(ax2)
 
     fig1, ax1 = plt.subplots()
     fig2, ax2 = plt.subplots()
-    ax1 = sdf.render_3d_cross_vec('Ax', 'Ay', 'Az', ax=ax1)
-    ax2 = render_3d_cross_vec(sdf, 'Ax', 'Ay', 'Az', ax=ax2)
+    ax1 = sdf.arrowplot(('Ax', 'Ay', 'Az'), ax=ax1)
+    ax2 = arrowplot(sdf, ('Ax', 'Ay', 'Az'), ax=ax2)
 
     assert repr(ax1) == repr(ax2)
 
