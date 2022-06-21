@@ -5,7 +5,7 @@ import math
 
 import numpy as np
 from numba import prange, njit, cuda
-from scipy.spatial.transform import Rotation as R
+from scipy.spatial.transform import Rotation
 
 from sarracen.kernels import BaseKernel
 
@@ -132,7 +132,7 @@ def _verify_columns(data, target, x, y):
     if x not in data.columns:
         raise KeyError(f"x-directional column '{x}' does not exist in the provided dataset.")
     if y not in data.columns:
-        raise KeyError(f"x-directional column '{y}' does not exist in the provided dataset.")
+        raise KeyError(f"y-directional column '{y}' does not exist in the provided dataset.")
     if target not in data.columns:
         raise KeyError(f"Target column '{target}' does not exist in provided dataset.")
     if data.mcol is None:
@@ -162,9 +162,9 @@ def _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max):
         if the specified `x` and `y` minimum and maximum values result in an invalid region.
     """
     if x_max - x_min <= 0:
-        raise ValueError("`xmax` must be greater than `xmin`!")
+        raise ValueError("`x_max` must be greater than `x_min`!")
     if y_max - y_min <= 0:
-        raise ValueError("`ymax` must be greater than `ymin`!")
+        raise ValueError("`y_max` must be greater than `y_min`!")
     if x_pixels <= 0:
         raise ValueError("`x_pixels` must be greater than zero!")
     if y_pixels <= 0:
@@ -214,26 +214,58 @@ def _rotate_data(data, x, y, z, rotation, origin):
     y_data = data[y].to_numpy()
     z_data = data[z].to_numpy()
     if rotation is not None:
-        if not isinstance(rotation, R):
-            rotation = R.from_euler('zyx', rotation, degrees=True)
+        if not isinstance(rotation, Rotation):
+            rotation = Rotation.from_euler('zyx', rotation, degrees=True)
 
-        vectors = data[[data.xcol, data.ycol, data.zcol]].to_numpy()
+        vectors = data[[x, y, z]].to_numpy()
         if origin is None:
-            origin = (vectors[:, 0].min() + vectors[:, 0].max()) / 2
+            origin = (vectors.min(0) + vectors.max(0)) / 2
 
         vectors = vectors - origin
         vectors = rotation.apply(vectors)
         vectors = vectors + origin
 
-        x_data = vectors[:, 0] if x == data.xcol else \
-            vectors[:, 1] if x == data.ycol else \
-            vectors[:, 2] if x == data.zcol else x_data
-        y_data = vectors[:, 0] if y == data.xcol else \
-            vectors[:, 1] if y == data.ycol else \
-            vectors[:, 2] if y == data.zcol else y_data
-        z_data = vectors[:, 0] if z == data.xcol else \
-            vectors[:, 1] if z == data.ycol else \
-            vectors[:, 2] if z == data.zcol else z_data
+        x_data = vectors[:, 0]
+        y_data = vectors[:, 1]
+        z_data = vectors[:, 2]
+
+    return x_data, y_data, z_data
+
+
+def _rotate_xyz(data, x, y, z, rotation, origin):
+    """ Rotate positional data in a particle dataset.
+
+        Differs from _rotate_data() in that the returned data values are shuffled to ensure that
+        the rotation is always applied to the global x, y, and z columns of the dataset, no matter
+        the order of x, y, and z provided to this function.
+
+        Parameters
+        ----------
+        data: SarracenDataFrame
+            The particle dataset to interpolate over.
+        x, y, z: str
+            Directional column labels containing the positional column labels
+        rotation: array_like or Rotation, optional
+            The rotation to apply to the data. If defined as an array, the
+            order of rotations is [z, y, x] in degrees
+        origin: array_like, optional
+            Point of rotation of the data, in [x, y, z] form.
+
+        Returns
+        -------
+        x_data, y_data, z_data: ndarray
+            The rotated x, y, and z directional data.
+        """
+    rotated_x, rotated_y, rotated_z = _rotate_data(data, data.xcol, data.ycol, data.zcol, rotation, origin)
+    x_data = rotated_x if x == data.xcol else \
+        rotated_y if x == data.ycol else \
+        rotated_z if x == data.zcol else data[x]
+    y_data = rotated_x if y == data.xcol else \
+        rotated_y if y == data.ycol else \
+        rotated_z if y == data.zcol else data[y]
+    z_data = rotated_x if z == data.xcol else \
+        rotated_y if z == data.ycol else \
+        rotated_z if z == data.zcol else data[z]
 
     return x_data, y_data, z_data
 
@@ -298,9 +330,81 @@ def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
                     kernel.get_radius(), x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2, backend)
 
 
-def interpolate_2d_cross(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
-                         kernel: BaseKernel = None, pixels: int = None, x1: float = None, x2: float = None,
-                         y1: float = None, y2: float = None, backend: str = None) -> np.ndarray:
+def interpolate_2d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, x: str = None, y: str = None,
+                       kernel: BaseKernel = None, x_pixels: int = None, y_pixels: int = None, x_min: float = None,
+                       x_max: float = None, y_min: float = None, y_max: float = None, backend: str = None):
+    """ Interpolate vector particle data across two directional axes to a 2D grid of particles.
+
+    Interpolate the data within a SarracenDataFrame to a 2D grid, by interpolating the values
+    of a target vector. The contributions of all vectors near the interpolation area are
+    summed and stored to a 2D grid.
+
+    Parameters
+    ----------
+    data : SarracenDataFrame
+        Particle data, in a SarracenDataFrame.
+    target_x, target_y: str
+        Column labels of the target vector.
+    x, y: str
+        Column labels of the directional axes. Defaults to the x & y columns detected in `data`.
+    kernel: BaseKernel, optional
+        Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
+    x_pixels, y_pixels: int, optional
+        Number of pixels in the output image in the x & y directions. Default values are chosen to keep
+        a consistent aspect ratio.
+    x_min, x_max, y_min, y_max: float, optional
+        The minimum and maximum values to use in interpolation, in particle data space. Defaults
+        to the minimum and maximum values of `x` and `y`.
+    backend: ['cpu', 'gpu']
+        The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+
+    Returns
+    -------
+    output_x, output_y: ndarray (2-Dimensional)
+        The interpolated output images, in a 2-dimensional numpy arrays. Dimensions are
+        structured in reverse order, where (x, y) -> [y, x].
+
+    Raises
+    -------
+    ValueError
+        If `x_pixels` or `y_pixels` are less than or equal to zero, or
+        if the specified `x` and `y` minimum and maximum values result in an invalid region, or
+        if `data` is not 2-dimensional.
+    KeyError
+        If `target_x`, `target_y`, `x`, `y`, mass, density, or smoothing length columns do not
+        exist in `data`.
+    """
+    x, y = _default_xy(data, x, y)
+    _verify_columns(data, x, y, target_x)
+    _verify_columns(data, x, y, target_y)
+
+    x_min, x_max, y_min, y_max = _snap_boundaries(data, x, y, x_min, x_max, y_min, y_max)
+    x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
+    _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
+
+    kernel = kernel if kernel is not None else data.kernel
+    backend = backend if backend is not None else data.backend
+    _check_dimension(data, 2)
+
+    return (_fast_2d(data[target_x].to_numpy(), 0, data[x].to_numpy(), data[y].to_numpy(), np.zeros(len(data)),
+                     data['m'].to_numpy(), data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w,
+                     kernel.get_radius(), x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2, backend),
+           _fast_2d(data[target_y].to_numpy(), 0, data[x].to_numpy(), data[y].to_numpy(), np.zeros(len(data)),
+                    data['m'].to_numpy(), data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w,
+                    kernel.get_radius(), x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2, backend))
+
+
+def interpolate_2d_cross(data: 'SarracenDataFrame',
+                         target: str,
+                         x: str = None,
+                         y: str = None,
+                         kernel: BaseKernel = None,
+                         pixels: int = None,
+                         x1: float = None,
+                         x2: float = None,
+                         y1: float = None,
+                         y2: float = None,
+                         backend: str = None) -> np.ndarray:
     """ Interpolate particle data across two directional axes to a 1D cross-section line.
 
     Interpolate the data within a SarracenDataFrame to a 1D line, by interpolating the values
@@ -424,7 +528,7 @@ def interpolate_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
     _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
 
-    x_data, y_data, _ = _rotate_data(data, x, y, data.zcol, rotation, origin)
+    x_data, y_data, _ = _rotate_xyz(data, x, y, data.zcol, rotation, origin)
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
     _check_dimension(data, 3)
@@ -434,6 +538,91 @@ def interpolate_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
     return _fast_2d(data[target].to_numpy(), 0, x_data, y_data, np.zeros(len(data)), data['m'].to_numpy(),
                     data['rho'].to_numpy(), data['h'].to_numpy(), weight_function,
                     kernel.get_radius(), x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2, backend)
+
+
+def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, target_z: str, x: str = None,
+                       y: str = None, kernel: BaseKernel = None, integral_samples: int = 1000,
+                       rotation: np.ndarray = None, origin: np.ndarray = None, x_pixels: int = None,
+                       y_pixels: int = None, x_min: float = None, x_max: float = None, y_min: float = None,
+                       y_max: float = None, backend: str = None):
+    """ Interpolate 3D vector particle data to a 2D grid of pixels.
+
+        Interpolates three-dimensional vector particle data in a SarracenDataFrame. The data
+        is interpolated to a 2D grid of pixels, by summing contributions in columns which
+        span the z-axis.
+
+        Parameters
+        ----------
+        data : SarracenDataFrame
+            Particle data, in a SarracenDataFrame.
+        target_x, target_y, target_z: str
+            Column labels of the target vector.
+        x, y: str
+            Column labels of the directional axes. Defaults to the x & y columns detected in `data`.
+        kernel: BaseKernel, optional
+            Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
+        integral_samples: int, optional
+            Number of sample points to take when approximating the 2D column kernel.
+        rotation: array_like or Rotation, optional
+            The rotation to apply to the data before interpolation. If defined as an array, the
+            order of rotations is [z, y, x] in degrees.
+        origin: array_like, optional
+            Point of rotation of the data, in [x, y, z] form. Defaults to the centre
+            point of the bounds of the data.
+        x_pixels, y_pixels: int, optional
+            Number of pixels in the output image in the x & y directions. Default values are chosen to keep
+            a consistent aspect ratio.
+        x_min, x_max, y_min, y_max: float, optional
+            The minimum and maximum values to use in interpolation, in particle data space. Defaults
+            to the minimum and maximum values of `x` and `y`.
+        backend: ['cpu', 'gpu']
+            The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+
+        Returns
+        -------
+        output_x, output_y: ndarray (2-Dimensional)
+            The interpolated output images. Dimensions are structured in reverse order, where (x, y) -> [y, x].
+
+        Raises
+        -------
+        ValueError
+            If `x_pixels` or `y_pixels` are less than or equal to zero, or
+            if the specified `x` and `y` minimum and maximums result in an invalid region, or
+            if the provided data is not 3-dimensional.
+        KeyError
+            If `target_x`, `target_y`, `x`, `y`, mass, density, or smoothing length columns do not
+            exist in `data`.
+
+        Notes
+        -----
+        Since the direction of integration is assumed to be straight across the z-axis, the z-axis column
+        is not required for this type of interpolation.
+        """
+    x, y = _default_xy(data, x, y)
+    _verify_columns(data, x, y, target_x)
+    _verify_columns(data, x, y, target_y)
+    _verify_columns(data, x, y, target_z)
+
+    x_min, x_max, y_min, y_max = _snap_boundaries(data, x, y, x_min, x_max, y_min, y_max)
+    x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
+    _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
+
+    x_data, y_data, _ = _rotate_xyz(data, x, y, data.zcol, rotation, origin)
+    if target_z not in data.columns:
+        raise KeyError(f"z-directional target column '{target_z}' does not exist in the provided dataset.")
+    target_x_data, target_y_data, _ = _rotate_data(data, target_x, target_y, target_z, rotation, origin)
+
+    kernel = kernel if kernel is not None else data.kernel
+    backend = backend if backend is not None else data.backend
+    _check_dimension(data, 3)
+
+    weight_function = kernel.get_column_kernel_func(integral_samples)
+    return (_fast_2d(target_x_data, 0, x_data, y_data, np.zeros(len(data)), data['m'].to_numpy(),
+                     data['rho'].to_numpy(), data['h'].to_numpy(), weight_function,
+                     kernel.get_radius(), x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2, backend),
+            _fast_2d(target_y_data, 0, x_data, y_data, np.zeros(len(data)), data['m'].to_numpy(),
+                     data['rho'].to_numpy(), data['h'].to_numpy(), weight_function,
+                     kernel.get_radius(), x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2, backend))
 
 
 def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, z_slice: float = None, x: str = None, y: str = None,
@@ -513,11 +702,100 @@ def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, z_slice: float 
 
     _check_dimension(data, 3)
 
-    x_data, y_data, z_data = _rotate_data(data, x, y, z, rotation, origin)
+    x_data, y_data, z_data = _rotate_xyz(data, x, y, data.zcol, rotation, origin)
 
     return _fast_2d(data[target].to_numpy(), z_slice, x_data, y_data, z_data, data['m'].to_numpy(),
                     data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w, kernel.get_radius(), x_pixels, y_pixels,
                     x_min, x_max, y_min, y_max, 3, backend)
+
+
+def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, target_z: str,
+                             z_slice: float = None, x: str = None, y: str = None, z: str = None,
+                             kernel: BaseKernel = None, rotation: np.ndarray = None, origin: np.ndarray = None,
+                             x_pixels: int = None, y_pixels: int = None, x_min: float = None, x_max: float = None,
+                             y_min: float = None, y_max: float = None, backend: str = None):
+    """ Interpolate 3D vector particle data to a 2D grid, using a 3D cross-section.
+
+        Interpolates vector particle data in a SarracenDataFrame across three directional axes to a 2D
+        grid of pixels. A cross-section is taken of the 3D data at a specific value of z, and
+        the contributions of vectors near the plane are interpolated to a 2D grid.
+
+        Parameters
+        ----------
+        data : SarracenDataFrame
+            The particle data to interpolate over.
+        target_x, target_y, target_z: str
+            The column labels of the target vector.
+        z_slice: float
+            The z-axis value to take the cross-section at. Defaults to the midpoint of the z-directional data.
+        x, y, z: str
+            The column labels of the directional data to interpolate over. Defaults to the x, y, and z columns
+            detected in `data`.
+        kernel: BaseKernel
+            The kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
+        rotation: array_like or Rotation, optional
+            The rotation to apply to the data before interpolation. If defined as an array, the
+            order of rotations is [z, y, x] in degrees.
+        origin: array_like, optional
+            Point of rotation of the data, in [x, y, z] form. Defaults to the centre
+            point of the bounds of the data.
+        x_pixels, y_pixels: int, optional
+            Number of pixels in the output image in the x & y directions. Default values are chosen to keep
+            a consistent aspect ratio.
+        x_min, x_max, y_min, y_max: float, optional
+            The minimum and maximum values to use in interpolation, in particle data space. Defaults
+            to the minimum and maximum values of `x` and `y`.
+        backend: ['cpu', 'gpu']
+        The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+
+
+        Returns
+        -------
+        output_x, output_y: ndarray (2-Dimensional)
+            The interpolated output images. Dimensions are structured in reverse order, where (x, y) -> [y, x].
+
+        Raises
+        -------
+        ValueError
+            If `pixwidthx`, `pixwidthy`, `pixcountx`, or `pixcounty` are less than or equal to zero, or
+            if the specified `x` and `y` minimum and maximums result in an invalid region, or
+            if the provided data is not 3-dimensional.
+        KeyError
+            If `target_x`, `target_y`, `target_z`, `x`, `y`, `z`, mass, density, or smoothing length columns do not
+            exist in `data`.
+        """
+    x, y = _default_xy(data, x, y)
+    _verify_columns(data, x, y, target_x)
+    _verify_columns(data, x, y, target_y)
+    _verify_columns(data, x, y, target_z)
+
+    if z is None:
+        z = data.zcol
+    if z not in data.columns:
+        raise KeyError(f"z-directional column '{z}' does not exist in the provided dataset.")
+
+    # set default slice to be through the data's average z-value.
+    if z_slice is None:
+        z_slice = _snap(data.loc[:, z].mean())
+
+    # boundaries of the plot default to the maximum & minimum values of the data.
+    x_min, x_max, y_min, y_max = _snap_boundaries(data, x, y, x_min, x_max, y_min, y_max)
+    x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
+    _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
+
+    x_data, y_data, z_data = _rotate_xyz(data, x, y, data.zcol, rotation, origin)
+    target_x_data, target_y_data, _ = _rotate_data(data, target_x, target_y, target_z, rotation, origin)
+
+    kernel = kernel if kernel is not None else data.kernel
+    backend = backend if backend is not None else data.backend
+    _check_dimension(data, 3)
+
+    return (_fast_2d(target_x_data, z_slice, x_data, y_data, z_data, data['m'].to_numpy(),
+                     data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w, kernel.get_radius(), x_pixels, y_pixels,
+                     x_min, x_max, y_min, y_max, 3, backend),
+            _fast_2d(target_y_data, z_slice, x_data, y_data, z_data, data['m'].to_numpy(),
+                     data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w, kernel.get_radius(), x_pixels, y_pixels,
+                     x_min, x_max, y_min, y_max, 3, backend))
 
 
 def _fast_2d(target, z_slice, x_data, y_data, z_data, mass_data, rho_data, h_data, weight_function, kernel_radius,
