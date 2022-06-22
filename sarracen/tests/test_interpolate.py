@@ -235,3 +235,206 @@ def test_default_kernel():
     image = interpolate_3d_cross(sdf_3, 'A', x_pixels=1, y_pixels=1, x_min=-1, x_max=1, y_min=-1, y_max=1, kernel=kernel)
     assert image == kernel.w(0, 3)
 
+
+def test_column_samples():
+    df_3 = pd.DataFrame({'x': [0], 'y': [0], 'z': [0], 'A': [1], 'h': [1], 'rho': [1], 'm': [1]})
+    sdf_3 = SarracenDataFrame(df_3, params=dict())
+    kernel = QuinticSplineKernel()
+    sdf_3.kernel = kernel
+
+    image = interpolate_3d(sdf_3, 'A', x_pixels=1, y_pixels=1, x_min=-1, x_max=1, y_min=-1, y_max=1, integral_samples=2)
+    assert image == kernel.get_column_kernel(2)[0]
+
+
+def test_pixel_arguments():
+    df_2 = pd.DataFrame({'x': [-2, 4], 'y': [3, 8], 'A': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
+    sdf_2 = SarracenDataFrame(df_2, params=dict())
+    df_3 = pd.DataFrame({'x': [-2, 4], 'y': [3, 8], 'z': [7, -2], 'A': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
+    sdf_3 = SarracenDataFrame(df_3, params=dict())
+
+    ratio_xy = (df_2['x'][1] - df_2['x'][0]) / (df_2['y'][1] - df_2['y'][0])
+    ratio_xz = (df_2['x'][1] - df_2['x'][0]) / (df_3['z'][0] - df_3['z'][1])
+    ratio_yz = (df_2['y'][1] - df_2['y'][0]) / (df_3['z'][0] - df_3['z'][1])
+
+    # Basic aspect ratio tests
+    image = interpolate_2d(sdf_2, 'A')
+    assert image.shape[0] / image.shape[1] == approx(1 / ratio_xy, rel=1e-2)
+
+    image = interpolate_3d(sdf_3, 'A')
+    assert image.shape[0] / image.shape[1] == approx(1 / ratio_xy, rel=1e-2)
+
+    image = interpolate_3d_cross(sdf_3, 'A', 0)
+    assert image.shape[0] / image.shape[1] == approx(1 / ratio_xy, rel=1e-2)
+
+    # Swapped axes
+    image = interpolate_2d(sdf_2, 'A', x='y', y='x')
+    assert image.shape[0] / image.shape[1] == approx(ratio_xy, rel=1e-2)
+
+    image = interpolate_3d(sdf_3, 'A', x='y', y='x')
+    assert image.shape[0] / image.shape[1] == approx(ratio_xy, rel=1e-2)
+
+    image = interpolate_3d(sdf_3, 'A', y='z')
+    assert image.shape[0] / image.shape[1] == approx(1 / ratio_xz, rel=1e-2)
+
+    image = interpolate_3d(sdf_3, 'A', x='z', y='x')
+    assert image.shape[0] / image.shape[1] == approx(ratio_xz, rel=1e-2)
+
+    image = interpolate_3d(sdf_3, 'A', x='y', y='z')
+    assert image.shape[0] / image.shape[1] == approx(1 / ratio_yz, rel=1e-2)
+
+    image = interpolate_3d(sdf_3, 'A', x='z', y='y')
+    assert image.shape[0] / image.shape[1] == approx(ratio_yz, rel=1e-2)
+
+    image = interpolate_3d_cross(sdf_3, 'A', 0, x='y', y='x')
+    assert image.shape[0] / image.shape[1] == approx(ratio_xy, rel=1e-2)
+
+    image = interpolate_3d_cross(sdf_3, 'A', 0, y='z')
+    assert image.shape[0] / image.shape[1] == approx(1 / ratio_xz, rel=1e-2)
+
+    image = interpolate_3d_cross(sdf_3, 'A', 0, x='z', y='x')
+    assert image.shape[0] / image.shape[1] == approx(ratio_xz, rel=1e-2)
+
+    image = interpolate_3d_cross(sdf_3, 'A', 0, x='y', y='z')
+    assert image.shape[0] / image.shape[1] == approx(1 / ratio_yz, rel=1e-2)
+
+    image = interpolate_3d_cross(sdf_3, 'A', 0, x='z', y='y')
+    assert image.shape[0] / image.shape[1] == approx(ratio_yz, rel=1e-2)
+
+    default_pixels = 20
+    # One defined axis
+    image = interpolate_2d(sdf_2, 'A', x_pixels=default_pixels)
+    assert image.shape == (round(default_pixels / ratio_xy), default_pixels)
+
+    image = interpolate_3d(sdf_3, 'A', x_pixels=default_pixels)
+    assert image.shape == (round(default_pixels / ratio_xy), default_pixels)
+
+    image = interpolate_3d_cross(sdf_3, 'A', x_pixels=default_pixels)
+    assert image.shape == (round(default_pixels / ratio_xy), default_pixels)
+
+    image = interpolate_2d(sdf_2, 'A', y_pixels=default_pixels)
+    assert image.shape == (default_pixels, round(default_pixels * ratio_xy))
+
+    image = interpolate_3d(sdf_3, 'A', y_pixels=default_pixels)
+    assert image.shape == (default_pixels, round(default_pixels * ratio_xy))
+
+    image = interpolate_3d_cross(sdf_3, 'A', y_pixels=default_pixels)
+    assert image.shape == (default_pixels, round(default_pixels * ratio_xy))
+
+    # One defined axis + swapped axes
+    image = interpolate_2d(sdf_2, 'A', x='y', y='x', x_pixels=default_pixels)
+    assert image.shape == (round(default_pixels * ratio_xy), default_pixels)
+
+    image = interpolate_3d(sdf_3, 'A', x='y', y='x', x_pixels=default_pixels)
+    assert image.shape == (round(default_pixels * ratio_xy), default_pixels)
+
+    image = interpolate_3d(sdf_3, 'A', y='z', x_pixels=default_pixels)
+    assert image.shape == (round(default_pixels / ratio_xz), default_pixels)
+
+    image = interpolate_3d(sdf_3, 'A', x='z', y='x', x_pixels=default_pixels)
+    assert image.shape == (round(default_pixels * ratio_xz), default_pixels)
+
+    image = interpolate_3d(sdf_3, 'A', x='y', y='z', x_pixels=default_pixels)
+    assert image.shape == (round(default_pixels / ratio_yz), default_pixels)
+
+    image = interpolate_3d(sdf_3, 'A', x='z', y='y', x_pixels=default_pixels)
+    assert image.shape == (round(default_pixels * ratio_yz), default_pixels)
+
+    image = interpolate_3d_cross(sdf_3, 'A', 0, x='y', y='x', x_pixels=default_pixels)
+    assert image.shape == (round(default_pixels * ratio_xy), default_pixels)
+
+    image = interpolate_3d_cross(sdf_3, 'A', 0, y='z', x_pixels=default_pixels)
+    assert image.shape == (round(default_pixels / ratio_xz), default_pixels)
+
+    image = interpolate_3d_cross(sdf_3, 'A', 0, x='z', y='x', x_pixels=default_pixels)
+    assert image.shape == (round(default_pixels * ratio_xz), default_pixels)
+
+    image = interpolate_3d_cross(sdf_3, 'A', 0, x='y', y='z', x_pixels=default_pixels)
+    assert image.shape == (round(default_pixels / ratio_yz), default_pixels)
+
+    image = interpolate_3d_cross(sdf_3, 'A', 0, x='z', y='y', x_pixels=default_pixels)
+    assert image.shape == (round(default_pixels * ratio_yz), default_pixels)
+
+    image = interpolate_2d(sdf_2, 'A', x='y', y='x', y_pixels=default_pixels)
+    assert image.shape == (default_pixels, round(default_pixels / ratio_xy))
+
+    image = interpolate_3d(sdf_3, 'A', x='y', y='x', y_pixels=default_pixels)
+    assert image.shape == (default_pixels, round(default_pixels / ratio_xy))
+
+    image = interpolate_3d(sdf_3, 'A', y='z', y_pixels=default_pixels)
+    assert image.shape == (default_pixels, round(default_pixels * ratio_xz))
+
+    image = interpolate_3d(sdf_3, 'A', x='z', y='x', y_pixels=default_pixels)
+    assert image.shape == (default_pixels, round(default_pixels / ratio_xz))
+
+    image = interpolate_3d(sdf_3, 'A', x='y', y='z', y_pixels=default_pixels)
+    assert image.shape == (default_pixels, round(default_pixels * ratio_yz))
+
+    image = interpolate_3d(sdf_3, 'A', x='z', y='y', y_pixels=default_pixels)
+    assert image.shape == (default_pixels, round(default_pixels / ratio_yz))
+
+    image = interpolate_3d_cross(sdf_3, 'A', 0, x='y', y='x', y_pixels=default_pixels)
+    assert image.shape == (default_pixels, round(default_pixels / ratio_xy))
+
+    image = interpolate_3d_cross(sdf_3, 'A', 0, y='z', y_pixels=default_pixels)
+    assert image.shape == (default_pixels, round(default_pixels * ratio_xz))
+
+    image = interpolate_3d_cross(sdf_3, 'A', 0, x='z', y='x', y_pixels=default_pixels)
+    assert image.shape == (default_pixels, round(default_pixels / ratio_xz))
+
+    image = interpolate_3d_cross(sdf_3, 'A', 0, x='y', y='z', y_pixels=default_pixels)
+    assert image.shape == (default_pixels, round(default_pixels * ratio_yz))
+
+    image = interpolate_3d_cross(sdf_3, 'A', 0, x='z', y='y', y_pixels=default_pixels)
+    assert image.shape == (default_pixels, round(default_pixels / ratio_yz))
+
+    x_pixels, y_pixels = 20, 30
+    # Two defined axes
+    image = interpolate_2d(sdf_2, 'A', x_pixels=x_pixels, y_pixels=y_pixels)
+    assert image.shape == (y_pixels, x_pixels)
+
+    image = interpolate_3d(sdf_3, 'A', x_pixels=x_pixels, y_pixels=y_pixels)
+    assert image.shape == (y_pixels, x_pixels)
+
+    image = interpolate_3d_cross(sdf_3, 'A', 0, x_pixels=x_pixels, y_pixels=y_pixels)
+    assert image.shape == (y_pixels, x_pixels)
+
+
+def test_irregular_bounds():
+    df = pd.DataFrame({'x': [0], 'y': [0], 'A': [4], 'h': [0.9], 'rho': [0.4], 'm': [0.03]})
+    sdf = SarracenDataFrame(df, params=dict())
+    kernel = CubicSplineKernel()
+    sdf.kernel = kernel
+    w = sdf['m'] / (sdf['rho'] * sdf['h'] ** 2)
+
+    # A mapping of pixel indices to x / y values in particle space.
+    real_x = -kernel.get_radius() + (np.arange(0, 50) + 0.5) * (2 * kernel.get_radius() / 50)
+    real_y = -kernel.get_radius() + (np.arange(0, 25) + 0.5) * (2 * kernel.get_radius() / 25)
+
+    image = interpolate_2d(sdf, 'A', x_pixels=50, y_pixels=25, x_min=-kernel.get_radius(), x_max=kernel.get_radius(),
+                           y_min=-kernel.get_radius(), y_max=kernel.get_radius())
+
+    for y in range(25):
+        for x in range(50):
+            assert image[y][x] == approx(
+                w[0] * sdf['A'][0] * kernel.w(np.sqrt(real_x[x] ** 2 + real_y[y] ** 2) / sdf['h'][0], 2))
+
+    sdf['z'] = -0.5
+    sdf.zcol = 'z'
+
+    image = interpolate_3d(sdf, 'A', x_pixels=50, y_pixels=25, x_min=-kernel.get_radius(), x_max=kernel.get_radius(),
+                           y_min=-kernel.get_radius(), y_max=kernel.get_radius())
+    column_func = kernel.get_column_kernel_func(1000)
+
+    for y in range(25):
+        for x in range(50):
+            assert image[y][x] == approx(
+                w[0] * sdf['A'][0] * column_func(np.sqrt(real_x[x] ** 2 + real_y[y] ** 2) / sdf['h'][0], 2))
+
+    w = sdf['m'] / (sdf['rho'] * sdf['h'] ** 3)
+    image = interpolate_3d_cross(sdf, 'A', 0, x_pixels=50, y_pixels=25, x_min=-kernel.get_radius(),
+                                 x_max=kernel.get_radius(), y_min=-kernel.get_radius(), y_max=kernel.get_radius())
+
+    for y in range(25):
+        for x in range(50):
+            assert image[y][x] == approx(
+                w[0] * sdf['A'][0] * kernel.w(np.sqrt(real_x[x] ** 2 + real_y[y] ** 2 + 0.5 ** 2) / sdf['h'][0], 3))
