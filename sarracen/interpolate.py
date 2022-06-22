@@ -185,7 +185,7 @@ def _check_dimension(data, dim):
         If the dataset is not `dim`-dimensional.
     """
     if data.get_dim() != dim:
-        raise ValueError(f"Dataset is not {dim}-dimensional.")
+        raise TypeError(f"Dataset is not {dim}-dimensional.")
 
 
 def _rotate_data(data, x, y, z, rotation, origin):
@@ -278,6 +278,7 @@ def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
         If `target`, `x`, `y`, mass, density, or smoothing length columns do not
         exist in `data`.
     """
+    _check_dimension(data, 2)
     x, y = _default_xy(data, x, y)
     _verify_columns(data, x, y, target)
 
@@ -286,7 +287,6 @@ def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
     _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
 
     kernel = kernel if kernel is not None else data.kernel
-    _check_dimension(data, 2)
 
     return _fast_2d(data[target].to_numpy(), 0, data[x].to_numpy(), data[y].to_numpy(), np.zeros(len(data)),
                     data['m'].to_numpy(), data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w, kernel.get_radius(),
@@ -340,6 +340,7 @@ def interpolate_2d_cross(data: 'SarracenDataFrame',
         If `target`, `x`, `y`, mass, density, or smoothing length columns do not
         exist in `data`.
     """
+    _check_dimension(data, 2)
     x, y = _default_xy(data, x, y)
     _verify_columns(data, x, y, target)
 
@@ -348,7 +349,6 @@ def interpolate_2d_cross(data: 'SarracenDataFrame',
         raise ValueError('Zero length cross section!')
 
     kernel = kernel if kernel is not None else data.kernel
-    _check_dimension(data, 2)
 
     if pixels <= 0:
         raise ValueError('pixcount must be greater than zero!')
@@ -424,6 +424,7 @@ def interpolate_3d(data: 'SarracenDataFrame',
     Since the direction of integration is assumed to be straight across the z-axis, the z-axis column
     is not required for this type of interpolation.
     """
+    _check_dimension(data, 3)
     x, y = _default_xy(data, x, y)
     _verify_columns(data, x, y, target)
 
@@ -433,7 +434,6 @@ def interpolate_3d(data: 'SarracenDataFrame',
 
     x_data, y_data, _ = _rotate_data(data, x, y, data.zcol, rotation, origin)
     kernel = kernel if kernel is not None else data.kernel
-    _check_dimension(data, 3)
 
     return _fast_2d(data[target].to_numpy(), 0, x_data, y_data, np.zeros(len(data)), data['m'].to_numpy(),
                     data['rho'].to_numpy(), data['h'].to_numpy(), kernel.get_column_kernel_func(integral_samples),
@@ -503,6 +503,8 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',
         If `target`, `x`, `y`, `z`, mass, density, or smoothing length columns do not
         exist in `data`.
     """
+    _check_dimension(data, 3)
+
     # x & y columns default to the variables determined by the SarracenDataFrame.
     x, y = _default_xy(data, x, y)
     _verify_columns(data, target, x, y)
@@ -522,8 +524,6 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',
     _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
 
     kernel = kernel if kernel is not None else data.kernel
-
-    _check_dimension(data, 3)
 
     x_data, y_data, z_data = _rotate_data(data, x, y, z, rotation, origin)
 
