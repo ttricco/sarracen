@@ -119,23 +119,10 @@ def _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max, default):
     return x_pixels, y_pixels
 
 
-def render_2d(data: 'SarracenDataFrame',
-              target: str,
-              x: str = None,
-              y: str = None,
-              kernel: BaseKernel = None,
-              x_pixels: int = None,
-              y_pixels: int = None,
-              x_min: float = None,
-              x_max: float = None,
-              y_min: float = None,
-              y_max: float = None,
-              cmap: Union[str, Colormap] = 'RdBu',
-              cbar: bool = True,
-              cbar_kws: dict = {},
-              cbar_ax: Axes = None,
-              ax: Axes = None,
-              **kwargs) -> Axes:
+def render_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
+              x_pixels: int = None, y_pixels: int = None, x_min: float = None, x_max: float = None, y_min: float = None,
+              y_max: float = None, cmap: Union[str, Colormap] = 'RdBu', cbar: bool = True, cbar_kws: dict = {},
+              cbar_ax: Axes = None, ax: Axes = None, backend: str = None, **kwargs) -> Axes:
     """ Render 2D particle data to a 2D grid, using SPH rendering of a target variable.
 
     Render the data within a SarracenDataFrame to a 2D matplotlib object, by rendering the values
@@ -168,6 +155,8 @@ def render_2d(data: 'SarracenDataFrame',
         Axes to draw the colorbar in, if not provided then space will be taken from the main Axes.
     ax: Axes
         The main axes in which to draw the rendered image.
+    backend: ['cpu', 'gpu']
+        The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
     kwargs: other keyword arguments
         Keyword arguments to pass to matplotlib.axes.Axes.imshow().
 
@@ -185,7 +174,7 @@ def render_2d(data: 'SarracenDataFrame',
         If `target`, `x`, `y`, mass, density, or smoothing length columns do not
         exist in `data`.
     """
-    image = interpolate_2d(data, target, x, y, kernel, x_pixels, y_pixels, x_min, x_max, y_min, y_max)
+    image = interpolate_2d(data, target, x, y, kernel, x_pixels, y_pixels, x_min, x_max, y_min, y_max, backend)
 
     if ax is None:
         ax = plt.gca()
@@ -210,7 +199,7 @@ def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[
                 x: str = None, y: str = None, z: str = None, kernel: BaseKernel = None, integral_samples: int = 1000,
                 rotation: np.ndarray = None, origin: np.ndarray = None, x_pixels: int = None, y_pixels: int = None,
                 x_min: float = None, x_max: float = None, y_min: float = None, y_max: float = None, ax: Axes = None,
-                backend: str='cpu', **kwargs) -> Axes:
+                backend: str = None, **kwargs) -> Axes:
     """ Create an SPH interpolated streamline plot of a target vector.
 
     Render the data within a SarracenDataFrame to a 2D matplotlib object, by rendering the values
@@ -246,6 +235,8 @@ def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[
         to the minimum and maximum values of `x` and `y`.
     ax: Axes
         The main axes in which to draw the rendered image.
+    backend: ['cpu', 'gpu']
+        The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
     kwargs: other keyword arguments
         Keyword arguments to pass to ax.streamlines()
 
@@ -312,7 +303,7 @@ def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[st
               x: str = None, y: str = None, z: str = None, kernel: BaseKernel = None, integral_samples: int = 1000,
               rotation: np.ndarray = None, origin: np.ndarray = None, x_arrows: int = None, y_arrows: int = None,
               x_min: float = None, x_max: float = None, y_min: float = None, y_max: float = None, ax: Axes = None,
-              backend: str='cpu', **kwargs) -> Axes:
+              backend: str = None, **kwargs) -> Axes:
     """ Create an SPH interpolated vector field plot of a target vector.
 
     Render the data within a SarracenDataFrame to a 2D matplotlib object, by rendering the values
@@ -347,6 +338,8 @@ def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[st
         to the minimum and maximum values of `x` and `y`.
     ax: Axes
         The main axes in which to draw the rendered image.
+    backend: ['cpu', 'gpu']
+        The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
     kwargs: other keyword arguments
         Keyword arguments to pass to ax.quiver()
 
@@ -413,18 +406,9 @@ def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[st
     return ax
 
 
-def render_2d_cross(data: 'SarracenDataFrame',
-                    target: str,
-                    x: str = None,
-                    y: str = None,
-                    kernel: BaseKernel = None,
-                    pixels: int = 512,
-                    x1: float = None,
-                    x2: float = None,
-                    y1: float = None,
-                    y2: float = None,
-                    ax: Axes = None,
-                    **kwargs) -> Axes:
+def render_2d_cross(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
+                    pixels: int = 512, x1: float = None, x2: float = None, y1: float = None, y2: float = None,
+                    ax: Axes = None, backend: str = None, **kwargs) -> Axes:
     """ Render 2D particle data to a 1D line, using a 2D cross-section.
 
     Render the data within a SarracenDataFrame to a seaborn-generated line plot, by taking
@@ -448,6 +432,8 @@ def render_2d_cross(data: 'SarracenDataFrame',
         the minimum and maximum values of `x` and `y`.
     ax: Axes
         The main axes in which to draw the rendered image.
+    backend: ['cpu', 'gpu']
+        The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
     kwargs: other keyword arguments
         Keyword arguments to pass to seaborn.lineplot().
 
@@ -466,7 +452,7 @@ def render_2d_cross(data: 'SarracenDataFrame',
         If `target`, `x`, `y`, mass, density, or smoothing length columns do not
         exist in `data`.
     """
-    output = interpolate_2d_cross(data, target, x, y, kernel, pixels, x1, x2, y1, y2)
+    output = interpolate_2d_cross(data, target, x, y, kernel, pixels, x1, x2, y1, y2, backend)
 
     if ax is None:
         ax = plt.gca()
@@ -482,26 +468,11 @@ def render_2d_cross(data: 'SarracenDataFrame',
     return ax
 
 
-def render_3d(data: 'SarracenDataFrame',
-              target: str,
-              x: str = None,
-              y: str = None,
-              kernel: BaseKernel = None,
-              integral_samples: int = 1000,
-              rotation: np.ndarray = None,
-              origin: np.ndarray = None,
-              x_pixels: int = None,
-              y_pixels: int = None,
-              x_min: float = None,
-              x_max: float = None,
-              y_min: float = None,
-              y_max: float = None,
-              cmap: Union[str, Colormap] = 'RdBu',
-              cbar: bool = True,
-              cbar_kws: dict = {},
-              cbar_ax: Axes = None,
-              ax: Axes = None,
-              **kwargs) -> Axes:
+def render_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
+              integral_samples: int = 1000, rotation: np.ndarray = None, origin: np.ndarray = None,
+              x_pixels: int = None, y_pixels: int = None, x_min: float = None, x_max: float = None, y_min: float = None,
+              y_max: float = None, cmap: Union[str, Colormap] = 'RdBu', cbar: bool = True, cbar_kws: dict = {},
+              cbar_ax: Axes = None, ax: Axes = None, backend: str = None, **kwargs) -> Axes:
     """ Render 3D particle data to a 2D grid, using SPH column rendering of a target variable.
 
     Render the data within a SarracenDataFrame to a 2D matplotlib object, by rendering the values
@@ -542,6 +513,8 @@ def render_3d(data: 'SarracenDataFrame',
         Axes to draw the colorbar in, if not provided then space will be taken from the main Axes.
     ax: Axes
         The main axes in which to draw the rendered image.
+    backend: ['cpu', 'gpu']
+        The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
     kwargs: other keyword arguments
         Keyword arguments to pass to matplotlib.axes.Axes.imshow().
 
@@ -561,7 +534,7 @@ def render_3d(data: 'SarracenDataFrame',
         exist in `data`.
     """
     image = interpolate_3d(data, target, x, y, kernel, integral_samples, rotation, origin, x_pixels, y_pixels, x_min,
-                           x_max, y_min, y_max)
+                           x_max, y_min, y_max, backend)
 
     if ax is None:
         ax = plt.gca()
@@ -589,27 +562,11 @@ def render_3d(data: 'SarracenDataFrame',
     return ax
 
 
-def render_3d_cross(data: 'SarracenDataFrame',
-                    target: str,
-                    z_slice: float = None,
-                    x: str = None,
-                    y: str = None,
-                    z: str = None,
-                    kernel: BaseKernel = None,
-                    rotation: np.ndarray = None,
-                    origin: np.ndarray = None,
-                    x_pixels: int = None,
-                    y_pixels: int = None,
-                    x_min: float = None,
-                    x_max: float = None,
-                    y_min: float = None,
-                    y_max: float = None,
-                    cmap: Union[str, Colormap] = 'RdBu',
-                    cbar: bool = True,
-                    cbar_kws: dict = {},
-                    cbar_ax: Axes = None,
-                    ax: Axes = None,
-                    **kwargs) -> Axes:
+def render_3d_cross(data: 'SarracenDataFrame', target: str, z_slice: float = None, x: str = None, y: str = None,
+                    z: str = None, kernel: BaseKernel = None, rotation: np.ndarray = None, origin: np.ndarray = None,
+                    x_pixels: int = None, y_pixels: int = None, x_min: float = None, x_max: float = None,
+                    y_min: float = None, y_max: float = None, cmap: Union[str, Colormap] = 'RdBu', cbar: bool = True,
+                    cbar_kws: dict = {}, cbar_ax: Axes = None, ax: Axes = None, backend: str = None, **kwargs) -> Axes:
     """ Render 3D particle data to a 2D grid, using a 3D cross-section.
 
     Render the data within a SarracenDataFrame to a 2D matplotlib object, using a 3D -> 2D
@@ -651,6 +608,8 @@ def render_3d_cross(data: 'SarracenDataFrame',
         Axes to draw the colorbar in, if not provided then space will be taken from the main Axes.
     ax: Axes
         The main axes in which to draw the rendered image.
+    backend: ['cpu', 'gpu']
+        The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
     kwargs: other keyword arguments
         Keyword arguments to pass to matplotlib.axes.Axes.imshow().
 
@@ -670,7 +629,7 @@ def render_3d_cross(data: 'SarracenDataFrame',
         exist in `data`.
     """
     image = interpolate_3d_cross(data, target, z_slice, x, y, z, kernel, rotation, origin, x_pixels, y_pixels, x_min,
-                                 x_max, y_min, y_max)
+                                 x_max, y_min, y_max, backend)
 
     if ax is None:
         ax = plt.gca()
