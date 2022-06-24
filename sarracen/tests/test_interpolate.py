@@ -82,12 +82,12 @@ def test_interpolate_2d_vec():
 
 
 def test_interpolate_2d_cross():
-    df = df = pd.DataFrame({'x': [0],
-                            'y': [0],
-                            'P': [1],
-                            'h': [1],
-                            'rho': [1],
-                            'm': [1]})
+    df = pd.DataFrame({'x': [0],
+                       'y': [0],
+                       'P': [1],
+                       'h': [1],
+                       'rho': [1],
+                       'm': [1]})
     sdf = SarracenDataFrame(df, params=dict())
 
     # first, test a cross-section at y=0
@@ -279,13 +279,13 @@ def test_interpolate_3d_vec():
 
 
 def test_interpolate_3d_cross():
-    df = df = pd.DataFrame({'x': [0],
-                            'y': [0],
-                            'z': [0],
-                            'P': [1],
-                            'h': [1],
-                            'rho': [1],
-                            'm': [1]})
+    df = pd.DataFrame({'x': [0],
+                       'y': [0],
+                       'z': [0],
+                       'P': [1],
+                       'h': [1],
+                       'rho': [1],
+                       'm': [1]})
     sdf = SarracenDataFrame(df, params=dict())
 
     # first, test a cross-section at z=0
@@ -408,3 +408,21 @@ def test_interpolate_3d_cross_vec():
     assert image[1][0][0] == 0
     assert image[1][19][19] == approx(
         w * (2 / np.sqrt(2)) * kernel.w((np.sqrt(2) - 1 - np.sqrt(2) * 0.025) / sdf['h'][0], 3))
+
+
+def test_race_conditions():
+    df = pd.concat([pd.DataFrame({'x': [0],
+                       'y': [0],
+                       'z': [-1],
+                       'A': [4],
+                       'h': [2],
+                       'rho': [0.5],
+                       'm': [0.1]})] * 10000, ignore_index=True)
+    sdf = SarracenDataFrame(df, params=dict())
+
+    w = sdf['m'][0] / (sdf['rho'][0] * sdf['h'][0] ** 3)
+    kernel = QuarticSplineKernel()
+    image = interpolate_3d(sdf, 'A', 'x', 'y', kernel, 1000, None, None, 15, 15, -0.5, 0.5, -0.5, 0.5)
+    column_kernel = kernel.get_column_kernel(1000)
+
+    assert image[7][7] == approx(w * sdf['h'][0] * sdf['A'][0] * column_kernel[0] * 10000, rel=1e-9)
