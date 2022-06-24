@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 from numpy.testing import assert_allclose
 from pytest import approx, raises
+from scipy.spatial.transform import Rotation
 
 from sarracen import SarracenDataFrame
 from sarracen.kernels import CubicSplineKernel, QuarticSplineKernel, QuinticSplineKernel
@@ -438,3 +439,122 @@ def test_irregular_bounds():
         for x in range(50):
             assert image[y][x] == approx(
                 w[0] * sdf['A'][0] * kernel.w(np.sqrt(real_x[x] ** 2 + real_y[y] ** 2 + 0.5 ** 2) / sdf['h'][0], 3))
+
+def test_oob_particles():
+    df_2 = pd.DataFrame({'x': [0], 'y': [0], 'A': [4], 'h': [0.9], 'rho': [0.4], 'm': [0.03]})
+    sdf_2 = SarracenDataFrame(df_2, params=dict())
+    df_3 = pd.DataFrame({'x': [0], 'y': [0], 'z': [-0.5], 'A': [4], 'h': [0.9], 'rho': [0.4], 'm': [0.03]})
+    sdf_3 = SarracenDataFrame(df_3, params=dict())
+
+    kernel = CubicSplineKernel()
+    sdf_2.kernel = kernel
+    sdf_3.kernel = kernel
+    w = sdf_2['m'] / (sdf_2['rho'] * sdf_2['h'] ** 2)
+
+    # A mapping of pixel indices to x / y values in particle space.
+    real_x = 1 + (np.arange(0, 25) + 0.5) * (1 / 25)
+    real_y = 1 + (np.arange(0, 25) + 0.5) * (1 / 25)
+
+    image = interpolate_2d(sdf_2, 'A', x_pixels=25, y_pixels=25, x_min=1, x_max=2, y_min=1, y_max=2)
+
+    for y in range(25):
+        for x in range(25):
+            assert image[y][x] == approx(
+                w[0] * sdf_2['A'][0] * kernel.w(np.sqrt(real_x[x] ** 2 + real_y[y] ** 2) / sdf_2['h'][0], 2))
+
+    image = interpolate_3d(sdf_3, 'A', x_pixels=25, y_pixels=25, x_min=1, x_max=2, y_min=1, y_max=2)
+    column_func = kernel.get_column_kernel_func(1000)
+
+    for y in range(25):
+        for x in range(25):
+            assert image[y][x] == approx(
+                w[0] * sdf_3['A'][0] * column_func(np.sqrt(real_x[x] ** 2 + real_y[y] ** 2) / sdf_3['h'][0], 2))
+
+    w = sdf_3['m'] / (sdf_3['rho'] * sdf_3['h'] ** 3)
+    image = interpolate_3d_cross(sdf_3, 'A', 0, x_pixels=25, y_pixels=25, x_min=1, x_max=2, y_min=1, y_max=2)
+
+    for y in range(25):
+        for x in range(25):
+            assert image[y][x] == approx(
+                w[0] * sdf_3['A'][0] * kernel.w(np.sqrt(real_x[x] ** 2 + real_y[y] ** 2 + 0.5 ** 2) / sdf_3['h'][0], 3))
+
+
+def test_nonstandard_rotation():
+    df = pd.DataFrame({'x': [1], 'y': [1], 'z': [1], 'A': [4], 'h': [0.9], 'rho': [0.4], 'm': [0.03]})
+    sdf = SarracenDataFrame(df, params=dict())
+    kernel = CubicSplineKernel()
+    sdf.kernel = kernel
+
+    column_kernel = kernel.get_column_kernel_func(1000)
+
+    rot_z, rot_y, rot_x = 129, 34, 50
+
+    image = interpolate_3d(sdf, 'A', x_pixels=50, y_pixels=50, x_min=-1, x_max=1, y_min=-1, y_max=1, rotation=[rot_z, rot_y, rot_x], origin=[0, 0, 0])
+
+    w = sdf['m'] / (sdf['rho'] * sdf['h'] ** 2)
+
+    pos_z1 = 1
+    pos_y1 = np.sin(rot_z / (180 / np.pi)) + np.cos(rot_z / (180 / np.pi))
+    pos_x1 = np.cos(rot_z / (180 / np.pi)) - np.sin(rot_z / (180 / np.pi))
+
+    pos_x2 = pos_x1 * np.cos(rot_y / (180 / np.pi)) + np.sin(rot_y / (180 / np.pi))
+    pos_y2 = pos_y1
+    pos_z2 = pos_x1 * -np.sin(rot_y / (180 / np.pi)) + np.cos(rot_y / (180 / np.pi))
+
+    pos_x3 = pos_x2
+    pos_y3 = pos_y2 * np.cos(rot_x / (180 / np.pi)) - pos_z2 * np.sin(rot_x / (180 / np.pi))
+    pos_z3 = pos_y2 * np.sin(rot_x / (180 / np.pi)) + pos_z2 * np.cos(rot_x / (180 / np.pi))
+
+    real = -1 + (np.arange(0, 50) + 0.5) * (1 / 25)
+
+    for y in range(50):
+        for x in range(50):
+            assert image[y][x] == approx(w[0] * sdf['A'][0] * column_kernel(
+                np.sqrt((pos_x3 - real[x]) ** 2 + (pos_y3 - real[y]) ** 2) / sdf['h'][0], 3))
+
+
+def test_scipy_rotation_equivalency():
+    df = pd.DataFrame({'x': [1], 'y': [1], 'z': [1], 'A': [4], 'h': [0.9], 'rho': [0.4], 'm': [0.03]})
+    sdf = SarracenDataFrame(df, params=dict())
+    kernel = CubicSplineKernel()
+    sdf.kernel = kernel
+
+    column_kernel = kernel.get_column_kernel_func(1000)
+    rot_z, rot_y, rot_x = 67, -34, 91
+
+    image1 = interpolate_3d(sdf, 'A', x_pixels=50, y_pixels=50, x_min=-1, x_max=1, y_min=-1, y_max=1, rotation=[rot_z, rot_y, rot_x], origin=[0, 0, 0])
+    image2 = interpolate_3d(sdf, 'A', x_pixels=50, y_pixels=50, x_min=-1, x_max=1, y_min=-1, y_max=1, rotation=Rotation.from_euler('zyx', [rot_z, rot_y, rot_x]))
+
+    assert_allclose(image1, image2)
+
+
+def quaternion_mult(q,r):
+    return [r[0]*q[0]-r[1]*q[1]-r[2]*q[2]-r[3]*q[3],
+            r[0]*q[1]+r[1]*q[0]-r[2]*q[3]+r[3]*q[2],
+            r[0]*q[2]+r[1]*q[3]+r[2]*q[0]-r[3]*q[1],
+            r[0]*q[3]-r[1]*q[2]+r[2]*q[1]+r[3]*q[0]]
+
+
+def test_quaternion_rotation():
+    df = pd.DataFrame({'x': [1], 'y': [1], 'z': [1], 'A': [4], 'h': [0.9], 'rho': [0.4], 'm': [0.03]})
+    sdf = SarracenDataFrame(df, params=dict())
+    kernel = CubicSplineKernel()
+    sdf.kernel = kernel
+
+    column_kernel = kernel.get_column_kernel_func(1000)
+    q = [5/np.sqrt(99), 3/np.sqrt(99), 8/np.sqrt(99), 1/np.sqrt(99)]
+    quat = Rotation.from_quat(q)
+    image = interpolate_3d(sdf, 'A', x_pixels=50, y_pixels=50, x_min=-1, x_max=1, y_min=-1, y_max=1, rotation=Rotation.from_quat(q), origin=[0, 0, 0])
+
+    w = sdf['m'] / (sdf['rho'] * sdf['h'] ** 2)
+
+    pre_pos = [0, 1, 1, 1]
+    pos = quaternion_mult([q[0], -1 * q[1], -1 * q[2], -1 * q[3]], quaternion_mult(pre_pos, q))
+
+    real = -1 + (np.arange(0, 50) + 0.5) * (1 / 25)
+
+    for y in range(50):
+        for x in range(50):
+            assert image[y][x] == approx(w[0] * sdf['A'][0] * column_kernel(
+                np.sqrt((pos[1] - real[x]) ** 2 + (pos[2] - real[y]) ** 2) / sdf['h'][0], 3))
+
