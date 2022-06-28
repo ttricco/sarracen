@@ -3,7 +3,7 @@ pytest unit tests for interpolate.py functions.
 """
 import pandas as pd
 import numpy as np
-from numpy.testing import assert_allclose, assert_equal
+from numpy.testing import assert_allclose
 from pytest import approx, raises
 from scipy.spatial.transform import Rotation
 
@@ -618,29 +618,26 @@ def test_invalid_region():
 
     # negative plot bounds
     with raises(ValueError):
-        interpolate_2d(sdf_2, 'A', x_min=-3, x_max=3, y_max=3, y_min=-3)
+        interpolate_2d(sdf_2, 'A', x_min=-3, x_max=3, y_max=-3, y_min=3)
 
     with raises(ValueError):
-        interpolate_2d_cross(sdf_2, 'A', x1=-3, x2=3, y2=3, y1=-3)
+        interpolate_3d(sdf_3, 'A', x_min=-3, x_max=3, y_max=-3, y_min=3)
 
     with raises(ValueError):
-        interpolate_3d(sdf_2, 'A', x_min=-3, x_max=3, y_max=3, y_min=-3)
-
-    with raises(ValueError):
-        interpolate_3d_cross(sdf_2, 'A', 0, x_min=-3, x_max=3, y_max=3, y_min=-3)
+        interpolate_3d_cross(sdf_3, 'A', 0, x_min=-3, x_max=3, y_max=-3, y_min=3)
 
     # zero plot bounds
     with raises(ValueError):
         interpolate_2d(sdf_2, 'A', x_min=-3, x_max=3, y_max=3, y_min=3)
 
     with raises(ValueError):
-        interpolate_2d_cross(sdf_2, 'A', x1=-3, x2=3, y2=3, y1=3)
+        interpolate_2d_cross(sdf_2, 'A', x1=3, x2=3, y2=3, y1=3)
 
     with raises(ValueError):
-        interpolate_3d(sdf_2, 'A', x_min=-3, x_max=3, y_max=3, y_min=3)
+        interpolate_3d(sdf_3, 'A', x_min=-3, x_max=3, y_max=3, y_min=3)
 
     with raises(ValueError):
-        interpolate_3d_cross(sdf_2, 'A', 0, x_min=-3, x_max=3, y_max=3, y_min=3)
+        interpolate_3d_cross(sdf_3, 'A', 0, x_min=-3, x_max=3, y_max=3, y_min=3)
 
     # zero pixels
     with raises(ValueError):
@@ -650,10 +647,10 @@ def test_invalid_region():
         interpolate_2d_cross(sdf_2, 'A', x1=-3, x2=3, y1=-3, y2=3, pixels=0)
 
     with raises(ValueError):
-        interpolate_3d(sdf_2, 'A', x_min=-3, x_max=3, y_min=-3, y_max=3, x_pixels=0, y_pixels=0)
+        interpolate_3d(sdf_3, 'A', x_min=-3, x_max=3, y_min=-3, y_max=3, x_pixels=0, y_pixels=0)
 
     with raises(ValueError):
-        interpolate_3d_cross(sdf_2, 'A', 0, x_min=-3, x_max=3, y_min=-3, y_max=3, x_pixels=0, y_pixels=0)
+        interpolate_3d_cross(sdf_3, 'A', 0, x_min=-3, x_max=3, y_min=-3, y_max=3, x_pixels=0, y_pixels=0)
 
 
 def test_required_columns():
@@ -675,5 +672,3 @@ def test_required_columns():
             interpolate_3d(sdf_dropped, 'A')
         with raises(KeyError):
             interpolate_3d_cross(sdf_dropped, 'A')
-
-
