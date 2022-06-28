@@ -18,4 +18,6 @@ class QuinticSplineKernel(BaseKernel):
             7 / (478 * np.pi) if (ndim == 2) else \
             1 / (120 * np.pi)
 
-        return norm * ((3 - q) ** 5 * (q < 3) - 6 * (2 - q) ** 5 * (q < 2) + 15 * (1 - q) ** 5 * (q < 1))
+        return norm * ((3 - q) ** 5 * (q < 3)
+                       - 6 * (2 - q) ** 5 * (q < 2)
+                       + 15 * (1 - q) ** 5 * (q < 1)) * (0 <= q)
