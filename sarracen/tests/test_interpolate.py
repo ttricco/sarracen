@@ -440,6 +440,7 @@ def test_irregular_bounds():
             assert image[y][x] == approx(
                 w[0] * sdf['A'][0] * kernel.w(np.sqrt(real_x[x] ** 2 + real_y[y] ** 2 + 0.5 ** 2) / sdf['h'][0], 3))
 
+
 def test_oob_particles():
     df_2 = pd.DataFrame({'x': [0], 'y': [0], 'A': [4], 'h': [0.9], 'rho': [0.4], 'm': [0.03]})
     sdf_2 = SarracenDataFrame(df_2, params=dict())
@@ -523,16 +524,9 @@ def test_scipy_rotation_equivalency():
     rot_z, rot_y, rot_x = 67, -34, 91
 
     image1 = interpolate_3d(sdf, 'A', x_pixels=50, y_pixels=50, x_min=-1, x_max=1, y_min=-1, y_max=1, rotation=[rot_z, rot_y, rot_x], origin=[0, 0, 0])
-    image2 = interpolate_3d(sdf, 'A', x_pixels=50, y_pixels=50, x_min=-1, x_max=1, y_min=-1, y_max=1, rotation=Rotation.from_euler('zyx', [rot_z, rot_y, rot_x]))
+    image2 = interpolate_3d(sdf, 'A', x_pixels=50, y_pixels=50, x_min=-1, x_max=1, y_min=-1, y_max=1, rotation=Rotation.from_euler('zyx', [rot_z, rot_y, rot_x], degrees=True), origin=[0, 0, 0])
 
     assert_allclose(image1, image2)
-
-
-def quaternion_mult(q,r):
-    return [r[0]*q[0]-r[1]*q[1]-r[2]*q[2]-r[3]*q[3],
-            r[0]*q[1]+r[1]*q[0]-r[2]*q[3]+r[3]*q[2],
-            r[0]*q[2]+r[1]*q[3]+r[2]*q[0]-r[3]*q[1],
-            r[0]*q[3]-r[1]*q[2]+r[2]*q[1]+r[3]*q[0]]
 
 
 def test_quaternion_rotation():
@@ -544,17 +538,73 @@ def test_quaternion_rotation():
     column_kernel = kernel.get_column_kernel_func(1000)
     q = [5/np.sqrt(99), 3/np.sqrt(99), 8/np.sqrt(99), 1/np.sqrt(99)]
     quat = Rotation.from_quat(q)
-    image = interpolate_3d(sdf, 'A', x_pixels=50, y_pixels=50, x_min=-1, x_max=1, y_min=-1, y_max=1, rotation=Rotation.from_quat(q), origin=[0, 0, 0])
+    image = interpolate_3d(sdf, 'A', x_pixels=50, y_pixels=50, x_min=-1, x_max=1, y_min=-1, y_max=1, rotation=quat, origin=[0, 0, 0])
 
     w = sdf['m'] / (sdf['rho'] * sdf['h'] ** 2)
 
-    pre_pos = [0, 1, 1, 1]
-    pos = quaternion_mult([q[0], -1 * q[1], -1 * q[2], -1 * q[3]], quaternion_mult(pre_pos, q))
-
+    pos = quat.apply([1, 1, 1])
     real = -1 + (np.arange(0, 50) + 0.5) * (1 / 25)
 
     for y in range(50):
         for x in range(50):
             assert image[y][x] == approx(w[0] * sdf['A'][0] * column_kernel(
-                np.sqrt((pos[1] - real[x]) ** 2 + (pos[2] - real[y]) ** 2) / sdf['h'][0], 3))
+                np.sqrt((pos[0] - real[x]) ** 2 + (pos[1] - real[y]) ** 2) / sdf['h'][0], 3))
 
+
+def test_rotation_stability():
+    df = pd.DataFrame({'x': [1], 'y': [1], 'z': [1], 'A': [4], 'h': [0.9], 'rho': [0.4], 'm': [0.03]})
+    sdf = SarracenDataFrame(df, params=dict())
+    kernel = CubicSplineKernel()
+    sdf.kernel = kernel
+    column_kernel = kernel.get_column_kernel_func(1000)
+
+    real = -1 + (np.arange(0, 50) + 0.5) * (1 / 25)
+    pixel_x, pixel_y = 12, 30
+
+    image = interpolate_3d(sdf, 'A', x_pixels=50, y_pixels=50, x_min=-1, x_max=1, y_min=-1, y_max=1)
+    image_rot = interpolate_3d(sdf, 'A', x_pixels=50, y_pixels=50, x_min=-1, x_max=1, y_min=-1, y_max=1,
+                               rotation=[237, 0, 0], origin=[real[pixel_x], real[pixel_y], 0])
+
+    w = sdf['m'] / (sdf['rho'] * sdf['h'] ** 2)
+
+    assert image[pixel_y][pixel_x] == approx(image_rot[pixel_y][pixel_x])
+
+
+def test_axes_rotation_separation():
+    df = pd.DataFrame({'x': [-1, 1], 'y': [1, -1], 'z': [1, -1], 'A': [2, 1.5], 'h': [1.1, 1.3], 'rho': [0.55, 0.45], 'm': [0.04, 0.05]})
+    sdf = SarracenDataFrame(df, params=dict())
+
+    image1 = interpolate_3d(sdf, 'A', x_pixels=50,  y_pixels=50, x_min=-1, x_max=1, y_min=-1, y_max=1, rotation=[234, 90, 48])
+    image2 = interpolate_3d(sdf, 'A', x='y', y='x', x_pixels=50,  y_pixels=50, x_min=-1, x_max=1, y_min=-1, y_max=1, rotation=[234, 90, 48])
+
+    assert_allclose(image1, image2.T)
+
+    image1 = interpolate_3d_cross(sdf, 'A', 0, x_pixels=50,  y_pixels=50, x_min=-1, x_max=1, y_min=-1, y_max=1, rotation=[234, 90, 48])
+    image2 = interpolate_3d_cross(sdf, 'A', 0, x='y', y='x', x_pixels=50,  y_pixels=50, x_min=-1, x_max=1, y_min=-1, y_max=1, rotation=[234, 90, 48])
+
+    assert_allclose(image1, image2.T)
+
+
+def test_axes_rotation_equivalency():
+    df = pd.DataFrame({'x': [-1, 1], 'y': [1, -1], 'z': [1, -1], 'A': [2, 1.5], 'h': [1.1, 1.3], 'rho': [0.55, 0.45],
+                       'm': [0.04, 0.05]})
+    sdf = SarracenDataFrame(df, params=dict())
+
+    x, y, z = 'x', 'y', 'z'
+    flip_x, flip_y, flip_z = False, False, False
+    for i_z in range(4):
+        for i_y in range(4):
+            for i_x in range(4):
+                rot_x, rot_y, rot_z = i_x * 90, i_y * 90, i_z * 90
+                image1 = interpolate_3d(sdf, 'A', x_pixels=50, y_pixels=50, x_min=-1, x_max=1, y_min=-1, y_max=1,
+                                        rotation=[rot_z, rot_y, rot_x], origin=[0, 0, 0])
+                image2 = interpolate_3d(sdf, 'A', x=x, y=y, x_pixels=50, y_pixels=50, x_min=-1, x_max=1, y_min=-1, y_max=1)
+                image2 = image2 if not flip_x else np.flip(image2, 1)
+                image2 = image2 if not flip_y else np.flip(image2, 0)
+                assert_allclose(image1, image2)
+                y, z = z, y
+                flip_y, flip_z = not flip_z, flip_y
+            x, z = z, x
+            flip_x, flip_z = flip_z, not flip_x
+        x, y = y, x
+        flip_x, flip_y = not flip_y, flip_x
