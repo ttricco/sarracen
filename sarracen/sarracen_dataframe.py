@@ -204,8 +204,8 @@ class SarracenDataFrame(DataFrame):
                   ax: Axes = None,
                   **kwargs) -> Axes:
 
-        return render_3d(self, target, x, y, kernel, int_samples, rotation, origin, x_pixels, y_pixels, x_min, x_max, y_min, y_max,
-                         cmap, cbar, cbar_kws, cbar_ax, ax, **kwargs)
+        return render_3d(self, target, x, y, kernel, int_samples, rotation, origin, x_pixels, y_pixels, x_min, x_max,
+                         y_min, y_max, cmap, cbar, cbar_kws, cbar_ax, ax, **kwargs)
 
     @_copy_doc(render_3d_cross)
     def render_3d_cross(self,

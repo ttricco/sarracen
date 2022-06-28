@@ -298,7 +298,7 @@ def interpolate_2d_cross(data: 'SarracenDataFrame',
                          x: str = None,
                          y: str = None,
                          kernel: BaseKernel = None,
-                         pixels: int = None,
+                         pixels: int = 512,
                          x1: float = None,
                          x2: float = None,
                          y1: float = None,
@@ -534,7 +534,7 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',
 
 # Underlying numba-compiled code for interpolation to a 2D grid. Used in interpolation of 2D data,
 # and column integration / cross-sections of 3D data.
-@njit(parallel=True, fastmath=True)
+#@njit(parallel=True, fastmath=True)
 def _fast_2d(target, z_slice, x_data, y_data, z_data, mass_data, rho_data, h_data, weight_function, kernel_radius,
              x_pixels, y_pixels, x_min, x_max, y_min, y_max, n_dims):
     image = np.zeros((y_pixels, x_pixels))

@@ -257,7 +257,7 @@ def render_3d(data: 'SarracenDataFrame',
               kernel: BaseKernel = None,
               integral_samples: int = 1000,
               rotation: np.ndarray = None,
-              origin: np.ndarray = None,
+              rot_origin: np.ndarray = None,
               x_pixels: int = None,
               y_pixels: int = None,
               x_min: float = None,
@@ -291,7 +291,7 @@ def render_3d(data: 'SarracenDataFrame',
     rotation: array_like or Rotation, optional
         The rotation to apply to the data before interpolation. If defined as an array, the
         order of rotations is [z, y, x] in degrees.
-    origin: array_like, optional
+    rot_origin: array_like, optional
         Point of rotation of the data, in [x, y, z] form. Defaults to the centre
         point of the bounds of the data.
     x_pixels, y_pixels: int, optional
@@ -328,7 +328,7 @@ def render_3d(data: 'SarracenDataFrame',
         If `target`, `x`, `y`, mass, density, or smoothing length columns do not
         exist in `data`.
     """
-    image = interpolate_3d(data, target, x, y, kernel, integral_samples, rotation, origin, x_pixels, y_pixels, x_min,
+    image = interpolate_3d(data, target, x, y, kernel, integral_samples, rotation, rot_origin, x_pixels, y_pixels, x_min,
                            x_max, y_min, y_max)
 
     if ax is None:
@@ -365,7 +365,7 @@ def render_3d_cross(data: 'SarracenDataFrame',
                     z: str = None,
                     kernel: BaseKernel = None,
                     rotation: np.ndarray = None,
-                    origin: np.ndarray = None,
+                    rot_origin: np.ndarray = None,
                     x_pixels: int = None,
                     y_pixels: int = None,
                     x_min: float = None,
@@ -400,7 +400,7 @@ def render_3d_cross(data: 'SarracenDataFrame',
     rotation: array_like or Rotation, optional
         The rotation to apply to the data before rendering. If defined as an array, the
         order of rotations is [z, y, x] in degrees.
-    origin: array_like, optional
+    rot_origin: array_like, optional
         Point of rotation of the data, in [x, y, z] form. Defaults to the centre
         point of the bounds of the data.
     x_pixels, y_pixels: int, optional
@@ -437,7 +437,7 @@ def render_3d_cross(data: 'SarracenDataFrame',
         If `target`, `x`, `y`, `z`, mass, density, or smoothing length columns do not
         exist in `data`.
     """
-    image = interpolate_3d_cross(data, target, z_slice, x, y, z, kernel, rotation, origin, x_pixels, y_pixels, x_min,
+    image = interpolate_3d_cross(data, target, z_slice, x, y, z, kernel, rotation, rot_origin, x_pixels, y_pixels, x_min,
                                  x_max, y_min, y_max)
 
     if ax is None:
