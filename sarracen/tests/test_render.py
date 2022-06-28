@@ -1,13 +1,9 @@
 """pytest unit tests for render.py functions."""
 import pandas as pd
-import numpy as np
 from matplotlib import pyplot as plt
-from matplotlib.axes import Axes
-from numpy.testing import assert_allclose, assert_array_equal
-from pytest import approx
+from numpy.testing import assert_array_equal
 
 from sarracen import SarracenDataFrame, interpolate_2d, interpolate_2d_cross, interpolate_3d, interpolate_3d_cross
-from sarracen.kernels import CubicSplineKernel
 from sarracen.render import render_2d, render_2d_cross, render_3d, render_3d_cross
 
 
@@ -111,168 +107,79 @@ def test_kwargs():
     assert ax.lines[0].get_linestyle() == '--'
 
 
-def test_2d_plot():
-    df = pd.DataFrame({'x': [3, 6],
-                       'y': [5, 1],
-                       'P': [1, 1],
-                       'h': [1, 1],
-                       'rho': [1, 1],
-                       'm': [1, 1]})
+def test_rotated_ticks():
+    df = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'z': [2, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
     sdf = SarracenDataFrame(df)
 
-    fig, ax = plt.subplots()
-    sdf.render_2d('P', ax=ax)
+    for func in [render_3d, render_3d_cross]:
+        fig, ax = plt.subplots()
+        func(sdf, 'P', rotation=[34, 23, 50], ax=ax)
 
-    assert isinstance(ax, Axes)
-
-    assert ax.get_xlabel() == 'x'
-    assert ax.get_ylabel() == 'y'
-    # the colorbar is contained in a second axes object inside the figure
-    assert ax.figure.axes[1].get_ylabel() == 'P'
-
-    assert ax.get_xlim() == (3, 6)
-    assert ax.get_ylim() == (1, 5)
-
-    # aspect ratio of data max & min is 4/3,
-    # pixel count => (512, 683)
-    # pixel width => (3/512, 4/638)
-    # both particles are in corners
-    # therefore closest pixel is => sqrt((3/1024)**2, (2/683)**2)
-    # use default kernel to determine the max pressure value
-    assert ax.figure.axes[1].get_ylim() == (0, CubicSplineKernel().w(np.sqrt((3 / 1024) ** 2 + (2 / 683) ** 2), 2))
+        assert ax.get_xticks().size == 0
+        assert ax.get_yticks().size == 0
 
 
-def test_2d_cross_plot():
-    df = pd.DataFrame({'rx': [0, 5],
-                       'P': [1, 1],
-                       'h': [1, 1],
-                       'rho': [1, 1],
-                       'y': [0, 4],
-                       'm': [1, 1]})
-    sdf = SarracenDataFrame(df)
+def test_plot_labels():
+    df_2 = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
+    sdf_2 = SarracenDataFrame(df_2)
+    df_3 = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'z': [2, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
+    sdf_3 = SarracenDataFrame(df_3)
+
+    for func in [render_2d, render_3d, render_3d_cross]:
+        fig, ax = plt.subplots()
+        func(sdf_2 if func is render_2d else sdf_3, 'P', ax=ax)
+
+        assert ax.get_xlabel() == 'x'
+        assert ax.get_ylabel() == 'y'
+        assert ax.figure.axes[1].get_ylabel() == ('column ' if func is render_3d else '') + 'P'
+
+        fig, ax = plt.subplots()
+        func(sdf_2 if func is render_2d else sdf_3, 'rho', x='y', y='x', ax=ax)
+
+        assert ax.get_xlabel() == 'y'
+        assert ax.get_ylabel() == 'x'
+        assert ax.figure.axes[1].get_ylabel() == ('column ' if func is render_3d else '') + 'rho'
 
     fig, ax = plt.subplots()
-    sdf.render_2d_cross('P', ax=ax)
+    render_2d_cross(sdf_2, 'P', ax=ax)
 
-    assert isinstance(ax, Axes)
-
-    assert ax.get_xlabel() == 'cross-section (rx, y)'
+    assert ax.get_xlabel() == 'cross-section (x, y)'
     assert ax.get_ylabel() == 'P'
 
-    # cross section from (0, 0) -> (5, 4), therefore x goes from 0 -> sqrt(5**2 + 4**2)
-    assert ax.get_xlim() == (0, np.sqrt(41))
-    # 512 pixels across (by default), and both particles are in corners
-    # therefore closest pixel to a particle is sqrt(41)/1024 units away
-    # use default kernel to determine the max pressure value
-    assert ax.get_ylim() == (0, approx(CubicSplineKernel().w(np.sqrt(41) / 1024, 2)))
-
-
-def test_3d_plot():
-    df = pd.DataFrame({'rx': [0, 5],
-                       'P': [1, 1],
-                       'h': [1, 1],
-                       'rz': [3, 1],
-                       'rho': [1, 1],
-                       'y': [0, 4],
-                       'm': [1, 1]})
-    sdf = SarracenDataFrame(df)
-
     fig, ax = plt.subplots()
-    sdf.render_3d('P', int_samples=10000, x_pixels=300, ax=ax)
+    render_2d_cross(sdf_2, 'rho', x='y', y='x', ax=ax)
 
-    assert isinstance(ax, Axes)
-
-    assert ax.get_xlabel() == 'rx'
-    assert ax.get_ylabel() == 'y'
-    # the colorbar is contained in a second axes object inside the figure
-    assert ax.figure.axes[1].get_ylabel() == 'column P'
-
-    assert ax.get_xlim() == (0, 5)
-    assert ax.get_ylim() == (0, 4)
-    # particle width is 1/60
-    # therefore closest pixel has q=sqrt(2*(1/120)^2)
-    # F(q) ~= 0.477372919027 (calculated externally)
-    assert ax.figure.axes[1].get_ylim() == (0, approx(0.477372919027))
+    assert ax.get_xlabel() == 'cross-section (y, x)'
+    assert ax.get_ylabel() == 'rho'
 
 
-def test_3d_cross_plot():
-    df = pd.DataFrame({'rx': [0, 2.5, 5],
-                       'P': [1, 1, 1],
-                       'h': [1, 1, 1],
-                       'rz': [3, 2, 1],
-                       'rho': [1, 1, 1],
-                       'y': [0, 2, 4],
-                       'm': [1, 1, 1]})
-    sdf = SarracenDataFrame(df)
+def test_plot_bounds():
+    df_2 = pd.DataFrame({'x': [6, 3], 'y': [5, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
+    sdf_2 = SarracenDataFrame(df_2)
+    df_3 = pd.DataFrame({'x': [6, 3], 'y': [5, 1], 'z': [0, 0], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
+    sdf_3 = SarracenDataFrame(df_3)
 
-    # setting the pixel count to an odd number ensures that the middle particle at (2.5, 2, 2) is at the
-    # exact same position as the centre pixel.
-    fig, ax = plt.subplots()
-    sdf.render_3d_cross('P', x_pixels=489, ax=ax)
+    for func in [render_2d, render_2d_cross, render_3d, render_3d_cross]:
+        fig, ax = plt.subplots()
+        func(sdf_2 if func is render_2d or func is render_2d_cross else sdf_3, 'P', ax=ax)
 
-    assert isinstance(ax, Axes)
+        if func is render_2d_cross:
+            assert ax.get_xlim() == (0, 5)
 
-    assert ax.get_xlabel() == 'rx'
-    assert ax.get_ylabel() == 'y'
-    # the colorbar is contained in a second axes object inside the figure
-    assert ax.figure.axes[1].get_ylabel() == 'P'
+            # 512 pixels across (by default), and both particles are in corners
+            # therefore closest pixel to a particle is sqrt(41)/1024 units away
+            # use default kernel to determine the max pressure value
+            assert ax.get_ylim() == (0, interpolate_2d_cross(sdf_2, 'P').max())
+        else:
+            assert ax.get_xlim() == (3, 6)
+            assert ax.get_ylim() == (1, 5)
 
-    assert ax.get_xlim() == (0, 5)
-    assert ax.get_ylim() == (0, 4)
-
-    # closest pixel/particle pair comes from the particle at (2.5, 2, 2), with r = 0.
-    assert ax.figure.axes[1].get_ylim() == (0, approx(CubicSplineKernel().w(0, 3)))
-
-
-def test_render_passthrough():
-    # Basic tests that both sdf.render() and render(sdf) return the same plots
-
-    # 2D dataset
-    df = pd.DataFrame({'x': [3, 6],
-                       'y': [5, 1],
-                       'P': [1, 1],
-                       'h': [1, 1],
-                       'rho': [1, 1],
-                       'm': [1, 1]})
-    sdf = SarracenDataFrame(df)
-
-    fig1, ax1 = plt.subplots()
-    fig2, ax2 = plt.subplots()
-    ax1 = sdf.render_2d('P', ax=ax1)
-    ax2 = render_2d(sdf, 'P', ax=ax2)
-
-    assert repr(ax1) == repr(ax2)
-
-    fig1, ax1 = plt.subplots()
-    fig2, ax2 = plt.subplots()
-    ax1 = sdf.render_2d_cross('P', ax=ax1)
-    ax2 = render_2d_cross(sdf, 'P', ax=ax2)
-
-    assert repr(ax1) == repr(ax2)
-
-    # 3D dataset
-    df = pd.DataFrame({'x': [3, 6],
-                       'y': [5, 1],
-                       'z': [2, 1],
-                       'P': [1, 1],
-                       'h': [1, 1],
-                       'rho': [1, 1],
-                       'm': [1, 1]})
-    sdf = SarracenDataFrame(df)
-
-    fig1, ax1 = plt.subplots()
-    fig2, ax2 = plt.subplots()
-    ax1 = sdf.render_3d('P', ax=ax1)
-    ax2 = render_3d(sdf, 'P', ax=ax2)
-
-    assert repr(ax1) == repr(ax2)
-
-    fig1, ax1 = plt.subplots()
-    fig2, ax2 = plt.subplots()
-    ax1 = sdf.render_3d_cross('P', ax=ax1)
-    ax2 = render_3d_cross(sdf, 'P', ax=ax2)
-
-    assert repr(ax1) == repr(ax2)
+        if func is render_2d:
+            assert ax.figure.axes[1].get_ylim() == (0, interpolate_2d(sdf_2, 'P').max())
+        elif func is render_3d:
+            assert ax.figure.axes[1].get_ylim() == (0, interpolate_3d(sdf_3, 'P').max())
+        elif func is render_3d_cross:
+            assert ax.figure.axes[1].get_ylim() == (0, interpolate_3d_cross(sdf_3, 'P').max())
 
 
 def test_snap():
