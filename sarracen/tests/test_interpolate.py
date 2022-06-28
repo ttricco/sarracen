@@ -3,7 +3,7 @@ pytest unit tests for interpolate.py functions.
 """
 import pandas as pd
 import numpy as np
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_equal
 from pytest import approx, raises
 from scipy.spatial.transform import Rotation
 
@@ -608,3 +608,72 @@ def test_axes_rotation_equivalency():
             flip_x, flip_z = flip_z, not flip_x
         x, y = y, x
         flip_x, flip_y = not flip_y, flip_x
+
+
+def test_invalid_region():
+    df_2 = pd.DataFrame({'x': [0], 'y': [0], 'A': [4], 'h': [0.9], 'rho': [0.4], 'm': [0.03]})
+    sdf_2 = SarracenDataFrame(df_2, params=dict())
+    df_3 = pd.DataFrame({'x': [0], 'y': [0], 'z': [-0.5], 'A': [4], 'h': [0.9], 'rho': [0.4], 'm': [0.03]})
+    sdf_3 = SarracenDataFrame(df_3, params=dict())
+
+    # negative plot bounds
+    with raises(ValueError):
+        interpolate_2d(sdf_2, 'A', x_min=-3, x_max=3, y_max=3, y_min=-3)
+
+    with raises(ValueError):
+        interpolate_2d_cross(sdf_2, 'A', x1=-3, x2=3, y2=3, y1=-3)
+
+    with raises(ValueError):
+        interpolate_3d(sdf_2, 'A', x_min=-3, x_max=3, y_max=3, y_min=-3)
+
+    with raises(ValueError):
+        interpolate_3d_cross(sdf_2, 'A', 0, x_min=-3, x_max=3, y_max=3, y_min=-3)
+
+    # zero plot bounds
+    with raises(ValueError):
+        interpolate_2d(sdf_2, 'A', x_min=-3, x_max=3, y_max=3, y_min=3)
+
+    with raises(ValueError):
+        interpolate_2d_cross(sdf_2, 'A', x1=-3, x2=3, y2=3, y1=3)
+
+    with raises(ValueError):
+        interpolate_3d(sdf_2, 'A', x_min=-3, x_max=3, y_max=3, y_min=3)
+
+    with raises(ValueError):
+        interpolate_3d_cross(sdf_2, 'A', 0, x_min=-3, x_max=3, y_max=3, y_min=3)
+
+    # zero pixels
+    with raises(ValueError):
+        interpolate_2d(sdf_2, 'A', x_min=-3, x_max=3, y_min=-3, y_max=3, x_pixels=0, y_pixels=0)
+
+    with raises(ValueError):
+        interpolate_2d_cross(sdf_2, 'A', x1=-3, x2=3, y1=-3, y2=3, pixels=0)
+
+    with raises(ValueError):
+        interpolate_3d(sdf_2, 'A', x_min=-3, x_max=3, y_min=-3, y_max=3, x_pixels=0, y_pixels=0)
+
+    with raises(ValueError):
+        interpolate_3d_cross(sdf_2, 'A', 0, x_min=-3, x_max=3, y_min=-3, y_max=3, x_pixels=0, y_pixels=0)
+
+
+def test_required_columns():
+    df_2 = pd.DataFrame({'x': [-1, 1], 'y': [1, -1], 'A': [2, 1.5], 'h': [1.1, 1.3], 'rho': [0.55, 0.45], 'm': [0.04, 0.05]})
+    sdf_2 = SarracenDataFrame(df_2, params=dict())
+    df_3 = pd.DataFrame({'x': [-1, 1], 'y': [1, -1], 'z': [1, -1], 'A': [2, 1.5], 'h': [1.1, 1.3], 'rho': [0.55, 0.45],
+                       'm': [0.04, 0.05]})
+    sdf_3 = SarracenDataFrame(df_3, params=dict())
+
+    for column in ['target', 'mass', 'rho', 'h']:
+        sdf_dropped = sdf_2.drop(column, axis=1)
+        with raises(KeyError):
+            interpolate_2d(sdf_dropped, 'A')
+        with raises(KeyError):
+            interpolate_2d_cross(sdf_dropped, 'A')
+
+        sdf_dropped = sdf_3.drop(column, axis=1)
+        with raises(KeyError):
+            interpolate_3d(sdf_dropped, 'A')
+        with raises(KeyError):
+            interpolate_3d_cross(sdf_dropped, 'A')
+
+

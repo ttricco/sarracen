@@ -3,12 +3,112 @@ import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
-from matplotlib.figure import Figure
+from numpy.testing import assert_allclose, assert_array_equal
 from pytest import approx
 
-from sarracen import SarracenDataFrame
+from sarracen import SarracenDataFrame, interpolate_2d, interpolate_2d_cross, interpolate_3d, interpolate_3d_cross
 from sarracen.kernels import CubicSplineKernel
 from sarracen.render import render_2d, render_2d_cross, render_3d, render_3d_cross
+
+
+def test_interpolation_passthrough():
+    df = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
+    sdf = SarracenDataFrame(df)
+
+    fig, ax = plt.subplots()
+    render_2d(sdf, 'P', ax=ax)
+
+    assert_array_equal(ax.images[0].get_array().filled(0), interpolate_2d(sdf, 'P'))
+
+    fig, ax = plt.subplots()
+    render_2d_cross(sdf, 'P', x1=3, x2=6, y1=5, y2=1, ax=ax)
+
+    assert_array_equal(ax.lines[0].get_ydata(), interpolate_2d_cross(sdf, 'P', x1=3, x2=6, y1=5, y2=1))
+
+    df = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'z': [2, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
+    sdf = SarracenDataFrame(df)
+
+    fig, ax = plt.subplots()
+    render_3d(sdf, 'P', ax=ax)
+
+    assert_array_equal(ax.images[0].get_array().filled(0), interpolate_3d(sdf, 'P'))
+
+    fig, ax = plt.subplots()
+    render_3d_cross(sdf, 'P', ax=ax)
+
+    assert_array_equal(ax.images[0].get_array().filled(0), interpolate_3d_cross(sdf, 'P'))
+
+
+def test_cmap():
+    df = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
+    sdf = SarracenDataFrame(df)
+
+    fig, ax = plt.subplots()
+    render_2d(sdf, 'P', ax=ax, cmap='magma')
+
+    assert ax.images[0].cmap.name == 'magma'
+
+    df = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'z': [2, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
+    sdf = SarracenDataFrame(df)
+
+    fig, ax = plt.subplots()
+    render_3d(sdf, 'P', cmap='magma', ax=ax)
+
+    assert ax.images[0].cmap.name == 'magma'
+
+    fig, ax = plt.subplots()
+    render_3d_cross(sdf, 'P', cmap='magma', ax=ax)
+
+    assert ax.images[0].cmap.name == 'magma'
+
+
+def test_cbar_exclusion():
+    df_2 = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
+    sdf_2 = SarracenDataFrame(df_2)
+    df_3 = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'z': [2, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
+    sdf_3 = SarracenDataFrame(df_3)
+
+    for func in [render_2d, render_3d, render_3d_cross]:
+        fig, ax = plt.subplots()
+        func(sdf_2 if func is render_2d else sdf_3, 'P', ax=ax, cbar=True)
+
+        assert ax.images[-1].colorbar is not None
+
+        fig, ax = plt.subplots()
+        func(sdf_2 if func is render_2d else sdf_3, 'P', ax=ax, cbar=False)
+
+        assert ax.images[-1].colorbar is None
+
+
+def test_cbar_keywords():
+    df_2 = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
+    sdf_2 = SarracenDataFrame(df_2)
+    df_3 = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'z': [2, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
+    sdf_3 = SarracenDataFrame(df_3)
+
+    for func in [render_2d, render_3d, render_3d_cross]:
+        fig, ax = plt.subplots()
+        func(sdf_2 if func is render_2d else sdf_3, 'P', ax=ax, cbar_kws={'orientation': 'horizontal'})
+
+        assert ax.images[-1].colorbar.orientation == 'horizontal'
+
+
+def test_kwargs():
+    df_2 = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
+    sdf_2 = SarracenDataFrame(df_2)
+    df_3 = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'z': [2, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
+    sdf_3 = SarracenDataFrame(df_3)
+
+    for func in [render_2d, render_3d, render_3d_cross]:
+        fig, ax = plt.subplots()
+        func(sdf_2 if func is render_2d else sdf_3, 'P', ax=ax, origin='upper')
+
+        assert ax.images[0].origin == 'upper'
+
+    fig, ax = plt.subplots()
+    render_2d_cross(sdf_2, 'P', x1=3, x2=6, y1=5, y2=1, ax=ax, linestyle='--')
+
+    assert ax.lines[0].get_linestyle() == '--'
 
 
 def test_2d_plot():
