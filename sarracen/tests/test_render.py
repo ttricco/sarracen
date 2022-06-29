@@ -6,7 +6,7 @@ from numpy.testing import assert_array_equal
 from pytest import mark
 
 from sarracen import SarracenDataFrame, interpolate_2d, interpolate_2d_cross, interpolate_3d, interpolate_3d_cross
-from sarracen.render import render_2d, render_2d_cross, render_3d, render_3d_cross
+from sarracen.render import render_2d, render_2d_cross, render_3d, render_3d_cross, streamlines
 
 backends = ['cpu']
 if cuda.is_available():
@@ -14,18 +14,17 @@ if cuda.is_available():
 
 @mark.parametrize("backend", backends)
 def test_interpolation_passthrough(backend):
-    df = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
+    df = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'P': [1, 1], 'Ax': [3, 2], 'Ay': [2, 1], 'h': [1, 1], 'rho': [1, 1],
+                       'm': [1, 1]})
     sdf = SarracenDataFrame(df)
     sdf.backend = backend
 
     fig, ax = plt.subplots()
     render_2d(sdf, 'P', ax=ax)
-
     assert_array_equal(ax.images[0].get_array().filled(0), interpolate_2d(sdf, 'P'))
 
     fig, ax = plt.subplots()
     render_2d_cross(sdf, 'P', x1=3, x2=6, y1=5, y2=1, ax=ax)
-
     assert_array_equal(ax.lines[0].get_ydata(), interpolate_2d_cross(sdf, 'P', x1=3, x2=6, y1=5, y2=1))
 
     df = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'z': [2, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
@@ -34,12 +33,10 @@ def test_interpolation_passthrough(backend):
 
     fig, ax = plt.subplots()
     render_3d(sdf, 'P', ax=ax)
-
     assert_array_equal(ax.images[0].get_array().filled(0), interpolate_3d(sdf, 'P'))
 
     fig, ax = plt.subplots()
     render_3d_cross(sdf, 'P', ax=ax)
-
     assert_array_equal(ax.images[0].get_array().filled(0), interpolate_3d_cross(sdf, 'P'))
 
 

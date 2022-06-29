@@ -590,6 +590,7 @@ def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
         Since the direction of integration is assumed to be straight across the z-axis, the z-axis column
         is not required for this type of interpolation.
         """
+    _check_dimension(data, 3)
     x, y = _default_xy(data, x, y)
     _verify_columns(data, x, y, target_x)
     _verify_columns(data, x, y, target_y)
@@ -606,7 +607,6 @@ def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
 
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
-    _check_dimension(data, 3)
 
     weight_function = kernel.get_column_kernel_func(integral_samples)
     return (_fast_2d(target_x_data, 0, x_data, y_data, np.zeros(len(data)), data['m'].to_numpy(),
@@ -756,6 +756,7 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y:
             If `target_x`, `target_y`, `target_z`, `x`, `y`, `z`, mass, density, or smoothing length columns do not
             exist in `data`.
         """
+    _check_dimension(data, 3)
     x, y = _default_xy(data, x, y)
     _verify_columns(data, x, y, target_x)
     _verify_columns(data, x, y, target_y)
@@ -780,7 +781,6 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y:
 
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
-    _check_dimension(data, 3)
 
     return (_fast_2d(target_x_data, z_slice, x_data, y_data, z_data, data['m'].to_numpy(),
                      data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w, kernel.get_radius(), x_pixels, y_pixels,
@@ -812,7 +812,7 @@ def _fast_2d_cross(target, x_data, y_data, mass_data, rho_data, h_data, weight_f
 
 # Underlying CPU numba-compiled code for interpolation to a 2D grid. Used in interpolation of 2D data,
 # and column integration / cross-sections of 3D data.
-@njit(parallel=True, fastmath=True)
+#@njit(parallel=True, fastmath=True)
 def _fast_2d_cpu(target, z_slice, x_data, y_data, z_data, mass_data, rho_data, h_data, weight_function, kernel_radius,
                  x_pixels, y_pixels, x_min, x_max, y_min, y_max, n_dims):
     image = np.zeros((y_pixels, x_pixels))
