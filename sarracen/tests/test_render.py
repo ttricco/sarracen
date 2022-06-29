@@ -1,15 +1,22 @@
 """pytest unit tests for render.py functions."""
 import pandas as pd
 from matplotlib import pyplot as plt
+from numba import cuda
 from numpy.testing import assert_array_equal
+from pytest import mark
 
 from sarracen import SarracenDataFrame, interpolate_2d, interpolate_2d_cross, interpolate_3d, interpolate_3d_cross
 from sarracen.render import render_2d, render_2d_cross, render_3d, render_3d_cross
 
+backends = ['cpu']
+if cuda.is_available():
+    backends.append('gpu')
 
-def test_interpolation_passthrough():
+@mark.parametrize("backend", backends)
+def test_interpolation_passthrough(backend):
     df = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
     sdf = SarracenDataFrame(df)
+    sdf.backend = backend
 
     fig, ax = plt.subplots()
     render_2d(sdf, 'P', ax=ax)
@@ -23,6 +30,7 @@ def test_interpolation_passthrough():
 
     df = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'z': [2, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
     sdf = SarracenDataFrame(df)
+    sdf.backend = backend
 
     fig, ax = plt.subplots()
     render_3d(sdf, 'P', ax=ax)
@@ -35,9 +43,11 @@ def test_interpolation_passthrough():
     assert_array_equal(ax.images[0].get_array().filled(0), interpolate_3d_cross(sdf, 'P'))
 
 
-def test_cmap():
+@mark.parametrize("backend", backends)
+def test_cmap(backend):
     df = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
     sdf = SarracenDataFrame(df)
+    sdf.backend = backend
 
     fig, ax = plt.subplots()
     render_2d(sdf, 'P', ax=ax, cmap='magma')
@@ -46,6 +56,7 @@ def test_cmap():
 
     df = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'z': [2, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
     sdf = SarracenDataFrame(df)
+    sdf.backend = backend
 
     fig, ax = plt.subplots()
     render_3d(sdf, 'P', cmap='magma', ax=ax)
@@ -58,11 +69,14 @@ def test_cmap():
     assert ax.images[0].cmap.name == 'magma'
 
 
-def test_cbar_exclusion():
+@mark.parametrize("backend", backends)
+def test_cbar_exclusion(backend):
     df_2 = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
     sdf_2 = SarracenDataFrame(df_2)
+    sdf_2.backend = backend
     df_3 = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'z': [2, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
     sdf_3 = SarracenDataFrame(df_3)
+    sdf_3.backend = backend
 
     for func in [render_2d, render_3d, render_3d_cross]:
         fig, ax = plt.subplots()
@@ -76,11 +90,14 @@ def test_cbar_exclusion():
         assert ax.images[-1].colorbar is None
 
 
-def test_cbar_keywords():
+@mark.parametrize("backend", backends)
+def test_cbar_keywords(backend):
     df_2 = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
     sdf_2 = SarracenDataFrame(df_2)
+    sdf_2.backend = backend
     df_3 = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'z': [2, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
     sdf_3 = SarracenDataFrame(df_3)
+    sdf_3.backend = backend
 
     for func in [render_2d, render_3d, render_3d_cross]:
         fig, ax = plt.subplots()
@@ -89,11 +106,14 @@ def test_cbar_keywords():
         assert ax.images[-1].colorbar.orientation == 'horizontal'
 
 
-def test_kwargs():
+@mark.parametrize("backend", backends)
+def test_kwargs(backend):
     df_2 = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
     sdf_2 = SarracenDataFrame(df_2)
+    sdf_2.backend = backend
     df_3 = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'z': [2, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
     sdf_3 = SarracenDataFrame(df_3)
+    sdf_3.backend = backend
 
     for func in [render_2d, render_3d, render_3d_cross]:
         fig, ax = plt.subplots()
@@ -107,9 +127,11 @@ def test_kwargs():
     assert ax.lines[0].get_linestyle() == '--'
 
 
-def test_rotated_ticks():
+@mark.parametrize("backend", backends)
+def test_rotated_ticks(backend):
     df = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'z': [2, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
     sdf = SarracenDataFrame(df)
+    sdf.backend = backend
 
     for func in [render_3d, render_3d_cross]:
         fig, ax = plt.subplots()
@@ -119,11 +141,14 @@ def test_rotated_ticks():
         assert ax.get_yticks().size == 0
 
 
-def test_plot_labels():
+@mark.parametrize("backend", backends)
+def test_plot_labels(backend):
     df_2 = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
     sdf_2 = SarracenDataFrame(df_2)
+    sdf_2.backend = backend
     df_3 = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'z': [2, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
     sdf_3 = SarracenDataFrame(df_3)
+    sdf_3.backend = backend
 
     for func in [render_2d, render_3d, render_3d_cross]:
         fig, ax = plt.subplots()
@@ -153,11 +178,14 @@ def test_plot_labels():
     assert ax.get_ylabel() == 'rho'
 
 
-def test_plot_bounds():
+@mark.parametrize("backend", backends)
+def test_plot_bounds(backend):
     df_2 = pd.DataFrame({'x': [6, 3], 'y': [5, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
     sdf_2 = SarracenDataFrame(df_2)
+    sdf_2.backend = backend
     df_3 = pd.DataFrame({'x': [6, 3], 'y': [5, 1], 'z': [0, 0], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
     sdf_3 = SarracenDataFrame(df_3)
+    sdf_3.backend = backend
 
     for func in [render_2d, render_2d_cross, render_3d, render_3d_cross]:
         fig, ax = plt.subplots()
@@ -182,7 +210,8 @@ def test_plot_bounds():
             assert ax.figure.axes[1].get_ylim() == (0, interpolate_3d_cross(sdf_3, 'P').max())
 
 
-def test_snap():
+@mark.parametrize("backend", backends)
+def test_snap(backend):
     df = pd.DataFrame({'x': [0.0001, 5.2],
                        'y': [3.00004, 0.1],
                        'P': [1, 1],
@@ -190,6 +219,7 @@ def test_snap():
                        'rho': [1, 1],
                        'm': [1, 1]})
     sdf = SarracenDataFrame(df)
+    sdf.backend = backend
 
     fig, ax = plt.subplots()
     sdf.render_2d('P', ax=ax)
