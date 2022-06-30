@@ -812,7 +812,7 @@ def _fast_2d_cross(target, x_data, y_data, mass_data, rho_data, h_data, weight_f
 
 # Underlying CPU numba-compiled code for interpolation to a 2D grid. Used in interpolation of 2D data,
 # and column integration / cross-sections of 3D data.
-#@njit(parallel=True, fastmath=True)
+@njit(parallel=True, fastmath=True)
 def _fast_2d_cpu(target, z_slice, x_data, y_data, z_data, mass_data, rho_data, h_data, weight_function, kernel_radius,
                  x_pixels, y_pixels, x_min, x_max, y_min, y_max, n_dims):
     image = np.zeros((y_pixels, x_pixels))
