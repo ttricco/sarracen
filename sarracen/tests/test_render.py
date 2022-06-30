@@ -6,7 +6,7 @@ from numpy.testing import assert_array_equal
 from pytest import mark
 
 from sarracen import SarracenDataFrame, interpolate_2d, interpolate_2d_cross, interpolate_3d, interpolate_3d_cross
-from sarracen.render import render_2d, render_2d_cross, render_3d, render_3d_cross, streamlines
+from sarracen.render import render_2d, render_2d_cross, render_3d, render_3d_cross, streamlines, arrowplot
 
 backends = ['cpu']
 if cuda.is_available():
@@ -14,6 +14,9 @@ if cuda.is_available():
 
 @mark.parametrize("backend", backends)
 def test_interpolation_passthrough(backend):
+    """
+    Verify that each rendering function uses the proper underlying interpolation function.
+    """
     df = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'P': [1, 1], 'Ax': [3, 2], 'Ay': [2, 1], 'h': [1, 1], 'rho': [1, 1],
                        'm': [1, 1]})
     sdf = SarracenDataFrame(df)
@@ -42,6 +45,9 @@ def test_interpolation_passthrough(backend):
 
 @mark.parametrize("backend", backends)
 def test_cmap(backend):
+    """
+    Verify that each rendering function uses the provided color map.
+    """
     df = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
     sdf = SarracenDataFrame(df)
     sdf.backend = backend
@@ -68,6 +74,9 @@ def test_cmap(backend):
 
 @mark.parametrize("backend", backends)
 def test_cbar_exclusion(backend):
+    """
+    Verify that each rendering function respects the cbar argument.
+    """
     df_2 = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
     sdf_2 = SarracenDataFrame(df_2)
     sdf_2.backend = backend
@@ -89,6 +98,9 @@ def test_cbar_exclusion(backend):
 
 @mark.parametrize("backend", backends)
 def test_cbar_keywords(backend):
+    """
+    Verify that each rendering function respects the passed keywords for the colorbar.
+    """
     df_2 = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
     sdf_2 = SarracenDataFrame(df_2)
     sdf_2.backend = backend
@@ -105,7 +117,11 @@ def test_cbar_keywords(backend):
 
 @mark.parametrize("backend", backends)
 def test_kwargs(backend):
-    df_2 = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
+    """
+    Verify that each rendering function respects passed keyword arguments.
+    """
+    df_2 = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1], 'Ax': [1, 1],
+                         'Ay': [1, 1]})
     sdf_2 = SarracenDataFrame(df_2)
     sdf_2.backend = backend
     df_3 = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'z': [2, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
@@ -119,6 +135,14 @@ def test_kwargs(backend):
         assert ax.images[0].origin == 'upper'
 
     fig, ax = plt.subplots()
+    streamlines(sdf_2, ('Ax', 'Ay'), ax=ax, zorder=5)
+    assert ax.patches[0].zorder == 5
+
+    fig, ax = plt.subplots()
+    arrowplot(sdf_2, ('Ax', 'Ay'), ax=ax, zorder=5)
+    assert ax.collections[0].zorder == 5
+
+    fig, ax = plt.subplots()
     render_2d_cross(sdf_2, 'P', x1=3, x2=6, y1=5, y2=1, ax=ax, linestyle='--')
 
     assert ax.lines[0].get_linestyle() == '--'
@@ -126,7 +150,11 @@ def test_kwargs(backend):
 
 @mark.parametrize("backend", backends)
 def test_rotated_ticks(backend):
-    df = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'z': [2, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
+    """
+    A rotated plot should have no x & y ticks.
+    """
+    df = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'z': [2, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1],
+                       'Ax': [1, 1], 'Ay': [1, 1], 'Az': [1, 1]})
     sdf = SarracenDataFrame(df)
     sdf.backend = backend
 
@@ -137,13 +165,26 @@ def test_rotated_ticks(backend):
         assert ax.get_xticks().size == 0
         assert ax.get_yticks().size == 0
 
+    for func in [arrowplot, streamlines]:
+        fig, ax = plt.subplots()
+        func(sdf, ('Ax', 'Ay', 'Az'), rotation=[34, 23, 50], ax=ax)
+
+        assert ax.get_xticks().size == 0
+        assert ax.get_yticks().size == 0
+
 
 @mark.parametrize("backend", backends)
 def test_plot_labels(backend):
-    df_2 = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
+    """
+    Verify that plot labels for each rendering function are correct.
+    """
+    df_2 = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1], 'Ax': [1, 1],
+                         'Ay': [1, 1]})
     sdf_2 = SarracenDataFrame(df_2)
     sdf_2.backend = backend
-    df_3 = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'z': [2, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
+
+    df_3 = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'z': [2, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1],
+                         'Ax': [1, 1], 'Ay': [1, 1], 'Az': [1, 1]})
     sdf_3 = SarracenDataFrame(df_3)
     sdf_3.backend = backend
 
@@ -162,6 +203,19 @@ def test_plot_labels(backend):
         assert ax.get_ylabel() == 'x'
         assert ax.figure.axes[1].get_ylabel() == ('column ' if func is render_3d else '') + 'rho'
 
+    for func in [streamlines, arrowplot]:
+        fig, ax = plt.subplots()
+        func(sdf_2, ('Ax', 'Ay'), ax=ax)
+
+        assert ax.get_xlabel() == 'x'
+        assert ax.get_ylabel() == 'y'
+
+        fig, ax = plt.subplots()
+        func(sdf_3, ('Ax', 'Ay', 'Az'), x='y', y='x', ax=ax)
+
+        assert ax.get_xlabel() == 'y'
+        assert ax.get_ylabel() == 'x'
+
     fig, ax = plt.subplots()
     render_2d_cross(sdf_2, 'P', ax=ax)
 
@@ -177,16 +231,24 @@ def test_plot_labels(backend):
 
 @mark.parametrize("backend", backends)
 def test_plot_bounds(backend):
+    """
+    Verify that plot bounds are set correctly for each rendering function.
+    """
     df_2 = pd.DataFrame({'x': [6, 3], 'y': [5, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
     sdf_2 = SarracenDataFrame(df_2)
     sdf_2.backend = backend
-    df_3 = pd.DataFrame({'x': [6, 3], 'y': [5, 1], 'z': [0, 0], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
+
+    df_3 = pd.DataFrame({'x': [6, 3], 'y': [5, 1], 'z': [2, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1],
+                         'Ax': [1, 1], 'Ay': [1, 1], 'Az': [1, 1]})
     sdf_3 = SarracenDataFrame(df_3)
     sdf_3.backend = backend
 
-    for func in [render_2d, render_2d_cross, render_3d, render_3d_cross]:
+    for func in [render_2d, render_2d_cross, render_3d, render_3d_cross, arrowplot, streamlines]:
         fig, ax = plt.subplots()
-        func(sdf_2 if func is render_2d or func is render_2d_cross else sdf_3, 'P', ax=ax)
+        if func is arrowplot or func is streamlines:
+            func(sdf_3, ('Ax', 'Ay', 'Az'), ax=ax)
+        else:
+            func(sdf_2 if func is render_2d or func is render_2d_cross else sdf_3, 'P', ax=ax)
 
         if func is render_2d_cross:
             assert ax.get_xlim() == (0, 5)
