@@ -1041,7 +1041,7 @@ def test_required_columns(backend):
         with raises(KeyError):
             interpolate_2d_cross(sdf_dropped, 'A')
         with raises(KeyError):
-            interpolate_2d_vec(sdf_dropped, 'A')
+            interpolate_2d_vec(sdf_dropped, 'A', 'B')
 
         sdf_dropped = sdf_3.drop(column, axis=1)
         with raises(KeyError):
