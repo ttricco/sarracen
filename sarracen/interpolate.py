@@ -4,9 +4,7 @@ Contains several interpolation functions which produce interpolated 2D or 1D arr
 import numpy as np
 from scipy.spatial.transform import Rotation
 
-from sarracen.backends.base_backend import BaseBackend
-from sarracen.backends.cpu_backend import CPUBackend
-from sarracen.backends.gpu_backend import GPUBackend
+from sarracen.backends import BaseBackend, CPUBackend, GPUBackend
 from sarracen.kernels import BaseKernel
 
 
