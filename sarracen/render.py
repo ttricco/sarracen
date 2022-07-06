@@ -469,7 +469,7 @@ def render_2d_cross(data: 'SarracenDataFrame', target: str, x: str = None, y: st
 
 
 def render_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
-              integral_samples: int = 1000, rotation: np.ndarray = None, origin: np.ndarray = None,
+              integral_samples: int = 1000, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
               x_pixels: int = None, y_pixels: int = None, x_min: float = None, x_max: float = None, y_min: float = None,
               y_max: float = None, cmap: Union[str, Colormap] = 'RdBu', cbar: bool = True, cbar_kws: dict = {},
               cbar_ax: Axes = None, ax: Axes = None, backend: str = None, **kwargs) -> Axes:
@@ -494,7 +494,7 @@ def render_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = No
     rotation: array_like or Rotation, optional
         The rotation to apply to the data before interpolation. If defined as an array, the
         order of rotations is [z, y, x] in degrees.
-    origin: array_like, optional
+    rot_origin: array_like, optional
         Point of rotation of the data, in [x, y, z] form. Defaults to the centre
         point of the bounds of the data.
     x_pixels, y_pixels: int, optional
@@ -533,7 +533,7 @@ def render_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = No
         If `target`, `x`, `y`, mass, density, or smoothing length columns do not
         exist in `data`.
     """
-    image = interpolate_3d(data, target, x, y, kernel, integral_samples, rotation, origin, x_pixels, y_pixels, x_min,
+    image = interpolate_3d(data, target, x, y, kernel, integral_samples, rotation, rot_origin, x_pixels, y_pixels, x_min,
                            x_max, y_min, y_max, backend)
 
     if ax is None:
@@ -563,10 +563,11 @@ def render_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = No
 
 
 def render_3d_cross(data: 'SarracenDataFrame', target: str, z_slice: float = None, x: str = None, y: str = None,
-                    z: str = None, kernel: BaseKernel = None, rotation: np.ndarray = None, origin: np.ndarray = None,
-                    x_pixels: int = None, y_pixels: int = None, x_min: float = None, x_max: float = None,
-                    y_min: float = None, y_max: float = None, cmap: Union[str, Colormap] = 'RdBu', cbar: bool = True,
-                    cbar_kws: dict = {}, cbar_ax: Axes = None, ax: Axes = None, backend: str = None, **kwargs) -> Axes:
+                    z: str = None, kernel: BaseKernel = None, rotation: np.ndarray = None,
+                    rot_origin: np.ndarray = None, x_pixels: int = None, y_pixels: int = None, x_min: float = None,
+                    x_max: float = None, y_min: float = None, y_max: float = None, cmap: Union[str, Colormap] = 'RdBu',
+                    cbar: bool = True, cbar_kws: dict = {}, cbar_ax: Axes = None, ax: Axes = None, backend: str = None,
+                    **kwargs) -> Axes:
     """ Render 3D particle data to a 2D grid, using a 3D cross-section.
 
     Render the data within a SarracenDataFrame to a 2D matplotlib object, using a 3D -> 2D
@@ -589,7 +590,7 @@ def render_3d_cross(data: 'SarracenDataFrame', target: str, z_slice: float = Non
     rotation: array_like or Rotation, optional
         The rotation to apply to the data before rendering. If defined as an array, the
         order of rotations is [z, y, x] in degrees.
-    origin: array_like, optional
+    rot_origin: array_like, optional
         Point of rotation of the data, in [x, y, z] form. Defaults to the centre
         point of the bounds of the data.
     x_pixels, y_pixels: int, optional
@@ -628,7 +629,7 @@ def render_3d_cross(data: 'SarracenDataFrame', target: str, z_slice: float = Non
         If `target`, `x`, `y`, `z`, mass, density, or smoothing length columns do not
         exist in `data`.
     """
-    image = interpolate_3d_cross(data, target, z_slice, x, y, z, kernel, rotation, origin, x_pixels, y_pixels, x_min,
+    image = interpolate_3d_cross(data, target, z_slice, x, y, z, kernel, rotation, rot_origin, x_pixels, y_pixels, x_min,
                                  x_max, y_min, y_max, backend)
 
     if ax is None:
