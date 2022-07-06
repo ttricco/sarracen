@@ -190,6 +190,6 @@ class CPUBackend(BaseBackend):
 
             # add contributions to output total
             for ipix in prange(int(ipixmax[i]) - int(ipixmin[i])):
-                output[ipix + int(ipixmin[i])] += term[i] * wab[ipix]
+                output[ipix + int(ipixmin[i])] += term[filter_det][i] * wab[ipix]
 
         return output
