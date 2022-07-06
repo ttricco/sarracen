@@ -7,7 +7,7 @@ from sarracen.kernels import CubicSplineKernel, QuarticSplineKernel, QuinticSpli
 
 
 def single_kernel(x, kernel):
-    return kernel.w(x, 1)
+    return kernel.w(np.abs(x), 1)
 
 
 def double_kernel(y, x, kernel):
@@ -18,6 +18,10 @@ def double_kernel(y, x, kernel):
 def triple_kernel(z, y, x, kernel):
     # Utility function for triple integrals in test_normalization
     return kernel.w(np.sqrt(x ** 2 + y ** 2 + z ** 2), 3)
+
+
+def double_column(y, x, column_func):
+    return column_func(np.sqrt(x ** 2 + y ** 2), 0)
 
 
 class TestKernels:
@@ -91,18 +95,20 @@ class TestKernels:
         # has all positive coordinates.
 
         for kernel in [CubicSplineKernel(), QuarticSplineKernel(), QuinticSplineKernel()]:
-            norm = quad(single_kernel, 0, kernel.get_radius(), kernel)[0]
-            assert approx(norm) == 0.5  # positive space -> a half of 1D space
+            norm = quad(single_kernel, -kernel.get_radius(), kernel.get_radius(), kernel)[0]
+            assert approx(norm) == 1
 
         for kernel in [CubicSplineKernel(), QuarticSplineKernel(), QuinticSplineKernel()]:
-            norm = dblquad(double_kernel, 0, kernel.get_radius(), 0, kernel.get_radius(), [kernel])[0]
-            assert approx(norm) == 0.25  # positive space -> a fourth of 2D space
+            norm = dblquad(double_kernel, -kernel.get_radius(), kernel.get_radius(), -kernel.get_radius(),
+                           kernel.get_radius(), [kernel])[0]
+            assert approx(norm) == 1
 
         for kernel in [CubicSplineKernel(), QuarticSplineKernel(), QuinticSplineKernel()]:
-            norm = tplquad(triple_kernel, 0, kernel.get_radius(), 0, kernel.get_radius(), 0, kernel.get_radius(), [kernel])[0]
-            assert approx(norm) == 0.125  # positive space -> an eight of 3D space
+            norm = tplquad(triple_kernel, -kernel.get_radius(), kernel.get_radius(), -kernel.get_radius(),
+                           kernel.get_radius(), -kernel.get_radius(), kernel.get_radius(), [kernel])[0]
+            assert approx(norm) == 1
 
-    def test_column_integration(self):
+    def test_cubic_column(self):
         kernel = CubicSplineKernel()
         column_kernel = kernel.get_column_kernel(10000)
 
@@ -115,6 +121,7 @@ class TestKernels:
         assert np.interp(2, np.linspace(0, kernel.get_radius(), 10000), column_kernel) == 0
         assert np.interp(5, np.linspace(0, kernel.get_radius(), 10000), column_kernel) == 0
 
+    def test_quartic_column(self):
         kernel = QuarticSplineKernel()
         column_kernel = kernel.get_column_kernel(10000)
 
@@ -128,6 +135,7 @@ class TestKernels:
         assert np.interp(2.5, np.linspace(0, kernel.get_radius(), 10000), column_kernel) == 0
         assert np.interp(5, np.linspace(0, kernel.get_radius(), 10000), column_kernel) == 0
 
+    def test_quintic_column(self):
         kernel = QuinticSplineKernel()
         column_kernel = kernel.get_column_kernel(10000)
 
@@ -142,3 +150,19 @@ class TestKernels:
                                                                                                    rel=1e-4)
         assert np.interp(3, np.linspace(0, kernel.get_radius(), 10000), column_kernel) == 0
         assert np.interp(5, np.linspace(0, kernel.get_radius(), 10000), column_kernel) == 0
+
+    def test_normalized_column(self):
+        for kernel in [CubicSplineKernel(), QuarticSplineKernel(), QuinticSplineKernel()]:
+            norm = dblquad(double_column, -kernel.get_radius(), kernel.get_radius(), -kernel.get_radius(),
+                           kernel.get_radius(), [kernel.get_column_kernel_func(10000)])[0]
+            assert approx(norm) == 1
+
+    def test_oob(self):
+        for kernel in [CubicSplineKernel(), QuarticSplineKernel(), QuinticSplineKernel()]:
+            for dimensions in range(1, 3):
+                assert kernel.w(-1, dimensions) == 0
+                assert kernel.w(kernel.get_radius() + 1, dimensions) == 0
+
+            column_func = kernel.get_column_kernel_func(1000)
+            assert column_func(-1, 0) == column_func(0, 0)
+            assert approx(column_func(kernel.get_radius() + 1, 0)) == 0

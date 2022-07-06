@@ -87,8 +87,8 @@ class BaseKernel:
             # using np.linspace() would break compatibility with the GPU backend,
             # so the calculation here is performed manually.
             wab_index = q * (samples - 1) / radius
-            index = int(math.floor(wab_index))
-            index1 = int(math.ceil(wab_index))
+            index = min(max(0, int(math.floor(wab_index))), samples - 1)
+            index1 = min(max(0, int(math.ceil(wab_index))), samples - 1)
             t = wab_index - index
             return column_kernel[index] * (1 - t) + column_kernel[index1] * t
 

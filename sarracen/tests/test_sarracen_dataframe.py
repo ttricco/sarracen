@@ -1,18 +1,14 @@
 """pytest unit tests for sarracen_dataframe.py functionality."""
 import pandas as pd
+from matplotlib import pyplot as plt
 
-from sarracen import SarracenDataFrame
+from sarracen import SarracenDataFrame, render_2d, render_2d_cross, render_3d, render_3d_cross
 
 
 def test_special_columns():
     # The 'x', 'y', 'rho', 'm', and 'h' keywords should be detected.
     # A 'z' column should not be detected.
-    df = pd.DataFrame({'P': [1, 1],
-                       'h': [1, 1],
-                       'rho': [1, 1],
-                       'x': [5, 6],
-                       'y': [5, 4],
-                       'm': [1, 1]})
+    df = pd.DataFrame({'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'x': [5, 6], 'y': [5, 4], 'm': [1, 1]})
     sdf = SarracenDataFrame(df)
 
     assert sdf.xcol == 'x'
@@ -24,12 +20,7 @@ def test_special_columns():
 
     # The 'rx', 'ry', 'rz', 'density', and 'mass' keywords should be detected.
     # An 'h' column should not be detected.
-    df = pd.DataFrame({'ry': [-1, 1],
-                       'density': [1, 1],
-                       'rx': [3, 4],
-                       'P': [1, 1],
-                       'rz': [4, 3],
-                       'mass': [1, 1]})
+    df = pd.DataFrame({'ry': [-1, 1], 'density': [1, 1], 'rx': [3, 4], 'P': [1, 1], 'rz': [4, 3], 'mass': [1, 1]})
     sdf = SarracenDataFrame(df)
 
     assert sdf.xcol == 'rx'
@@ -42,11 +33,7 @@ def test_special_columns():
     # No keywords, so fall back to the first two columns for x and y.
     # Even though 'k' exists, this will be assumed to be 2D data.
     # The 'h' column will be detected, but no density or mass column will be detected.
-    df = pd.DataFrame({'i': [3.4, 2.1],
-                       'j': [4.9, 1.6],
-                       'k': [2.3, 2.0],
-                       'h': [1, 1],
-                       'P': [1, 1]})
+    df = pd.DataFrame({'i': [3.4, 2.1], 'j': [4.9, 1.6], 'k': [2.3, 2.0], 'h': [1, 1], 'P': [1, 1]})
     sdf = SarracenDataFrame(df)
 
     assert sdf.xcol == 'i'
@@ -59,48 +46,26 @@ def test_special_columns():
 
 def test_dimensions():
     # This should be detected as 3-dimensional data.
-    df = pd.DataFrame({'P': [1, 1],
-                       'z': [4, 3],
-                       'h': [1, 1],
-                       'rho': [1, 1],
-                       'x': [5, 6],
-                       'y': [5, 4],
-                       'm': [1, 1]})
+    df = pd.DataFrame({'P': [1, 1], 'z': [4, 3], 'h': [1, 1], 'rho': [1, 1], 'x': [5, 6], 'y': [5, 4], 'm': [1, 1]})
     sdf = SarracenDataFrame(df)
 
     assert sdf.get_dim() == 3
 
     # This should be detected as 2-dimensional data.
-    df = pd.DataFrame({'P': [1, 1],
-                       'h': [1, 1],
-                       'y': [5, 4],
-                       'rho': [1, 1],
-                       'm': [1, 1],
-                       'x': [5, 6]})
+    df = pd.DataFrame({'P': [1, 1], 'h': [1, 1], 'y': [5, 4], 'rho': [1, 1], 'm': [1, 1], 'x': [5, 6]})
     sdf = SarracenDataFrame(df)
 
     assert sdf.get_dim() == 2
 
     # This should assumed to be 2-dimensional data.
-    df = pd.DataFrame({'P': [1, 1],
-                       'h': [1, 1],
-                       'rho': [1, 1],
-                       'm': [1, 1]})
+    df = pd.DataFrame({'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
     sdf = SarracenDataFrame(df)
 
     assert sdf.get_dim() == 2
 
 
 def test_column_changing():
-    df = pd.DataFrame({'P': [1],
-                       'z': [2],
-                       'h': [3],
-                       'rho': [4],
-                       'x': [5],
-                       'y': [6],
-                       'm': [7],
-                       'd': [8],
-                       'smooth': [9],
+    df = pd.DataFrame({'P': [1], 'z': [2], 'h': [3], 'rho': [4], 'x': [5], 'y': [6], 'm': [7], 'd': [8], 'smooth': [9],
                        'ma': [10]})
     sdf = SarracenDataFrame(df)
 
@@ -138,3 +103,44 @@ def test_column_changing():
     assert sdf.rhocol == 'd'
     assert sdf.mcol == 'ma'
     assert sdf.hcol == 'smooth'
+
+
+def test_render_passthrough():
+    # Basic tests that both sdf.render() and render(sdf) return the same plots
+
+    # 2D dataset
+    df = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
+    sdf = SarracenDataFrame(df)
+
+    fig1, ax1 = plt.subplots()
+    fig2, ax2 = plt.subplots()
+    ax1 = sdf.render_2d('P', ax=ax1)
+    ax2 = render_2d(sdf, 'P', ax=ax2)
+
+    assert repr(ax1) == repr(ax2)
+
+    fig1, ax1 = plt.subplots()
+    fig2, ax2 = plt.subplots()
+    ax1 = sdf.render_2d_cross('P', ax=ax1)
+    ax2 = render_2d_cross(sdf, 'P', ax=ax2)
+
+    assert repr(ax1) == repr(ax2)
+
+    # 3D dataset
+    df = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'z': [2, 1], 'P': [1, 1], 'h': [1, 1], 'Ax': [5, 3], 'Ay': [2, 3],
+                       'Az': [1, -1], 'rho': [1, 1], 'm': [1, 1]})
+    sdf = SarracenDataFrame(df)
+
+    fig1, ax1 = plt.subplots()
+    fig2, ax2 = plt.subplots()
+    ax1 = sdf.render_3d('P', ax=ax1)
+    ax2 = render_3d(sdf, 'P', ax=ax2)
+
+    assert repr(ax1) == repr(ax2)
+
+    fig1, ax1 = plt.subplots()
+    fig2, ax2 = plt.subplots()
+    ax1 = sdf.render_3d_cross('P', ax=ax1)
+    ax2 = render_3d_cross(sdf, 'P', ax=ax2)
+
+    assert repr(ax1) == repr(ax2)
