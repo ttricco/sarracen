@@ -6,7 +6,7 @@ from numba import cuda
 from numba.core.registry import CPUDispatcher
 from numpy import ndarray
 
-from sarracen.backends.base_backend import BaseBackend
+from sarracen.interpolate.base_backend import BaseBackend
 
 
 class GPUBackend(BaseBackend):

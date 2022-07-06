@@ -5,7 +5,7 @@ from numba.core.registry import CPUDispatcher
 from numpy import ndarray
 import numpy as np
 
-from sarracen.backends.base_backend import BaseBackend
+from sarracen.interpolate.base_backend import BaseBackend
 
 
 class CPUBackend(BaseBackend):
