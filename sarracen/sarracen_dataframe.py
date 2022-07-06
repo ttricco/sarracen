@@ -63,6 +63,10 @@ class SarracenDataFrame(DataFrame):
         self._kernel = CubicSplineKernel()
         self._backend = 'cpu'
 
+    @property
+    def _constructor(self):
+        return SarracenDataFrame
+
     def _identify_special_columns(self):
         """ Identify special columns commonly used in analysis functions.
 
