@@ -18,5 +18,6 @@ class QuarticSplineKernel(BaseKernel):
             96 / (1199 * np.pi) if (ndim == 2) else \
             1 / (20 * np.pi)
 
-        return norm * (((5 / 2) - q) ** 4 * (q < 2.5) - 5 * ((3 / 2) - q) ** 4 * (q < 1.5) + 10 * ((1 / 2) - q) ** 4 * (
-                    q < 0.5))
+        return norm * (((5 / 2) - q) ** 4 * (q < 2.5)
+                       - 5 * ((3 / 2) - q) ** 4 * (q < 1.5)
+                       + 10 * ((1 / 2) - q) ** 4 * ( q < 0.5)) * (0 <= q)
