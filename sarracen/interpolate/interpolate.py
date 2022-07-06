@@ -1,12 +1,10 @@
 """
 Contains several interpolation functions which produce interpolated 2D or 1D arrays of SPH data.
 """
-import math
-
 import numpy as np
-from numba import prange, njit, cuda
 from scipy.spatial.transform import Rotation
 
+from sarracen.interpolate import BaseBackend, CPUBackend, GPUBackend
 from sarracen.kernels import BaseKernel
 
 
@@ -259,19 +257,19 @@ def _rotate_xyz(data, x, y, z, rotation, origin):
     rotated_x, rotated_y, rotated_z = _rotate_data(data, data.xcol, data.ycol, data.zcol, rotation, origin)
     x_data = rotated_x if x == data.xcol else \
         rotated_y if x == data.ycol else \
-        rotated_z if x == data.zcol else data[x]
+            rotated_z if x == data.zcol else data[x]
     y_data = rotated_x if y == data.xcol else \
         rotated_y if y == data.ycol else \
-        rotated_z if y == data.zcol else data[y]
+            rotated_z if y == data.zcol else data[y]
     z_data = rotated_x if z == data.xcol else \
         rotated_y if z == data.ycol else \
-        rotated_z if z == data.zcol else data[z]
+            rotated_z if z == data.zcol else data[z]
 
     return x_data, y_data, z_data
 
 
 def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
-                   x_pixels: int = None, y_pixels: int = None,  x_min: float = None, x_max: float = None,
+                   x_pixels: int = None, y_pixels: int = None, x_min: float = None, x_max: float = None,
                    y_min: float = None, y_max: float = None, backend: str = None) -> np.ndarray:
     """ Interpolate particle data across two directional axes to a 2D grid of pixels.
 
@@ -325,9 +323,10 @@ def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
     backend = backend if backend is not None else data.backend
     _check_dimension(data, 2)
 
-    return _fast_2d(data[target].to_numpy(), 0, data[x].to_numpy(), data[y].to_numpy(), np.zeros(len(data)),
-                    data['m'].to_numpy(), data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w,
-                    kernel.get_radius(), x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2, backend)
+    return get_backend(backend). \
+        interpolate_2d_render(data[target].to_numpy(), data[x].to_numpy(), data[y].to_numpy(), data['m'].to_numpy(),
+                              data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w, kernel.get_radius(), x_pixels,
+                              y_pixels, x_min, x_max, y_min, y_max)
 
 
 def interpolate_2d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, x: str = None, y: str = None,
@@ -386,12 +385,11 @@ def interpolate_2d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
     backend = backend if backend is not None else data.backend
     _check_dimension(data, 2)
 
-    return (_fast_2d(data[target_x].to_numpy(), 0, data[x].to_numpy(), data[y].to_numpy(), np.zeros(len(data)),
-                     data['m'].to_numpy(), data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w,
-                     kernel.get_radius(), x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2, backend),
-           _fast_2d(data[target_y].to_numpy(), 0, data[x].to_numpy(), data[y].to_numpy(), np.zeros(len(data)),
-                    data['m'].to_numpy(), data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w,
-                    kernel.get_radius(), x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2, backend))
+    return get_backend(backend).\
+        interpolate_2d_render_vec(data[target_x].to_numpy(), data[target_y].to_numpy(), data[x].to_numpy(),
+                                  data[y].to_numpy(), data['m'].to_numpy(), data['rho'].to_numpy(),
+                                  data['h'].to_numpy(), kernel.w, kernel.get_radius(), x_pixels, y_pixels, x_min, x_max,
+                                  y_min, y_max)
 
 
 def interpolate_2d_cross(data: 'SarracenDataFrame',
@@ -458,9 +456,10 @@ def interpolate_2d_cross(data: 'SarracenDataFrame',
     if pixels <= 0:
         raise ValueError('pixcount must be greater than zero!')
 
-    return _fast_2d_cross(data[target].to_numpy(), data[x].to_numpy(), data[y].to_numpy(), data['m'].to_numpy(),
-                          data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w, kernel.get_radius(), pixels, x1,
-                          x2, y1, y2, backend)
+    return get_backend(backend)\
+        .interpolate_2d_cross(data[target].to_numpy(), data[x].to_numpy(), data[y].to_numpy(), data['m'].to_numpy(),
+                              data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w, kernel.get_radius(), pixels, x1,
+                              x2, y1, y2)
 
 
 def interpolate_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
@@ -535,9 +534,10 @@ def interpolate_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
 
     weight_function = kernel.get_column_kernel_func(integral_samples)
 
-    return _fast_2d(data[target].to_numpy(), 0, x_data, y_data, np.zeros(len(data)), data['m'].to_numpy(),
-                    data['rho'].to_numpy(), data['h'].to_numpy(), weight_function,
-                    kernel.get_radius(), x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2, backend)
+    return get_backend(backend). \
+        interpolate_3d_projection(data[target].to_numpy(), x_data, y_data, data['m'].to_numpy(), data['rho'].to_numpy(),
+                                  data['h'].to_numpy(), weight_function, kernel.get_radius(), x_pixels, y_pixels, x_min,
+                                  x_max, y_min, y_max)
 
 
 def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, target_z: str, x: str = None,
@@ -617,12 +617,10 @@ def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
     _check_dimension(data, 3)
 
     weight_function = kernel.get_column_kernel_func(integral_samples)
-    return (_fast_2d(target_x_data, 0, x_data, y_data, np.zeros(len(data)), data['m'].to_numpy(),
-                     data['rho'].to_numpy(), data['h'].to_numpy(), weight_function,
-                     kernel.get_radius(), x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2, backend),
-            _fast_2d(target_y_data, 0, x_data, y_data, np.zeros(len(data)), data['m'].to_numpy(),
-                     data['rho'].to_numpy(), data['h'].to_numpy(), weight_function,
-                     kernel.get_radius(), x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2, backend))
+    return get_backend(backend). \
+        interpolate_3d_projection_vec(target_x_data, target_y_data, x_data, y_data, data['m'].to_numpy(),
+                                      data['rho'].to_numpy(), data['h'].to_numpy(), weight_function,
+                                      kernel.get_radius(), x_pixels, y_pixels, x_min, x_max, y_min, y_max)
 
 
 def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, z_slice: float = None, x: str = None, y: str = None,
@@ -704,9 +702,10 @@ def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, z_slice: float 
 
     x_data, y_data, z_data = _rotate_xyz(data, x, y, data.zcol, rotation, origin)
 
-    return _fast_2d(data[target].to_numpy(), z_slice, x_data, y_data, z_data, data['m'].to_numpy(),
-                    data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w, kernel.get_radius(), x_pixels, y_pixels,
-                    x_min, x_max, y_min, y_max, 3, backend)
+    return get_backend(backend) \
+        .interpolate_3d_cross(data[target].to_numpy(), z_slice, x_data, y_data, z_data, data['m'].to_numpy(),
+                              data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w, kernel.get_radius(), x_pixels,
+                              y_pixels, x_min, x_max, y_min, y_max)
 
 
 def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, target_z: str,
@@ -790,326 +789,27 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y:
     backend = backend if backend is not None else data.backend
     _check_dimension(data, 3)
 
-    return (_fast_2d(target_x_data, z_slice, x_data, y_data, z_data, data['m'].to_numpy(),
-                     data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w, kernel.get_radius(), x_pixels, y_pixels,
-                     x_min, x_max, y_min, y_max, 3, backend),
-            _fast_2d(target_y_data, z_slice, x_data, y_data, z_data, data['m'].to_numpy(),
-                     data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w, kernel.get_radius(), x_pixels, y_pixels,
-                     x_min, x_max, y_min, y_max, 3, backend))
+    return get_backend(backend) \
+        .interpolate_3d_cross_vec(target_x_data, target_y_data, z_slice, x_data, y_data, z_data, data['m'].to_numpy(),
+                                  data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w, kernel.get_radius(), x_pixels,
+                                  y_pixels, x_min, x_max, y_min, y_max)
 
 
-def _fast_2d(target, z_slice, x_data, y_data, z_data, mass_data, rho_data, h_data, weight_function, kernel_radius,
-             x_pixels, y_pixels, x_min, x_max, y_min, y_max, n_dims, backend):
-    if backend == 'cpu':
-        return _fast_2d_cpu(target, z_slice, x_data, y_data, z_data, mass_data, rho_data, h_data, weight_function,
-                            kernel_radius, x_pixels, y_pixels, x_min, x_max, y_min, y_max, n_dims)
-    elif backend == 'gpu':
-        return _fast_2d_gpu(target, z_slice, x_data, y_data, z_data, mass_data, rho_data, h_data, weight_function,
-                            kernel_radius, x_pixels, y_pixels, x_min, x_max, y_min, y_max, n_dims)
+def get_backend(code: str) -> BaseBackend:
+    """ Get the interpolation backend assocated with a string code.
 
+    Parameters
+    ----------
+    code: str
+        The code assocated with the particular backend. At the moment, 'cpu' for the CPU backend, and 'gpu' for
+        the GPU backend are supported.
 
-def _fast_2d_cross(target, x_data, y_data, mass_data, rho_data, h_data, weight_function, kernel_radius, pixels, x1, x2,
-                   y1, y2, backend):
-    if backend == 'cpu':
-        return _fast_2d_cross_cpu(target, x_data, y_data, mass_data, rho_data, h_data, weight_function,
-                                  kernel_radius, pixels, x1, x2, y1, y2)
-    elif backend == 'gpu':
-        return _fast_2d_cross_gpu(target, x_data, y_data, mass_data, rho_data, h_data, weight_function,
-                                  kernel_radius, pixels, x1, x2, y1, y2)
-
-
-# Underlying CPU numba-compiled code for interpolation to a 2D grid. Used in interpolation of 2D data,
-# and column integration / cross-sections of 3D data.
-@njit(parallel=True, fastmath=True)
-def _fast_2d_cpu(target, z_slice, x_data, y_data, z_data, mass_data, rho_data, h_data, weight_function, kernel_radius,
-                 x_pixels, y_pixels, x_min, x_max, y_min, y_max, n_dims):
-    image = np.zeros((y_pixels, x_pixels))
-    pixwidthx = (x_max - x_min) / x_pixels
-    pixwidthy = (y_max - y_min) / y_pixels
-    if not n_dims == 2:
-        dz = np.float64(z_slice) - z_data
-    else:
-        dz = np.zeros(target.size)
-
-    term = (target * mass_data / (rho_data * h_data ** n_dims))
-
-    # iterate through the indexes of non-filtered particles
-    for i in prange(term.size):
-        if np.abs(dz[i]) >= kernel_radius * h_data[i]:
-            continue
-
-        # determine maximum and minimum pixels that this particle contributes to
-        ipixmin = int(np.rint((x_data[i] - kernel_radius * h_data[i] - x_min) / pixwidthx))
-        jpixmin = int(np.rint((y_data[i] - kernel_radius * h_data[i] - y_min) / pixwidthy))
-        ipixmax = int(np.rint((x_data[i] + kernel_radius * h_data[i] - x_min) / pixwidthx))
-        jpixmax = int(np.rint((y_data[i] + kernel_radius * h_data[i] - y_min) / pixwidthy))
-
-        if ipixmax < 0 or ipixmin > x_pixels or jpixmax < 0 or jpixmin > y_pixels:
-            continue
-        if ipixmin < 0:
-            ipixmin = 0
-        if ipixmax > x_pixels:
-            ipixmax = x_pixels
-        if jpixmin < 0:
-            jpixmin = 0
-        if jpixmax > y_pixels:
-            jpixmax = y_pixels
-
-        # precalculate differences in the x-direction (optimization)
-        dx2i = ((x_min + (np.arange(ipixmin, ipixmax) + 0.5) * pixwidthx - x_data[i]) ** 2) \
-               * (1 / (h_data[i] ** 2)) + ((dz[i] ** 2) * (1 / h_data[i] ** 2))
-
-        # determine differences in the y-direction
-        ypix = y_min + (np.arange(jpixmin, jpixmax) + 0.5) * pixwidthy
-        dy = ypix - y_data[i]
-        dy2 = dy * dy * (1 / (h_data[i] ** 2))
-
-        # calculate contributions at pixels i, j due to particle at x, y
-        q2 = dx2i + dy2.reshape(len(dy2), 1)
-
-        for jpix in prange(jpixmax - jpixmin):
-            for ipix in prange(ipixmax - ipixmin):
-                if np.sqrt(q2[jpix][ipix]) > kernel_radius:
-                    continue
-                wab = weight_function(np.sqrt(q2[jpix][ipix]), n_dims)
-                image[jpix + jpixmin, ipix + ipixmin] += term[i] * wab
-
-    return image
-
-
-# For the GPU, the numba code is compiled using a factory function approach. This is required
-# since a CUDA numba kernel cannot easily take weight_function as an argument.
-def _fast_2d_gpu(target, z_slice, x_data, y_data, z_data, mass_data, rho_data, h_data, weight_function, kernel_radius,
-                 x_pixels, y_pixels, x_min, x_max, y_min, y_max, n_dims):
-    # Underlying GPU numba-compiled code for interpolation to a 2D grid. Used in interpolation of 2D data,
-    # and column integration / cross-sections of 3D data.
-    @cuda.jit(fastmath=True)
-    def _2d_func(target, z_slice, x_data, y_data, z_data, mass_data, rho_data, h_data, kernel_radius,
-                     x_pixels, y_pixels, x_min, x_max, y_min, y_max, n_dims, image):
-        pixwidthx = (x_max - x_min) / x_pixels
-        pixwidthy = (y_max - y_min) / y_pixels
-
-        i = cuda.grid(1)
-        if i < len(target):
-            if not n_dims == 2:
-                dz = np.float64(z_slice) - z_data[i]
-            else:
-                dz = 0
-
-            term = (target[i] * mass_data[i] / (rho_data[i] * h_data[i] ** n_dims))
-
-            if abs(dz) >= kernel_radius * h_data[i]:
-                return
-
-            # determine maximum and minimum pixels that this particle contributes to
-            ipixmin = round((x_data[i] - kernel_radius * h_data[i] - x_min) / pixwidthx)
-            jpixmin = round((y_data[i] - kernel_radius * h_data[i] - y_min) / pixwidthy)
-            ipixmax = round((x_data[i] + kernel_radius * h_data[i] - x_min) / pixwidthx)
-            jpixmax = round((y_data[i] + kernel_radius * h_data[i] - y_min) / pixwidthy)
-
-            if ipixmax < 0 or ipixmin > x_pixels or jpixmax < 0 or jpixmin > y_pixels:
-                return
-            if ipixmin < 0:
-                ipixmin = 0
-            if ipixmax > x_pixels:
-                ipixmax = x_pixels
-            if jpixmin < 0:
-                jpixmin = 0
-            if jpixmax > y_pixels:
-                jpixmax = y_pixels
-
-            # calculate contributions to all nearby pixels
-            for jpix in range(jpixmax - jpixmin):
-                for ipix in range(ipixmax - ipixmin):
-                    # determine difference in the x-direction
-                    xpix = x_min + ((ipix + ipixmin) + 0.5) * pixwidthx
-                    dx = xpix - x_data[i]
-                    dx2 = dx * dx * (1 / (h_data[i] ** 2))
-
-                    # determine difference in the y-direction
-                    ypix = y_min + ((jpix + jpixmin) + 0.5) * pixwidthy
-                    dy = ypix - y_data[i]
-                    dy2 = dy * dy * (1 / (h_data[i] ** 2))
-
-                    dz2 = ((dz ** 2) * (1 / h_data[i] ** 2))
-
-                    # calculate contributions at pixels i, j due to particle at x, y
-                    q = math.sqrt(dx2 + dy2 + dz2)
-
-                    # add contribution to image
-                    if q < kernel_radius:
-                        # atomic add protects the summation against race conditions.
-                        wab = weight_function(q, n_dims)
-                        cuda.atomic.add(image, (jpix + jpixmin, ipix + ipixmin), term * wab)
-
-    threadsperblock = 32
-    blockspergrid = (target.size + (threadsperblock - 1)) // threadsperblock
-
-    # transfer relevant data to the GPU
-    d_target = cuda.to_device(target)
-    d_x = cuda.to_device(x_data)
-    d_y = cuda.to_device(y_data)
-    d_z = cuda.to_device(z_data)
-    d_m = cuda.to_device(mass_data)
-    d_rho = cuda.to_device(rho_data)
-    d_h = cuda.to_device(h_data)
-    # CUDA kernels have no return values, so the image data must be
-    # allocated on the device beforehand.
-    d_image = cuda.to_device(np.zeros((y_pixels, x_pixels)))
-
-    # execute the newly compiled CUDA kernel.
-    _2d_func[blockspergrid, threadsperblock](d_target, z_slice, d_x, d_y, d_z, d_m, d_rho, d_h, kernel_radius, x_pixels,
-                                             y_pixels, x_min, x_max, y_min, y_max, n_dims, d_image)
-
-    return d_image.copy_to_host()
-
-
-# Underlying CPU numba-compiled code for 2D->1D cross-sections.
-@njit(parallel=True, fastmath=True)
-def _fast_2d_cross_cpu(target, x_data, y_data, mass_data, rho_data, h_data, weight_function, kernel_radius, pixels, x1,
-                       x2, y1, y2):
-    # determine the slope of the cross-section line
-    gradient = 0
-    if not x2 - x1 == 0:
-        gradient = (y2 - y1) / (x2 - x1)
-    yint = y2 - gradient * x2
-
-    # determine the fraction of the line that one pixel represents
-    xlength = np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
-    pixwidth = xlength / pixels
-    xpixwidth = (x2 - x1) / pixels
-
-    term = target * mass_data / (rho_data * h_data ** 2)
-
-    # the intersections between the line and a particle's 'smoothing circle' are
-    # found by solving a quadratic equation with the below values of a, b, and c.
-    # if the determinant is negative, the particle does not contribute to the
-    # cross-section, and can be removed.
-    aa = 1 + gradient ** 2
-    bb = 2 * gradient * (yint - y_data) - 2 * x_data
-    cc = x_data ** 2 + y_data ** 2 - 2 * yint * y_data + yint ** 2 - (kernel_radius * h_data) ** 2
-    det = bb ** 2 - 4 * aa * cc
-
-    # create a filter for particles that do not contribute to the cross-section
-    filter_det = det >= 0
-    det = np.sqrt(det)
-    cc = None
-
-    output = np.zeros(pixels)
-
-    # the starting and ending x coordinates of the lines intersections with a particle's smoothing circle
-    xstart = ((-bb[filter_det] - det[filter_det]) / (2 * aa)).clip(a_min=x1, a_max=x2)
-    xend = ((-bb[filter_det] + det[filter_det]) / (2 * aa)).clip(a_min=x1, a_max=x2)
-    bb, det = None, None
-
-    # the start and end distances which lie within a particle's smoothing circle.
-    rstart = np.sqrt((xstart - x1) ** 2 + ((gradient * xstart + yint) - y1) ** 2)
-    rend = np.sqrt((xend - x1) ** 2 + (((gradient * xend + yint) - y1) ** 2))
-    xstart, xend = None, None
-
-    # the maximum and minimum pixels that each particle contributes to.
-    ipixmin = np.rint(rstart / pixwidth).clip(a_min=0, a_max=pixels)
-    ipixmax = np.rint(rend / pixwidth).clip(a_min=0, a_max=pixels)
-    rstart, rend = None, None
-
-    # iterate through the indices of all non-filtered particles
-    for i in prange(len(x_data[filter_det])):
-        # determine contributions to all affected pixels for this particle
-        xpix = x1 + (np.arange(int(ipixmin[i]), int(ipixmax[i])) + 0.5) * xpixwidth
-        ypix = gradient * xpix + yint
-        dy = ypix - y_data[filter_det][i]
-        dx = xpix - x_data[filter_det][i]
-
-        q2 = (dx * dx + dy * dy) * (1 / (h_data[filter_det][i] * h_data[filter_det][i]))
-        wab = weight_function(np.sqrt(q2), 2)
-
-        # add contributions to output total
-        for ipix in prange(int(ipixmax[i]) - int(ipixmin[i])):
-            output[ipix + int(ipixmin[i])] += term[i] * wab[ipix]
-
-    return output
-
-
-# For the GPU, the numba code is compiled using a factory function approach. This is required
-# since a CUDA numba kernel cannot easily take weight_function as an argument.
-def _fast_2d_cross_gpu(target, x_data, y_data, mass_data, rho_data, h_data, weight_function, kernel_radius, pixels, x1,
-                       x2, y1, y2):
-    # determine the slope of the cross-section line
-    gradient = 0
-    if not x2 - x1 == 0:
-        gradient = (y2 - y1) / (x2 - x1)
-    yint = y2 - gradient * x2
-
-    # determine the fraction of the line that one pixel represents
-    xlength = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
-    pixwidth = xlength / pixels
-    xpixwidth = (x2 - x1) / pixels
-    aa = 1 + gradient ** 2
-
-    # Underlying GPU numba-compiled code for 2D->1D cross-sections
-    @cuda.jit(fastmath=True)
-    def _2d_func(target, x_data, y_data, mass_data, rho_data, h_data, kernel_radius, pixels, x1, x2, y1, y2, image):
-        i = cuda.grid(1)
-        if i < target.size:
-            term = target[i] * mass_data[i] / (rho_data[i] * h_data[i] ** 2)
-
-            # the intersections between the line and a particle's 'smoothing circle' are
-            # found by solving a quadratic equation with the below values of a, b, and c.
-            # if the determinant is negative, the particle does not contribute to the
-            # cross-section, and can be removed.
-            bb = 2 * gradient * (yint - y_data[i]) - 2 * x_data[i]
-            cc = x_data[i] ** 2 + y_data[i] ** 2 - 2 * yint * y_data[i] + yint ** 2 - (kernel_radius * h_data[i]) ** 2
-            det = bb ** 2 - 4 * aa * cc
-
-            # create a filter for particles that do not contribute to the cross-section
-            if det < 0:
-                return
-
-            det = math.sqrt(det)
-
-            # the starting and ending x coordinates of the lines intersections with a particle's smoothing circle
-            xstart = min(max(x1, (-bb - det) / (2 * aa)), x2)
-            xend = min(max(x1, (-bb + det) / (2 * aa)), x2)
-
-            # the start and end distances which lie within a particle's smoothing circle.
-            rstart = math.sqrt((xstart - x1) ** 2 + ((gradient * xstart + yint) - y1) ** 2)
-            rend = math.sqrt((xend - x1) ** 2 + (((gradient * xend + yint) - y1) ** 2))
-
-            # the maximum and minimum pixels that each particle contributes to.
-            ipixmin = min(max(0, round(rstart / pixwidth)), pixels)
-            ipixmax = min(max(0, round(rend / pixwidth)), pixels)
-
-            # iterate through all affected pixels
-            for ipix in range(ipixmin, ipixmax):
-                # determine contributions to all affected pixels for this particle
-                xpix = x1 + (ipix + 0.5) * xpixwidth
-                ypix = gradient * xpix + yint
-                dy = ypix - y_data[i]
-                dx = xpix - x_data[i]
-
-                q2 = (dx * dx + dy * dy) * (1 / (h_data[i] * h_data[i]))
-                wab = weight_function(math.sqrt(q2), 2)
-
-                # add contributions to output total.
-                cuda.atomic.add(image, ipix, wab * term)
-
-    threadsperblock = 32
-    blockspergrid = (target.size + (threadsperblock - 1)) // threadsperblock
-
-    # transfer relevant data to the GPU
-    d_target = cuda.to_device(target)
-    d_x = cuda.to_device(x_data)
-    d_y = cuda.to_device(y_data)
-    d_m = cuda.to_device(mass_data)
-    d_rho = cuda.to_device(rho_data)
-    d_h = cuda.to_device(h_data)
-
-    # CUDA kernels have no return values, so the image data must be
-    # allocated on the device beforehand.
-    d_image = cuda.to_device(np.zeros(pixels))
-
-    # execute the newly compiled GPU kernel
-    _2d_func[blockspergrid, threadsperblock](d_target, d_x, d_y, d_m, d_rho, d_h, kernel_radius, pixels, x1, x2, y1, y2,
-                                             d_image)
-
-    return d_image.copy_to_host()
+    Returns
+    -------
+    CPUBackend: The backend to use for interpolation.
+    """
+    if code == 'cpu':
+        return CPUBackend
+    if code == 'gpu':
+        return GPUBackend
+    raise ValueError("Invalid code!")
