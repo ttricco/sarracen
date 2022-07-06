@@ -102,7 +102,6 @@ def test_single_repeated_particle(backend):
 
     If this test fails, it is likely that there is a race condition issue in the interpolation implementation.
     """
-    # This test currently is expected to fail on the CPU backend!
 
     repetitions = 10000
     df = pd.concat([pd.DataFrame({'x': [0], 'y': [0], 'A': [4], 'B': [5], 'h': [0.9], 'rho': [0.4],

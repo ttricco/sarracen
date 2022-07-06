@@ -1,6 +1,6 @@
 from typing import Tuple
 
-from numba import njit, prange
+from numba import njit, prange, get_num_threads
 from numba.core.registry import CPUDispatcher
 from numpy import ndarray
 import numpy as np
@@ -75,7 +75,7 @@ class CPUBackend(BaseBackend):
     @njit(parallel=True, fastmath=True)
     def _fast_2d(target, z_slice, x_data, y_data, z_data, mass_data, rho_data, h_data, weight_function,
                  kernel_radius, x_pixels, y_pixels, x_min, x_max, y_min, y_max, n_dims):
-        image = np.zeros((y_pixels, x_pixels))
+        output = np.zeros((y_pixels, x_pixels))
         pixwidthx = (x_max - x_min) / x_pixels
         pixwidthy = (y_max - y_min) / y_pixels
         if not n_dims == 2:
@@ -85,48 +85,59 @@ class CPUBackend(BaseBackend):
 
         term = (target * mass_data / (rho_data * h_data ** n_dims))
 
-        # iterate through the indexes of non-filtered particles
-        for i in prange(term.size):
-            if np.abs(dz[i]) >= kernel_radius * h_data[i]:
-                continue
+        output_local = np.zeros((get_num_threads(), y_pixels, x_pixels))
 
-            # determine maximum and minimum pixels that this particle contributes to
-            ipixmin = int(np.rint((x_data[i] - kernel_radius * h_data[i] - x_min) / pixwidthx))
-            jpixmin = int(np.rint((y_data[i] - kernel_radius * h_data[i] - y_min) / pixwidthy))
-            ipixmax = int(np.rint((x_data[i] + kernel_radius * h_data[i] - x_min) / pixwidthx))
-            jpixmax = int(np.rint((y_data[i] + kernel_radius * h_data[i] - y_min) / pixwidthy))
+        # thread safety: each thread has its own grid, which are combined after interpolation
+        for thread in prange(get_num_threads()):
+            block_size = term.size / get_num_threads()
+            range_start = thread * block_size
+            range_end = (thread + 1) * block_size
 
-            if ipixmax < 0 or ipixmin > x_pixels or jpixmax < 0 or jpixmin > y_pixels:
-                continue
-            if ipixmin < 0:
-                ipixmin = 0
-            if ipixmax > x_pixels:
-                ipixmax = x_pixels
-            if jpixmin < 0:
-                jpixmin = 0
-            if jpixmax > y_pixels:
-                jpixmax = y_pixels
+            # iterate through the indexes of non-filtered particles
+            for i in range(range_start, range_end):
+                if np.abs(dz[i]) >= kernel_radius * h_data[i]:
+                    continue
 
-            # precalculate differences in the x-direction (optimization)
-            dx2i = ((x_min + (np.arange(ipixmin, ipixmax) + 0.5) * pixwidthx - x_data[i]) ** 2) \
-                   * (1 / (h_data[i] ** 2)) + ((dz[i] ** 2) * (1 / h_data[i] ** 2))
+                # determine maximum and minimum pixels that this particle contributes to
+                ipixmin = int(np.rint((x_data[i] - kernel_radius * h_data[i] - x_min) / pixwidthx))
+                jpixmin = int(np.rint((y_data[i] - kernel_radius * h_data[i] - y_min) / pixwidthy))
+                ipixmax = int(np.rint((x_data[i] + kernel_radius * h_data[i] - x_min) / pixwidthx))
+                jpixmax = int(np.rint((y_data[i] + kernel_radius * h_data[i] - y_min) / pixwidthy))
 
-            # determine differences in the y-direction
-            ypix = y_min + (np.arange(jpixmin, jpixmax) + 0.5) * pixwidthy
-            dy = ypix - y_data[i]
-            dy2 = dy * dy * (1 / (h_data[i] ** 2))
+                if ipixmax < 0 or ipixmin > x_pixels or jpixmax < 0 or jpixmin > y_pixels:
+                    continue
+                if ipixmin < 0:
+                    ipixmin = 0
+                if ipixmax > x_pixels:
+                    ipixmax = x_pixels
+                if jpixmin < 0:
+                    jpixmin = 0
+                if jpixmax > y_pixels:
+                    jpixmax = y_pixels
 
-            # calculate contributions at pixels i, j due to particle at x, y
-            q2 = dx2i + dy2.reshape(len(dy2), 1)
+                # precalculate differences in the x-direction (optimization)
+                dx2i = ((x_min + (np.arange(ipixmin, ipixmax) + 0.5) * pixwidthx - x_data[i]) ** 2) \
+                       * (1 / (h_data[i] ** 2)) + ((dz[i] ** 2) * (1 / h_data[i] ** 2))
 
-            for jpix in prange(jpixmax - jpixmin):
-                for ipix in prange(ipixmax - ipixmin):
-                    if np.sqrt(q2[jpix][ipix]) > kernel_radius:
-                        continue
-                    wab = weight_function(np.sqrt(q2[jpix][ipix]), n_dims)
-                    image[jpix + jpixmin, ipix + ipixmin] += term[i] * wab
+                # determine differences in the y-direction
+                ypix = y_min + (np.arange(jpixmin, jpixmax) + 0.5) * pixwidthy
+                dy = ypix - y_data[i]
+                dy2 = dy * dy * (1 / (h_data[i] ** 2))
 
-        return image
+                # calculate contributions at pixels i, j due to particle at x, y
+                q2 = dx2i + dy2.reshape(len(dy2), 1)
+
+                for jpix in range(jpixmax - jpixmin):
+                    for ipix in range(ipixmax - ipixmin):
+                        if np.sqrt(q2[jpix][ipix]) > kernel_radius:
+                            continue
+                        wab = weight_function(np.sqrt(q2[jpix][ipix]), n_dims)
+                        output_local[thread][jpix + jpixmin, ipix + ipixmin] += term[i] * wab
+
+        for i in range(get_num_threads()):
+            output += output_local[i]
+
+        return output
 
     # Underlying CPU numba-compiled code for 2D->1D cross-sections.
     @staticmethod
@@ -177,19 +188,32 @@ class CPUBackend(BaseBackend):
         ipixmax = np.rint(rend / pixwidth).clip(a_min=0, a_max=pixels)
         rstart, rend = None, None
 
-        # iterate through the indices of all non-filtered particles
-        for i in prange(len(x_data[filter_det])):
-            # determine contributions to all affected pixels for this particle
-            xpix = x1 + (np.arange(int(ipixmin[i]), int(ipixmax[i])) + 0.5) * xpixwidth
-            ypix = gradient * xpix + yint
-            dy = ypix - y_data[filter_det][i]
-            dx = xpix - x_data[filter_det][i]
 
-            q2 = (dx * dx + dy * dy) * (1 / (h_data[filter_det][i] * h_data[filter_det][i]))
-            wab = weight_function(np.sqrt(q2), 2)
+        output_local = np.zeros((get_num_threads(), pixels))
 
-            # add contributions to output total
-            for ipix in prange(int(ipixmax[i]) - int(ipixmin[i])):
-                output[ipix + int(ipixmin[i])] += term[filter_det][i] * wab[ipix]
+        # thread safety: each thread has its own grid, which are combined after interpolation
+        for thread in prange(get_num_threads()):
+
+            block_size = len(x_data[filter_det]) / get_num_threads()
+            range_start = thread * block_size
+            range_end = (thread + 1) * block_size
+
+            # iterate through the indices of all non-filtered particles
+            for i in range(range_start, range_end):
+                # determine contributions to all affected pixels for this particle
+                xpix = x1 + (np.arange(int(ipixmin[i]), int(ipixmax[i])) + 0.5) * xpixwidth
+                ypix = gradient * xpix + yint
+                dy = ypix - y_data[filter_det][i]
+                dx = xpix - x_data[filter_det][i]
+
+                q2 = (dx * dx + dy * dy) * (1 / (h_data[filter_det][i] * h_data[filter_det][i]))
+                wab = weight_function(np.sqrt(q2), 2)
+
+                # add contributions to output total
+                for ipix in range(int(ipixmax[i]) - int(ipixmin[i])):
+                    output_local[thread][ipix + int(ipixmin[i])] += term[filter_det][i] * wab[ipix]
+
+        for i in range(get_num_threads()):
+            output += output_local[i]
 
         return output
