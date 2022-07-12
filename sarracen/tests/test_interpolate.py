@@ -1051,3 +1051,21 @@ def test_required_columns(backend):
             interpolate_3d_vec(sdf_dropped, 'A', 'B', 'C')
         with raises(KeyError):
             interpolate_3d_cross_vec(sdf_dropped, 'A', 'B', 'C')
+
+
+@mark.parametrize("backend", backends)
+def test_exact_interpolation(backend):
+    """
+    Exact interpolation over the entire effective area of a kernel should return 1 over the particle bounds, multiplied by the weight.
+    """
+    df = pd.DataFrame({'x': [0], 'y': [0], 'A': [2], 'h': [1.1], 'rho': [0.55], 'm': [0.04]})
+    sdf = SarracenDataFrame(df, params=dict())
+    sdf.backend = backend
+
+    kernel = CubicSplineKernel()
+    w = sdf['m'] * sdf['A'] / (sdf['rho'] * sdf['h'] ** 2)
+
+    bound = kernel.get_radius() * sdf['h'][0]
+    image = interpolate_2d(sdf, 'A', x_min=-bound, x_max=bound, y_min=-bound, y_max=bound, x_pixels=1, exact=True)
+
+    assert image.sum() == approx(w[0] * sdf['h'][0] ** 2 / (4 * bound ** 2))

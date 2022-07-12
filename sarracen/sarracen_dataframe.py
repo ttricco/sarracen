@@ -153,10 +153,10 @@ class SarracenDataFrame(DataFrame):
     def render_2d(self, target: str, x: str = None, y: str = None, kernel: BaseKernel = None, x_pixels: int = None,
                   y_pixels: int = None, x_min: float = None, x_max: float = None, y_min: float = None,
                   y_max: float = None, cmap: Union[str, Colormap] = 'RdBu', cbar: bool = True, cbar_kws: dict = {},
-                  cbar_ax: Axes = None, ax: Axes = None, backend: str = None, **kwargs) -> Axes:
+                  cbar_ax: Axes = None, ax: Axes = None, exact: bool = None, backend: str = None, **kwargs) -> Axes:
 
         return render_2d(self, target, x, y, kernel, x_pixels, y_pixels, x_min, x_max, y_min, y_max, cmap, cbar,
-                         cbar_kws, cbar_ax, ax, backend, **kwargs)
+                         cbar_kws, cbar_ax, ax, exact, backend, **kwargs)
 
     @_copy_doc(render_2d_cross)
     def render_2d_cross(self, target: str, x: str = None, y: str = None, kernel: BaseKernel = None, pixels: int = 512,

@@ -270,7 +270,7 @@ def _rotate_xyz(data, x, y, z, rotation, origin):
 
 def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
                    x_pixels: int = None, y_pixels: int = None, x_min: float = None, x_max: float = None,
-                   y_min: float = None, y_max: float = None, backend: str = None) -> np.ndarray:
+                   y_min: float = None, y_max: float = None, exact: bool = False, backend: str = None) -> np.ndarray:
     """ Interpolate particle data across two directional axes to a 2D grid of pixels.
 
     Interpolate the data within a SarracenDataFrame to a 2D grid, by interpolating the values
@@ -293,6 +293,8 @@ def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
     x_min, x_max, y_min, y_max: float, optional
         The minimum and maximum values to use in interpolation, in particle data space. Defaults
         to the minimum and maximum values of `x` and `y`.
+    exact: bool
+        Whether to use exact interpolation of the data.
     backend: ['cpu', 'gpu']
         The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
 
@@ -326,7 +328,7 @@ def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
     return get_backend(backend). \
         interpolate_2d_render(data[target].to_numpy(), data[x].to_numpy(), data[y].to_numpy(), data['m'].to_numpy(),
                               data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w, kernel.get_radius(), x_pixels,
-                              y_pixels, x_min, x_max, y_min, y_max)
+                              y_pixels, x_min, x_max, y_min, y_max, exact)
 
 
 def interpolate_2d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, x: str = None, y: str = None,

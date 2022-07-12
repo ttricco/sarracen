@@ -122,7 +122,7 @@ def _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max, default):
 def render_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
               x_pixels: int = None, y_pixels: int = None, x_min: float = None, x_max: float = None, y_min: float = None,
               y_max: float = None, cmap: Union[str, Colormap] = 'RdBu', cbar: bool = True, cbar_kws: dict = {},
-              cbar_ax: Axes = None, ax: Axes = None, backend: str = None, **kwargs) -> Axes:
+              cbar_ax: Axes = None, ax: Axes = None, exact: bool = False, backend: str = None, **kwargs) -> Axes:
     """ Render 2D particle data to a 2D grid, using SPH rendering of a target variable.
 
     Render the data within a SarracenDataFrame to a 2D matplotlib object, by rendering the values
@@ -155,6 +155,8 @@ def render_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = No
         Axes to draw the colorbar in, if not provided then space will be taken from the main Axes.
     ax: Axes
         The main axes in which to draw the rendered image.
+    exact: bool
+        Whether to use exact interpolation of the data.
     backend: ['cpu', 'gpu']
         The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
     kwargs: other keyword arguments
@@ -174,7 +176,7 @@ def render_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = No
         If `target`, `x`, `y`, mass, density, or smoothing length columns do not
         exist in `data`.
     """
-    image = interpolate_2d(data, target, x, y, kernel, x_pixels, y_pixels, x_min, x_max, y_min, y_max, backend)
+    image = interpolate_2d(data, target, x, y, kernel, x_pixels, y_pixels, x_min, x_max, y_min, y_max, exact, backend)
 
     if ax is None:
         ax = plt.gca()
