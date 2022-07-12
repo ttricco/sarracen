@@ -6,6 +6,7 @@ from numpy import ndarray
 import numpy as np
 
 from sarracen.interpolate.base_backend import BaseBackend
+from sarracen.kernels.cubic_spline_exact import pint
 
 
 class CPUBackend(BaseBackend):
@@ -13,9 +14,13 @@ class CPUBackend(BaseBackend):
     @staticmethod
     def interpolate_2d_render(target: ndarray, x: ndarray, y: ndarray, mass: ndarray, rho: ndarray, h: ndarray,
                               weight_function: CPUDispatcher, kernel_radius: float, x_pixels: int, y_pixels: int,
-                              x_min: float, x_max: float, y_min: float, y_max: float) -> ndarray:
-        return CPUBackend._fast_2d(target, 0, x, y, np.zeros(len(target)), mass, rho, h, weight_function, kernel_radius,
-                                   x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2)
+                              x_min: float, x_max: float, y_min: float, y_max: float, exact) -> ndarray:
+        if exact:
+            return CPUBackend._exact_2d_render(target, x, y, mass, rho, h, x_pixels, y_pixels, x_min, x_max, y_min,
+                                               y_max)
+        else:
+            return CPUBackend._fast_2d(target, 0, x, y, np.zeros(len(target)), mass, rho, h, weight_function,
+                                       kernel_radius, x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2)
 
     @staticmethod
     def interpolate_2d_render_vec(target_x: ndarray, target_y: ndarray, x: ndarray, y: ndarray, mass: ndarray,
@@ -133,6 +138,115 @@ class CPUBackend(BaseBackend):
                             continue
                         wab = weight_function(np.sqrt(q2[jpix][ipix]), n_dims)
                         output_local[thread][jpix + jpixmin, ipix + ipixmin] += term[i] * wab
+
+        for i in range(get_num_threads()):
+            output += output_local[i]
+
+        return output
+
+    # Underlying CPU numba-compiled code for exact interpolation of 2D data to a 2D grid.
+    @staticmethod
+    @njit(parallel=True)
+    def _exact_2d_render(target, x_data, y_data, mass_data, rho_data, h_data, x_pixels, y_pixels, x_min, x_max, y_min,
+                         y_max):
+        output_local = np.zeros((get_num_threads(), y_pixels, x_pixels))
+        pixwidthx = (x_max - x_min) / x_pixels
+        pixwidthy = (y_max - y_min) / y_pixels
+
+        term = (target * mass_data / (rho_data * h_data ** 2))
+
+        for thread in prange(get_num_threads()):
+            block_size = term.size / get_num_threads()
+            range_start = int(thread * block_size)
+            range_end = int((thread + 1) * block_size)
+
+            # iterate through the indexes of non-filtered particles
+            for i in range(range_start, range_end):
+
+                # determine maximum and minimum pixels that this particle contributes to
+                ipixmin = int(np.rint((x_data[i] - 2 * h_data[i] - x_min) / pixwidthx))
+                jpixmin = int(np.rint((y_data[i] - 2 * h_data[i] - y_min) / pixwidthy))
+                ipixmax = int(np.rint((x_data[i] + 2 * h_data[i] - x_min) / pixwidthx))
+                jpixmax = int(np.rint((y_data[i] + 2 * h_data[i] - y_min) / pixwidthy))
+
+                if ipixmax < 0 or ipixmin >= x_pixels or jpixmax < 0 or jpixmin >= y_pixels:
+                    continue
+                if ipixmin < 0:
+                    ipixmin = 0
+                if ipixmax > x_pixels:
+                    ipixmax = x_pixels
+                if jpixmin < 0:
+                    jpixmin = 0
+                if jpixmax > y_pixels:
+                    jpixmax = y_pixels
+
+                denom = 1 / np.abs(pixwidthx * pixwidthy) * h_data[i] ** 2
+
+                if jpixmax >= jpixmin:
+                    ypix = y_min + (jpixmin + 0.5) * pixwidthy
+                    dy = ypix - y_data[i]
+
+                    for ipix in range(ipixmin, ipixmax):
+                        xpix = x_min + (ipix + 0.5) * pixwidthx
+                        dx = xpix - x_data[i]
+
+                        # Top Boundary
+                        r0 = 0.5 * pixwidthy - dy
+                        d1 = 0.5 * pixwidthx + dx
+                        d2 = 0.5 * pixwidthx - dx
+                        pixint = pint(r0, d1, d2, 1 / h_data[i])
+                        wab = pixint * denom
+
+                        output_local[thread, jpixmin, ipix] += term[i] * wab
+
+                if ipixmax >= ipixmin:
+                    xpix = x_min + (ipixmin + 0.5) * pixwidthx
+                    dx = xpix - x_data[i]
+
+                    for jpix in range(jpixmin, jpixmax):
+                        ypix = y_min + (jpix + 0.5) * pixwidthy
+                        dy = ypix - y_data[i]
+
+                        # Left Boundary
+                        r0 = 0.5 * pixwidthx - dx
+                        d1 = 0.5 * pixwidthy - dy
+                        d2 = 0.5 * pixwidthy + dy
+                        pixint = pint(r0, d1, d2, 1 / h_data[i])
+                        wab = pixint * denom
+
+                        output_local[thread, jpix, ipixmin] += term[i] * wab
+
+                for jpix in range(jpixmin, jpixmax):
+                    ypix = y_min + (jpix + 0.5) * pixwidthy
+                    dy = ypix - y_data[i]
+
+                    for ipix in range(ipixmin, ipixmax):
+                        xpix = x_min + (ipix + 0.5) * pixwidthx
+                        dx = xpix - x_data[i]
+
+                        # Bottom boundaries
+                        r0 = 0.5 * pixwidthy + dy
+                        d1 = 0.5 * pixwidthx - dx
+                        d2 = 0.5 * pixwidthx + dx
+                        pixint = pint(r0, d1, d2, 1 / h_data[i])
+                        wab = pixint * denom
+
+                        output_local[thread, jpix, ipix] += term[i] * wab
+                        if jpix < jpixmax - 1:
+                            output_local[thread, jpix + 1, ipix] -= term[i] * wab
+
+                        # Right Boundaries
+                        r0 = 0.5 * pixwidthx + dx
+                        d1 = 0.5 * pixwidthy + dy
+                        d2 = 0.5 * pixwidthy - dy
+                        pixint = pint(r0, d1, d2, 1 / h_data[i])
+                        wab = pixint * denom
+
+                        output_local[thread, jpix, ipix] += term[i] * wab
+                        if ipix < ipixmax - 1:
+                            output_local[thread, jpix, ipix + 1] -= term[i] * wab
+
+        output = np.zeros((y_pixels, x_pixels))
 
         for i in range(get_num_threads()):
             output += output_local[i]

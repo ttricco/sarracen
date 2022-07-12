@@ -14,7 +14,7 @@ class GPUBackend(BaseBackend):
     @staticmethod
     def interpolate_2d_render(target: ndarray, x: ndarray, y: ndarray, mass: ndarray, rho: ndarray, h: ndarray,
                               weight_function: CPUDispatcher, kernel_radius: float, x_pixels: int, y_pixels: int,
-                              x_min: float, x_max: float, y_min: float, y_max: float) -> ndarray:
+                              x_min: float, x_max: float, y_min: float, y_max: float, exact) -> ndarray:
         return GPUBackend._fast_2d(target, 0, x, y, np.zeros(len(target)), mass, rho, h, weight_function, kernel_radius,
                                    x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2)
 
