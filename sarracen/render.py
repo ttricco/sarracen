@@ -470,11 +470,12 @@ def render_2d_cross(data: 'SarracenDataFrame', target: str, x: str = None, y: st
     return ax
 
 
-def render_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
-              integral_samples: int = 1000, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
-              x_pixels: int = None, y_pixels: int = None, x_min: float = None, x_max: float = None, y_min: float = None,
-              y_max: float = None, cmap: Union[str, Colormap] = 'RdBu', cbar: bool = True, cbar_kws: dict = {},
-              cbar_ax: Axes = None, ax: Axes = None, backend: str = None, **kwargs) -> Axes:
+def render_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
+              kernel: BaseKernel = None, integral_samples: int = 1000, rotation: np.ndarray = None,
+              rot_origin: np.ndarray = None, x_pixels: int = None, y_pixels: int = None, x_min: float = None,
+              x_max: float = None, y_min: float = None, y_max: float = None, cmap: Union[str, Colormap] = 'RdBu',
+              cbar: bool = True, cbar_kws: dict = {}, cbar_ax: Axes = None, ax: Axes = None, exact: bool = None,
+              backend: str = None, **kwargs) -> Axes:
     """ Render 3D particle data to a 2D grid, using SPH column rendering of a target variable.
 
     Render the data within a SarracenDataFrame to a 2D matplotlib object, by rendering the values
@@ -535,8 +536,8 @@ def render_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = No
         If `target`, `x`, `y`, mass, density, or smoothing length columns do not
         exist in `data`.
     """
-    image = interpolate_3d(data, target, x, y, kernel, integral_samples, rotation, rot_origin, x_pixels, y_pixels, x_min,
-                           x_max, y_min, y_max, backend)
+    image = interpolate_3d(data, target, x, y, z, kernel, integral_samples, rotation, rot_origin, x_pixels, y_pixels,
+                           x_min, x_max, y_min, y_max, exact, backend)
 
     if ax is None:
         ax = plt.gca()

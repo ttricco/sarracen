@@ -166,14 +166,15 @@ class SarracenDataFrame(DataFrame):
         return render_2d_cross(self, target, x, y, kernel, pixels, x1, x2, y1, y2, ax, backend, **kwargs)
 
     @_copy_doc(render_3d)
-    def render_3d(self, target: str, x: str = None, y: str = None, kernel: BaseKernel = None, int_samples: int = 1000,
-                  rotation: np.ndarray = None, rot_origin: np.ndarray = None, x_pixels: int = None,
-                  y_pixels: int = None, x_min: float = None, x_max: float = None, y_min: float = None,
-                  y_max: float = None, cmap: Union[str, Colormap] = 'RdBu', cbar: bool = True, cbar_kws: dict = {},
-                  cbar_ax: Axes = None, ax: Axes = None, backend: str = None, **kwargs) -> Axes:
+    def render_3d(self, target: str, x: str = None, y: str = None, z: str = None, kernel: BaseKernel = None,
+                  int_samples: int = 1000, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
+                  x_pixels: int = None, y_pixels: int = None, x_min: float = None, x_max: float = None,
+                  y_min: float = None, y_max: float = None, cmap: Union[str, Colormap] = 'RdBu', cbar: bool = True,
+                  cbar_kws: dict = {}, cbar_ax: Axes = None, ax: Axes = None, exact: bool = None, backend: str = None,
+                  **kwargs) -> Axes:
 
-        return render_3d(self, target, x, y, kernel, int_samples, rotation, rot_origin, x_pixels, y_pixels, x_min, x_max,
-                         y_min, y_max, cmap, cbar, cbar_kws, cbar_ax, ax, backend, **kwargs)
+        return render_3d(self, target, x, y, z, kernel, int_samples, rotation, rot_origin, x_pixels, y_pixels, x_min,
+                         x_max, y_min, y_max, cmap, cbar, cbar_kws, cbar_ax, ax, exact, backend, **kwargs)
 
     @_copy_doc(render_3d_cross)
     def render_3d_cross(self, target: str, z_slice: float = None, x: str = None, y: str = None, z: str = None,
