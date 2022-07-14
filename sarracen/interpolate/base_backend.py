@@ -30,9 +30,10 @@ class BaseBackend:
         return zeros(pixels)
 
     @staticmethod
-    def interpolate_3d_projection(target: ndarray, x: ndarray, y: ndarray, mass: ndarray, rho: ndarray, h: ndarray,
-                                  weight_function: CPUDispatcher, kernel_radius: float, x_pixels: int, y_pixels: int,
-                                  x_min: float, x_max: float, y_min: float, y_max: float) -> ndarray:
+    def interpolate_3d_projection(target: ndarray, x: ndarray, y: ndarray, z: ndarray, mass: ndarray, rho: ndarray,
+                                  h: ndarray, weight_function: CPUDispatcher, kernel_radius: float, x_pixels: int,
+                                  y_pixels: int, x_min: float, x_max: float, y_min: float, y_max: float,
+                                  exact: bool) -> ndarray:
         """ Interpolate 3D particle data to a 2D grid of pixels. """
         return zeros((y_pixels, x_pixels))
 
