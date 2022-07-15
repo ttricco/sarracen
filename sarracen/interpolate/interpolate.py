@@ -333,7 +333,8 @@ def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
 
 def interpolate_2d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, x: str = None, y: str = None,
                        kernel: BaseKernel = None, x_pixels: int = None, y_pixels: int = None, x_min: float = None,
-                       x_max: float = None, y_min: float = None, y_max: float = None, backend: str = None):
+                       x_max: float = None, y_min: float = None, y_max: float = None, exact: bool = False,
+                       backend: str = None):
     """ Interpolate vector particle data across two directional axes to a 2D grid of particles.
 
     Interpolate the data within a SarracenDataFrame to a 2D grid, by interpolating the values
@@ -356,6 +357,8 @@ def interpolate_2d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
     x_min, x_max, y_min, y_max: float, optional
         The minimum and maximum values to use in interpolation, in particle data space. Defaults
         to the minimum and maximum values of `x` and `y`.
+    exact: bool
+        Whether to use exact interpolation of the data.
     backend: ['cpu', 'gpu']
         The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
 
@@ -391,7 +394,7 @@ def interpolate_2d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
         interpolate_2d_render_vec(data[target_x].to_numpy(), data[target_y].to_numpy(), data[x].to_numpy(),
                                   data[y].to_numpy(), data['m'].to_numpy(), data['rho'].to_numpy(),
                                   data['h'].to_numpy(), kernel.w, kernel.get_radius(), x_pixels, y_pixels, x_min, x_max,
-                                  y_min, y_max)
+                                  y_min, y_max, exact)
 
 
 def interpolate_2d_cross(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
@@ -456,10 +459,10 @@ def interpolate_2d_cross(data: 'SarracenDataFrame', target: str, x: str = None, 
                               x2, y1, y2)
 
 
-def interpolate_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
-                   kernel: BaseKernel = None, integral_samples: int = 1000, rotation: np.ndarray = None,
-                   origin: np.ndarray = None, x_pixels: int = None, y_pixels: int = None, x_min: float = None,
-                   x_max: float = None, y_min: float = None, y_max: float = None, exact: bool = False, backend: str = None):
+def interpolate_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
+                   integral_samples: int = 1000, rotation: np.ndarray = None, origin: np.ndarray = None,
+                   x_pixels: int = None, y_pixels: int = None, x_min: float = None, x_max: float = None,
+                   y_min: float = None, y_max: float = None, exact: bool = False, backend: str = None):
     """ Interpolate 3D particle data to a 2D grid of pixels.
 
     Interpolates three-dimensional particle data in a SarracenDataFrame. The data
@@ -490,6 +493,8 @@ def interpolate_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
     x_min, x_max, y_min, y_max: float, optional
         The minimum and maximum values to use in interpolation, in particle data space. Defaults
         to the minimum and maximum values of `x` and `y`.
+    exact: bool
+        Whether to use exact interpolation of the data.
     backend: ['cpu', 'gpu']
         The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
 
@@ -538,7 +543,7 @@ def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
                        y: str = None, kernel: BaseKernel = None, integral_samples: int = 1000,
                        rotation: np.ndarray = None, origin: np.ndarray = None, x_pixels: int = None,
                        y_pixels: int = None, x_min: float = None, x_max: float = None, y_min: float = None,
-                       y_max: float = None, backend: str = None):
+                       y_max: float = None, exact: bool = False, backend: str = None):
     """ Interpolate 3D vector particle data to a 2D grid of pixels.
 
         Interpolates three-dimensional vector particle data in a SarracenDataFrame. The data
@@ -569,6 +574,8 @@ def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
         x_min, x_max, y_min, y_max: float, optional
             The minimum and maximum values to use in interpolation, in particle data space. Defaults
             to the minimum and maximum values of `x` and `y`.
+        exact: bool
+            Whether to use exact interpolation of the data.
         backend: ['cpu', 'gpu']
             The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
 
@@ -614,7 +621,7 @@ def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
     return get_backend(backend). \
         interpolate_3d_projection_vec(target_x_data, target_y_data, x_data, y_data, data['m'].to_numpy(),
                                       data['rho'].to_numpy(), data['h'].to_numpy(), weight_function,
-                                      kernel.get_radius(), x_pixels, y_pixels, x_min, x_max, y_min, y_max)
+                                      kernel.get_radius(), x_pixels, y_pixels, x_min, x_max, y_min, y_max, exact)
 
 
 def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, z_slice: float = None, x: str = None, y: str = None,
@@ -739,8 +746,7 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y:
             The minimum and maximum values to use in interpolation, in particle data space. Defaults
             to the minimum and maximum values of `x` and `y`.
         backend: ['cpu', 'gpu']
-        The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
-
+            The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
 
         Returns
         -------
