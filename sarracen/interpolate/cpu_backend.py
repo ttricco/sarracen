@@ -26,7 +26,12 @@ class CPUBackend(BaseBackend):
     def interpolate_2d_render_vec(target_x: ndarray, target_y: ndarray, x: ndarray, y: ndarray, mass: ndarray,
                                   rho: ndarray, h: ndarray, weight_function: CPUDispatcher, kernel_radius: float,
                                   x_pixels: int, y_pixels: int, x_min: float, x_max: float, y_min: float,
-                                  y_max: float) -> Tuple[ndarray, ndarray]:
+                                  y_max: float, exact: bool) -> Tuple[ndarray, ndarray]:
+        if exact:
+            return (CPUBackend._exact_2d_render(target_x, x, y, mass, rho, h, x_pixels, y_pixels, x_min, x_max, y_min,
+                                                y_max),
+                    CPUBackend._exact_2d_render(target_y, x, y, mass, rho, h, x_pixels, y_pixels, x_min, x_max, y_min,
+                                                y_max))
         return (CPUBackend._fast_2d(target_x, 0, x, y, np.zeros(len(target_x)), mass, rho, h, weight_function,
                                     kernel_radius, x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2),
                 CPUBackend._fast_2d(target_y, 0, x, y, np.zeros(len(target_y)), mass, rho, h, weight_function,
@@ -45,7 +50,7 @@ class CPUBackend(BaseBackend):
                                   y_pixels: int, x_min: float, x_max: float, y_min: float, y_max: float,
                                   exact: bool) -> ndarray:
         if exact:
-            return CPUBackend._exact_3d_project(target, x, y, z, mass, rho, h, x_pixels, y_pixels, x_min, x_max, y_min,
+            return CPUBackend._exact_3d_project(target, x, y, mass, rho, h, x_pixels, y_pixels, x_min, x_max, y_min,
                                                 y_max)
         return CPUBackend._fast_2d(target, 0, x, y, np.zeros(len(target)), mass, rho, h, weight_function, kernel_radius,
                                    x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2)
@@ -54,7 +59,12 @@ class CPUBackend(BaseBackend):
     def interpolate_3d_projection_vec(target_x: ndarray, target_y: ndarray, x: ndarray, y: ndarray, mass: ndarray,
                                       rho: ndarray, h: ndarray, weight_function: CPUDispatcher, kernel_radius: float,
                                       x_pixels: int, y_pixels: int, x_min: float, x_max: float, y_min: float,
-                                      y_max: float) -> Tuple[ndarray, ndarray]:
+                                      y_max: float, exact: bool) -> Tuple[ndarray, ndarray]:
+        if exact:
+            return (CPUBackend._exact_3d_project(target_x, x, y, mass, rho, h, x_pixels, y_pixels, x_min, x_max, y_min,
+                                                 y_max),
+                    CPUBackend._exact_3d_project(target_y, x, y, mass, rho, h, x_pixels, y_pixels, x_min, x_max, y_min,
+                                                 y_max))
         return (CPUBackend._fast_2d(target_x, 0, x, y, np.zeros(len(target_x)), mass, rho, h, weight_function,
                                     kernel_radius, x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2),
                 CPUBackend._fast_2d(target_y, 0, x, y, np.zeros(len(target_y)), mass, rho, h, weight_function,
@@ -186,6 +196,8 @@ class CPUBackend(BaseBackend):
 
                 denom = 1 / np.abs(pixwidthx * pixwidthy) * h_data[i] ** 2
 
+                # To calculate the exact surface integral of this pixel, calculate the comprising line integrals
+                # at each boundary of the square.
                 if jpixmax >= jpixmin:
                     ypix = y_min + (jpixmin + 0.5) * pixwidthy
                     dy = ypix - y_data[i]
@@ -198,7 +210,7 @@ class CPUBackend(BaseBackend):
                         r0 = 0.5 * pixwidthy - dy
                         d1 = 0.5 * pixwidthx + dx
                         d2 = 0.5 * pixwidthx - dx
-                        pixint = pint(r0, d1, d2, 1 / h_data[i])
+                        pixint = pint(r0, d1, d2, h_data[i])
                         wab = pixint * denom
 
                         output_local[thread, jpixmin, ipix] += term[i] * wab
@@ -215,7 +227,7 @@ class CPUBackend(BaseBackend):
                         r0 = 0.5 * pixwidthx - dx
                         d1 = 0.5 * pixwidthy - dy
                         d2 = 0.5 * pixwidthy + dy
-                        pixint = pint(r0, d1, d2, 1 / h_data[i])
+                        pixint = pint(r0, d1, d2, h_data[i])
                         wab = pixint * denom
 
                         output_local[thread, jpix, ipixmin] += term[i] * wab
@@ -232,10 +244,13 @@ class CPUBackend(BaseBackend):
                         r0 = 0.5 * pixwidthy + dy
                         d1 = 0.5 * pixwidthx - dx
                         d2 = 0.5 * pixwidthx + dx
-                        pixint = pint(r0, d1, d2, 1 / h_data[i])
+                        pixint = pint(r0, d1, d2, h_data[i])
                         wab = pixint * denom
 
                         output_local[thread, jpix, ipix] += term[i] * wab
+
+                        # The negative value of the bottom boundary is equal to the value of the top boundary of the
+                        # pixel below this pixel.
                         if jpix < jpixmax - 1:
                             output_local[thread, jpix + 1, ipix] -= term[i] * wab
 
@@ -243,10 +258,13 @@ class CPUBackend(BaseBackend):
                         r0 = 0.5 * pixwidthx + dx
                         d1 = 0.5 * pixwidthy + dy
                         d2 = 0.5 * pixwidthy - dy
-                        pixint = pint(r0, d1, d2, 1 / h_data[i])
+                        pixint = pint(r0, d1, d2, h_data[i])
                         wab = pixint * denom
 
                         output_local[thread, jpix, ipix] += term[i] * wab
+
+                        # The negative value of the right boundary is equal to the value of the left boundary of the
+                        # pixel to the right of this pixel.
                         if ipix < ipixmax - 1:
                             output_local[thread, jpix, ipix + 1] -= term[i] * wab
 
@@ -338,8 +356,8 @@ class CPUBackend(BaseBackend):
 
     @staticmethod
     @njit(parallel=True)
-    def _exact_3d_project(target, x_data, y_data, z_data, mass_data, rho_data, h_data, x_pixels, y_pixels, x_min, x_max,
-                          y_min, y_max):
+    def _exact_3d_project(target, x_data, y_data, mass_data, rho_data, h_data, x_pixels, y_pixels, x_min, x_max, y_min,
+                          y_max):
         output_local = np.zeros((get_num_threads(), y_pixels, x_pixels))
         pixwidthx = (x_max - x_min) / x_pixels
         pixwidthy = (y_max - y_min) / y_pixels
@@ -363,6 +381,8 @@ class CPUBackend(BaseBackend):
                 ipixmax = int(np.rint((x_data[i] + 2 * h_data[i] - x_min) / pixwidthx))
                 jpixmax = int(np.rint((y_data[i] + 2 * h_data[i] - y_min) / pixwidthy))
 
+                # The width of the z contribution of this particle.
+                # = 2 * kernel_radius * h[i], where kernel_radius is 2 for the cubic spline kernel.
                 pixwidthz = 4 * h_data[i]
 
                 if ipixmax < 0 or ipixmin >= x_pixels or jpixmax < 0 or jpixmin >= y_pixels:
@@ -386,13 +406,24 @@ class CPUBackend(BaseBackend):
                         q2 = (dx ** 2 + dy ** 2) / h_data[i] ** 2
 
                         if q2 < 4 + 3 * pixwidthx * pixwidthy / h_data[i] ** 2:
-                            pixint = 2 * wallint(0.5 * pixwidthz, x_data[i], y_data[i], xpix, ypix, pixwidthx, pixwidthy, h_data[i])
+                            # Calculate the volume integral of this pixel by summing the comprising
+                            # surface integrals of each surface of the cube.
 
-                            pixint += wallint(ypix - y_data[i] + 0.5 * pixwidthy, x_data[i], 0, xpix, 0, pixwidthx, pixwidthz, h_data[i])
-                            pixint += wallint(y_data[i] - ypix + 0.5 * pixwidthy, x_data[i], 0, xpix, 0, pixwidthx, pixwidthz, h_data[i])
+                            # x-y surfaces
+                            pixint = 2 * wallint(0.5 * pixwidthz, x_data[i], y_data[i], xpix, ypix, pixwidthx,
+                                                 pixwidthy, h_data[i])
 
-                            pixint += wallint(xpix - x_data[i] + 0.5 * pixwidthx, 0, y_data[i], 0, ypix, pixwidthz, pixwidthy, h_data[i])
-                            pixint += wallint(x_data[i] - xpix + 0.5 * pixwidthx, 0, y_data[i], 0, ypix, pixwidthz, pixwidthy, h_data[i])
+                            # x-z surfaces
+                            pixint += wallint(ypix - y_data[i] + 0.5 * pixwidthy, x_data[i], 0, xpix, 0, pixwidthx,
+                                              pixwidthz, h_data[i])
+                            pixint += wallint(y_data[i] - ypix + 0.5 * pixwidthy, x_data[i], 0, xpix, 0, pixwidthx,
+                                              pixwidthz, h_data[i])
+
+                            # y-z surfaces
+                            pixint += wallint(xpix - x_data[i] + 0.5 * pixwidthx, 0, y_data[i], 0, ypix, pixwidthz,
+                                              pixwidthy, h_data[i])
+                            pixint += wallint(x_data[i] - xpix + 0.5 * pixwidthx, 0, y_data[i], 0, ypix, pixwidthz,
+                                              pixwidthy, h_data[i])
 
                             wab = pixint * dfac[i]
 
