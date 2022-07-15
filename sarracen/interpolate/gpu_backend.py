@@ -7,6 +7,7 @@ from numba.core.registry import CPUDispatcher
 from numpy import ndarray
 
 from sarracen.interpolate.base_backend import BaseBackend
+from sarracen.kernels.cubic_spline_exact import pint, wallint
 
 
 class GPUBackend(BaseBackend):
@@ -14,7 +15,10 @@ class GPUBackend(BaseBackend):
     @staticmethod
     def interpolate_2d_render(target: ndarray, x: ndarray, y: ndarray, mass: ndarray, rho: ndarray, h: ndarray,
                               weight_function: CPUDispatcher, kernel_radius: float, x_pixels: int, y_pixels: int,
-                              x_min: float, x_max: float, y_min: float, y_max: float, exact) -> ndarray:
+                              x_min: float, x_max: float, y_min: float, y_max: float, exact: bool) -> ndarray:
+        if exact:
+            return GPUBackend._exact_2d_render(target, x, y, mass, rho, h, x_pixels, y_pixels, x_min, x_max, y_min,
+                                               y_max)
         return GPUBackend._fast_2d(target, 0, x, y, np.zeros(len(target)), mass, rho, h, weight_function, kernel_radius,
                                    x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2)
 
@@ -39,6 +43,9 @@ class GPUBackend(BaseBackend):
     def interpolate_3d_projection(target: ndarray, x: ndarray, y: ndarray, z: ndarray, mass: ndarray, rho: ndarray, h: ndarray,
                                   weight_function: CPUDispatcher, kernel_radius: float, x_pixels: int, y_pixels: int,
                                   x_min: float, x_max: float, y_min: float, y_max: float, exact: bool) -> ndarray:
+        if exact:
+            return GPUBackend._exact_3d_project(target, x, y, z, mass, rho, h, x_pixels, y_pixels, x_min, x_max, y_min,
+                                                y_max)
         return GPUBackend._fast_2d(target, 0, x, y, np.zeros(len(target)), mass, rho, h, weight_function, kernel_radius,
                                    x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2)
 
@@ -158,6 +165,123 @@ class GPUBackend(BaseBackend):
 
         return d_image.copy_to_host()
 
+    # Underlying CPU numba-compiled code for exact interpolation of 2D data to a 2D grid.
+    @staticmethod
+    def _exact_2d_render(target, x_data, y_data, mass_data, rho_data, h_data, x_pixels, y_pixels, x_min, x_max, y_min,
+                         y_max):
+        pixwidthx = (x_max - x_min) / x_pixels
+        pixwidthy = (y_max - y_min) / y_pixels
+
+        # Underlying GPU numba-compiled code for interpolation to a 2D grid. Used in interpolation of 2D data,
+        # and column integration / cross-sections of 3D data.
+        @cuda.jit
+        def _2d_func(target, x_data, y_data, mass_data, rho_data, h_data, image):
+            i = cuda.grid(1)
+            if i < len(target):
+                term = (target[i] * mass_data[i] / (rho_data[i] * h_data[i] ** 2))
+
+                # determine maximum and minimum pixels that this particle contributes to
+                ipixmin = round((x_data[i] - 2 * h_data[i] - x_min) / pixwidthx)
+                jpixmin = round((y_data[i] - 2 * h_data[i] - y_min) / pixwidthy)
+                ipixmax = round((x_data[i] + 2 * h_data[i] - x_min) / pixwidthx)
+                jpixmax = round((y_data[i] + 2 * h_data[i] - y_min) / pixwidthy)
+
+                if ipixmax < 0 or ipixmin >= x_pixels or jpixmax < 0 or jpixmin >= y_pixels:
+                    return
+                if ipixmin < 0:
+                    ipixmin = 0
+                if ipixmax > x_pixels:
+                    ipixmax = x_pixels
+                if jpixmin < 0:
+                    jpixmin = 0
+                if jpixmax > y_pixels:
+                    jpixmax = y_pixels
+
+                denom = 1 / abs(pixwidthx * pixwidthy) * h_data[i] ** 2
+
+                if jpixmax >= jpixmin:
+                    ypix = y_min + (jpixmin + 0.5) * pixwidthy
+                    dy = ypix - y_data[i]
+
+                    for ipix in range(ipixmin, ipixmax):
+                        xpix = x_min + (ipix + 0.5) * pixwidthx
+                        dx = xpix - x_data[i]
+
+                        # Top Boundary
+                        r0 = 0.5 * pixwidthy - dy
+                        d1 = 0.5 * pixwidthx + dx
+                        d2 = 0.5 * pixwidthx - dx
+                        pixint = pint(r0, d1, d2, 1 / h_data[i])
+                        wab = pixint * denom
+
+                        cuda.atomic.add(image, (jpixmin, ipix), term * wab)
+
+                if ipixmax >= ipixmin:
+                    xpix = x_min + (ipixmin + 0.5) * pixwidthx
+                    dx = xpix - x_data[i]
+
+                    for jpix in range(jpixmin, jpixmax):
+                        ypix = y_min + (jpix + 0.5) * pixwidthy
+                        dy = ypix - y_data[i]
+
+                        # Left Boundary
+                        r0 = 0.5 * pixwidthx - dx
+                        d1 = 0.5 * pixwidthy - dy
+                        d2 = 0.5 * pixwidthy + dy
+                        pixint = pint(r0, d1, d2, 1 / h_data[i])
+                        wab = pixint * denom
+
+                        cuda.atomic.add(image, (jpix, ipixmin), term * wab)
+
+                for jpix in range(jpixmin, jpixmax):
+                    ypix = y_min + (jpix + 0.5) * pixwidthy
+                    dy = ypix - y_data[i]
+
+                    for ipix in range(ipixmin, ipixmax):
+                        xpix = x_min + (ipix + 0.5) * pixwidthx
+                        dx = xpix - x_data[i]
+
+                        # Bottom boundaries
+                        r0 = 0.5 * pixwidthy + dy
+                        d1 = 0.5 * pixwidthx - dx
+                        d2 = 0.5 * pixwidthx + dx
+                        pixint = pint(r0, d1, d2, 1 / h_data[i])
+                        wab = pixint * denom
+
+                        cuda.atomic.add(image, (jpix, ipix), term * wab)
+                        if jpix < jpixmax - 1:
+                            cuda.atomic.sub(image, (jpix + 1, ipix), term * wab)
+
+                        # Right Boundaries
+                        r0 = 0.5 * pixwidthx + dx
+                        d1 = 0.5 * pixwidthy + dy
+                        d2 = 0.5 * pixwidthy - dy
+                        pixint = pint(r0, d1, d2, 1 / h_data[i])
+                        wab = pixint * denom
+
+                        cuda.atomic.add(image, (jpix, ipix), term * wab)
+                        if ipix < ipixmax - 1:
+                            cuda.atomic.sub(image, (jpix, ipix + 1), term * wab)
+
+        threadsperblock = 32
+        blockspergrid = (target.size + (threadsperblock - 1)) // threadsperblock
+
+        # transfer relevant data to the GPU
+        d_target = cuda.to_device(target)
+        d_x = cuda.to_device(x_data)
+        d_y = cuda.to_device(y_data)
+        d_m = cuda.to_device(mass_data)
+        d_rho = cuda.to_device(rho_data)
+        d_h = cuda.to_device(h_data)
+        # CUDA kernels have no return values, so the image data must be
+        # allocated on the device beforehand.
+        d_image = cuda.to_device(np.zeros((y_pixels, x_pixels)))
+
+        # execute the newly compiled CUDA kernel.
+        _2d_func[blockspergrid, threadsperblock](d_target, d_x, d_y, d_m, d_rho, d_h, d_image)
+
+        return d_image.copy_to_host()
+
     # For the GPU, the numba code is compiled using a factory function approach. This is required
     # since a CUDA numba kernel cannot easily take weight_function as an argument.
     @staticmethod
@@ -241,5 +365,87 @@ class GPUBackend(BaseBackend):
         # execute the newly compiled GPU kernel
         _2d_func[blockspergrid, threadsperblock](d_target, d_x, d_y, d_m, d_rho, d_h, kernel_radius, pixels, x1, x2, y1,
                                                  y2, d_image)
+
+        return d_image.copy_to_host()
+
+    @staticmethod
+    def _exact_3d_project(target, x_data, y_data, z_data, mass_data, rho_data, h_data, x_pixels, y_pixels, x_min, x_max,
+                          y_min, y_max):
+        pixwidthx = (x_max - x_min) / x_pixels
+        pixwidthy = (y_max - y_min) / y_pixels
+
+        norm3d = 1 / np.pi
+
+        @cuda.jit
+        def _3d_func(target, x_data, y_data, mass_data, rho_data, h_data, image):
+            i = cuda.grid(1)
+            if i < len(target):
+                weight = mass_data[i] / (rho_data[i] * h_data[i] ** 3)
+                dfac = h_data[i] ** 3 / (pixwidthx * pixwidthy * norm3d)
+                term = norm3d * weight * target[i]
+
+                # determine maximum and minimum pixels that this particle contributes to
+                ipixmin = round((x_data[i] - 2 * h_data[i] - x_min) / pixwidthx)
+                jpixmin = round((y_data[i] - 2 * h_data[i] - y_min) / pixwidthy)
+                ipixmax = round((x_data[i] + 2 * h_data[i] - x_min) / pixwidthx)
+                jpixmax = round((y_data[i] + 2 * h_data[i] - y_min) / pixwidthy)
+
+                pixwidthz = 4 * h_data[i]
+
+                if ipixmax < 0 or ipixmin >= x_pixels or jpixmax < 0 or jpixmin >= y_pixels:
+                    return
+                if ipixmin < 0:
+                    ipixmin = 0
+                if ipixmax > x_pixels:
+                    ipixmax = x_pixels
+                if jpixmin < 0:
+                    jpixmin = 0
+                if jpixmax > y_pixels:
+                    jpixmax = y_pixels
+
+                for jpix in range(jpixmin, jpixmax):
+                    ypix = y_min + (jpix + 0.5) * pixwidthy
+                    dy = ypix - y_data[i]
+
+                    for ipix in range(ipixmin, ipixmax):
+                        xpix = x_min + (ipix + 0.5) * pixwidthx
+                        dx = xpix - x_data[i]
+
+                        q2 = (dx ** 2 + dy ** 2) / h_data[i] ** 2
+
+                        if q2 < 4 + 3 * pixwidthx * pixwidthy / h_data[i] ** 2:
+                            pixint = 2 * wallint(0.5 * pixwidthz, x_data[i], y_data[i], xpix, ypix, pixwidthx,
+                                                 pixwidthy, h_data[i])
+
+                            pixint += wallint(ypix - y_data[i] + 0.5 * pixwidthy, x_data[i], 0, xpix, 0,
+                                              pixwidthx, pixwidthz, h_data[i])
+                            pixint += wallint(y_data[i] - ypix + 0.5 * pixwidthy, x_data[i], 0, xpix, 0,
+                                              pixwidthx, pixwidthz, h_data[i])
+
+                            pixint += wallint(xpix - x_data[i] + 0.5 * pixwidthx, 0, y_data[i], 0, ypix, pixwidthz,
+                                              pixwidthy, h_data[i])
+                            pixint += wallint(x_data[i] - xpix + 0.5 * pixwidthx, 0, y_data[i], 0, ypix, pixwidthz,
+                                              pixwidthy, h_data[i])
+
+                            wab = pixint * dfac
+
+                            cuda.atomic.add(image, (jpix, ipix), term * wab)
+
+        threadsperblock = 32
+        blockspergrid = (target.size + (threadsperblock - 1)) // threadsperblock
+
+        # transfer relevant data to the GPU
+        d_target = cuda.to_device(target)
+        d_x = cuda.to_device(x_data)
+        d_y = cuda.to_device(y_data)
+        d_m = cuda.to_device(mass_data)
+        d_rho = cuda.to_device(rho_data)
+        d_h = cuda.to_device(h_data)
+        # CUDA kernels have no return values, so the image data must be
+        # allocated on the device beforehand.
+        d_image = cuda.to_device(np.zeros((y_pixels, x_pixels)))
+
+        # execute the newly compiled CUDA kernel.
+        _3d_func[blockspergrid, threadsperblock](d_target, d_x, d_y, d_m, d_rho, d_h, d_image)
 
         return d_image.copy_to_host()
