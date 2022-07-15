@@ -388,8 +388,8 @@ class CPUBackend(BaseBackend):
                         if q2 < 4 + 3 * pixwidthx * pixwidthy / h_data[i] ** 2:
                             pixint = 2 * wallint(0.5 * pixwidthz, x_data[i], y_data[i], xpix, ypix, pixwidthx, pixwidthy, h_data[i])
 
-                            pixint += wallint(ypix - y_data[i] + 0.5 * pixwidthy, x_data[i], z_data[i], xpix, 0, pixwidthx, pixwidthz, h_data[i])
-                            pixint += wallint(y_data[i] - ypix + 0.5 * pixwidthy, x_data[i], z_data[i], xpix, 0, pixwidthx, pixwidthz, h_data[i])
+                            pixint += wallint(ypix - y_data[i] + 0.5 * pixwidthy, x_data[i], 0, xpix, 0, pixwidthx, pixwidthz, h_data[i])
+                            pixint += wallint(y_data[i] - ypix + 0.5 * pixwidthy, x_data[i], 0, xpix, 0, pixwidthx, pixwidthz, h_data[i])
 
                             pixint += wallint(xpix - x_data[i] + 0.5 * pixwidthx, 0, y_data[i], 0, ypix, pixwidthz, pixwidthy, h_data[i])
                             pixint += wallint(x_data[i] - xpix + 0.5 * pixwidthx, 0, y_data[i], 0, ypix, pixwidthz, pixwidthy, h_data[i])
