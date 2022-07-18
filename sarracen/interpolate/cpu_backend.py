@@ -6,7 +6,7 @@ from numpy import ndarray
 import numpy as np
 
 from sarracen.interpolate.base_backend import BaseBackend
-from sarracen.kernels.cubic_spline_exact import pint, wallint
+from sarracen.kernels.cubic_spline_exact import line_int, surface_int
 
 
 class CPUBackend(BaseBackend):
@@ -210,7 +210,7 @@ class CPUBackend(BaseBackend):
                         r0 = 0.5 * pixwidthy - dy
                         d1 = 0.5 * pixwidthx + dx
                         d2 = 0.5 * pixwidthx - dx
-                        pixint = pint(r0, d1, d2, h_data[i])
+                        pixint = line_int(r0, d1, d2, h_data[i])
                         wab = pixint * denom
 
                         output_local[thread, jpixmin, ipix] += term[i] * wab
@@ -227,7 +227,7 @@ class CPUBackend(BaseBackend):
                         r0 = 0.5 * pixwidthx - dx
                         d1 = 0.5 * pixwidthy - dy
                         d2 = 0.5 * pixwidthy + dy
-                        pixint = pint(r0, d1, d2, h_data[i])
+                        pixint = line_int(r0, d1, d2, h_data[i])
                         wab = pixint * denom
 
                         output_local[thread, jpix, ipixmin] += term[i] * wab
@@ -244,7 +244,7 @@ class CPUBackend(BaseBackend):
                         r0 = 0.5 * pixwidthy + dy
                         d1 = 0.5 * pixwidthx - dx
                         d2 = 0.5 * pixwidthx + dx
-                        pixint = pint(r0, d1, d2, h_data[i])
+                        pixint = line_int(r0, d1, d2, h_data[i])
                         wab = pixint * denom
 
                         output_local[thread, jpix, ipix] += term[i] * wab
@@ -258,7 +258,7 @@ class CPUBackend(BaseBackend):
                         r0 = 0.5 * pixwidthx + dx
                         d1 = 0.5 * pixwidthy + dy
                         d2 = 0.5 * pixwidthy - dy
-                        pixint = pint(r0, d1, d2, h_data[i])
+                        pixint = line_int(r0, d1, d2, h_data[i])
                         wab = pixint * denom
 
                         output_local[thread, jpix, ipix] += term[i] * wab
@@ -410,20 +410,20 @@ class CPUBackend(BaseBackend):
                             # surface integrals of each surface of the cube.
 
                             # x-y surfaces
-                            pixint = 2 * wallint(0.5 * pixwidthz, x_data[i], y_data[i], xpix, ypix, pixwidthx,
-                                                 pixwidthy, h_data[i])
+                            pixint = 2 * surface_int(0.5 * pixwidthz, x_data[i], y_data[i], xpix, ypix, pixwidthx,
+                                                     pixwidthy, h_data[i])
 
                             # x-z surfaces
-                            pixint += wallint(ypix - y_data[i] + 0.5 * pixwidthy, x_data[i], 0, xpix, 0, pixwidthx,
-                                              pixwidthz, h_data[i])
-                            pixint += wallint(y_data[i] - ypix + 0.5 * pixwidthy, x_data[i], 0, xpix, 0, pixwidthx,
-                                              pixwidthz, h_data[i])
+                            pixint += surface_int(ypix - y_data[i] + 0.5 * pixwidthy, x_data[i], 0, xpix, 0, pixwidthx,
+                                                  pixwidthz, h_data[i])
+                            pixint += surface_int(y_data[i] - ypix + 0.5 * pixwidthy, x_data[i], 0, xpix, 0, pixwidthx,
+                                                  pixwidthz, h_data[i])
 
                             # y-z surfaces
-                            pixint += wallint(xpix - x_data[i] + 0.5 * pixwidthx, 0, y_data[i], 0, ypix, pixwidthz,
-                                              pixwidthy, h_data[i])
-                            pixint += wallint(x_data[i] - xpix + 0.5 * pixwidthx, 0, y_data[i], 0, ypix, pixwidthz,
-                                              pixwidthy, h_data[i])
+                            pixint += surface_int(xpix - x_data[i] + 0.5 * pixwidthx, 0, y_data[i], 0, ypix, pixwidthz,
+                                                  pixwidthy, h_data[i])
+                            pixint += surface_int(x_data[i] - xpix + 0.5 * pixwidthx, 0, y_data[i], 0, ypix, pixwidthz,
+                                                  pixwidthy, h_data[i])
 
                             wab = pixint * dfac[i]
 

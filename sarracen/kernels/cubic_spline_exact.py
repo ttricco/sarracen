@@ -4,7 +4,7 @@ from numba import njit
 
 
 @njit
-def pint(r0, d1, d2, h):
+def line_int(r0, d1, d2, h):
     """ Calculate an exact 2D line integral over the cubic spline kernel.
 
     Used in exact calculation of a pixel surface integral in 2D.
@@ -189,7 +189,7 @@ def _f3_2d(phi):
 
 
 @njit
-def wallint(r0, x1, y1, x2, y2, wx, wy, h):
+def surface_int(r0, x1, y1, x2, y2, wx, wy, h):
     """ Calculate an exact 3D surface integral over the cubic spline kernel.
 
     Used to exactly calculating the contribution of a particle to a pixel's volume in 3D space.
@@ -219,31 +219,31 @@ def wallint(r0, x1, y1, x2, y2, wx, wy, h):
     r1 = 0.5 * wy + dy
     d1 = 0.5 * wx - dx
     d2 = 0.5 * wx + dx
-    result = result + _pint3d(r0, r1, d1, d2, h)
+    result = result + _line_int3d(r0, r1, d1, d2, h)
 
     # Top boundary
     r1 = 0.5 * wy - dy
     d1 = 0.5 * wx + dx
     d2 = 0.5 * wx - dx
-    result = result + _pint3d(r0, r1, d1, d2, h)
+    result = result + _line_int3d(r0, r1, d1, d2, h)
 
     # Right boundary
     r1 = 0.5 * wx + dx
     d1 = 0.5 * wy + dy
     d2 = 0.5 * wy - dy
-    result = result + _pint3d(r0, r1, d1, d2, h)
+    result = result + _line_int3d(r0, r1, d1, d2, h)
 
     # Left boundary
     r1 = 0.5 * wx - dx
     d1 = 0.5 * wy - dy
     d2 = 0.5 * wy + dy
-    result = result + _pint3d(r0, r1, d1, d2, h)
+    result = result + _line_int3d(r0, r1, d1, d2, h)
 
     return result
 
 
 @njit
-def _pint3d(r0, r1, d1, d2, h):
+def _line_int3d(r0, r1, d1, d2, h):
     """ Calculate an exact 3D line integral over the cubic spline kernel.
 
     Used in wallint.
