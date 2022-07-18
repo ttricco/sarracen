@@ -6,6 +6,7 @@ from numpy import ndarray
 import numpy as np
 
 from sarracen.interpolate.base_backend import BaseBackend
+from sarracen.kernels.cubic_spline_exact import line_int, surface_int
 
 
 class CPUBackend(BaseBackend):
@@ -13,15 +14,24 @@ class CPUBackend(BaseBackend):
     @staticmethod
     def interpolate_2d_render(target: ndarray, x: ndarray, y: ndarray, mass: ndarray, rho: ndarray, h: ndarray,
                               weight_function: CPUDispatcher, kernel_radius: float, x_pixels: int, y_pixels: int,
-                              x_min: float, x_max: float, y_min: float, y_max: float) -> ndarray:
-        return CPUBackend._fast_2d(target, 0, x, y, np.zeros(len(target)), mass, rho, h, weight_function, kernel_radius,
-                                   x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2)
+                              x_min: float, x_max: float, y_min: float, y_max: float, exact: bool) -> ndarray:
+        if exact:
+            return CPUBackend._exact_2d_render(target, x, y, mass, rho, h, x_pixels, y_pixels, x_min, x_max, y_min,
+                                               y_max)
+        else:
+            return CPUBackend._fast_2d(target, 0, x, y, np.zeros(len(target)), mass, rho, h, weight_function,
+                                       kernel_radius, x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2)
 
     @staticmethod
     def interpolate_2d_render_vec(target_x: ndarray, target_y: ndarray, x: ndarray, y: ndarray, mass: ndarray,
                                   rho: ndarray, h: ndarray, weight_function: CPUDispatcher, kernel_radius: float,
                                   x_pixels: int, y_pixels: int, x_min: float, x_max: float, y_min: float,
-                                  y_max: float) -> Tuple[ndarray, ndarray]:
+                                  y_max: float, exact: bool) -> Tuple[ndarray, ndarray]:
+        if exact:
+            return (CPUBackend._exact_2d_render(target_x, x, y, mass, rho, h, x_pixels, y_pixels, x_min, x_max, y_min,
+                                                y_max),
+                    CPUBackend._exact_2d_render(target_y, x, y, mass, rho, h, x_pixels, y_pixels, x_min, x_max, y_min,
+                                                y_max))
         return (CPUBackend._fast_2d(target_x, 0, x, y, np.zeros(len(target_x)), mass, rho, h, weight_function,
                                     kernel_radius, x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2),
                 CPUBackend._fast_2d(target_y, 0, x, y, np.zeros(len(target_y)), mass, rho, h, weight_function,
@@ -35,9 +45,13 @@ class CPUBackend(BaseBackend):
                                              y1, y2)
 
     @staticmethod
-    def interpolate_3d_projection(target: ndarray, x: ndarray, y: ndarray, mass: ndarray, rho: ndarray, h: ndarray,
-                                  weight_function: CPUDispatcher, kernel_radius: float, x_pixels: int, y_pixels: int,
-                                  x_min: float, x_max: float, y_min: float, y_max: float) -> ndarray:
+    def interpolate_3d_projection(target: ndarray, x: ndarray, y: ndarray, z: ndarray, mass: ndarray, rho: ndarray,
+                                  h: ndarray, weight_function: CPUDispatcher, kernel_radius: float, x_pixels: int,
+                                  y_pixels: int, x_min: float, x_max: float, y_min: float, y_max: float,
+                                  exact: bool) -> ndarray:
+        if exact:
+            return CPUBackend._exact_3d_project(target, x, y, mass, rho, h, x_pixels, y_pixels, x_min, x_max, y_min,
+                                                y_max)
         return CPUBackend._fast_2d(target, 0, x, y, np.zeros(len(target)), mass, rho, h, weight_function, kernel_radius,
                                    x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2)
 
@@ -45,7 +59,12 @@ class CPUBackend(BaseBackend):
     def interpolate_3d_projection_vec(target_x: ndarray, target_y: ndarray, x: ndarray, y: ndarray, mass: ndarray,
                                       rho: ndarray, h: ndarray, weight_function: CPUDispatcher, kernel_radius: float,
                                       x_pixels: int, y_pixels: int, x_min: float, x_max: float, y_min: float,
-                                      y_max: float) -> Tuple[ndarray, ndarray]:
+                                      y_max: float, exact: bool) -> Tuple[ndarray, ndarray]:
+        if exact:
+            return (CPUBackend._exact_3d_project(target_x, x, y, mass, rho, h, x_pixels, y_pixels, x_min, x_max, y_min,
+                                                 y_max),
+                    CPUBackend._exact_3d_project(target_y, x, y, mass, rho, h, x_pixels, y_pixels, x_min, x_max, y_min,
+                                                 y_max))
         return (CPUBackend._fast_2d(target_x, 0, x, y, np.zeros(len(target_x)), mass, rho, h, weight_function,
                                     kernel_radius, x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2),
                 CPUBackend._fast_2d(target_y, 0, x, y, np.zeros(len(target_y)), mass, rho, h, weight_function,
@@ -90,8 +109,8 @@ class CPUBackend(BaseBackend):
         # thread safety: each thread has its own grid, which are combined after interpolation
         for thread in prange(get_num_threads()):
             block_size = term.size / get_num_threads()
-            range_start = thread * block_size
-            range_end = (thread + 1) * block_size
+            range_start = int(thread * block_size)
+            range_end = int((thread + 1) * block_size)
 
             # iterate through the indexes of non-filtered particles
             for i in range(range_start, range_end):
@@ -133,6 +152,123 @@ class CPUBackend(BaseBackend):
                             continue
                         wab = weight_function(np.sqrt(q2[jpix][ipix]), n_dims)
                         output_local[thread][jpix + jpixmin, ipix + ipixmin] += term[i] * wab
+
+        for i in range(get_num_threads()):
+            output += output_local[i]
+
+        return output
+
+    # Underlying CPU numba-compiled code for exact interpolation of 2D data to a 2D grid.
+    @staticmethod
+    @njit(parallel=True)
+    def _exact_2d_render(target, x_data, y_data, mass_data, rho_data, h_data, x_pixels, y_pixels, x_min, x_max, y_min,
+                         y_max):
+        output_local = np.zeros((get_num_threads(), y_pixels, x_pixels))
+        pixwidthx = (x_max - x_min) / x_pixels
+        pixwidthy = (y_max - y_min) / y_pixels
+
+        term = (target * mass_data / (rho_data * h_data ** 2))
+
+        for thread in prange(get_num_threads()):
+            block_size = term.size / get_num_threads()
+            range_start = int(thread * block_size)
+            range_end = int((thread + 1) * block_size)
+
+            # iterate through the indexes of non-filtered particles
+            for i in range(range_start, range_end):
+
+                # determine maximum and minimum pixels that this particle contributes to
+                ipixmin = int(np.rint((x_data[i] - 2 * h_data[i] - x_min) / pixwidthx))
+                jpixmin = int(np.rint((y_data[i] - 2 * h_data[i] - y_min) / pixwidthy))
+                ipixmax = int(np.rint((x_data[i] + 2 * h_data[i] - x_min) / pixwidthx))
+                jpixmax = int(np.rint((y_data[i] + 2 * h_data[i] - y_min) / pixwidthy))
+
+                if ipixmax < 0 or ipixmin >= x_pixels or jpixmax < 0 or jpixmin >= y_pixels:
+                    continue
+                if ipixmin < 0:
+                    ipixmin = 0
+                if ipixmax > x_pixels:
+                    ipixmax = x_pixels
+                if jpixmin < 0:
+                    jpixmin = 0
+                if jpixmax > y_pixels:
+                    jpixmax = y_pixels
+
+                denom = 1 / np.abs(pixwidthx * pixwidthy) * h_data[i] ** 2
+
+                # To calculate the exact surface integral of this pixel, calculate the comprising line integrals
+                # at each boundary of the square.
+                if jpixmax >= jpixmin:
+                    ypix = y_min + (jpixmin + 0.5) * pixwidthy
+                    dy = ypix - y_data[i]
+
+                    for ipix in range(ipixmin, ipixmax):
+                        xpix = x_min + (ipix + 0.5) * pixwidthx
+                        dx = xpix - x_data[i]
+
+                        # Top Boundary
+                        r0 = 0.5 * pixwidthy - dy
+                        d1 = 0.5 * pixwidthx + dx
+                        d2 = 0.5 * pixwidthx - dx
+                        pixint = line_int(r0, d1, d2, h_data[i])
+                        wab = pixint * denom
+
+                        output_local[thread, jpixmin, ipix] += term[i] * wab
+
+                if ipixmax >= ipixmin:
+                    xpix = x_min + (ipixmin + 0.5) * pixwidthx
+                    dx = xpix - x_data[i]
+
+                    for jpix in range(jpixmin, jpixmax):
+                        ypix = y_min + (jpix + 0.5) * pixwidthy
+                        dy = ypix - y_data[i]
+
+                        # Left Boundary
+                        r0 = 0.5 * pixwidthx - dx
+                        d1 = 0.5 * pixwidthy - dy
+                        d2 = 0.5 * pixwidthy + dy
+                        pixint = line_int(r0, d1, d2, h_data[i])
+                        wab = pixint * denom
+
+                        output_local[thread, jpix, ipixmin] += term[i] * wab
+
+                for jpix in range(jpixmin, jpixmax):
+                    ypix = y_min + (jpix + 0.5) * pixwidthy
+                    dy = ypix - y_data[i]
+
+                    for ipix in range(ipixmin, ipixmax):
+                        xpix = x_min + (ipix + 0.5) * pixwidthx
+                        dx = xpix - x_data[i]
+
+                        # Bottom boundaries
+                        r0 = 0.5 * pixwidthy + dy
+                        d1 = 0.5 * pixwidthx - dx
+                        d2 = 0.5 * pixwidthx + dx
+                        pixint = line_int(r0, d1, d2, h_data[i])
+                        wab = pixint * denom
+
+                        output_local[thread, jpix, ipix] += term[i] * wab
+
+                        # The negative value of the bottom boundary is equal to the value of the top boundary of the
+                        # pixel below this pixel.
+                        if jpix < jpixmax - 1:
+                            output_local[thread, jpix + 1, ipix] -= term[i] * wab
+
+                        # Right Boundaries
+                        r0 = 0.5 * pixwidthx + dx
+                        d1 = 0.5 * pixwidthy + dy
+                        d2 = 0.5 * pixwidthy - dy
+                        pixint = line_int(r0, d1, d2, h_data[i])
+                        wab = pixint * denom
+
+                        output_local[thread, jpix, ipix] += term[i] * wab
+
+                        # The negative value of the right boundary is equal to the value of the left boundary of the
+                        # pixel to the right of this pixel.
+                        if ipix < ipixmax - 1:
+                            output_local[thread, jpix, ipix + 1] -= term[i] * wab
+
+        output = np.zeros((y_pixels, x_pixels))
 
         for i in range(get_num_threads()):
             output += output_local[i]
@@ -212,6 +348,88 @@ class CPUBackend(BaseBackend):
                 # add contributions to output total
                 for ipix in range(int(ipixmax[i]) - int(ipixmin[i])):
                     output_local[thread][ipix + int(ipixmin[i])] += term[filter_det][i] * wab[ipix]
+
+        for i in range(get_num_threads()):
+            output += output_local[i]
+
+        return output
+
+    @staticmethod
+    @njit(parallel=True)
+    def _exact_3d_project(target, x_data, y_data, mass_data, rho_data, h_data, x_pixels, y_pixels, x_min, x_max, y_min,
+                          y_max):
+        output_local = np.zeros((get_num_threads(), y_pixels, x_pixels))
+        pixwidthx = (x_max - x_min) / x_pixels
+        pixwidthy = (y_max - y_min) / y_pixels
+
+        weight = mass_data / (rho_data * h_data ** 3)
+        norm3d = 1 / np.pi
+        dfac = h_data ** 3 / (pixwidthx * pixwidthy * norm3d)
+        term = norm3d * weight * target
+
+        for thread in prange(get_num_threads()):
+            block_size = term.size / get_num_threads()
+            range_start = int(thread * block_size)
+            range_end = int((thread + 1) * block_size)
+
+            # iterate through the indexes of non-filtered particles
+            for i in range(range_start, range_end):
+
+                # determine maximum and minimum pixels that this particle contributes to
+                ipixmin = int(np.rint((x_data[i] - 2 * h_data[i] - x_min) / pixwidthx))
+                jpixmin = int(np.rint((y_data[i] - 2 * h_data[i] - y_min) / pixwidthy))
+                ipixmax = int(np.rint((x_data[i] + 2 * h_data[i] - x_min) / pixwidthx))
+                jpixmax = int(np.rint((y_data[i] + 2 * h_data[i] - y_min) / pixwidthy))
+
+                # The width of the z contribution of this particle.
+                # = 2 * kernel_radius * h[i], where kernel_radius is 2 for the cubic spline kernel.
+                pixwidthz = 4 * h_data[i]
+
+                if ipixmax < 0 or ipixmin >= x_pixels or jpixmax < 0 or jpixmin >= y_pixels:
+                    continue
+                if ipixmin < 0:
+                    ipixmin = 0
+                if ipixmax > x_pixels:
+                    ipixmax = x_pixels
+                if jpixmin < 0:
+                    jpixmin = 0
+                if jpixmax > y_pixels:
+                    jpixmax = y_pixels
+
+                for jpix in range(jpixmin, jpixmax):
+                    ypix = y_min + (jpix + 0.5) * pixwidthy
+                    dy = ypix - y_data[i]
+                    for ipix in range(ipixmin, ipixmax):
+                        xpix = x_min + (ipix + 0.5) * pixwidthx
+                        dx = xpix - x_data[i]
+
+                        q2 = (dx ** 2 + dy ** 2) / h_data[i] ** 2
+
+                        if q2 < 4 + 3 * pixwidthx * pixwidthy / h_data[i] ** 2:
+                            # Calculate the volume integral of this pixel by summing the comprising
+                            # surface integrals of each surface of the cube.
+
+                            # x-y surfaces
+                            pixint = 2 * surface_int(0.5 * pixwidthz, x_data[i], y_data[i], xpix, ypix, pixwidthx,
+                                                     pixwidthy, h_data[i])
+
+                            # x-z surfaces
+                            pixint += surface_int(ypix - y_data[i] + 0.5 * pixwidthy, x_data[i], 0, xpix, 0, pixwidthx,
+                                                  pixwidthz, h_data[i])
+                            pixint += surface_int(y_data[i] - ypix + 0.5 * pixwidthy, x_data[i], 0, xpix, 0, pixwidthx,
+                                                  pixwidthz, h_data[i])
+
+                            # y-z surfaces
+                            pixint += surface_int(xpix - x_data[i] + 0.5 * pixwidthx, 0, y_data[i], 0, ypix, pixwidthz,
+                                                  pixwidthy, h_data[i])
+                            pixint += surface_int(x_data[i] - xpix + 0.5 * pixwidthx, 0, y_data[i], 0, ypix, pixwidthz,
+                                                  pixwidthy, h_data[i])
+
+                            wab = pixint * dfac[i]
+
+                            output_local[thread, jpix, ipix] += term[i] * wab
+
+        output = np.zeros((y_pixels, x_pixels))
 
         for i in range(get_num_threads()):
             output += output_local[i]

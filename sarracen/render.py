@@ -122,7 +122,7 @@ def _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max, default):
 def render_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
               x_pixels: int = None, y_pixels: int = None, x_min: float = None, x_max: float = None, y_min: float = None,
               y_max: float = None, cmap: Union[str, Colormap] = 'RdBu', cbar: bool = True, cbar_kws: dict = {},
-              cbar_ax: Axes = None, ax: Axes = None, backend: str = None, **kwargs) -> Axes:
+              cbar_ax: Axes = None, ax: Axes = None, exact: bool = None, backend: str = None, **kwargs) -> Axes:
     """ Render 2D particle data to a 2D grid, using SPH rendering of a target variable.
 
     Render the data within a SarracenDataFrame to a 2D matplotlib object, by rendering the values
@@ -155,6 +155,8 @@ def render_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = No
         Axes to draw the colorbar in, if not provided then space will be taken from the main Axes.
     ax: Axes
         The main axes in which to draw the rendered image.
+    exact: bool
+        Whether to use exact interpolation of the data. Defaults to False.
     backend: ['cpu', 'gpu']
         The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
     kwargs: other keyword arguments
@@ -174,7 +176,7 @@ def render_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = No
         If `target`, `x`, `y`, mass, density, or smoothing length columns do not
         exist in `data`.
     """
-    image = interpolate_2d(data, target, x, y, kernel, x_pixels, y_pixels, x_min, x_max, y_min, y_max, backend)
+    image = interpolate_2d(data, target, x, y, kernel, x_pixels, y_pixels, x_min, x_max, y_min, y_max, exact, backend)
 
     if ax is None:
         ax = plt.gca()
@@ -199,7 +201,7 @@ def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[
                 x: str = None, y: str = None, z: str = None, kernel: BaseKernel = None, integral_samples: int = 1000,
                 rotation: np.ndarray = None, origin: np.ndarray = None, x_pixels: int = None, y_pixels: int = None,
                 x_min: float = None, x_max: float = None, y_min: float = None, y_max: float = None, ax: Axes = None,
-                backend: str = None, **kwargs) -> Axes:
+                exact: bool = None, backend: str = None, **kwargs) -> Axes:
     """ Create an SPH interpolated streamline plot of a target vector.
 
     Render the data within a SarracenDataFrame to a 2D matplotlib object, by rendering the values
@@ -235,6 +237,8 @@ def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[
         to the minimum and maximum values of `x` and `y`.
     ax: Axes
         The main axes in which to draw the rendered image.
+    exact: bool
+        Whether to use exact interpolation of the data. For cross-sections this is ignored. Defaults to False.
     backend: ['cpu', 'gpu']
         The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
     kwargs: other keyword arguments
@@ -261,13 +265,13 @@ def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[
         if not len(target) == 2:
             raise ValueError('Target vector is not 2-dimensional.')
         img = interpolate_2d_vec(data, target[0], target[1], x, y, kernel, x_pixels, y_pixels, x_min, x_max, y_min,
-                                 y_max, backend)
+                                 y_max, exact, backend)
     elif data.get_dim() == 3:
         if not len(target) == 3:
             raise ValueError('Target vector is not 3-dimensional.')
         if z_slice is None:
             img = interpolate_3d_vec(data, target[0], target[1], target[2], x, y, kernel, integral_samples, rotation,
-                                     origin, x_pixels, y_pixels, x_min, x_max, y_min, y_max, backend)
+                                     origin, x_pixels, y_pixels, x_min, x_max, y_min, y_max, exact, backend)
         else:
             img = interpolate_3d_cross_vec(data, target[0], target[1], target[2], z_slice, x, y, z, kernel, rotation,
                                            origin, x_pixels, y_pixels, x_min, x_max, y_min, y_max, backend)
@@ -303,7 +307,7 @@ def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[st
               x: str = None, y: str = None, z: str = None, kernel: BaseKernel = None, integral_samples: int = 1000,
               rotation: np.ndarray = None, origin: np.ndarray = None, x_arrows: int = None, y_arrows: int = None,
               x_min: float = None, x_max: float = None, y_min: float = None, y_max: float = None, ax: Axes = None,
-              backend: str = None, **kwargs) -> Axes:
+              exact: bool = None, backend: str = None, **kwargs) -> Axes:
     """ Create an SPH interpolated vector field plot of a target vector.
 
     Render the data within a SarracenDataFrame to a 2D matplotlib object, by rendering the values
@@ -338,6 +342,8 @@ def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[st
         to the minimum and maximum values of `x` and `y`.
     ax: Axes
         The main axes in which to draw the rendered image.
+    exact: bool
+        Whether to use exact interpolation of the data. For cross-sections this is ignored. Defaults to False.
     backend: ['cpu', 'gpu']
         The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
     kwargs: other keyword arguments
@@ -367,14 +373,17 @@ def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[st
         if not len(target) == 2:
             raise ValueError('Target vector is not 2-dimensional.')
         img = interpolate_2d_vec(data, target[0], target[1], x, y, kernel, x_arrows, y_arrows, x_min, x_max, y_min,
-                                 y_max, backend)
+                                 y_max, exact, backend)
     elif data.get_dim() == 3:
         if not len(target) == 3:
             raise ValueError('Target vector is not 3-dimensional.')
         if z_slice is None:
             img = interpolate_3d_vec(data, target[0], target[1], target[2], x, y, kernel, integral_samples, rotation,
-                                     origin, x_arrows, y_arrows, x_min, x_max, y_min, y_max, backend)
+                                     origin, x_arrows, y_arrows, x_min, x_max, y_min, y_max, exact, backend)
         else:
+            if exact:
+                raise UserWarning("Exact interpolation is not supported for 3D cross-sections.")
+
             img = interpolate_3d_cross_vec(data, target[0], target[1], target[2], z_slice, x, y, z, kernel, rotation,
                                            origin, x_arrows, y_arrows, x_min, x_max, y_min, y_max, backend)
     else:
@@ -472,7 +481,7 @@ def render_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = No
               integral_samples: int = 1000, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
               x_pixels: int = None, y_pixels: int = None, x_min: float = None, x_max: float = None, y_min: float = None,
               y_max: float = None, cmap: Union[str, Colormap] = 'RdBu', cbar: bool = True, cbar_kws: dict = {},
-              cbar_ax: Axes = None, ax: Axes = None, backend: str = None, **kwargs) -> Axes:
+              cbar_ax: Axes = None, ax: Axes = None, exact: bool = None, backend: str = None, **kwargs) -> Axes:
     """ Render 3D particle data to a 2D grid, using SPH column rendering of a target variable.
 
     Render the data within a SarracenDataFrame to a 2D matplotlib object, by rendering the values
@@ -513,6 +522,8 @@ def render_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = No
         Axes to draw the colorbar in, if not provided then space will be taken from the main Axes.
     ax: Axes
         The main axes in which to draw the rendered image.
+    exact: bool
+        Whether to use exact interpolation of the data. Defaults to False.
     backend: ['cpu', 'gpu']
         The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
     kwargs: other keyword arguments
@@ -533,8 +544,8 @@ def render_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = No
         If `target`, `x`, `y`, mass, density, or smoothing length columns do not
         exist in `data`.
     """
-    image = interpolate_3d(data, target, x, y, kernel, integral_samples, rotation, rot_origin, x_pixels, y_pixels, x_min,
-                           x_max, y_min, y_max, backend)
+    image = interpolate_3d(data, target, x, y, kernel, integral_samples, rotation, rot_origin, x_pixels, y_pixels,
+                           x_min, x_max, y_min, y_max, exact, backend)
 
     if ax is None:
         ax = plt.gca()
