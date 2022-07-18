@@ -268,6 +268,25 @@ def _rotate_xyz(data, x, y, z, rotation, origin):
     return x_data, y_data, z_data
 
 
+def _get_mass(data: 'SarracenDataFrame'):
+    if data._mcol == None:
+        if 'massoftype' not in data.params:
+            raise KeyError("'massoftype' column does not exist in this SarracenDataFrame.")
+        return data.params['massoftype']
+
+    return data[data._mcol].to_numpy()
+
+
+def _get_density(data: 'SarracenDataFrame'):
+    if data._rhocol == None:
+        if not {data.hcol}.issubset(data.columns) or 'hfact' not in data.params:
+            raise KeyError('Density cannot be derived from the columns in this SarracenDataFrame.')
+
+        return ((data.params['hfact'] / data['h']) ** (data.get_dim()) * _get_mass(data)).to_numpy()
+
+    return data[data._rhocol].to_numpy()
+
+
 def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
                    x_pixels: int = None, y_pixels: int = None, x_min: float = None, x_max: float = None,
                    y_min: float = None, y_max: float = None, exact: bool = False, backend: str = None) -> np.ndarray:
@@ -322,12 +341,15 @@ def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
     _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
 
+    mass_data = _get_mass(data)
+    rho_data = _get_density(data)
+
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
 
     return get_backend(backend). \
-        interpolate_2d_render(data[target].to_numpy(), data[x].to_numpy(), data[y].to_numpy(), data['m'].to_numpy(),
-                              data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w, kernel.get_radius(), x_pixels,
+        interpolate_2d_render(data[target].to_numpy(), data[x].to_numpy(), data[y].to_numpy(), mass_data,
+                              rho_data, data['h'].to_numpy(), kernel.w, kernel.get_radius(), x_pixels,
                               y_pixels, x_min, x_max, y_min, y_max, exact)
 
 
@@ -387,14 +409,16 @@ def interpolate_2d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
     _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
 
+    mass_data = _get_mass(data)
+    rho_data = _get_density(data)
+
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
 
     return get_backend(backend).\
         interpolate_2d_render_vec(data[target_x].to_numpy(), data[target_y].to_numpy(), data[x].to_numpy(),
-                                  data[y].to_numpy(), data['m'].to_numpy(), data['rho'].to_numpy(),
-                                  data['h'].to_numpy(), kernel.w, kernel.get_radius(), x_pixels, y_pixels, x_min, x_max,
-                                  y_min, y_max, exact)
+                                  data[y].to_numpy(), mass_data, rho_data, data['h'].to_numpy(), kernel.w,
+                                  kernel.get_radius(), x_pixels, y_pixels, x_min, x_max, y_min, y_max, exact)
 
 
 def interpolate_2d_cross(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
@@ -447,6 +471,9 @@ def interpolate_2d_cross(data: 'SarracenDataFrame', target: str, x: str = None, 
     if y2 == y1 and x2 == x1:
         raise ValueError('Zero length cross section!')
 
+    mass_data = _get_mass(data)
+    rho_data = _get_density(data)
+
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
 
@@ -454,9 +481,8 @@ def interpolate_2d_cross(data: 'SarracenDataFrame', target: str, x: str = None, 
         raise ValueError('pixcount must be greater than zero!')
 
     return get_backend(backend)\
-        .interpolate_2d_cross(data[target].to_numpy(), data[x].to_numpy(), data[y].to_numpy(), data['m'].to_numpy(),
-                              data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w, kernel.get_radius(), pixels, x1,
-                              x2, y1, y2)
+        .interpolate_2d_cross(data[target].to_numpy(), data[x].to_numpy(), data[y].to_numpy(), mass_data, rho_data,
+                              data['h'].to_numpy(), kernel.w, kernel.get_radius(), pixels, x1, x2, y1, y2)
 
 
 def interpolate_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
@@ -521,7 +547,15 @@ def interpolate_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
     """
     _check_dimension(data, 3)
     x, y = _default_xy(data, x, y)
-    _verify_columns(data, x, y, target)
+
+    mass_data = _get_mass(data)
+    rho_data = _get_density(data)
+
+    if target == 'rho':
+        target_data = rho_data
+    else:
+        _verify_columns(data, x, y, target)
+        target_data = data[target].to_numpy()
 
     x_min, x_max, y_min, y_max = _snap_boundaries(data, x, y, x_min, x_max, y_min, y_max)
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
@@ -534,9 +568,9 @@ def interpolate_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
     weight_function = kernel.get_column_kernel_func(integral_samples)
 
     return get_backend(backend). \
-        interpolate_3d_projection(data[target].to_numpy(), x_data, y_data, z_data, data['m'].to_numpy(),
-                                  data['rho'].to_numpy(), data['h'].to_numpy(), weight_function, kernel.get_radius(),
-                                  x_pixels, y_pixels, x_min, x_max, y_min, y_max, exact)
+        interpolate_3d_projection(target_data, x_data, y_data, z_data, mass_data, rho_data,
+                                  data['h'].to_numpy(), weight_function, kernel.get_radius(), x_pixels, y_pixels, x_min,
+                                  x_max, y_min, y_max, exact)
 
 
 def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, target_z: str, x: str = None,
@@ -614,14 +648,17 @@ def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
         raise KeyError(f"z-directional target column '{target_z}' does not exist in the provided dataset.")
     target_x_data, target_y_data, _ = _rotate_data(data, target_x, target_y, target_z, rotation, origin)
 
+    mass_data = _get_mass(data)
+    rho_data = _get_density(data)
+
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
 
     weight_function = kernel.get_column_kernel_func(integral_samples)
     return get_backend(backend). \
-        interpolate_3d_projection_vec(target_x_data, target_y_data, x_data, y_data, data['m'].to_numpy(),
-                                      data['rho'].to_numpy(), data['h'].to_numpy(), weight_function,
-                                      kernel.get_radius(), x_pixels, y_pixels, x_min, x_max, y_min, y_max, exact)
+        interpolate_3d_projection_vec(target_x_data, target_y_data, x_data, y_data, mass_data, rho_data,
+                                      data['h'].to_numpy(), weight_function, kernel.get_radius(), x_pixels, y_pixels,
+                                      x_min, x_max, y_min, y_max, exact)
 
 
 def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, z_slice: float = None, x: str = None, y: str = None,
@@ -698,14 +735,17 @@ def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, z_slice: float 
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
     _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
 
+    mass_data = _get_mass(data)
+    rho_data = _get_density(data)
+
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
 
     x_data, y_data, z_data = _rotate_xyz(data, x, y, z, rotation, origin)
 
     return get_backend(backend) \
-        .interpolate_3d_cross(data[target].to_numpy(), z_slice, x_data, y_data, z_data, data['m'].to_numpy(),
-                              data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w, kernel.get_radius(), x_pixels,
+        .interpolate_3d_cross(data[target].to_numpy(), z_slice, x_data, y_data, z_data, mass_data,
+                              rho_data, data['h'].to_numpy(), kernel.w, kernel.get_radius(), x_pixels,
                               y_pixels, x_min, x_max, y_min, y_max)
 
 
@@ -786,13 +826,16 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y:
     x_data, y_data, z_data = _rotate_xyz(data, x, y, data.zcol, rotation, origin)
     target_x_data, target_y_data, _ = _rotate_data(data, target_x, target_y, target_z, rotation, origin)
 
+    mass_data = _get_mass(data)
+    rho_data = _get_density(data)
+
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
 
     return get_backend(backend) \
-        .interpolate_3d_cross_vec(target_x_data, target_y_data, z_slice, x_data, y_data, z_data, data['m'].to_numpy(),
-                                  data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w, kernel.get_radius(), x_pixels,
-                                  y_pixels, x_min, x_max, y_min, y_max)
+        .interpolate_3d_cross_vec(target_x_data, target_y_data, z_slice, x_data, y_data, z_data, mass_data, rho_data,
+                                  data['h'].to_numpy(), kernel.w, kernel.get_radius(), x_pixels, y_pixels, x_min, x_max,
+                                  y_min, y_max)
 
 
 def get_backend(code: str) -> BaseBackend:
