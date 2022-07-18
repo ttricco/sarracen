@@ -122,7 +122,7 @@ def _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max, default):
 def render_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
               x_pixels: int = None, y_pixels: int = None, x_min: float = None, x_max: float = None, y_min: float = None,
               y_max: float = None, cmap: Union[str, Colormap] = 'RdBu', cbar: bool = True, cbar_kws: dict = {},
-              cbar_ax: Axes = None, ax: Axes = None, exact: bool = False, backend: str = None, **kwargs) -> Axes:
+              cbar_ax: Axes = None, ax: Axes = None, exact: bool = None, backend: str = None, **kwargs) -> Axes:
     """ Render 2D particle data to a 2D grid, using SPH rendering of a target variable.
 
     Render the data within a SarracenDataFrame to a 2D matplotlib object, by rendering the values
@@ -156,7 +156,7 @@ def render_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = No
     ax: Axes
         The main axes in which to draw the rendered image.
     exact: bool
-        Whether to use exact interpolation of the data.
+        Whether to use exact interpolation of the data. Defaults to False.
     backend: ['cpu', 'gpu']
         The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
     kwargs: other keyword arguments
@@ -238,7 +238,7 @@ def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[
     ax: Axes
         The main axes in which to draw the rendered image.
     exact: bool
-        Whether to use exact interpolation of the data. For cross-sections this is ignored.
+        Whether to use exact interpolation of the data. For cross-sections this is ignored. Defaults to False.
     backend: ['cpu', 'gpu']
         The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
     kwargs: other keyword arguments
@@ -265,13 +265,13 @@ def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[
         if not len(target) == 2:
             raise ValueError('Target vector is not 2-dimensional.')
         img = interpolate_2d_vec(data, target[0], target[1], x, y, kernel, x_pixels, y_pixels, x_min, x_max, y_min,
-                                 y_max, backend)
+                                 y_max, exact, backend)
     elif data.get_dim() == 3:
         if not len(target) == 3:
             raise ValueError('Target vector is not 3-dimensional.')
         if z_slice is None:
             img = interpolate_3d_vec(data, target[0], target[1], target[2], x, y, kernel, integral_samples, rotation,
-                                     origin, x_pixels, y_pixels, x_min, x_max, y_min, y_max, backend)
+                                     origin, x_pixels, y_pixels, x_min, x_max, y_min, y_max, exact, backend)
         else:
             img = interpolate_3d_cross_vec(data, target[0], target[1], target[2], z_slice, x, y, z, kernel, rotation,
                                            origin, x_pixels, y_pixels, x_min, x_max, y_min, y_max, backend)
@@ -343,7 +343,7 @@ def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[st
     ax: Axes
         The main axes in which to draw the rendered image.
     exact: bool
-        Whether to use exact interpolation of the data. For cross-sections this is ignored.
+        Whether to use exact interpolation of the data. For cross-sections this is ignored. Defaults to False.
     backend: ['cpu', 'gpu']
         The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
     kwargs: other keyword arguments
@@ -523,7 +523,7 @@ def render_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = No
     ax: Axes
         The main axes in which to draw the rendered image.
     exact: bool
-        Whether to use exact interpolation of the data.
+        Whether to use exact interpolation of the data. Defaults to False.
     backend: ['cpu', 'gpu']
         The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
     kwargs: other keyword arguments
