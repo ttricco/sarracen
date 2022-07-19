@@ -12,103 +12,92 @@ from sarracen.kernels.cubic_spline_exact import line_int, surface_int
 class CPUBackend(BaseBackend):
 
     @staticmethod
-    def interpolate_2d_render(target: ndarray, x: ndarray, y: ndarray, mass: ndarray, rho: ndarray, h: ndarray,
-                              weight_function: CPUDispatcher, kernel_radius: float, x_pixels: int, y_pixels: int,
-                              x_min: float, x_max: float, y_min: float, y_max: float, exact: bool) -> ndarray:
+    def interpolate_2d_render(x: ndarray, y: ndarray, weight: ndarray, h: ndarray, weight_function: CPUDispatcher,
+                              kernel_radius: float, x_pixels: int, y_pixels: int, x_min: float, x_max: float,
+                              y_min: float, y_max: float, exact: bool) -> ndarray:
         if exact:
-            return CPUBackend._exact_2d_render(target, x, y, mass, rho, h, x_pixels, y_pixels, x_min, x_max, y_min,
-                                               y_max)
-        else:
-            return CPUBackend._fast_2d(target, 0, x, y, np.zeros(len(target)), mass, rho, h, weight_function,
-                                       kernel_radius, x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2)
+            return CPUBackend._exact_2d_render(x, y, weight, h, x_pixels, y_pixels, x_min, x_max, y_min, y_max)
+        return CPUBackend._fast_2d(0, x, y, np.zeros(x.size), weight, h, weight_function, kernel_radius, x_pixels,
+                                   y_pixels, x_min, x_max, y_min, y_max, 2)
 
     @staticmethod
-    def interpolate_2d_render_vec(target_x: ndarray, target_y: ndarray, x: ndarray, y: ndarray, mass: ndarray,
-                                  rho: ndarray, h: ndarray, weight_function: CPUDispatcher, kernel_radius: float,
-                                  x_pixels: int, y_pixels: int, x_min: float, x_max: float, y_min: float,
-                                  y_max: float, exact: bool) -> Tuple[ndarray, ndarray]:
+    def interpolate_2d_render_vec(x: ndarray, y: ndarray, weight_x: ndarray, weight_y: ndarray, h: ndarray,
+                                  weight_function: CPUDispatcher, kernel_radius: float, x_pixels: int, y_pixels: int,
+                                  x_min: float, x_max: float, y_min: float, y_max: float,
+                                  exact: bool) -> Tuple[ndarray, ndarray]:
         if exact:
-            return (CPUBackend._exact_2d_render(target_x, x, y, mass, rho, h, x_pixels, y_pixels, x_min, x_max, y_min,
-                                                y_max),
-                    CPUBackend._exact_2d_render(target_y, x, y, mass, rho, h, x_pixels, y_pixels, x_min, x_max, y_min,
-                                                y_max))
-        return (CPUBackend._fast_2d(target_x, 0, x, y, np.zeros(len(target_x)), mass, rho, h, weight_function,
-                                    kernel_radius, x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2),
-                CPUBackend._fast_2d(target_y, 0, x, y, np.zeros(len(target_y)), mass, rho, h, weight_function,
-                                    kernel_radius, x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2))
+            return (CPUBackend._exact_2d_render(x, y, weight_x, h, x_pixels, y_pixels, x_min, x_max, y_min, y_max),
+                    CPUBackend._exact_2d_render(x, y, weight_y, h, x_pixels, y_pixels, x_min, x_max, y_min, y_max))
+        return (CPUBackend._fast_2d(0, x, y, np.zeros(x.size), weight_x, h, weight_function, kernel_radius, x_pixels,
+                                    y_pixels, x_min, x_max, y_min, y_max, 2),
+                CPUBackend._fast_2d(0, x, y, np.zeros(x.size), weight_y, h, weight_function, kernel_radius, x_pixels,
+                                    y_pixels, x_min, x_max, y_min, y_max, 2))
 
     @staticmethod
-    def interpolate_2d_cross(target: ndarray, x: ndarray, y: ndarray, mass: ndarray, rho: ndarray, h: ndarray,
-                             weight_function: CPUDispatcher, kernel_radius: float, pixels: int, x1: float, x2: float,
-                             y1: float, y2: float) -> ndarray:
-        return CPUBackend._fast_2d_cross_cpu(target, x, y, mass, rho, h, weight_function, kernel_radius, pixels, x1, x2,
-                                             y1, y2)
+    def interpolate_2d_cross(x: ndarray, y: ndarray, weight: ndarray, h: ndarray, weight_function: CPUDispatcher,
+                             kernel_radius: float, pixels: int, x1: float, x2: float, y1: float, y2: float) -> ndarray:
+        return CPUBackend._fast_2d_cross_cpu(x, y, weight, h, weight_function, kernel_radius, pixels, x1, x2, y1, y2)
 
     @staticmethod
-    def interpolate_3d_projection(target: ndarray, x: ndarray, y: ndarray, z: ndarray, mass: ndarray, rho: ndarray,
-                                  h: ndarray, weight_function: CPUDispatcher, kernel_radius: float, x_pixels: int,
-                                  y_pixels: int, x_min: float, x_max: float, y_min: float, y_max: float,
-                                  exact: bool) -> ndarray:
+    def interpolate_3d_projection(x: ndarray, y: ndarray, z: ndarray, weight: ndarray, h: ndarray,
+                                  weight_function: CPUDispatcher, kernel_radius: float, x_pixels: int, y_pixels: int,
+                                  x_min: float, x_max: float, y_min: float, y_max: float, exact: bool) -> ndarray:
         if exact:
-            return CPUBackend._exact_3d_project(target, x, y, mass, rho, h, x_pixels, y_pixels, x_min, x_max, y_min,
-                                                y_max)
-        return CPUBackend._fast_2d(target, 0, x, y, np.zeros(len(target)), mass, rho, h, weight_function, kernel_radius,
-                                   x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2)
+            return CPUBackend._exact_3d_project(x, y, weight, h, x_pixels, y_pixels, x_min, x_max, y_min, y_max)
+        return CPUBackend._fast_2d(0, x, y, np.zeros(x.size), weight, h, weight_function, kernel_radius, x_pixels,
+                                   y_pixels, x_min, x_max, y_min, y_max, 2)
 
     @staticmethod
-    def interpolate_3d_projection_vec(target_x: ndarray, target_y: ndarray, x: ndarray, y: ndarray, mass: ndarray,
-                                      rho: ndarray, h: ndarray, weight_function: CPUDispatcher, kernel_radius: float,
-                                      x_pixels: int, y_pixels: int, x_min: float, x_max: float, y_min: float,
-                                      y_max: float, exact: bool) -> Tuple[ndarray, ndarray]:
+    def interpolate_3d_projection_vec(x: ndarray, y: ndarray, weight_x: ndarray, weight_y: ndarray, h: ndarray,
+                                      weight_function: CPUDispatcher, kernel_radius: float, x_pixels: int,
+                                      y_pixels: int, x_min: float, x_max: float, y_min: float, y_max: float,
+                                      exact: bool) -> Tuple[ndarray, ndarray]:
         if exact:
-            return (CPUBackend._exact_3d_project(target_x, x, y, mass, rho, h, x_pixels, y_pixels, x_min, x_max, y_min,
-                                                 y_max),
-                    CPUBackend._exact_3d_project(target_y, x, y, mass, rho, h, x_pixels, y_pixels, x_min, x_max, y_min,
-                                                 y_max))
-        return (CPUBackend._fast_2d(target_x, 0, x, y, np.zeros(len(target_x)), mass, rho, h, weight_function,
-                                    kernel_radius, x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2),
-                CPUBackend._fast_2d(target_y, 0, x, y, np.zeros(len(target_y)), mass, rho, h, weight_function,
-                                    kernel_radius, x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2))
+            return (CPUBackend._exact_3d_project(x, y, weight_x, h, x_pixels, y_pixels, x_min, x_max, y_min, y_max),
+                    CPUBackend._exact_3d_project(x, y, weight_y, h, x_pixels, y_pixels, x_min, x_max, y_min, y_max))
+        return (CPUBackend._fast_2d(0, x, y, np.zeros(x.size), weight_x, h, weight_function, kernel_radius, x_pixels,
+                                    y_pixels, x_min, x_max, y_min, y_max, 2),
+                CPUBackend._fast_2d(0, x, y, np.zeros(y.size), weight_y, h, weight_function, kernel_radius, x_pixels,
+                                    y_pixels, x_min, x_max, y_min, y_max, 2))
 
     @staticmethod
-    def interpolate_3d_cross(target: ndarray, z_slice: float, x: ndarray, y: ndarray, z: ndarray, mass: ndarray,
-                             rho: ndarray, h: ndarray, weight_function: CPUDispatcher, kernel_radius: float,
-                             x_pixels: int, y_pixels: int, x_min: float, x_max: float, y_min: float,
-                             y_max: float) -> ndarray:
-        return CPUBackend._fast_2d(target, z_slice, x, y, z, mass, rho, h, weight_function, kernel_radius, x_pixels,
-                                   y_pixels, x_min, x_max, y_min, y_max, 3)
+    def interpolate_3d_cross(z_slice: float, x: ndarray, y: ndarray, z: ndarray, weight: ndarray, h: ndarray,
+                             weight_function: CPUDispatcher, kernel_radius: float, x_pixels: int, y_pixels: int,
+                             x_min: float, x_max: float, y_min: float, y_max: float) -> ndarray:
+        return CPUBackend._fast_2d(z_slice, x, y, z, weight, h, weight_function, kernel_radius, x_pixels, y_pixels,
+                                   x_min, x_max, y_min, y_max, 3)
 
     @staticmethod
-    def interpolate_3d_cross_vec(target_x: ndarray, target_y: ndarray, z_slice: float, x: ndarray, y: ndarray,
-                                 z: ndarray, mass: ndarray, rho: ndarray, h: ndarray, weight_function: CPUDispatcher,
-                                 kernel_radius: float, x_pixels: int, y_pixels: int, x_min: float, x_max: float,
-                                 y_min: float, y_max: float) -> Tuple[ndarray, ndarray]:
-        return (CPUBackend._fast_2d(target_x, z_slice, x, y, z, mass, rho, h, weight_function, kernel_radius, x_pixels,
-                                    y_pixels, x_min, x_max, y_min, y_max, 3),
-                CPUBackend._fast_2d(target_y, z_slice, x, y, z, mass, rho, h, weight_function, kernel_radius, x_pixels,
-                                    y_pixels, x_min, x_max, y_min, y_max, 3))
+    def interpolate_3d_cross_vec(z_slice: float, x: ndarray, y: ndarray, z: ndarray, weight_x: ndarray,
+                                 weight_y: ndarray, h: ndarray, weight_function: CPUDispatcher, kernel_radius: float,
+                                 x_pixels: int, y_pixels: int, x_min: float, x_max: float, y_min: float,
+                                 y_max: float) -> Tuple[ndarray, ndarray]:
+        return (CPUBackend._fast_2d(z_slice, x, y, z, weight_x, h, weight_function, kernel_radius, x_pixels, y_pixels,
+                                    x_min, x_max, y_min, y_max, 3),
+                CPUBackend._fast_2d(z_slice, x, y, z, weight_y, h, weight_function, kernel_radius, x_pixels, y_pixels,
+                                    x_min, x_max, y_min, y_max, 3))
 
     # Underlying CPU numba-compiled code for interpolation to a 2D grid. Used in interpolation of 2D data,
     # and column integration / cross-sections of 3D data.
     @staticmethod
     @njit(parallel=True, fastmath=True)
-    def _fast_2d(target, z_slice, x_data, y_data, z_data, mass_data, rho_data, h_data, weight_function,
-                 kernel_radius, x_pixels, y_pixels, x_min, x_max, y_min, y_max, n_dims):
+    def _fast_2d(z_slice, x_data, y_data, z_data, w_data, h_data, weight_function, kernel_radius, x_pixels, y_pixels,
+                 x_min, x_max, y_min, y_max, n_dims):
         output = np.zeros((y_pixels, x_pixels))
         pixwidthx = (x_max - x_min) / x_pixels
         pixwidthy = (y_max - y_min) / y_pixels
         if not n_dims == 2:
             dz = np.float64(z_slice) - z_data
         else:
-            dz = np.zeros(target.size)
+            dz = np.zeros(x_data.size)
 
-        term = (target * mass_data / (rho_data * h_data ** n_dims))
+        term = w_data / h_data ** n_dims
 
         output_local = np.zeros((get_num_threads(), y_pixels, x_pixels))
 
         # thread safety: each thread has its own grid, which are combined after interpolation
         for thread in prange(get_num_threads()):
-            block_size = term.size / get_num_threads()
+            block_size = x_data.size / get_num_threads()
             range_start = int(thread * block_size)
             range_end = int((thread + 1) * block_size)
 
@@ -161,16 +150,15 @@ class CPUBackend(BaseBackend):
     # Underlying CPU numba-compiled code for exact interpolation of 2D data to a 2D grid.
     @staticmethod
     @njit(parallel=True)
-    def _exact_2d_render(target, x_data, y_data, mass_data, rho_data, h_data, x_pixels, y_pixels, x_min, x_max, y_min,
-                         y_max):
+    def _exact_2d_render(x_data, y_data, w_data, h_data, x_pixels, y_pixels, x_min, x_max, y_min, y_max):
         output_local = np.zeros((get_num_threads(), y_pixels, x_pixels))
         pixwidthx = (x_max - x_min) / x_pixels
         pixwidthy = (y_max - y_min) / y_pixels
 
-        term = (target * mass_data / (rho_data * h_data ** 2))
+        term = w_data / h_data ** 2
 
         for thread in prange(get_num_threads()):
-            block_size = term.size / get_num_threads()
+            block_size = x_data.size / get_num_threads()
             range_start = int(thread * block_size)
             range_end = int((thread + 1) * block_size)
 
@@ -278,8 +266,7 @@ class CPUBackend(BaseBackend):
     # Underlying CPU numba-compiled code for 2D->1D cross-sections.
     @staticmethod
     @njit(parallel=True, fastmath=True)
-    def _fast_2d_cross_cpu(target, x_data, y_data, mass_data, rho_data, h_data, weight_function, kernel_radius, pixels,
-                           x1, x2, y1, y2):
+    def _fast_2d_cross_cpu(x_data, y_data, w_data, h_data, weight_function, kernel_radius, pixels, x1, x2, y1, y2):
         # determine the slope of the cross-section line
         gradient = 0
         if not x2 - x1 == 0:
@@ -291,7 +278,7 @@ class CPUBackend(BaseBackend):
         pixwidth = xlength / pixels
         xpixwidth = (x2 - x1) / pixels
 
-        term = target * mass_data / (rho_data * h_data ** 2)
+        term = w_data / h_data ** 2
 
         # the intersections between the line and a particle's 'smoothing circle' are
         # found by solving a quadratic equation with the below values of a, b, and c.
@@ -356,16 +343,14 @@ class CPUBackend(BaseBackend):
 
     @staticmethod
     @njit(parallel=True)
-    def _exact_3d_project(target, x_data, y_data, mass_data, rho_data, h_data, x_pixels, y_pixels, x_min, x_max, y_min,
-                          y_max):
+    def _exact_3d_project(x_data, y_data, w_data, h_data, x_pixels, y_pixels, x_min, x_max, y_min, y_max):
         output_local = np.zeros((get_num_threads(), y_pixels, x_pixels))
         pixwidthx = (x_max - x_min) / x_pixels
         pixwidthy = (y_max - y_min) / y_pixels
 
-        weight = mass_data / (rho_data * h_data ** 3)
         norm3d = 1 / np.pi
         dfac = h_data ** 3 / (pixwidthx * pixwidthy * norm3d)
-        term = norm3d * weight * target
+        term = norm3d * w_data / h_data ** 3
 
         for thread in prange(get_num_threads()):
             block_size = term.size / get_num_threads()
