@@ -65,7 +65,7 @@ def _default_axes(data, x, y):
     return x, y
 
 
-def _default_bounds(data, x, y, x_min, x_max, y_min, y_max):
+def _default_bounds(data, x, y, x1, x2, y1, y2):
     """Utility function to determine the 2-dimensional boundaries to use in 2D rendering.
 
     Parameters
@@ -74,34 +74,34 @@ def _default_bounds(data, x, y, x_min, x_max, y_min, y_max):
         The particle dataset to render.
     x, y: str
         The directional column labels that will be used for rendering.
-    x_min, x_max, y_min, y_max: float
+    x1, x2, y1, y2: float
         The minimum and maximum values passed to the render function, in particle data space.
 
     Returns
     -------
-    x_min, x_max, y_min, y_max: float
+    x1, x2, y1, y2: float
         The minimum and maximum values to use for rendering, in particle data space. Defaults
         to the maximum and minimum values of `x` and `y`, snapped to the nearest integer.
     """
-    if x_min is None:
-        x_min = _snap(data.loc[:, x].min())
-    if y_min is None:
-        y_min = _snap(data.loc[:, y].min())
-    if x_max is None:
-        x_max = _snap(data.loc[:, x].max())
-    if y_max is None:
-        y_max = _snap(data.loc[:, y].max())
+    if x1 is None:
+        x1 = _snap(data.loc[:, x].min())
+    if y1 is None:
+        y1 = _snap(data.loc[:, y].min())
+    if x2 is None:
+        x2 = _snap(data.loc[:, x].max())
+    if y2 is None:
+        y2 = _snap(data.loc[:, y].max())
 
-    return x_min, x_max, y_min, y_max
+    return x1, x2, y1, y2
 
 
-def _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max, default):
+def _set_pixels(x_pixels, y_pixels, x1, x2, y1, y2, default):
     """Utility function to determine the number of pixels to interpolate over in 2D interpolation.
     Parameters
     ----------
     x_pixels, y_pixels: int
         The number of pixels in the x & y directions passed to the interpolation function.
-    x_min, x_max, y_min, y_max: float
+    x1, x2, y1, y2: float
         The minimum and maximum values to use in interpolation, in particle data space.
     Returns
     -------
@@ -112,95 +112,113 @@ def _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max, default):
     if x_pixels is None and y_pixels is None:
         x_pixels = default
     if x_pixels is None:
-        x_pixels = int(np.rint(y_pixels * ((x_max - x_min) / (y_max - y_min))))
+        x_pixels = int(np.rint(y_pixels * ((x2 - x1) / (y2 - y1))))
     if y_pixels is None:
-        y_pixels = int(np.rint(x_pixels * ((y_max - y_min) / (x_max - x_min))))
+        y_pixels = int(np.rint(x_pixels * ((y2 - y1) / (x2 - x1))))
 
     return x_pixels, y_pixels
 
 
-def render_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
-              x_pixels: int = None, y_pixels: int = None, x_min: float = None, x_max: float = None, y_min: float = None,
-              y_max: float = None, cmap: Union[str, Colormap] = 'RdBu', cbar: bool = True, cbar_kws: dict = {},
-              cbar_ax: Axes = None, ax: Axes = None, exact: bool = None, backend: str = None, **kwargs) -> Axes:
-    """ Render 2D particle data to a 2D grid, using SPH rendering of a target variable.
-
-    Render the data within a SarracenDataFrame to a 2D matplotlib object, by rendering the values
-    of a target variable. The contributions of all particles near the rendered area are summed and
-    stored to a 2D grid.
+def render(data: 'SarracenDataFrame', target: str, xsec: Union[float, bool] = None, x: str = None, y: str = None,
+           z: str = None, kernel: BaseKernel = None, x_pixels: int = None, y_pixels: int = None, x1: float = None,
+           x2: float = None, y1: float = None, y2: float = None, cmap: Union[str, Colormap] = 'RdBu', cbar: bool = True,
+           cbar_kws: dict = {}, cbar_ax: Axes = None, ax: Axes = None, exact: bool = None, backend: str = None,
+           integral_samples: int = 1000, rotation: np.ndarray = None, rot_origin: np.ndarray = None, **kwargs) -> Axes:
+    """ Render a scalar SPH target variable to a grid or line plot.
 
     Parameters
     ----------
     data : SarracenDataFrame
         Particle data, in a SarracenDataFrame.
     target: str
-        Column label of the target smoothing data.
-    x, y: str, optional
-        Column label of the x & y directional axes. Defaults to the columns detected in `data`.
+        Column label of the target variable.
+    xsec: float or bool, optional.
+        For 2D datasets, whether to perform a cross-section (no cross-section by default). For a 3D dataset, the z to
+        take a cross-section at. If none, column interpolation is performed.
+    x, y, z: str, optional
+        Column labels of the x, y & z directional axes. Defaults to the columns detected in `data`.
     kernel: BaseKernel, optional
         Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
     x_pixels, y_pixels: int, optional
-        Number of pixels in the output image in the x & y directions. Default values are chosen to keep
-        a consistent aspect ratio.
-    x_min, x_max, y_min, y_max: float, optional
-        The minimum and maximum values to use in interpolation, in particle data space. Defaults
-        to the minimum and maximum values of `x` and `y`.
+        Number of pixels present in the final image. For 2D cross-sections, `x_pixels` sets the number of samples in
+        the final line plot.
+    x1, x2, y1, y2: float, optional
+        The starting and ending corners of the final 2D image, or the starting and ending points of the cross-sectional
+        line.
     cmap: str or Colormap, optional
-        The color map to use when plotting this data.
+        The color map to use when plotting a 2D image. Not applicable to 2D cross-sections.
     cbar: bool, optional
-        True if a colorbar should be drawn.
+        True if a colorbar should be drawn. Not applicable to 2D cross-sections.
     cbar_kws: dict, optional
-        Keyword arguments to pass to matplotlib.figure.Figure.colorbar()
+        Keyword arguments to pass to matplotlib.figure.Figure.colorbar(). Not applicable to 2D cross-sections.
     cbar_ax: Axes
         Axes to draw the colorbar in, if not provided then space will be taken from the main Axes.
+        Not applicable to 2D cross-sections.
     ax: Axes
         The main axes in which to draw the rendered image.
     exact: bool
-        Whether to use exact interpolation of the data. Defaults to False.
+        Whether to use exact interpolation of the data. For cross-sections this is ignored. Defaults to False.
     backend: ['cpu', 'gpu']
         The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
+    integral_samples: int, optional
+        If using column interpolation, the number of sample points to take when approximating the 2D column kernel.
+    rotation: array_like or Rotation, optional
+        The rotation to apply to the data before interpolation. If defined as an array, the
+        order of rotations is [z, y, x] in degrees. Only applies to 3D datasets.
+    rot_origin: array_like, optional
+        Point of rotation of the data, in [x, y, z] form. Defaults to the centre
+        point of the bounds of the data. Only applies to 3D datasets.
     kwargs: other keyword arguments
-        Keyword arguments to pass to matplotlib.axes.Axes.imshow().
+        Keyword arguments to pass to ax.imshow or sns.lineplot.
 
     Returns
     -------
-    Axes
-        The resulting matplotlib axes, which contain the 2d rendered image.
 
-    Raises
-    -------
-    ValueError
-        If `x_pixels` or `y_pixels` are less than or equal to zero, or
-        if the specified `x` and `y` minimum and maximums result in an invalid region.
-    KeyError
-        If `target`, `x`, `y`, mass, density, or smoothing length columns do not
-        exist in `data`.
     """
-    image = interpolate_2d(data, target, x, y, kernel, x_pixels, y_pixels, x_min, x_max, y_min, y_max, exact, backend)
+    if data.get_dim() == 2:
+        if xsec:
+            image = interpolate_2d_cross(data, target, x, y, kernel, x_pixels, x1, x2, y1, y2, backend)
+        else:
+            image = interpolate_2d(data, target, x, y, kernel, x_pixels, y_pixels, x1, x2, y1, y2, exact, backend)
+    else:
+        if xsec:
+            image = interpolate_3d_cross(data, target, xsec if xsec is not True else None, x, y, z, kernel, rotation,
+                                         rot_origin, x_pixels, y_pixels, x1, x2, y1, y2, backend)
+        else:
+            image = interpolate_3d(data, target, x, y, kernel, integral_samples, rotation, rot_origin, x_pixels,
+                                   y_pixels, x1, x2, y1, y2, exact, backend)
 
     if ax is None:
         ax = plt.gca()
 
     x, y = _default_axes(data, x, y)
-    x_min, x_max, y_min, y_max = _default_bounds(data, x, y, x_min, x_max, y_min, y_max)
+    x1, x2, y1, y2 = _default_bounds(data, x, y, x1, x2, y1, y2)
 
-    kwargs.setdefault("origin", 'lower')
-    kwargs.setdefault("extent", [x_min, x_max, y_min, y_max])
-    graphic = ax.imshow(image, cmap=cmap, **kwargs)
-    ax.set_xlabel(x)
-    ax.set_ylabel(y)
+    if image.ndim == 1:
+        sns.lineplot(x=np.linspace(0, np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2), image.size), y=image, ax=ax, **kwargs)
+        ax.margins(x=0, y=0)
+        ax.set_xlabel(f'cross-section ({x}, {y})')
+        ax.set_ylabel(target)
+    else:
+        kwargs.setdefault("origin", 'lower')
+        kwargs.setdefault("extent", [x1, x2, y1, y2])
+        graphic = ax.imshow(image, cmap=cmap, **kwargs)
+        if rotation is not None and data.get_dim() == 3:
+            ax.set_xticks([])
+            ax.set_yticks([])
+        else:
+            ax.set_xlabel(x)
+            ax.set_ylabel(y)
 
-    if cbar:
-        colorbar = ax.figure.colorbar(graphic, cbar_ax, ax, **cbar_kws)
-        colorbar.ax.set_ylabel(target)
-
-    return ax
+        if cbar:
+            colorbar = ax.figure.colorbar(graphic, cbar_ax, ax, **cbar_kws)
+            colorbar.ax.set_ylabel(f"column {target}" if (data.get_dim() == 3 and not xsec) else target)
 
 
 def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[str, str, str]], z_slice: int = None,
                 x: str = None, y: str = None, z: str = None, kernel: BaseKernel = None, integral_samples: int = 1000,
-                rotation: np.ndarray = None, origin: np.ndarray = None, x_pixels: int = None, y_pixels: int = None,
-                x_min: float = None, x_max: float = None, y_min: float = None, y_max: float = None, ax: Axes = None,
+                rotation: np.ndarray = None, rot_origin: np.ndarray = None, x_pixels: int = None, y_pixels: int = None,
+                x1: float = None, x2: float = None, y1: float = None, y2: float = None, ax: Axes = None,
                 exact: bool = None, backend: str = None, **kwargs) -> Axes:
     """ Create an SPH interpolated streamline plot of a target vector.
 
@@ -211,7 +229,7 @@ def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[
 
     Parameters
     ----------
-    data : SarracenDataFrame
+    data: SarracenDataFrame
         Particle data, in a SarracenDataFrame.
     target: str tuple of shape (2) or (3).
         Column label of the target vector. Shape must match the # of dimensions in `data`.
@@ -226,13 +244,13 @@ def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[
     rotation: array_like or Rotation, optional
         The rotation to apply to the data before interpolation. If defined as an array, the
         order of rotations is [z, y, x] in degrees.
-    origin: array_like, optional
+    rot_origin: array_like, optional
         Point of rotation of the data, in [x, y, z] form. Defaults to the centre
         point of the bounds of the data.
     x_pixels, y_pixels: int, optional
         Number of interpolation samples to pass to ax.streamlines(). Default values are chosen to keep
         a consistent aspect ratio.
-    x_min, x_max, y_min, y_max: float, optional
+    x1, x2, y1, y2: float, optional
         The minimum and maximum values to use in interpolation, in particle data space. Defaults
         to the minimum and maximum values of `x` and `y`.
     ax: Axes
@@ -264,17 +282,17 @@ def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[
     if data.get_dim() == 2:
         if not len(target) == 2:
             raise ValueError('Target vector is not 2-dimensional.')
-        img = interpolate_2d_vec(data, target[0], target[1], x, y, kernel, x_pixels, y_pixels, x_min, x_max, y_min,
-                                 y_max, exact, backend)
+        img = interpolate_2d_vec(data, target[0], target[1], x, y, kernel, x_pixels, y_pixels, x1, x2, y1,
+                                 y2, exact, backend)
     elif data.get_dim() == 3:
         if not len(target) == 3:
             raise ValueError('Target vector is not 3-dimensional.')
         if z_slice is None:
             img = interpolate_3d_vec(data, target[0], target[1], target[2], x, y, kernel, integral_samples, rotation,
-                                     origin, x_pixels, y_pixels, x_min, x_max, y_min, y_max, exact, backend)
+                                     rot_origin, x_pixels, y_pixels, x1, x2, y1, y2, exact, backend)
         else:
             img = interpolate_3d_cross_vec(data, target[0], target[1], target[2], z_slice, x, y, z, kernel, rotation,
-                                           origin, x_pixels, y_pixels, x_min, x_max, y_min, y_max, backend)
+                                           rot_origin, x_pixels, y_pixels, x1, x2, y1, y2, backend)
     else:
         raise ValueError('`data` is not a valid number of dimensions.')
 
@@ -282,14 +300,14 @@ def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[
         ax = plt.gca()
 
     x, y = _default_axes(data, x, y)
-    x_min, x_max, y_min, y_max = _default_bounds(data, x, y, x_min, x_max, y_min, y_max)
+    x1, x2, y1, y2 = _default_bounds(data, x, y, x1, x2, y1, y2)
 
     kwargs.setdefault("color", 'black')
-    ax.streamplot(np.linspace(x_min, x_max, np.size(img[0], 1)), np.linspace(y_min, y_max, np.size(img[0], 0)),
+    ax.streamplot(np.linspace(x1, x2, np.size(img[0], 1)), np.linspace(y1, y2, np.size(img[0], 0)),
                   img[0], img[1], **kwargs)
 
-    ax.set_xlim(x_min, x_max)
-    ax.set_ylim(y_min, y_max)
+    ax.set_xlim(x1, x2)
+    ax.set_ylim(y1, y2)
 
     # remove the x & y ticks if the data is rotated, since these no longer have physical
     # relevance to the displayed data.
@@ -305,8 +323,8 @@ def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[
 
 def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[str, str, str]], z_slice: int = None,
               x: str = None, y: str = None, z: str = None, kernel: BaseKernel = None, integral_samples: int = 1000,
-              rotation: np.ndarray = None, origin: np.ndarray = None, x_arrows: int = None, y_arrows: int = None,
-              x_min: float = None, x_max: float = None, y_min: float = None, y_max: float = None, ax: Axes = None,
+              rotation: np.ndarray = None, rot_origin: np.ndarray = None, x_arrows: int = None, y_arrows: int = None,
+              x1: float = None, x2: float = None, y1: float = None, y2: float = None, ax: Axes = None,
               exact: bool = None, backend: str = None, **kwargs) -> Axes:
     """ Create an SPH interpolated vector field plot of a target vector.
 
@@ -332,12 +350,12 @@ def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[st
     rotation: array_like or Rotation, optional
         The rotation to apply to the data before interpolation. If defined as an array, the order of rotations
         is [z, y, x] in degrees.
-    origin: array_like, optional
+    rot_origin: array_like, optional
         Point of rotation of the data, in [x, y, z] form. Defaults to the centre point of the bounds of the data.
     x_arrows, y_arrows: int, optional
         Number of arrows in the output image in the x & y directions. Default values are chosen to keep
         a consistent aspect ratio.
-    x_min, x_max, y_min, y_max: float, optional
+    x1, x2, y1, y2: float, optional
         The minimum and maximum values to use in interpolation, in particle data space. Defaults
         to the minimum and maximum values of `x` and `y`.
     ax: Axes
@@ -366,26 +384,26 @@ def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[st
         exist in `data`.
     """
     x, y = _default_axes(data, x, y)
-    x_min, x_max, y_min, y_max = _default_bounds(data, x, y, x_min, x_max, y_min, y_max)
-    x_arrows, y_arrows = _set_pixels(x_arrows, y_arrows, x_min, x_max, y_min, y_max, 20)
+    x1, x2, y1, y2 = _default_bounds(data, x, y, x1, x2, y1, y2)
+    x_arrows, y_arrows = _set_pixels(x_arrows, y_arrows, x1, x2, y1, y2, 20)
 
     if data.get_dim() == 2:
         if not len(target) == 2:
             raise ValueError('Target vector is not 2-dimensional.')
-        img = interpolate_2d_vec(data, target[0], target[1], x, y, kernel, x_arrows, y_arrows, x_min, x_max, y_min,
-                                 y_max, exact, backend)
+        img = interpolate_2d_vec(data, target[0], target[1], x, y, kernel, x_arrows, y_arrows, x1, x2, y1,
+                                 y2, exact, backend)
     elif data.get_dim() == 3:
         if not len(target) == 3:
             raise ValueError('Target vector is not 3-dimensional.')
         if z_slice is None:
             img = interpolate_3d_vec(data, target[0], target[1], target[2], x, y, kernel, integral_samples, rotation,
-                                     origin, x_arrows, y_arrows, x_min, x_max, y_min, y_max, exact, backend)
+                                     rot_origin, x_arrows, y_arrows, x1, x2, y1, y2, exact, backend)
         else:
             if exact:
                 raise UserWarning("Exact interpolation is not supported for 3D cross-sections.")
 
             img = interpolate_3d_cross_vec(data, target[0], target[1], target[2], z_slice, x, y, z, kernel, rotation,
-                                           origin, x_arrows, y_arrows, x_min, x_max, y_min, y_max, backend)
+                                           rot_origin, x_arrows, y_arrows, x1, x2, y1, y2, backend)
     else:
         raise ValueError('`data` is not a valid number of dimensions.')
 
@@ -393,15 +411,15 @@ def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[st
         ax = plt.gca()
 
     x, y = _default_axes(data, x, y)
-    x_min, x_max, y_min, y_max = _default_bounds(data, x, y, x_min, x_max, y_min, y_max)
+    x1, x2, y1, y2 = _default_bounds(data, x, y, x1, x2, y1, y2)
 
     kwargs.setdefault("angles", 'uv')
     kwargs.setdefault("pivot", 'mid')
-    ax.quiver(np.linspace(x_min, x_max, np.size(img[0], 1)), np.linspace(y_min, y_max, np.size(img[0], 0)), img[0],
+    ax.quiver(np.linspace(x1, x2, np.size(img[0], 1)), np.linspace(y1, y2, np.size(img[0], 0)), img[0],
               img[1], **kwargs)
 
-    ax.set_xlim(x_min, x_max)
-    ax.set_ylim(y_min, y_max)
+    ax.set_xlim(x1, x2)
+    ax.set_ylim(y1, y2)
 
     # remove the x & y ticks if the data is rotated, since these no longer have physical
     # relevance to the displayed data.
@@ -411,259 +429,5 @@ def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[st
     else:
         ax.set_xlabel(x)
         ax.set_ylabel(y)
-
-    return ax
-
-
-def render_2d_cross(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
-                    pixels: int = 512, x1: float = None, x2: float = None, y1: float = None, y2: float = None,
-                    ax: Axes = None, backend: str = None, **kwargs) -> Axes:
-    """ Render 2D particle data to a 1D line, using a 2D cross-section.
-
-    Render the data within a SarracenDataFrame to a seaborn-generated line plot, by taking
-    a 2D->1D cross section of a target variable. The contributions of all particles near the
-    cross-section line are summed and stored in a 1D array.
-
-    Parameters
-    ----------
-    data : SarracenDataFrame
-        Particle data, in a SarracenDataFrame.
-    target: str
-        Column label of the target smoothing data.
-    x, y: str
-        Column labels of the directional axes. Defaults to the x & y columns detected in `data`.
-    kernel: BaseKernel, optional
-        Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
-    pixels: int, optional
-        Number of points in the resulting line plot in the x-direction.
-    x1, x2, y1, y2: float, optional
-        Starting and ending coordinates of the cross-section line (in particle data space). Defaults to
-        the minimum and maximum values of `x` and `y`.
-    ax: Axes
-        The main axes in which to draw the rendered image.
-    backend: ['cpu', 'gpu']
-        The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
-    kwargs: other keyword arguments
-        Keyword arguments to pass to seaborn.lineplot().
-
-    Returns
-    -------
-    Axes
-        The resulting matplotlib axes, which contains the 1d cross-sectional plot.
-
-    Raises
-    -------
-    ValueError
-        If `x_pixels` or `y_pixels` are less than or equal to zero, or
-        if the specified `x1`, `x2`, `y1`, and `y2` are all the same
-        (indicating a zero-length cross-section).
-    KeyError
-        If `target`, `x`, `y`, mass, density, or smoothing length columns do not
-        exist in `data`.
-    """
-    output = interpolate_2d_cross(data, target, x, y, kernel, pixels, x1, x2, y1, y2, backend)
-
-    if ax is None:
-        ax = plt.gca()
-
-    x, y = _default_axes(data, x, y)
-    x1, x2, y1, y2 = _default_bounds(data, x, y, x1, x2, y1, y2)
-
-    sns.lineplot(x=np.linspace(0, np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2), pixels), y=output, ax=ax, **kwargs)
-    ax.margins(x=0, y=0)
-    ax.set_xlabel(f'cross-section ({x}, {y})')
-    ax.set_ylabel(target)
-
-    return ax
-
-
-def render_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
-              integral_samples: int = 1000, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
-              x_pixels: int = None, y_pixels: int = None, x_min: float = None, x_max: float = None, y_min: float = None,
-              y_max: float = None, cmap: Union[str, Colormap] = 'RdBu', cbar: bool = True, cbar_kws: dict = {},
-              cbar_ax: Axes = None, ax: Axes = None, exact: bool = None, backend: str = None, **kwargs) -> Axes:
-    """ Render 3D particle data to a 2D grid, using SPH column rendering of a target variable.
-
-    Render the data within a SarracenDataFrame to a 2D matplotlib object, by rendering the values
-    of a target variable. The contributions of all particles near columns across the z-axis are
-    summed and stored in a to a 2D grid.
-
-    Parameters
-    ----------
-    data : SarracenDataFrame
-        Particle data, in a SarracenDataFrame.
-    target: str
-        Column label of the target smoothing data.
-    x, y: str
-        Column labels of the directional axes. Defaults to the x & y columns detected in `data`.
-    kernel: BaseKernel, optional
-        Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
-    integral_samples: int, optional
-        The number of sample points to take when approximating the 2D column kernel.
-    rotation: array_like or Rotation, optional
-        The rotation to apply to the data before interpolation. If defined as an array, the
-        order of rotations is [z, y, x] in degrees.
-    rot_origin: array_like, optional
-        Point of rotation of the data, in [x, y, z] form. Defaults to the centre
-        point of the bounds of the data.
-    x_pixels, y_pixels: int, optional
-        Number of pixels in the output image in the x & y directions. Default values are chosen to keep
-        a consistent aspect ratio.
-    x_min, x_max, y_min, y_max: float, optional
-        The minimum and maximum values to render over, in particle data space. Defaults
-        to the minimum and maximum values of `x` and `y`.
-    cmap: str or Colormap, optional
-        The color map to use when plotting this data.
-    cbar: bool, optional
-        True if a colorbar should be drawn.
-    cbar_kws: dict, optional
-        Keyword arguments to pass to matplotlib.figure.Figure.colorbar()
-    cbar_ax: Axes
-        Axes to draw the colorbar in, if not provided then space will be taken from the main Axes.
-    ax: Axes
-        The main axes in which to draw the rendered image.
-    exact: bool
-        Whether to use exact interpolation of the data. Defaults to False.
-    backend: ['cpu', 'gpu']
-        The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
-    kwargs: other keyword arguments
-        Keyword arguments to pass to matplotlib.axes.Axes.imshow().
-
-    Returns
-    -------
-    Axes
-        The resulting matplotlib axes, which contains the 2d rendered image.
-
-    Raises
-    -------
-    ValueError
-        If `x_pixels` or `y_pixels` are less than or equal to zero, or
-        if the specified `x` and `y` minimum and maximums result in an invalid region, or
-        if the provided data is not 3-dimensional.
-    KeyError
-        If `target`, `x`, `y`, mass, density, or smoothing length columns do not
-        exist in `data`.
-    """
-    image = interpolate_3d(data, target, x, y, kernel, integral_samples, rotation, rot_origin, x_pixels, y_pixels,
-                           x_min, x_max, y_min, y_max, exact, backend)
-
-    if ax is None:
-        ax = plt.gca()
-
-    x, y = _default_axes(data, x, y)
-    x_min, x_max, y_min, y_max = _default_bounds(data, x, y, x_min, x_max, y_min, y_max)
-
-    kwargs.setdefault("origin", 'lower')
-    kwargs.setdefault("extent", [x_min, x_max, y_min, y_max])
-    graphic = ax.imshow(image, cmap=cmap, **kwargs)
-
-    # remove the x & y ticks if the data is rotated, since these no longer have physical
-    # relevance to the displayed data.
-    if rotation is not None:
-        ax.set_xticks([])
-        ax.set_yticks([])
-    else:
-        ax.set_xlabel(x)
-        ax.set_ylabel(y)
-
-    if cbar:
-        colorbar = ax.figure.colorbar(graphic, cbar_ax, ax, **cbar_kws)
-        colorbar.ax.set_ylabel(f"column {target}")
-
-    return ax
-
-
-def render_3d_cross(data: 'SarracenDataFrame', target: str, z_slice: float = None, x: str = None, y: str = None,
-                    z: str = None, kernel: BaseKernel = None, rotation: np.ndarray = None,
-                    rot_origin: np.ndarray = None, x_pixels: int = None, y_pixels: int = None, x_min: float = None,
-                    x_max: float = None, y_min: float = None, y_max: float = None, cmap: Union[str, Colormap] = 'RdBu',
-                    cbar: bool = True, cbar_kws: dict = {}, cbar_ax: Axes = None, ax: Axes = None, backend: str = None,
-                    **kwargs) -> Axes:
-    """ Render 3D particle data to a 2D grid, using a 3D cross-section.
-
-    Render the data within a SarracenDataFrame to a 2D matplotlib object, using a 3D -> 2D
-    cross-section of the target variable. The cross-section is taken of the 3D data at a specific
-    value of z, and the contributions of particles near the plane are interpolated to a 2D grid.
-
-    Parameters
-    ----------
-    data : SarracenDataFrame
-        The particle data to render.
-    target: str
-        The column label of the target smoothing data.
-    z_slice: float
-        The z-axis value to take the cross-section at. Defaults to the midpoint of the z-directional data.
-    x, y, z: str
-        The column labels of the directional data to render. Defaults to the x, y, and z columns
-        detected in `data`.
-    kernel: BaseKernel
-        The kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
-    rotation: array_like or Rotation, optional
-        The rotation to apply to the data before rendering. If defined as an array, the
-        order of rotations is [z, y, x] in degrees.
-    rot_origin: array_like, optional
-        Point of rotation of the data, in [x, y, z] form. Defaults to the centre
-        point of the bounds of the data.
-    x_pixels, y_pixels: int, optional
-        Number of pixels in the output image in the x & y directions. Default values are chosen to keep
-        a consistent aspect ratio.
-    x_min, x_max, y_min, y_max: float, optional
-        The minimum and maximum values to render over, in particle data space. Defaults
-        to the minimum and maximum values of `x` and `y`.
-    cmap: str or Colormap, optional
-        The color map to use when plotting this data.
-    cbar: bool, optional
-        True if a colorbar should be drawn.
-    cbar_kws: dict, optional
-        Keyword arguments to pass to matplotlib.figure.Figure.colorbar()
-    cbar_ax: Axes
-        Axes to draw the colorbar in, if not provided then space will be taken from the main Axes.
-    ax: Axes
-        The main axes in which to draw the rendered image.
-    backend: ['cpu', 'gpu']
-        The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
-    kwargs: other keyword arguments
-        Keyword arguments to pass to matplotlib.axes.Axes.imshow().
-
-    Returns
-    -------
-    Axes
-        The resulting matplotlib axes object, containing the 3d cross-section image.
-
-    Raises
-    -------
-    ValueError
-        If `x_pixels` or `y_pixels` are less than or equal to zero, or
-        if the specified `x` and `y` minimum and maximums result in an invalid region, or
-        if the provided data is not 3-dimensional.
-    KeyError
-        If `target`, `x`, `y`, `z`, mass, density, or smoothing length columns do not
-        exist in `data`.
-    """
-    image = interpolate_3d_cross(data, target, z_slice, x, y, z, kernel, rotation, rot_origin, x_pixels, y_pixels, x_min,
-                                 x_max, y_min, y_max, backend)
-
-    if ax is None:
-        ax = plt.gca()
-
-    x, y = _default_axes(data, x, y)
-    x_min, x_max, y_min, y_max = _default_bounds(data, x, y, x_min, x_max, y_min, y_max)
-
-    kwargs.setdefault("origin", 'lower')
-    kwargs.setdefault("extent", [x_min, x_max, y_min, y_max])
-    graphic = ax.imshow(image, cmap=cmap, **kwargs)
-
-    # remove the x & y ticks if the data is rotated, since these no longer have physical
-    # relevance to the displayed data.
-    if rotation is not None:
-        ax.set_xticks([])
-        ax.set_yticks([])
-    else:
-        ax.set_xlabel(x)
-        ax.set_ylabel(y)
-
-    if cbar:
-        colorbar = ax.figure.colorbar(graphic, cbar_ax, ax, **cbar_kws)
-        colorbar.ax.set_ylabel(target)
 
     return ax
