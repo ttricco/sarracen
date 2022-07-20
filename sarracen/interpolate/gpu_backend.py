@@ -13,101 +13,92 @@ from sarracen.kernels.cubic_spline_exact import line_int, surface_int
 class GPUBackend(BaseBackend):
 
     @staticmethod
-    def interpolate_2d_render(target: ndarray, x: ndarray, y: ndarray, mass: ndarray, rho: ndarray, h: ndarray,
-                              weight_function: CPUDispatcher, kernel_radius: float, x_pixels: int, y_pixels: int,
-                              x_min: float, x_max: float, y_min: float, y_max: float, exact: bool) -> ndarray:
+    def interpolate_2d_render(x: ndarray, y: ndarray, weight: ndarray, h: ndarray, weight_function: CPUDispatcher,
+                              kernel_radius: float, x_pixels: int, y_pixels: int, x_min: float, x_max: float,
+                              y_min: float, y_max: float, exact: bool) -> ndarray:
         if exact:
-            return GPUBackend._exact_2d_render(target, x, y, mass, rho, h, x_pixels, y_pixels, x_min, x_max, y_min,
-                                               y_max)
-        return GPUBackend._fast_2d(target, 0, x, y, np.zeros(len(target)), mass, rho, h, weight_function, kernel_radius,
-                                   x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2)
+            return GPUBackend._exact_2d_render(x, y, weight, h, x_pixels, y_pixels, x_min, x_max, y_min, y_max)
+        return GPUBackend._fast_2d(0, x, y, np.zeros(x.size), weight, h, weight_function, kernel_radius, x_pixels,
+                                   y_pixels, x_min, x_max, y_min, y_max, 2)
 
     @staticmethod
-    def interpolate_2d_render_vec(target_x: ndarray, target_y: ndarray, x: ndarray, y: ndarray, mass: ndarray,
-                                  rho: ndarray, h: ndarray, weight_function: CPUDispatcher, kernel_radius: float,
-                                  x_pixels: int, y_pixels: int, x_min: float, x_max: float, y_min: float,
-                                  y_max: float, exact: bool) -> Tuple[ndarray, ndarray]:
+    def interpolate_2d_render_vec(x: ndarray, y: ndarray, weight_x: ndarray, weight_y: ndarray, h: ndarray,
+                                  weight_function: CPUDispatcher, kernel_radius: float, x_pixels: int, y_pixels: int,
+                                  x_min: float, x_max: float, y_min: float, y_max: float,
+                                  exact: bool) -> Tuple[ndarray, ndarray]:
         if exact:
-            return (GPUBackend._exact_2d_render(target_x, x, y, mass, rho, h, x_pixels, y_pixels, x_min, x_max, y_min,
-                                                y_max),
-                    GPUBackend._exact_2d_render(target_y, x, y, mass, rho, h, x_pixels, y_pixels, x_min, x_max, y_min,
-                                                y_max))
-        return (GPUBackend._fast_2d(target_x, 0, x, y, np.zeros(len(target_x)), mass, rho, h, weight_function,
-                                    kernel_radius, x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2),
-                GPUBackend._fast_2d(target_y, 0, x, y, np.zeros(len(target_y)), mass, rho, h, weight_function,
-                                    kernel_radius, x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2))
+            return (GPUBackend._exact_2d_render(x, y, weight_x, h, x_pixels, y_pixels, x_min, x_max, y_min, y_max),
+                    GPUBackend._exact_2d_render(x, y, weight_y, h, x_pixels, y_pixels, x_min, x_max, y_min, y_max))
+        return (GPUBackend._fast_2d(0, x, y, np.zeros(x.size), weight_x, h, weight_function, kernel_radius, x_pixels,
+                                    y_pixels, x_min, x_max, y_min, y_max, 2),
+                GPUBackend._fast_2d(0, x, y, np.zeros(x.size), weight_y, h, weight_function, kernel_radius, x_pixels,
+                                    y_pixels, x_min, x_max, y_min, y_max, 2))
 
     @staticmethod
-    def interpolate_2d_cross(target: ndarray, x: ndarray, y: ndarray, mass: ndarray, rho: ndarray, h: ndarray,
-                             weight_function: CPUDispatcher, kernel_radius: float, pixels: int, x1: float, x2: float,
-                             y1: float, y2: float) -> ndarray:
-        return GPUBackend._fast_2d_cross(target, x, y, mass, rho, h, weight_function, kernel_radius, pixels, x1, x2,
-                                             y1, y2)
+    def interpolate_2d_cross(x: ndarray, y: ndarray, weight: ndarray, h: ndarray, weight_function: CPUDispatcher,
+                             kernel_radius: float, pixels: int, x1: float, x2: float, y1: float, y2: float) -> ndarray:
+        return GPUBackend._fast_2d_cross(x, y, weight, h, weight_function, kernel_radius, pixels, x1, x2, y1, y2)
 
     @staticmethod
-    def interpolate_3d_projection(target: ndarray, x: ndarray, y: ndarray, z: ndarray, mass: ndarray, rho: ndarray, h: ndarray,
+    def interpolate_3d_projection(x: ndarray, y: ndarray, z: ndarray, weight: ndarray, h: ndarray,
                                   weight_function: CPUDispatcher, kernel_radius: float, x_pixels: int, y_pixels: int,
                                   x_min: float, x_max: float, y_min: float, y_max: float, exact: bool) -> ndarray:
         if exact:
-            return GPUBackend._exact_3d_project(target, x, y, mass, rho, h, x_pixels, y_pixels, x_min, x_max, y_min,
-                                                y_max)
-        return GPUBackend._fast_2d(target, 0, x, y, np.zeros(len(target)), mass, rho, h, weight_function, kernel_radius,
-                                   x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2)
+            return GPUBackend._exact_3d_project(x, y, weight, h, x_pixels, y_pixels, x_min, x_max, y_min, y_max)
+        return GPUBackend._fast_2d(0, x, y, np.zeros(x.size), weight, h, weight_function, kernel_radius, x_pixels,
+                                   y_pixels, x_min, x_max, y_min, y_max, 2)
 
     @staticmethod
-    def interpolate_3d_projection_vec(target_x: ndarray, target_y: ndarray, x: ndarray, y: ndarray, mass: ndarray,
-                                      rho: ndarray, h: ndarray, weight_function: CPUDispatcher, kernel_radius: float,
-                                      x_pixels: int, y_pixels: int, x_min: float, x_max: float, y_min: float,
-                                      y_max: float, exact: bool) -> Tuple[ndarray, ndarray]:
+    def interpolate_3d_projection_vec(x: ndarray, y: ndarray, weight_x: ndarray, weight_y: ndarray, h: ndarray,
+                                      weight_function: CPUDispatcher, kernel_radius: float, x_pixels: int,
+                                      y_pixels: int, x_min: float, x_max: float, y_min: float, y_max: float,
+                                      exact: bool) -> Tuple[ndarray, ndarray]:
         if exact:
-            return (GPUBackend._exact_3d_project(target_x, x, y, mass, rho, h, x_pixels, y_pixels, x_min, x_max, y_min,
-                                                 y_max),
-                    GPUBackend._exact_3d_project(target_y, x, y, mass, rho, h, x_pixels, y_pixels, x_min, x_max, y_min,
-                                                 y_max))
-        return (GPUBackend._fast_2d(target_x, 0, x, y, np.zeros(len(target_x)), mass, rho, h, weight_function,
-                                    kernel_radius, x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2),
-                GPUBackend._fast_2d(target_y, 0, x, y, np.zeros(len(target_y)), mass, rho, h, weight_function,
-                                    kernel_radius, x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2))
+            return (GPUBackend._exact_3d_project(x, y, weight_x, h, x_pixels, y_pixels, x_min, x_max, y_min, y_max),
+                    GPUBackend._exact_3d_project(x, y, weight_y, h, x_pixels, y_pixels, x_min, x_max, y_min, y_max))
+        return (GPUBackend._fast_2d(0, x, y, np.zeros(x.size), weight_x, h, weight_function, kernel_radius, x_pixels,
+                                    y_pixels, x_min, x_max, y_min, y_max, 2),
+                GPUBackend._fast_2d(0, x, y, np.zeros(y.size), weight_y, h, weight_function, kernel_radius, x_pixels,
+                                    y_pixels, x_min, x_max, y_min, y_max, 2))
 
     @staticmethod
-    def interpolate_3d_cross(target: ndarray, z_slice: float, x: ndarray, y: ndarray, z: ndarray, mass: ndarray,
-                             rho: ndarray, h: ndarray, weight_function: CPUDispatcher, kernel_radius: float,
-                             x_pixels: int, y_pixels: int, x_min: float, x_max: float, y_min: float,
-                             y_max: float) -> ndarray:
-        return GPUBackend._fast_2d(target, z_slice, x, y, z, mass, rho, h, weight_function, kernel_radius, x_pixels,
-                                   y_pixels, x_min, x_max, y_min, y_max, 3)
+    def interpolate_3d_cross(z_slice: float, x: ndarray, y: ndarray, z: ndarray, weight: ndarray, h: ndarray,
+                             weight_function: CPUDispatcher, kernel_radius: float, x_pixels: int, y_pixels: int,
+                             x_min: float, x_max: float, y_min: float, y_max: float) -> ndarray:
+        return GPUBackend._fast_2d(z_slice, x, y, z, weight, h, weight_function, kernel_radius, x_pixels, y_pixels,
+                                   x_min, x_max, y_min, y_max, 3)
 
     @staticmethod
-    def interpolate_3d_cross_vec(target_x: ndarray, target_y: ndarray, z_slice: float, x: ndarray, y: ndarray,
-                                 z: ndarray, mass: ndarray, rho: ndarray, h: ndarray, weight_function: CPUDispatcher,
-                                 kernel_radius: float, x_pixels: int, y_pixels: int, x_min: float, x_max: float,
-                                 y_min: float, y_max: float) -> Tuple[ndarray, ndarray]:
-        return (GPUBackend._fast_2d(target_x, z_slice, x, y, z, mass, rho, h, weight_function, kernel_radius, x_pixels,
-                                    y_pixels, x_min, x_max, y_min, y_max, 3),
-                GPUBackend._fast_2d(target_y, z_slice, x, y, z, mass, rho, h, weight_function, kernel_radius, x_pixels,
-                                    y_pixels, x_min, x_max, y_min, y_max, 3))
+    def interpolate_3d_cross_vec(z_slice: float, x: ndarray, y: ndarray, z: ndarray, weight_x: ndarray,
+                                 weight_y: ndarray, h: ndarray, weight_function: CPUDispatcher, kernel_radius: float,
+                                 x_pixels: int, y_pixels: int, x_min: float, x_max: float, y_min: float,
+                                 y_max: float) -> Tuple[ndarray, ndarray]:
+        return (GPUBackend._fast_2d(z_slice, x, y, z, weight_x, h, weight_function, kernel_radius, x_pixels, y_pixels,
+                                    x_min, x_max, y_min, y_max, 3),
+                GPUBackend._fast_2d(z_slice, x, y, z, weight_y, h, weight_function, kernel_radius, x_pixels, y_pixels,
+                                    x_min, x_max, y_min, y_max, 3))
 
     # For the GPU, the numba code is compiled using a factory function approach. This is required
     # since a CUDA numba kernel cannot easily take weight_function as an argument.
     @staticmethod
-    def _fast_2d(target, z_slice, x_data, y_data, z_data, mass_data, rho_data, h_data, weight_function,
-                     kernel_radius, x_pixels, y_pixels, x_min, x_max, y_min, y_max, n_dims):
+    def _fast_2d(z_slice, x_data, y_data, z_data, w_data, h_data, weight_function, kernel_radius, x_pixels, y_pixels,
+                 x_min, x_max, y_min, y_max, n_dims):
         # Underlying GPU numba-compiled code for interpolation to a 2D grid. Used in interpolation of 2D data,
         # and column integration / cross-sections of 3D data.
         @cuda.jit(fastmath=True)
-        def _2d_func(target, z_slice, x_data, y_data, z_data, mass_data, rho_data, h_data, kernel_radius,
-                     x_pixels, y_pixels, x_min, x_max, y_min, y_max, n_dims, image):
+        def _2d_func(z_slice, x_data, y_data, z_data, w_data, h_data, kernel_radius, x_pixels, y_pixels, x_min, x_max,
+                     y_min, y_max, n_dims, image):
             pixwidthx = (x_max - x_min) / x_pixels
             pixwidthy = (y_max - y_min) / y_pixels
 
             i = cuda.grid(1)
-            if i < len(target):
+            if i < len(x_data):
                 if not n_dims == 2:
                     dz = np.float64(z_slice) - z_data[i]
                 else:
                     dz = 0
 
-                term = (target[i] * mass_data[i] / (rho_data[i] * h_data[i] ** n_dims))
+                term = w_data[i] / h_data[i] ** n_dims
 
                 if abs(dz) >= kernel_radius * h_data[i]:
                     return
@@ -154,41 +145,37 @@ class GPUBackend(BaseBackend):
                             cuda.atomic.add(image, (jpix + jpixmin, ipix + ipixmin), term * wab)
 
         threadsperblock = 32
-        blockspergrid = (target.size + (threadsperblock - 1)) // threadsperblock
+        blockspergrid = (x_data.size + (threadsperblock - 1)) // threadsperblock
 
         # transfer relevant data to the GPU
-        d_target = cuda.to_device(target)
         d_x = cuda.to_device(x_data)
         d_y = cuda.to_device(y_data)
         d_z = cuda.to_device(z_data)
-        d_m = cuda.to_device(mass_data)
-        d_rho = cuda.to_device(rho_data)
+        d_w = cuda.to_device(w_data)
         d_h = cuda.to_device(h_data)
         # CUDA kernels have no return values, so the image data must be
         # allocated on the device beforehand.
         d_image = cuda.to_device(np.zeros((y_pixels, x_pixels)))
 
         # execute the newly compiled CUDA kernel.
-        _2d_func[blockspergrid, threadsperblock](d_target, z_slice, d_x, d_y, d_z, d_m, d_rho, d_h, kernel_radius,
-                                                 x_pixels,
-                                                 y_pixels, x_min, x_max, y_min, y_max, n_dims, d_image)
+        _2d_func[blockspergrid, threadsperblock](z_slice, d_x, d_y, d_z, d_w, d_h, kernel_radius, x_pixels, y_pixels,
+                                                 x_min, x_max, y_min, y_max, n_dims, d_image)
 
         return d_image.copy_to_host()
 
     # Underlying CPU numba-compiled code for exact interpolation of 2D data to a 2D grid.
     @staticmethod
-    def _exact_2d_render(target, x_data, y_data, mass_data, rho_data, h_data, x_pixels, y_pixels, x_min, x_max, y_min,
-                         y_max):
+    def _exact_2d_render(x_data, y_data, w_data, h_data, x_pixels, y_pixels, x_min, x_max, y_min, y_max):
         pixwidthx = (x_max - x_min) / x_pixels
         pixwidthy = (y_max - y_min) / y_pixels
 
         # Underlying GPU numba-compiled code for interpolation to a 2D grid. Used in interpolation of 2D data,
         # and column integration / cross-sections of 3D data.
         @cuda.jit
-        def _2d_func(target, x_data, y_data, mass_data, rho_data, h_data, image):
+        def _2d_func(x_data, y_data, w_data, h_data, image):
             i = cuda.grid(1)
-            if i < len(target):
-                term = (target[i] * mass_data[i] / (rho_data[i] * h_data[i] ** 2))
+            if i < len(x_data):
+                term = w_data[i] / h_data[i] ** 2
 
                 # determine maximum and minimum pixels that this particle contributes to
                 ipixmin = round((x_data[i] - 2 * h_data[i] - x_min) / pixwidthx)
@@ -281,29 +268,26 @@ class GPUBackend(BaseBackend):
                             cuda.atomic.sub(image, (jpix, ipix + 1), term * wab)
 
         threadsperblock = 32
-        blockspergrid = (target.size + (threadsperblock - 1)) // threadsperblock
+        blockspergrid = (x_data.size + (threadsperblock - 1)) // threadsperblock
 
         # transfer relevant data to the GPU
-        d_target = cuda.to_device(target)
         d_x = cuda.to_device(x_data)
         d_y = cuda.to_device(y_data)
-        d_m = cuda.to_device(mass_data)
-        d_rho = cuda.to_device(rho_data)
+        d_w = cuda.to_device(w_data)
         d_h = cuda.to_device(h_data)
         # CUDA kernels have no return values, so the image data must be
         # allocated on the device beforehand.
         d_image = cuda.to_device(np.zeros((y_pixels, x_pixels)))
 
         # execute the newly compiled CUDA kernel.
-        _2d_func[blockspergrid, threadsperblock](d_target, d_x, d_y, d_m, d_rho, d_h, d_image)
+        _2d_func[blockspergrid, threadsperblock](d_x, d_y, d_w, d_h, d_image)
 
         return d_image.copy_to_host()
 
     # For the GPU, the numba code is compiled using a factory function approach. This is required
     # since a CUDA numba kernel cannot easily take weight_function as an argument.
     @staticmethod
-    def _fast_2d_cross(target, x_data, y_data, mass_data, rho_data, h_data, weight_function, kernel_radius, pixels,
-                           x1, x2, y1, y2):
+    def _fast_2d_cross(x_data, y_data, w_data, h_data, weight_function, kernel_radius, pixels, x1, x2, y1, y2):
         # determine the slope of the cross-section line
         gradient = 0
         if not x2 - x1 == 0:
@@ -318,10 +302,10 @@ class GPUBackend(BaseBackend):
 
         # Underlying GPU numba-compiled code for 2D->1D cross-sections
         @cuda.jit(fastmath=True)
-        def _2d_func(target, x_data, y_data, mass_data, rho_data, h_data, kernel_radius, pixels, x1, x2, y1, y2, image):
+        def _2d_func(x_data, y_data, w_data, h_data, kernel_radius, pixels, x1, x2, y1, y2, image):
             i = cuda.grid(1)
-            if i < target.size:
-                term = target[i] * mass_data[i] / (rho_data[i] * h_data[i] ** 2)
+            if i < x_data.size:
+                term = w_data[i] / h_data[i] ** 2
 
                 # the intersections between the line and a particle's 'smoothing circle' are
                 # found by solving a quadratic equation with the below values of a, b, and c.
@@ -332,13 +316,13 @@ class GPUBackend(BaseBackend):
                             kernel_radius * h_data[i]) ** 2
                 det = bb ** 2 - 4 * aa * cc
 
-                # create a filter for particles that do not contribute to the cross-section
+                # create a filter for particles that do not contribute to the cross-section.
                 if det < 0:
                     return
 
                 det = math.sqrt(det)
 
-                # the starting and ending x coordinates of the lines intersections with a particle's smoothing circle
+                # the starting and ending x coordinates of the lines intersections with a particle's smoothing circle.
                 xstart = min(max(x1, (-bb - det) / (2 * aa)), x2)
                 xend = min(max(x1, (-bb + det) / (2 * aa)), x2)
 
@@ -365,14 +349,12 @@ class GPUBackend(BaseBackend):
                     cuda.atomic.add(image, ipix, wab * term)
 
         threadsperblock = 32
-        blockspergrid = (target.size + (threadsperblock - 1)) // threadsperblock
+        blockspergrid = (x_data.size + (threadsperblock - 1)) // threadsperblock
 
         # transfer relevant data to the GPU
-        d_target = cuda.to_device(target)
         d_x = cuda.to_device(x_data)
         d_y = cuda.to_device(y_data)
-        d_m = cuda.to_device(mass_data)
-        d_rho = cuda.to_device(rho_data)
+        d_w = cuda.to_device(w_data)
         d_h = cuda.to_device(h_data)
 
         # CUDA kernels have no return values, so the image data must be
@@ -380,26 +362,23 @@ class GPUBackend(BaseBackend):
         d_image = cuda.to_device(np.zeros(pixels))
 
         # execute the newly compiled GPU kernel
-        _2d_func[blockspergrid, threadsperblock](d_target, d_x, d_y, d_m, d_rho, d_h, kernel_radius, pixels, x1, x2, y1,
-                                                 y2, d_image)
+        _2d_func[blockspergrid, threadsperblock](d_x, d_y, d_w, d_h, kernel_radius, pixels, x1, x2, y1, y2, d_image)
 
         return d_image.copy_to_host()
 
     @staticmethod
-    def _exact_3d_project(target, x_data, y_data, mass_data, rho_data, h_data, x_pixels, y_pixels, x_min, x_max, y_min,
-                          y_max):
+    def _exact_3d_project(x_data, y_data, w_data, h_data, x_pixels, y_pixels, x_min, x_max, y_min, y_max):
         pixwidthx = (x_max - x_min) / x_pixels
         pixwidthy = (y_max - y_min) / y_pixels
 
         norm3d = 1 / np.pi
 
         @cuda.jit
-        def _3d_func(target, x_data, y_data, mass_data, rho_data, h_data, image):
+        def _3d_func(x_data, y_data, w_data, h_data, image):
             i = cuda.grid(1)
-            if i < len(target):
-                weight = mass_data[i] / (rho_data[i] * h_data[i] ** 3)
+            if i < len(x_data):
                 dfac = h_data[i] ** 3 / (pixwidthx * pixwidthy * norm3d)
-                term = norm3d * weight * target[i]
+                term = norm3d * w_data[i] / h_data[i] ** 3
 
                 # determine maximum and minimum pixels that this particle contributes to
                 ipixmin = round((x_data[i] - 2 * h_data[i] - x_min) / pixwidthx)
@@ -457,20 +436,18 @@ class GPUBackend(BaseBackend):
                             cuda.atomic.add(image, (jpix, ipix), term * wab)
 
         threadsperblock = 32
-        blockspergrid = (target.size + (threadsperblock - 1)) // threadsperblock
+        blockspergrid = (x_data.size + (threadsperblock - 1)) // threadsperblock
 
         # transfer relevant data to the GPU
-        d_target = cuda.to_device(target)
         d_x = cuda.to_device(x_data)
         d_y = cuda.to_device(y_data)
-        d_m = cuda.to_device(mass_data)
-        d_rho = cuda.to_device(rho_data)
+        d_w = cuda.to_device(w_data)
         d_h = cuda.to_device(h_data)
         # CUDA kernels have no return values, so the image data must be
         # allocated on the device beforehand.
         d_image = cuda.to_device(np.zeros((y_pixels, x_pixels)))
 
         # execute the newly compiled CUDA kernel.
-        _3d_func[blockspergrid, threadsperblock](d_target, d_x, d_y, d_m, d_rho, d_h, d_image)
+        _3d_func[blockspergrid, threadsperblock](d_x, d_y, d_w, d_h, d_image)
 
         return d_image.copy_to_host()
