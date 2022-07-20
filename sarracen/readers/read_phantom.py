@@ -1,3 +1,5 @@
+from typing import Union
+
 import numpy as np
 import pandas as pd
 
@@ -154,7 +156,7 @@ def _read_array_block(fp, df, n, nums, def_int_dtype, def_real_dtype):
 
     return df
 
-def _read_array_blocks(fp, def_int_dtype, def_real_dtype):
+def _read_array_blocks(fp, def_int_dtype, def_real_dtype, drop_sinks):
     """ Read particle data. Block 2 is always for sink particles?"""
     nblocks = np.frombuffer(_read_fortran_block(fp, 4), dtype=np.int32)[0]
 
@@ -181,11 +183,14 @@ def _read_array_blocks(fp, def_int_dtype, def_real_dtype):
         else:
             df = _read_array_block(fp, df, n[i], nums[i], def_int_dtype, def_real_dtype)
 
-    return pd.concat([df, df_sinks], ignore_index=True)
+    if drop_sinks:
+        return df
+    else:
+        return pd.concat([df, df_sinks], ignore_index=True)
 
 
-
-def read_phantom(filename: str) -> SarracenDataFrame:
+def read_phantom(filename: str, drop_sinks: bool = True,
+                 separate_types: bool = True) -> Union[SarracenDataFrame, list[SarracenDataFrame]]:
     """
     Read data from a Phantom dump file.
 
@@ -193,6 +198,11 @@ def read_phantom(filename: str) -> SarracenDataFrame:
     ----------
     filename : str
         Name of the file to be loaded.
+    drop_sinks: bool
+        Whether to exclude sink particles from the final dataframe(s)
+    separate_types: bool
+        Whether to separate different particle types into several dataframes. If true, a list of dataframes may
+        be returned.
 
     Returns
     -------
@@ -205,6 +215,19 @@ def read_phantom(filename: str) -> SarracenDataFrame:
         header_vars = _read_global_header(fp, def_int_dtype, def_real_dtype)
         header_vars['file_identifier'] = file_identifier
 
-        df = _read_array_blocks(fp, def_int_dtype, def_real_dtype)
+        df = _read_array_blocks(fp, def_int_dtype, def_real_dtype, drop_sinks)
 
-        return SarracenDataFrame(df, params=header_vars)
+        if separate_types and 'itype' in df and df['itype'].nunique() > 1:
+            df_list = []
+            for _, group in df.groupby('itype'):
+                itype = int(group["itype"].iloc[0])
+                mass_key = 'massoftype' if itype == 1 else f'massoftype_{itype}'
+                df_list.append(SarracenDataFrame(group.dropna(axis=1),
+                                                 params={**header_vars, **{"mass": header_vars[mass_key]}}))
+
+            if not drop_sinks:
+                df_list.append(SarracenDataFrame(df[df['itype'].isna()], params=header_vars))
+
+            return df_list
+
+        return SarracenDataFrame(df, params={**header_vars, **{"mass": header_vars['massoftype']}})

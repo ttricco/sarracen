@@ -264,9 +264,9 @@ def _rotate_xyz(data, x, y, z, rotation, origin):
 
 def _get_mass(data: 'SarracenDataFrame'):
     if data._mcol == None:
-        if 'massoftype' not in data.params:
-            raise KeyError("'massoftype' column does not exist in this SarracenDataFrame.")
-        return data.params['massoftype']
+        if 'mass' not in data.params:
+            raise KeyError("'mass' column does not exist in this SarracenDataFrame.")
+        return data.params['mass']
 
     return data[data._mcol].to_numpy()
 
