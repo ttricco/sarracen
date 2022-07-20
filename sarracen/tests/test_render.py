@@ -6,7 +6,7 @@ from numpy.testing import assert_array_equal
 from pytest import mark
 
 from sarracen import SarracenDataFrame, interpolate_2d, interpolate_2d_cross, interpolate_3d, interpolate_3d_cross
-from sarracen.render import render_2d, render_2d_cross, render_3d, render_3d_cross, streamlines, arrowplot
+from sarracen.render import render, streamlines, arrowplot
 
 backends = ['cpu']
 if cuda.is_available():
@@ -23,11 +23,11 @@ def test_interpolation_passthrough(backend):
     sdf.backend = backend
 
     fig, ax = plt.subplots()
-    render_2d(sdf, 'P', ax=ax)
+    render(sdf, 'P', ax=ax)
     assert_array_equal(ax.images[0].get_array().filled(0), interpolate_2d(sdf, 'P'))
 
     fig, ax = plt.subplots()
-    render_2d_cross(sdf, 'P', x1=3, x2=6, y1=5, y2=1, ax=ax)
+    render(sdf, 'P', xsec=True, x1=3, x2=6, y1=5, y2=1, ax=ax)
     assert_array_equal(ax.lines[0].get_ydata(), interpolate_2d_cross(sdf, 'P', x1=3, x2=6, y1=5, y2=1))
 
     df = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'z': [2, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
@@ -35,11 +35,11 @@ def test_interpolation_passthrough(backend):
     sdf.backend = backend
 
     fig, ax = plt.subplots()
-    render_3d(sdf, 'P', ax=ax)
+    render(sdf, 'P', ax=ax)
     assert_array_equal(ax.images[0].get_array().filled(0), interpolate_3d(sdf, 'P'))
 
     fig, ax = plt.subplots()
-    render_3d_cross(sdf, 'P', ax=ax)
+    render(sdf, 'P', xsec=True, ax=ax)
     assert_array_equal(ax.images[0].get_array().filled(0), interpolate_3d_cross(sdf, 'P'))
 
 
@@ -53,7 +53,7 @@ def test_cmap(backend):
     sdf.backend = backend
 
     fig, ax = plt.subplots()
-    render_2d(sdf, 'P', ax=ax, cmap='magma')
+    render(sdf, 'P', ax=ax, cmap='magma')
 
     assert ax.images[0].cmap.name == 'magma'
 
@@ -62,12 +62,12 @@ def test_cmap(backend):
     sdf.backend = backend
 
     fig, ax = plt.subplots()
-    render_3d(sdf, 'P', cmap='magma', ax=ax)
+    render(sdf, 'P', cmap='magma', ax=ax)
 
     assert ax.images[0].cmap.name == 'magma'
 
     fig, ax = plt.subplots()
-    render_3d_cross(sdf, 'P', cmap='magma', ax=ax)
+    render(sdf, 'P', xsec=True, cmap='magma', ax=ax)
 
     assert ax.images[0].cmap.name == 'magma'
 
@@ -84,14 +84,14 @@ def test_cbar_exclusion(backend):
     sdf_3 = SarracenDataFrame(df_3)
     sdf_3.backend = backend
 
-    for func in [render_2d, render_3d, render_3d_cross]:
+    for args in [{'data': sdf_2, 'xsec': False}, {'data': sdf_3, 'xsec': False}, {'data': sdf_3, 'xsec': True}]:
         fig, ax = plt.subplots()
-        func(sdf_2 if func is render_2d else sdf_3, 'P', ax=ax, cbar=True)
+        render(args['data'], 'P', xsec=args['xsec'], ax=ax, cbar=True)
 
         assert ax.images[-1].colorbar is not None
 
         fig, ax = plt.subplots()
-        func(sdf_2 if func is render_2d else sdf_3, 'P', ax=ax, cbar=False)
+        render(args['data'], 'P', xsec=args['xsec'], ax=ax, cbar=False)
 
         assert ax.images[-1].colorbar is None
 
@@ -108,9 +108,9 @@ def test_cbar_keywords(backend):
     sdf_3 = SarracenDataFrame(df_3)
     sdf_3.backend = backend
 
-    for func in [render_2d, render_3d, render_3d_cross]:
+    for args in [{'data': sdf_2, 'xsec': False}, {'data': sdf_3, 'xsec': False}, {'data': sdf_3, 'xsec': True}]:
         fig, ax = plt.subplots()
-        func(sdf_2 if func is render_2d else sdf_3, 'P', ax=ax, cbar_kws={'orientation': 'horizontal'})
+        render(args['data'], 'P', xsec=args['xsec'], ax=ax, cbar_kws={'orientation': 'horizontal'})
 
         assert ax.images[-1].colorbar.orientation == 'horizontal'
 
@@ -128,9 +128,9 @@ def test_kwargs(backend):
     sdf_3 = SarracenDataFrame(df_3)
     sdf_3.backend = backend
 
-    for func in [render_2d, render_3d, render_3d_cross]:
+    for args in [{'data': sdf_2, 'xsec': False}, {'data': sdf_3, 'xsec': False}, {'data': sdf_3, 'xsec': True}]:
         fig, ax = plt.subplots()
-        func(sdf_2 if func is render_2d else sdf_3, 'P', ax=ax, origin='upper')
+        render(args['data'], 'P', xsec=args['xsec'], ax=ax, origin='upper')
 
         assert ax.images[0].origin == 'upper'
 
@@ -143,7 +143,7 @@ def test_kwargs(backend):
     assert ax.collections[0].zorder == 5
 
     fig, ax = plt.subplots()
-    render_2d_cross(sdf_2, 'P', x1=3, x2=6, y1=5, y2=1, ax=ax, linestyle='--')
+    render(sdf_2, 'P', xsec=True, x1=3, x2=6, y1=5, y2=1, ax=ax, linestyle='--')
 
     assert ax.lines[0].get_linestyle() == '--'
 
@@ -158,9 +158,9 @@ def test_rotated_ticks(backend):
     sdf = SarracenDataFrame(df)
     sdf.backend = backend
 
-    for func in [render_3d, render_3d_cross]:
+    for xsec in [False, True]:
         fig, ax = plt.subplots()
-        func(sdf, 'P', rotation=[34, 23, 50], ax=ax)
+        render(sdf, 'P', xsec=xsec, rotation=[34, 23, 50], ax=ax)
 
         assert ax.get_xticks().size == 0
         assert ax.get_yticks().size == 0
@@ -188,20 +188,21 @@ def test_plot_labels(backend):
     sdf_3 = SarracenDataFrame(df_3)
     sdf_3.backend = backend
 
-    for func in [render_2d, render_3d, render_3d_cross]:
+    for args in [{'data': sdf_2, 'xsec': False}, {'data': sdf_3, 'xsec': False}, {'data': sdf_3, 'xsec': True}]:
         fig, ax = plt.subplots()
-        func(sdf_2 if func is render_2d else sdf_3, 'P', ax=ax)
+        render(args['data'], 'P', xsec=args['xsec'], ax=ax)
 
         assert ax.get_xlabel() == 'x'
         assert ax.get_ylabel() == 'y'
-        assert ax.figure.axes[1].get_ylabel() == ('column ' if func is render_3d else '') + 'P'
+        assert ax.figure.axes[1].get_ylabel() == ('column ' if args['data'] is sdf_3 and not args['xsec'] else '') + 'P'
 
         fig, ax = plt.subplots()
-        func(sdf_2 if func is render_2d else sdf_3, 'rho', x='y', y='x', ax=ax)
+        render(args['data'], 'rho', xsec=args['xsec'], x='y', y='x', ax=ax)
 
         assert ax.get_xlabel() == 'y'
         assert ax.get_ylabel() == 'x'
-        assert ax.figure.axes[1].get_ylabel() == ('column ' if func is render_3d else '') + 'rho'
+        assert ax.figure.axes[1].get_ylabel() == ('column ' if args['data'] is sdf_3 and not args['xsec'] else '')\
+               + 'rho'
 
     for func in [streamlines, arrowplot]:
         fig, ax = plt.subplots()
@@ -217,13 +218,13 @@ def test_plot_labels(backend):
         assert ax.get_ylabel() == 'x'
 
     fig, ax = plt.subplots()
-    render_2d_cross(sdf_2, 'P', ax=ax)
+    render(sdf_2, 'P', xsec=True, ax=ax)
 
     assert ax.get_xlabel() == 'cross-section (x, y)'
     assert ax.get_ylabel() == 'P'
 
     fig, ax = plt.subplots()
-    render_2d_cross(sdf_2, 'rho', x='y', y='x', ax=ax)
+    render(sdf_2, 'rho', xsec=True, x='y', y='x', ax=ax)
 
     assert ax.get_xlabel() == 'cross-section (y, x)'
     assert ax.get_ylabel() == 'rho'
@@ -243,14 +244,12 @@ def test_plot_bounds(backend):
     sdf_3 = SarracenDataFrame(df_3)
     sdf_3.backend = backend
 
-    for func in [render_2d, render_2d_cross, render_3d, render_3d_cross, arrowplot, streamlines]:
+    for args in [{'data': sdf_2, 'xsec': False}, {'data': sdf_2, 'xsec': False}, {'data': sdf_3, 'xsec': False},
+                 {'data': sdf_3, 'xsec': True}]:
         fig, ax = plt.subplots()
-        if func is arrowplot or func is streamlines:
-            func(sdf_3, ('Ax', 'Ay', 'Az'), ax=ax)
-        else:
-            func(sdf_2 if func is render_2d or func is render_2d_cross else sdf_3, 'P', ax=ax)
+        render(args['data'], 'P', xsec=args['xsec'], ax=ax)
 
-        if func is render_2d_cross:
+        if args['data'] is sdf_2 and args['xsec']:
             assert ax.get_xlim() == (0, 5)
 
             # 512 pixels across (by default), and both particles are in corners
@@ -261,12 +260,21 @@ def test_plot_bounds(backend):
             assert ax.get_xlim() == (3, 6)
             assert ax.get_ylim() == (1, 5)
 
-        if func is render_2d:
-            assert ax.figure.axes[1].get_ylim() == (0, interpolate_2d(sdf_2, 'P').max())
-        elif func is render_3d:
-            assert ax.figure.axes[1].get_ylim() == (0, interpolate_3d(sdf_3, 'P').max())
-        elif func is render_3d_cross:
-            assert ax.figure.axes[1].get_ylim() == (0, interpolate_3d_cross(sdf_3, 'P').max())
+        if args['data'] is sdf_2:
+            if args['xsec']:
+                assert ax.figure.axes[1].get_ylim() == (0, interpolate_2d(sdf_2, 'P').max())
+        else:
+            if args['xsec']:
+                assert ax.figure.axes[1].get_ylim() == (0, interpolate_3d_cross(sdf_3, 'P').max())
+            else:
+                assert ax.figure.axes[1].get_ylim() == (0, interpolate_3d(sdf_3, 'P').max())
+
+    for func in [arrowplot, streamlines]:
+        fig, ax = plt.subplots()
+        func(sdf_3, ('Ax', 'Ay', 'Az'), ax=ax)
+
+        assert ax.get_xlim() == (3, 6)
+        assert ax.get_ylim() == (1, 5)
 
 
 @mark.parametrize("backend", backends)
@@ -281,7 +289,7 @@ def test_snap(backend):
     sdf.backend = backend
 
     fig, ax = plt.subplots()
-    sdf.render_2d('P', ax=ax)
+    sdf.render('P', ax=ax)
 
     # 0.0001 -> 0.0, 5.2 -> 5.2
     assert ax.get_xlim() == (0.0, 5.2)
