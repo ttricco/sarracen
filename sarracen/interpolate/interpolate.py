@@ -398,7 +398,7 @@ def interpolate_2d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
 
 
 def interpolate_2d_cross(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
-                         kernel: BaseKernel = None, pixels: int = 512, x1: float = None, x2: float = None,
+                         kernel: BaseKernel = None, pixels: int = None, x1: float = None, x2: float = None,
                          y1: float = None, y2: float = None, backend: str = None) -> np.ndarray:
     """ Interpolate particle data across two directional axes to a 1D cross-section line.
 
@@ -449,6 +449,7 @@ def interpolate_2d_cross(data: 'SarracenDataFrame', target: str, x: str = None, 
 
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
+    pixels = pixels if pixels is not None else 512
 
     if pixels <= 0:
         raise ValueError('pixcount must be greater than zero!')
