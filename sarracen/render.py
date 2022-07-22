@@ -417,7 +417,7 @@ def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[st
         key_length = float(np.format_float_positional(np.mean(np.sqrt(img[0] ** 2 + img[1] ** 2)), precision=1,
                                                       unique=False, fractional=False, trim='k'))
         qkey_kws.setdefault('U', key_length)
-        qkey_kws.setdefault('label', f"= {key_length}")
+        qkey_kws.setdefault('label', f"= {qkey_kws['U']}")
 
         qkey_kws.setdefault('labelpos', 'E')
         qkey_kws.setdefault('coordinates', 'axes')
