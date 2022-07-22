@@ -14,7 +14,7 @@ import numpy as np
 import seaborn as sns
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
-from matplotlib.colors import Colormap
+from matplotlib.colors import Colormap, LogNorm
 
 from sarracen.interpolate import interpolate_2d_cross, interpolate_2d, interpolate_3d, interpolate_3d_cross, \
     interpolate_3d_vec, interpolate_3d_cross_vec, interpolate_2d_vec
@@ -122,7 +122,8 @@ def _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max, default):
 def render_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
               x_pixels: int = None, y_pixels: int = None, x_min: float = None, x_max: float = None, y_min: float = None,
               y_max: float = None, cmap: Union[str, Colormap] = 'RdBu', cbar: bool = True, cbar_kws: dict = {},
-              cbar_ax: Axes = None, ax: Axes = None, exact: bool = None, backend: str = None, **kwargs) -> Axes:
+              cbar_ax: Axes = None, ax: Axes = None, exact: bool = None, backend: str = None, log_scale: bool = False,
+              **kwargs) -> Axes:
     """ Render 2D particle data to a 2D grid, using SPH rendering of a target variable.
 
     Render the data within a SarracenDataFrame to a 2D matplotlib object, by rendering the values
@@ -159,6 +160,8 @@ def render_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = No
         Whether to use exact interpolation of the data. Defaults to False.
     backend: ['cpu', 'gpu']
         The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
+    log_scale: bool
+        Whether to use a logarithmic scale for color coding.
     kwargs: other keyword arguments
         Keyword arguments to pass to matplotlib.axes.Axes.imshow().
 
@@ -186,13 +189,19 @@ def render_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = No
 
     kwargs.setdefault("origin", 'lower')
     kwargs.setdefault("extent", [x_min, x_max, y_min, y_max])
+    if log_scale:
+        kwargs.setdefault("norm", LogNorm(clip=True))
+
     graphic = ax.imshow(image, cmap=cmap, **kwargs)
     ax.set_xlabel(x)
     ax.set_ylabel(y)
 
     if cbar:
         colorbar = ax.figure.colorbar(graphic, cbar_ax, ax, **cbar_kws)
-        colorbar.ax.set_ylabel(target)
+        label = target
+        if log_scale:
+            label = f"log ({label})"
+        colorbar.ax.set_ylabel(label)
 
     return ax
 
@@ -417,7 +426,7 @@ def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[st
 
 def render_2d_cross(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
                     pixels: int = 512, x1: float = None, x2: float = None, y1: float = None, y2: float = None,
-                    ax: Axes = None, backend: str = None, **kwargs) -> Axes:
+                    ax: Axes = None, backend: str = None, log_scale: bool = False, **kwargs) -> Axes:
     """ Render 2D particle data to a 1D line, using a 2D cross-section.
 
     Render the data within a SarracenDataFrame to a seaborn-generated line plot, by taking
@@ -443,6 +452,8 @@ def render_2d_cross(data: 'SarracenDataFrame', target: str, x: str = None, y: st
         The main axes in which to draw the rendered image.
     backend: ['cpu', 'gpu']
         The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
+    log_scale: bool
+        Whether to use a logarithmic scale in the y-axis.
     kwargs: other keyword arguments
         Keyword arguments to pass to seaborn.lineplot().
 
@@ -469,10 +480,19 @@ def render_2d_cross(data: 'SarracenDataFrame', target: str, x: str = None, y: st
     x, y = _default_axes(data, x, y)
     x1, x2, y1, y2 = _default_bounds(data, x, y, x1, x2, y1, y2)
 
-    sns.lineplot(x=np.linspace(0, np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2), pixels), y=output, ax=ax, **kwargs)
+    lineplot = sns.lineplot(x=np.linspace(0, np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2), pixels), y=output, ax=ax,
+                            **kwargs)
+
+    if log_scale:
+        lineplot.set(yscale='log')
+
     ax.margins(x=0, y=0)
     ax.set_xlabel(f'cross-section ({x}, {y})')
-    ax.set_ylabel(target)
+
+    label = target
+    if log_scale:
+        label = f"log ({label})"
+    ax.set_ylabel(label)
 
     return ax
 
@@ -481,7 +501,8 @@ def render_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = No
               integral_samples: int = 1000, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
               x_pixels: int = None, y_pixels: int = None, x_min: float = None, x_max: float = None, y_min: float = None,
               y_max: float = None, cmap: Union[str, Colormap] = 'RdBu', cbar: bool = True, cbar_kws: dict = {},
-              cbar_ax: Axes = None, ax: Axes = None, exact: bool = None, backend: str = None, **kwargs) -> Axes:
+              cbar_ax: Axes = None, ax: Axes = None, exact: bool = None, backend: str = None, log_scale: bool = False,
+              **kwargs) -> Axes:
     """ Render 3D particle data to a 2D grid, using SPH column rendering of a target variable.
 
     Render the data within a SarracenDataFrame to a 2D matplotlib object, by rendering the values
@@ -526,6 +547,8 @@ def render_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = No
         Whether to use exact interpolation of the data. Defaults to False.
     backend: ['cpu', 'gpu']
         The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
+    log_scale: bool
+        Whether to use a logarithmic scale for color coding.
     kwargs: other keyword arguments
         Keyword arguments to pass to matplotlib.axes.Axes.imshow().
 
@@ -555,6 +578,9 @@ def render_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = No
 
     kwargs.setdefault("origin", 'lower')
     kwargs.setdefault("extent", [x_min, x_max, y_min, y_max])
+    if log_scale:
+        kwargs.setdefault("norm", LogNorm(clip=True))
+
     graphic = ax.imshow(image, cmap=cmap, **kwargs)
 
     # remove the x & y ticks if the data is rotated, since these no longer have physical
@@ -568,7 +594,10 @@ def render_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = No
 
     if cbar:
         colorbar = ax.figure.colorbar(graphic, cbar_ax, ax, **cbar_kws)
-        colorbar.ax.set_ylabel(f"column {target}")
+        label = f"column {target}"
+        if log_scale:
+            label = f"log ({label})"
+        colorbar.ax.set_ylabel(label)
 
     return ax
 
@@ -578,7 +607,7 @@ def render_3d_cross(data: 'SarracenDataFrame', target: str, z_slice: float = Non
                     rot_origin: np.ndarray = None, x_pixels: int = None, y_pixels: int = None, x_min: float = None,
                     x_max: float = None, y_min: float = None, y_max: float = None, cmap: Union[str, Colormap] = 'RdBu',
                     cbar: bool = True, cbar_kws: dict = {}, cbar_ax: Axes = None, ax: Axes = None, backend: str = None,
-                    **kwargs) -> Axes:
+                    log_scale: bool = False, **kwargs) -> Axes:
     """ Render 3D particle data to a 2D grid, using a 3D cross-section.
 
     Render the data within a SarracenDataFrame to a 2D matplotlib object, using a 3D -> 2D
@@ -622,6 +651,8 @@ def render_3d_cross(data: 'SarracenDataFrame', target: str, z_slice: float = Non
         The main axes in which to draw the rendered image.
     backend: ['cpu', 'gpu']
         The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
+    log_scale: bool
+        Whether to use a logarithmic scale for color coding.
     kwargs: other keyword arguments
         Keyword arguments to pass to matplotlib.axes.Axes.imshow().
 
@@ -651,6 +682,9 @@ def render_3d_cross(data: 'SarracenDataFrame', target: str, z_slice: float = Non
 
     kwargs.setdefault("origin", 'lower')
     kwargs.setdefault("extent", [x_min, x_max, y_min, y_max])
+    if log_scale:
+        kwargs.setdefault("norm", LogNorm(clip=True))
+
     graphic = ax.imshow(image, cmap=cmap, **kwargs)
 
     # remove the x & y ticks if the data is rotated, since these no longer have physical
@@ -664,6 +698,9 @@ def render_3d_cross(data: 'SarracenDataFrame', target: str, z_slice: float = Non
 
     if cbar:
         colorbar = ax.figure.colorbar(graphic, cbar_ax, ax, **cbar_kws)
-        colorbar.ax.set_ylabel(target)
+        label = target
+        if log_scale:
+            label = f"log ({label})"
+        colorbar.ax.set_ylabel(label)
 
     return ax
