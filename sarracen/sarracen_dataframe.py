@@ -166,7 +166,7 @@ class SarracenDataFrame(DataFrame):
                     y_pixels: int = None, xlim: tuple[float, float] = None, ylim: tuple[float, float] = None,
                     ax: Axes = None, exact: bool = None, backend: str = None, log_scale: bool = None, **kwargs) -> Axes:
         return streamlines(self, target, x, y, z, z_slice, kernel, integral_samples, rotation, rot_origin, x_pixels,
-                           y_pixels, xlim, ylim, ax, exact, backend, log_scale, **kwargs)
+                           y_pixels, xlim, ylim, ax, exact, backend, **kwargs)
 
     @_copy_doc(arrowplot)
     def arrowplot(self, target: Union[Tuple[str, str], Tuple[str, str, str]], x: str = None, y: str = None,
@@ -175,7 +175,7 @@ class SarracenDataFrame(DataFrame):
                   y_arrows: int = None, xlim: tuple[float, float] = None, ylim: tuple[float, float] = None,
                   ax: Axes = None, exact: bool = None, backend: str = None, log_scale: bool = None, **kwargs) -> Axes:
         return arrowplot(self, target, z_slice, x, y, z, kernel, integral_samples, rotation, rot_origin, x_arrows,
-                         y_arrows, xlim, ylim, ax, exact, backend, log_scale, **kwargs)
+                         y_arrows, xlim, ylim, ax, exact, backend, **kwargs)
 
     @property
     def params(self):
