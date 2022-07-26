@@ -369,8 +369,6 @@ def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[st
         If `target`, `x`, `y`, `z` (for 3-dimensional data), mass, density, or smoothing length columns do not
         exist in `data`.
     """
-    if qkey_kws is None:
-        qkey_kws = {}
     x, y = _default_axes(data, x, y)
     x_min, x_max, y_min, y_max = _default_bounds(data, x, y, x_min, x_max, y_min, y_max)
     x_arrows, y_arrows = _set_pixels(x_arrows, y_arrows, x_min, x_max, y_min, y_max, 20)
