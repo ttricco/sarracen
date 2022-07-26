@@ -14,7 +14,7 @@ import numpy as np
 import seaborn as sns
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
-from matplotlib.colors import Colormap
+from matplotlib.colors import Colormap, LogNorm
 
 from sarracen.interpolate import interpolate_2d_cross, interpolate_2d, interpolate_3d, interpolate_3d_cross, \
     interpolate_3d_vec, interpolate_3d_cross_vec, interpolate_2d_vec
@@ -74,12 +74,12 @@ def _default_bounds(data, x, y, xlim, ylim) -> tuple[tuple[float, float], tuple[
         The particle dataset to render.
     x, y: str
         The directional column labels that will be used for rendering.
-    x1, x2, y1, y2: float
+    xlim, ylim: float
         The minimum and maximum values passed to the render function, in particle data space.
 
     Returns
     -------
-    xlim, ylim: float
+    xlim, ylim: tuple of float
         The minimum and maximum values to use for rendering, in particle data space. Defaults
         to the maximum and minimum values of `x` and `y`, snapped to the nearest integer.
     """
@@ -103,7 +103,7 @@ def _set_pixels(x_pixels, y_pixels, xlim, ylim, default):
     ----------
     x_pixels, y_pixels: int
         The number of pixels in the x & y directions passed to the interpolation function.
-    x1, x2, y1, y2: float
+    xlim, ylim: tuple of float
         The minimum and maximum values to use in interpolation, in particle data space.
     Returns
     -------
@@ -126,7 +126,7 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
            xlim: tuple[float, float] = None, ylim: tuple[float, float] = None, cmap: Union[str, Colormap] = 'RdBu',
            cbar: bool = True, cbar_kws: dict = {}, cbar_ax: Axes = None, ax: Axes = None, exact: bool = None,
            backend: str = None, integral_samples: int = 1000, rotation: np.ndarray = None,
-           rot_origin: np.ndarray = None, **kwargs) -> Axes:
+           rot_origin: np.ndarray = None, log_scale: bool = False, **kwargs) -> Axes:
     """ Render a scalar SPH target variable to a grid or line plot.
 
     Parameters
@@ -171,12 +171,24 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
     rot_origin: array_like, optional
         Point of rotation of the data, in [x, y, z] form. Defaults to the centre
         point of the bounds of the data. Only applies to 3D datasets.
+    log_scale: bool
+        Whether to use a logarithmic scale for color coding.
     kwargs: other keyword arguments
         Keyword arguments to pass to ax.imshow or sns.lineplot.
 
     Returns
     -------
+    Axes
+        The resulting matplotlib axes, which contain the 2d rendered image.
 
+    Raises
+    -------
+    ValueError
+        If `x_pixels` or `y_pixels` are less than or equal to zero, or
+        if the specified `x` and `y` minimum and maximums result in an invalid region.
+    KeyError
+        If `target`, `x`, `y`, mass, density, or smoothing length columns do not
+        exist in `data`.
     """
     if data.get_dim() == 2:
         if xsec is not None:
@@ -198,14 +210,25 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
     xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
 
     if image.ndim == 1:
-        sns.lineplot(x=np.linspace(0, np.sqrt((xlim[1] - xlim[0]) ** 2 + (ylim[1] - ylim[0]) ** 2), image.size),
-                     y=image, ax=ax, **kwargs)
+        lineplot = sns.lineplot(x=np.linspace(0, np.sqrt((xlim[1] - xlim[0]) ** 2 + (ylim[1] - ylim[0]) ** 2),
+                                              image.size), y=image, ax=ax, **kwargs)
+
+        if log_scale:
+            lineplot.set(yscale='log')
+
         ax.margins(x=0, y=0)
         ax.set_xlabel(f'cross-section ({x}, {y})')
-        ax.set_ylabel(target)
+
+        label = target
+        if log_scale:
+            label = f"log ({label})"
+        ax.set_ylabel(label)
     else:
         kwargs.setdefault("origin", 'lower')
         kwargs.setdefault("extent", [xlim[0], xlim[1], ylim[0], ylim[1]])
+        if log_scale:
+            kwargs.setdefault("norm", LogNorm(clip=True))
+
         graphic = ax.imshow(image, cmap=cmap, **kwargs)
         if rotation is not None and data.get_dim() == 3:
             ax.set_xticks([])
@@ -216,7 +239,12 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
 
         if cbar:
             colorbar = ax.figure.colorbar(graphic, cbar_ax, ax, **cbar_kws)
-            colorbar.ax.set_ylabel(f"column {target}" if (data.get_dim() == 3 and xsec is None) else target)
+            label = target
+            if data.get_dim() == 3 and xsec is None:
+                label = f"column {label}"
+            if log_scale:
+                label = f"log ({label})"
+            colorbar.ax.set_ylabel(label)
 
     return ax
 
