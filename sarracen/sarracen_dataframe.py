@@ -155,27 +155,27 @@ class SarracenDataFrame(DataFrame):
                ylim: tuple[float, float] = None, cmap: Union[str, Colormap] = 'RdBu', cbar: bool = True,
                cbar_kws: dict = {}, cbar_ax: Axes = None, ax: Axes = None, exact: bool = None, backend: str = None,
                integral_samples: int = 1000, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
-               **kwargs) -> Axes:
+               log_scale: bool = None, **kwargs) -> Axes:
         return render(self, target, x, y, z, xsec, kernel, x_pixels, y_pixels, xlim, ylim, cmap, cbar, cbar_kws,
-                      cbar_ax, ax, exact, backend, integral_samples, rotation, rot_origin, **kwargs)
+                      cbar_ax, ax, exact, backend, integral_samples, rotation, rot_origin, log_scale, **kwargs)
 
     @_copy_doc(streamlines)
     def streamlines(self, target: Union[Tuple[str, str], Tuple[str, str, str]], x: str = None, y: str = None,
                     z: str = None, z_slice: int = None, kernel: BaseKernel = None, integral_samples: int = 1000,
                     rotation: np.ndarray = None, rot_origin: np.ndarray = None, x_pixels: int = None,
                     y_pixels: int = None, xlim: tuple[float, float] = None, ylim: tuple[float, float] = None,
-                    ax: Axes = None, exact: bool = None, backend: str = None, **kwargs) -> Axes:
+                    ax: Axes = None, exact: bool = None, backend: str = None, log_scale: bool = None, **kwargs) -> Axes:
         return streamlines(self, target, x, y, z, z_slice, kernel, integral_samples, rotation, rot_origin, x_pixels,
-                           y_pixels, xlim, ylim, ax, exact, backend, **kwargs)
+                           y_pixels, xlim, ylim, ax, exact, backend, log_scale, **kwargs)
 
     @_copy_doc(arrowplot)
     def arrowplot(self, target: Union[Tuple[str, str], Tuple[str, str, str]], x: str = None, y: str = None,
                   z: str = None, z_slice: int = None, kernel: BaseKernel = None, integral_samples: int = 1000,
                   rotation: np.ndarray = None, rot_origin: np.ndarray = None, x_arrows: int = None,
                   y_arrows: int = None, xlim: tuple[float, float] = None, ylim: tuple[float, float] = None,
-                  ax: Axes = None, exact: bool = None, backend: str = None, **kwargs) -> Axes:
+                  ax: Axes = None, exact: bool = None, backend: str = None, log_scale: bool = None, **kwargs) -> Axes:
         return arrowplot(self, target, z_slice, x, y, z, kernel, integral_samples, rotation, rot_origin, x_arrows,
-                         y_arrows, xlim, ylim, ax, exact, backend, **kwargs)
+                         y_arrows, xlim, ylim, ax, exact, backend, log_scale, **kwargs)
 
     @property
     def params(self):
