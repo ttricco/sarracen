@@ -179,8 +179,7 @@ def _check_dimension(data, dim):
         If the dataset is not `dim`-dimensional.
     """
     if data.get_dim() != dim:
-        #raise TypeError(f"Dataset is not {dim}-dimensional.")
-        pass
+        raise TypeError(f"Dataset is not {dim}-dimensional.")
 
 
 def _rotate_data(data, x, y, z, rotation, origin):
