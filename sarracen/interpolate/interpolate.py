@@ -52,7 +52,7 @@ def _default_xy(data, x, y):
     return x, y
 
 
-def _snap_boundaries(data, x, y, x_min, x_max, y_min, y_max):
+def _snap_boundaries(data, x, y, xlim, ylim) -> tuple[tuple[float, float], tuple[float, float]]:
     """Utility function to determine the 2-dimensional boundaries to use in 2D interpolation.
 
     Parameters
@@ -61,50 +61,51 @@ def _snap_boundaries(data, x, y, x_min, x_max, y_min, y_max):
         The particle dataset to interpolate over.
     x, y: str
         The directional column labels that will be used in interpolation.
-    x_min, x_max, y_min, y_max: float
+    xlim, ylim: tuple of float
         The minimum and maximum values passed to the interpolation function, in particle data space.
 
     Returns
     -------
-    x_min, x_max, y_min, y_max: float
+    xlim, ylim: tuple of float
         The minimum and maximum values to use in interpolation, in particle data space. Defaults
         to the maximum and minimum values of `x` and `y`, snapped to the nearest integer.
     """
     # boundaries of the plot default to the maximum & minimum values of the data.
-    if x_min is None:
-        x_min = _snap(data.loc[:, x].min())
-    if y_min is None:
-        y_min = _snap(data.loc[:, y].min())
-    if x_max is None:
-        x_max = _snap(data.loc[:, x].max())
-    if y_max is None:
-        y_max = _snap(data.loc[:, y].max())
+    x_min = xlim[0] if xlim is not None and xlim[0] is not None else None
+    y_min = ylim[0] if ylim is not None and ylim[0] is not None else None
+    x_max = xlim[1] if xlim is not None and xlim[1] is not None else None
+    y_max = ylim[1] if ylim is not None and ylim[1] is not None else None
 
-    return x_min, x_max, y_min, y_max
+    x_min = _snap(data.loc[:, x].min()) if x_min is None else x_min
+    y_min = _snap(data.loc[:, y].min()) if y_min is None else y_min
+    x_max = _snap(data.loc[:, x].max()) if x_max is None else x_max
+    y_max = _snap(data.loc[:, y].max()) if y_max is None else y_max
+
+    return (x_min, x_max), (y_min, y_max)
 
 
-def _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max):
+def _set_pixels(x_pixels: int, y_pixels: int, xlim: tuple[float, float], ylim: tuple[float, float]) -> tuple[int, int]:
     """Utility function to determine the number of pixels to interpolate over in 2D interpolation.
 
     Parameters
     ----------
     x_pixels, y_pixels: int
         The number of pixels in the x & y directions passed to the interpolation function.
-    x_min, x_max, y_min, y_max: float
+    xlim, ylim: tuple of float
         The minimum and maximum values to use in interpolation, in particle data space.
 
     Returns
     -------
-    x_pixels, y_pixels
+    x_pixels, y_pixels: int
         The number of pixels in the x & y directions to use in 2D interpolation.
     """
     # set # of pixels to maintain an aspect ratio that is the same as the underlying bounds of the data.
     if x_pixels is None and y_pixels is None:
         x_pixels = 512
     if x_pixels is None:
-        x_pixels = int(np.rint(y_pixels * ((x_max - x_min) / (y_max - y_min))))
+        x_pixels = int(np.rint(y_pixels * ((xlim[1] - xlim[0]) / (ylim[1] - ylim[0]))))
     if y_pixels is None:
-        y_pixels = int(np.rint(x_pixels * ((y_max - y_min) / (x_max - x_min))))
+        y_pixels = int(np.rint(x_pixels * ((ylim[1] - ylim[0]) / (xlim[1] - xlim[0]))))
 
     return x_pixels, y_pixels
 
@@ -143,14 +144,14 @@ def _verify_columns(data, target, x, y):
         raise KeyError("Smoothing length column does not exist in the provided dataset.")
 
 
-def _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max):
+def _check_boundaries(x_pixels: int, y_pixels: int, xlim: tuple[float, float], ylim: tuple[float, float]):
     """ Verify that the pixel count and boundaries of a 2D plot describe a valid region.
 
     Parameters
     ----------
     x_pixels, y_pixels: int
         The number of pixels in the x & y directions passed to the interpolation function.
-    x_min, x_max, y_min, y_max: float
+    xlim, ylim: tuple of float
         The minimum and maximum values to use in interpolation, in particle data space.
 
     Raises
@@ -159,10 +160,10 @@ def _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max):
         If `x_pixels` or `y_pixels` are less than or equal to zero, or
         if the specified `x` and `y` minimum and maximum values result in an invalid region.
     """
-    if x_max - x_min <= 0:
-        raise ValueError("`x_max` must be greater than `x_min`!")
-    if y_max - y_min <= 0:
-        raise ValueError("`y_max` must be greater than `y_min`!")
+    if xlim[1] - xlim[0] <= 0:
+        raise ValueError("`xlim` max must be greater than min!")
+    if ylim[1] - xlim[0] <= 0:
+        raise ValueError("`ylim` max must be greater than min!")
     if x_pixels <= 0:
         raise ValueError("`x_pixels` must be greater than zero!")
     if y_pixels <= 0:
@@ -269,8 +270,8 @@ def _rotate_xyz(data, x, y, z, rotation, origin):
 
 
 def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
-                   x_pixels: int = None, y_pixels: int = None, x_min: float = None, x_max: float = None,
-                   y_min: float = None, y_max: float = None, exact: bool = False, backend: str = None) -> np.ndarray:
+                   x_pixels: int = None, y_pixels: int = None, xlim: tuple[float, float] = None,
+                   ylim: tuple[float, float] = None, exact: bool = False, backend: str = None) -> np.ndarray:
     """ Interpolate particle data across two directional axes to a 2D grid of pixels.
 
     Interpolate the data within a SarracenDataFrame to a 2D grid, by interpolating the values
@@ -290,7 +291,7 @@ def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
     x_pixels, y_pixels: int, optional
         Number of pixels in the output image in the x & y directions. Default values are chosen to keep
         a consistent aspect ratio.
-    x_min, x_max, y_min, y_max: float, optional
+    xlim, ylim: tuple of float, optional
         The minimum and maximum values to use in interpolation, in particle data space. Defaults
         to the minimum and maximum values of `x` and `y`.
     exact: bool
@@ -318,9 +319,9 @@ def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
     x, y = _default_xy(data, x, y)
     _verify_columns(data, x, y, target)
 
-    x_min, x_max, y_min, y_max = _snap_boundaries(data, x, y, x_min, x_max, y_min, y_max)
-    x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
-    _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
+    xlim, ylim = _snap_boundaries(data, x, y, xlim, ylim)
+    x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
+    _check_boundaries(x_pixels, y_pixels, xlim, ylim)
 
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
@@ -328,12 +329,12 @@ def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
     return get_backend(backend). \
         interpolate_2d_render(data[target].to_numpy(), data[x].to_numpy(), data[y].to_numpy(), data['m'].to_numpy(),
                               data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w, kernel.get_radius(), x_pixels,
-                              y_pixels, x_min, x_max, y_min, y_max, exact)
+                              y_pixels, xlim[0], xlim[1], ylim[0], ylim[1], exact)
 
 
 def interpolate_2d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, x: str = None, y: str = None,
-                       kernel: BaseKernel = None, x_pixels: int = None, y_pixels: int = None, x_min: float = None,
-                       x_max: float = None, y_min: float = None, y_max: float = None, exact: bool = False,
+                       kernel: BaseKernel = None, x_pixels: int = None, y_pixels: int = None,
+                       xlim: tuple[float, float] = None, ylim: tuple[float, float] = None, exact: bool = False,
                        backend: str = None):
     """ Interpolate vector particle data across two directional axes to a 2D grid of particles.
 
@@ -354,7 +355,7 @@ def interpolate_2d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
     x_pixels, y_pixels: int, optional
         Number of pixels in the output image in the x & y directions. Default values are chosen to keep
         a consistent aspect ratio.
-    x_min, x_max, y_min, y_max: float, optional
+    xlim, ylim: tuple of float, optional
         The minimum and maximum values to use in interpolation, in particle data space. Defaults
         to the minimum and maximum values of `x` and `y`.
     exact: bool
@@ -383,9 +384,9 @@ def interpolate_2d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
     _verify_columns(data, x, y, target_x)
     _verify_columns(data, x, y, target_y)
 
-    x_min, x_max, y_min, y_max = _snap_boundaries(data, x, y, x_min, x_max, y_min, y_max)
-    x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
-    _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
+    xlim, ylim = _snap_boundaries(data, x, y, xlim, ylim)
+    x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
+    _check_boundaries(x_pixels, y_pixels, xlim, ylim)
 
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
@@ -393,13 +394,13 @@ def interpolate_2d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
     return get_backend(backend).\
         interpolate_2d_render_vec(data[target_x].to_numpy(), data[target_y].to_numpy(), data[x].to_numpy(),
                                   data[y].to_numpy(), data['m'].to_numpy(), data['rho'].to_numpy(),
-                                  data['h'].to_numpy(), kernel.w, kernel.get_radius(), x_pixels, y_pixels, x_min, x_max,
-                                  y_min, y_max, exact)
+                                  data['h'].to_numpy(), kernel.w, kernel.get_radius(), x_pixels, y_pixels, xlim[0],
+                                  xlim[1], ylim[0], ylim[1], exact)
 
 
 def interpolate_2d_cross(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
-                         kernel: BaseKernel = None, pixels: int = None, x1: float = None, x2: float = None,
-                         y1: float = None, y2: float = None, backend: str = None) -> np.ndarray:
+                         kernel: BaseKernel = None, pixels: int = None, xlim: tuple[float, float] = None,
+                         ylim: tuple[float, float] = None, backend: str = None) -> np.ndarray:
     """ Interpolate particle data across two directional axes to a 1D cross-section line.
 
     Interpolate the data within a SarracenDataFrame to a 1D line, by interpolating the values
@@ -418,7 +419,7 @@ def interpolate_2d_cross(data: 'SarracenDataFrame', target: str, x: str = None, 
         Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
     pixels: int, optional
         Number of points in the resulting line plot in the x-direction.
-    x1, x2, y1, y2: float, optional
+    xlim, ylim: tuple of float, optional
         Starting and ending coordinates of the cross-section line (in particle data space). Defaults to
         the minimum and maximum values of `x` and `y`.
     backend: ['cpu', 'gpu']
@@ -433,7 +434,7 @@ def interpolate_2d_cross(data: 'SarracenDataFrame', target: str, x: str = None, 
     -------
     ValueError
         If `x_pixels` or `y_pixels` are less than or equal to zero, or
-        if the specified `x1`, `x2`, `y1`, and `y2` are all the same (indicating a zero-length cross-section), or
+        if the specified `xlim` and `ylim` values are all the same (indicating a zero-length cross-section), or
         if `data` is not 2-dimensional.
     KeyError
         If `target`, `x`, `y`, mass, density, or smoothing length columns do not
@@ -443,8 +444,8 @@ def interpolate_2d_cross(data: 'SarracenDataFrame', target: str, x: str = None, 
     x, y = _default_xy(data, x, y)
     _verify_columns(data, x, y, target)
 
-    x1, x2, y1, y2 = _snap_boundaries(data, x, y, x1, x2, y1, y2)
-    if y2 == y1 and x2 == x1:
+    xlim, ylim = _snap_boundaries(data, x, y, xlim, ylim)
+    if xlim[0] == xlim[1] and ylim[0] == ylim[1]:
         raise ValueError('Zero length cross section!')
 
     kernel = kernel if kernel is not None else data.kernel
@@ -456,14 +457,14 @@ def interpolate_2d_cross(data: 'SarracenDataFrame', target: str, x: str = None, 
 
     return get_backend(backend)\
         .interpolate_2d_cross(data[target].to_numpy(), data[x].to_numpy(), data[y].to_numpy(), data['m'].to_numpy(),
-                              data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w, kernel.get_radius(), pixels, x1,
-                              x2, y1, y2)
+                              data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w, kernel.get_radius(), pixels,
+                              xlim[0], xlim[1], ylim[0], ylim[1])
 
 
 def interpolate_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
                    integral_samples: int = 1000, rotation: np.ndarray = None, origin: np.ndarray = None,
-                   x_pixels: int = None, y_pixels: int = None, x_min: float = None, x_max: float = None,
-                   y_min: float = None, y_max: float = None, exact: bool = False, backend: str = None):
+                   x_pixels: int = None, y_pixels: int = None, xlim: tuple[float, float] = None,
+                   ylim: tuple[float, float] = None, exact: bool = False, backend: str = None):
     """ Interpolate 3D particle data to a 2D grid of pixels.
 
     Interpolates three-dimensional particle data in a SarracenDataFrame. The data
@@ -491,7 +492,7 @@ def interpolate_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
     x_pixels, y_pixels: int, optional
         Number of pixels in the output image in the x & y directions. Default values are chosen to keep
         a consistent aspect ratio.
-    x_min, x_max, y_min, y_max: float, optional
+    xlim, ylim: tuple of float, optional
         The minimum and maximum values to use in interpolation, in particle data space. Defaults
         to the minimum and maximum values of `x` and `y`.
     exact: bool
@@ -524,9 +525,9 @@ def interpolate_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
     x, y = _default_xy(data, x, y)
     _verify_columns(data, x, y, target)
 
-    x_min, x_max, y_min, y_max = _snap_boundaries(data, x, y, x_min, x_max, y_min, y_max)
-    x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
-    _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
+    xlim, ylim = _snap_boundaries(data, x, y, xlim, ylim)
+    x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
+    _check_boundaries(x_pixels, y_pixels, xlim, ylim)
 
     x_data, y_data, z_data = _rotate_xyz(data, x, y, data.zcol, rotation, origin)
     kernel = kernel if kernel is not None else data.kernel
@@ -537,14 +538,14 @@ def interpolate_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
     return get_backend(backend). \
         interpolate_3d_projection(data[target].to_numpy(), x_data, y_data, z_data, data['m'].to_numpy(),
                                   data['rho'].to_numpy(), data['h'].to_numpy(), weight_function, kernel.get_radius(),
-                                  x_pixels, y_pixels, x_min, x_max, y_min, y_max, exact)
+                                  x_pixels, y_pixels, xlim[0], xlim[1], ylim[0], ylim[1], exact)
 
 
 def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, target_z: str, x: str = None,
                        y: str = None, kernel: BaseKernel = None, integral_samples: int = 1000,
                        rotation: np.ndarray = None, origin: np.ndarray = None, x_pixels: int = None,
-                       y_pixels: int = None, x_min: float = None, x_max: float = None, y_min: float = None,
-                       y_max: float = None, exact: bool = False, backend: str = None):
+                       y_pixels: int = None, xlim: tuple[float, float] = None, ylim: tuple[float, float] = None,
+                       exact: bool = False, backend: str = None):
     """ Interpolate 3D vector particle data to a 2D grid of pixels.
 
         Interpolates three-dimensional vector particle data in a SarracenDataFrame. The data
@@ -572,7 +573,7 @@ def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
         x_pixels, y_pixels: int, optional
             Number of pixels in the output image in the x & y directions. Default values are chosen to keep
             a consistent aspect ratio.
-        x_min, x_max, y_min, y_max: float, optional
+        xlim, ylim: tuple of float, optional
             The minimum and maximum values to use in interpolation, in particle data space. Defaults
             to the minimum and maximum values of `x` and `y`.
         exact: bool
@@ -606,9 +607,9 @@ def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
     _verify_columns(data, x, y, target_y)
     _verify_columns(data, x, y, target_z)
 
-    x_min, x_max, y_min, y_max = _snap_boundaries(data, x, y, x_min, x_max, y_min, y_max)
-    x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
-    _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
+    xlim, ylim = _snap_boundaries(data, x, y, xlim, ylim)
+    x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
+    _check_boundaries(x_pixels, y_pixels, xlim, ylim)
 
     x_data, y_data, _ = _rotate_xyz(data, x, y, data.zcol, rotation, origin)
     if target_z not in data.columns:
@@ -622,13 +623,14 @@ def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
     return get_backend(backend). \
         interpolate_3d_projection_vec(target_x_data, target_y_data, x_data, y_data, data['m'].to_numpy(),
                                       data['rho'].to_numpy(), data['h'].to_numpy(), weight_function,
-                                      kernel.get_radius(), x_pixels, y_pixels, x_min, x_max, y_min, y_max, exact)
+                                      kernel.get_radius(), x_pixels, y_pixels, xlim[0], xlim[1], ylim[0], ylim[1],
+                                      exact)
 
 
-def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, z_slice: float = None, x: str = None, y: str = None,
-                         z: str = None, kernel: BaseKernel = None, rotation: np.ndarray = None,
-                         origin: np.ndarray = None, x_pixels: int = None, y_pixels: int = None, x_min: float = None,
-                         x_max: float = None, y_min: float = None, y_max: float = None, backend: str = None):
+def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
+                         z_slice: float = None, kernel: BaseKernel = None, rotation: np.ndarray = None,
+                         origin: np.ndarray = None, x_pixels: int = None, y_pixels: int = None,
+                         xlim: tuple[float, float] = None, ylim: tuple[float, float] = None, backend: str = None):
     """ Interpolate 3D particle data to a 2D grid, using a 3D cross-section.
 
     Interpolates particle data in a SarracenDataFrame across three directional axes to a 2D
@@ -657,7 +659,7 @@ def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, z_slice: float 
     x_pixels, y_pixels: int, optional
         Number of pixels in the output image in the x & y directions. Default values are chosen to keep
         a consistent aspect ratio.
-    x_min, x_max, y_min, y_max: float, optional
+    xlim, ylim: tuple of float, optional
         The minimum and maximum values to use in interpolation, in particle data space. Defaults
         to the minimum and maximum values of `x` and `y`.
     backend: ['cpu', 'gpu']
@@ -695,9 +697,9 @@ def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, z_slice: float 
         z_slice = _snap(data.loc[:, z].mean())
 
     # boundaries of the plot default to the maximum & minimum values of the data.
-    x_min, x_max, y_min, y_max = _snap_boundaries(data, x, y, x_min, x_max, y_min, y_max)
-    x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
-    _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
+    xlim, ylim = _snap_boundaries(data, x, y, xlim, ylim)
+    x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
+    _check_boundaries(x_pixels, y_pixels, xlim, ylim)
 
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
@@ -705,16 +707,16 @@ def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, z_slice: float 
     x_data, y_data, z_data = _rotate_xyz(data, x, y, z, rotation, origin)
 
     return get_backend(backend) \
-        .interpolate_3d_cross(data[target].to_numpy(), z_slice, x_data, y_data, z_data, data['m'].to_numpy(),
+        .interpolate_3d_cross(data[target].to_numpy(), x_data, y_data, z_data, z_slice, data['m'].to_numpy(),
                               data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w, kernel.get_radius(), x_pixels,
-                              y_pixels, x_min, x_max, y_min, y_max)
+                              y_pixels, xlim[0], xlim[1], ylim[0], ylim[1])
 
 
 def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, target_z: str,
                              z_slice: float = None, x: str = None, y: str = None, z: str = None,
                              kernel: BaseKernel = None, rotation: np.ndarray = None, origin: np.ndarray = None,
-                             x_pixels: int = None, y_pixels: int = None, x_min: float = None, x_max: float = None,
-                             y_min: float = None, y_max: float = None, backend: str = None):
+                             x_pixels: int = None, y_pixels: int = None, xlim: tuple[float, float] = None,
+                             ylim: tuple[float, float] = None, backend: str = None):
     """ Interpolate 3D vector particle data to a 2D grid, using a 3D cross-section.
 
         Interpolates vector particle data in a SarracenDataFrame across three directional axes to a 2D
@@ -743,7 +745,7 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y:
         x_pixels, y_pixels: int, optional
             Number of pixels in the output image in the x & y directions. Default values are chosen to keep
             a consistent aspect ratio.
-        x_min, x_max, y_min, y_max: float, optional
+        xlim, ylim: float, optional
             The minimum and maximum values to use in interpolation, in particle data space. Defaults
             to the minimum and maximum values of `x` and `y`.
         backend: ['cpu', 'gpu']
@@ -780,9 +782,9 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y:
         z_slice = _snap(data.loc[:, z].mean())
 
     # boundaries of the plot default to the maximum & minimum values of the data.
-    x_min, x_max, y_min, y_max = _snap_boundaries(data, x, y, x_min, x_max, y_min, y_max)
-    x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
-    _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
+    xlim, ylim = _snap_boundaries(data, x, y, xlim, ylim)
+    x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
+    _check_boundaries(x_pixels, y_pixels, xlim, ylim)
 
     x_data, y_data, z_data = _rotate_xyz(data, x, y, data.zcol, rotation, origin)
     target_x_data, target_y_data, _ = _rotate_data(data, target_x, target_y, target_z, rotation, origin)
@@ -791,9 +793,9 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y:
     backend = backend if backend is not None else data.backend
 
     return get_backend(backend) \
-        .interpolate_3d_cross_vec(target_x_data, target_y_data, z_slice, x_data, y_data, z_data, data['m'].to_numpy(),
+        .interpolate_3d_cross_vec(target_x_data, target_y_data, x_data, y_data, z_data, z_slice, data['m'].to_numpy(),
                                   data['rho'].to_numpy(), data['h'].to_numpy(), kernel.w, kernel.get_radius(), x_pixels,
-                                  y_pixels, x_min, x_max, y_min, y_max)
+                                  y_pixels, xlim[0], xlim[1], ylim[0], ylim[1])
 
 
 def get_backend(code: str) -> BaseBackend:
