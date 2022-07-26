@@ -156,7 +156,7 @@ def _read_array_block(fp, df, n, nums, def_int_dtype, def_real_dtype):
 
     return df
 
-def _read_array_blocks(fp, def_int_dtype, def_real_dtype, drop_sinks):
+def _read_array_blocks(fp, def_int_dtype, def_real_dtype):
     """ Read particle data. Block 2 is always for sink particles?"""
     nblocks = np.frombuffer(_read_fortran_block(fp, 4), dtype=np.int32)[0]
 
@@ -183,10 +183,7 @@ def _read_array_blocks(fp, def_int_dtype, def_real_dtype, drop_sinks):
         else:
             df = _read_array_block(fp, df, n[i], nums[i], def_int_dtype, def_real_dtype)
 
-    if drop_sinks:
-        return df
-    else:
-        return pd.concat([df, df_sinks], ignore_index=True)
+    return df, df_sinks
 
 
 def read_phantom(filename: str, drop_sinks: bool = True,
@@ -215,7 +212,10 @@ def read_phantom(filename: str, drop_sinks: bool = True,
         header_vars = _read_global_header(fp, def_int_dtype, def_real_dtype)
         header_vars['file_identifier'] = file_identifier
 
-        df = _read_array_blocks(fp, def_int_dtype, def_real_dtype, drop_sinks)
+        df, df_sinks = _read_array_blocks(fp, def_int_dtype, def_real_dtype)
+
+        if not drop_sinks:
+            df = pd.concat([df, df_sinks], ignore_index=True)
 
         if separate_types and 'itype' in df and df['itype'].nunique() > 1:
             df_list = []
