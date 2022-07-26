@@ -179,7 +179,8 @@ def _check_dimension(data, dim):
         If the dataset is not `dim`-dimensional.
     """
     if data.get_dim() != dim:
-        raise TypeError(f"Dataset is not {dim}-dimensional.")
+        #raise TypeError(f"Dataset is not {dim}-dimensional.")
+        pass
 
 
 def _rotate_data(data, x, y, z, rotation, origin):
@@ -329,15 +330,21 @@ def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
     """
     _check_dimension(data, 2)
     x, y = _default_xy(data, x, y)
-    _verify_columns(data, x, y, target)
+
+    mass_data = _get_mass(data)
+    rho_data = _get_density(data)
+
+    if target == 'rho':
+        target_data = rho_data
+    else:
+        _verify_columns(data, x, y, target)
+        target_data = data[target].to_numpy()
+
+    w_data = target_data * mass_data / rho_data
 
     x_min, x_max, y_min, y_max = _snap_boundaries(data, x, y, x_min, x_max, y_min, y_max)
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
     _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
-
-    mass_data = _get_mass(data)
-    rho_data = _get_density(data)
-    w_data = data[target].to_numpy() * mass_data / rho_data
 
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
@@ -460,15 +467,21 @@ def interpolate_2d_cross(data: 'SarracenDataFrame', target: str, x: str = None, 
     """
     _check_dimension(data, 2)
     x, y = _default_xy(data, x, y)
-    _verify_columns(data, x, y, target)
+
+    mass_data = _get_mass(data)
+    rho_data = _get_density(data)
+
+    if target == 'rho':
+        target_data = rho_data
+    else:
+        _verify_columns(data, x, y, target)
+        target_data = data[target].to_numpy()
+
+    w_data = target_data * mass_data / rho_data
 
     x1, x2, y1, y2 = _snap_boundaries(data, x, y, x1, x2, y1, y2)
     if y2 == y1 and x2 == x1:
         raise ValueError('Zero length cross section!')
-
-    mass_data = _get_mass(data)
-    rho_data = _get_density(data)
-    w_data = data[target].to_numpy() * mass_data / rho_data
 
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
@@ -717,7 +730,6 @@ def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, z_slice: float 
 
     # x & y columns default to the variables determined by the SarracenDataFrame.
     x, y = _default_xy(data, x, y)
-    _verify_columns(data, target, x, y)
 
     if z is None:
         z = data.zcol
@@ -728,14 +740,21 @@ def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, z_slice: float 
     if z_slice is None:
         z_slice = _snap(data.loc[:, z].mean())
 
+    mass_data = _get_mass(data)
+    rho_data = _get_density(data)
+
+    if target == 'rho':
+        target_data = rho_data
+    else:
+        _verify_columns(data, x, y, target)
+        target_data = data[target].to_numpy()
+
+    w_data = target_data * mass_data / rho_data
+
     # boundaries of the plot default to the maximum & minimum values of the data.
     x_min, x_max, y_min, y_max = _snap_boundaries(data, x, y, x_min, x_max, y_min, y_max)
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
     _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
-
-    mass_data = _get_mass(data)
-    rho_data = _get_density(data)
-    w_data = data[target].to_numpy() * mass_data / rho_data
 
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
