@@ -39,9 +39,9 @@ class GPUBackend(BaseBackend):
                             x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2))
 
     @staticmethod
-    def interpolate_2d_cross(target: ndarray, x: ndarray, y: ndarray, mass: ndarray, rho: ndarray, h: ndarray,
-                             weight_function: CPUDispatcher, kernel_radius: float, pixels: int, x1: float, x2: float,
-                             y1: float, y2: float) -> ndarray:
+    def interpolate_2d_line(target: ndarray, x: ndarray, y: ndarray, mass: ndarray, rho: ndarray, h: ndarray,
+                            weight_function: CPUDispatcher, kernel_radius: float, pixels: int, x1: float, x2: float,
+                            y1: float, y2: float) -> ndarray:
         return GPUBackend._fast_2d_cross(target, x, y, mass, rho, h, weight_function, kernel_radius, pixels, x1, x2,
                                              y1, y2)
 

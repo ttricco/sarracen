@@ -16,7 +16,7 @@ from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.colors import Colormap, LogNorm
 
-from sarracen.interpolate import interpolate_2d_cross, interpolate_2d, interpolate_3d, interpolate_3d_cross, \
+from sarracen.interpolate import interpolate_2d_line, interpolate_2d, interpolate_3d, interpolate_3d_cross, \
     interpolate_3d_vec, interpolate_3d_cross_vec, interpolate_2d_vec
 from sarracen.kernels import BaseKernel
 
@@ -135,28 +135,25 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
         Particle data, in a SarracenDataFrame.
     target: str
         Column label of the target variable.
-    xsec: float or bool, optional.
-        For 2D datasets, whether to perform a cross-section (no cross-section by default). For a 3D dataset, the z to
-        take a cross-section at. If none, column interpolation is performed.
     x, y, z: str, optional
         Column labels of the x, y & z directional axes. Defaults to the columns detected in `data`.
+    xsec: float or bool, optional.
+        For a 3D dataset, the z to take a cross-section at. If none, column interpolation is performed. 'True' takes
+        the cross section at the middle z value of the data.
     kernel: BaseKernel, optional
         Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
     x_pixels, y_pixels: int, optional
-        Number of pixels present in the final image. For 2D cross-sections, `x_pixels` sets the number of samples in
-        the final line plot.
+        Number of pixels present in the final image.
     xlim, ylim: tuple of float, optional
-        The starting and ending corners of the final 2D image, or the starting and ending points of the cross-sectional
-        line.
+        The starting and ending corners of the final 2D image.
     cmap: str or Colormap, optional
-        The color map to use when plotting a 2D image. Not applicable to 2D cross-sections.
+        The color map to use when plotting a 2D image.
     cbar: bool, optional
-        True if a colorbar should be drawn. Not applicable to 2D cross-sections.
+        True if a colorbar should be drawn.
     cbar_kws: dict, optional
-        Keyword arguments to pass to matplotlib.figure.Figure.colorbar(). Not applicable to 2D cross-sections.
+        Keyword arguments to pass to matplotlib.figure.Figure.colorbar().
     cbar_ax: Axes
         Axes to draw the colorbar in, if not provided then space will be taken from the main Axes.
-        Not applicable to 2D cross-sections.
     ax: Axes
         The main axes in which to draw the rendered image.
     exact: bool
@@ -174,7 +171,7 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
     log_scale: bool
         Whether to use a logarithmic scale for color coding.
     kwargs: other keyword arguments
-        Keyword arguments to pass to ax.imshow or sns.lineplot.
+        Keyword arguments to pass to ax.imshow.
 
     Returns
     -------
@@ -191,10 +188,7 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
         exist in `data`.
     """
     if data.get_dim() == 2:
-        if xsec is not None:
-            image = interpolate_2d_cross(data, target, x, y, kernel, x_pixels, xlim, ylim, backend)
-        else:
-            image = interpolate_2d(data, target, x, y, kernel, x_pixels, y_pixels, xlim, ylim, exact, backend)
+        image = interpolate_2d(data, target, x, y, kernel, x_pixels, y_pixels, xlim, ylim, exact, backend)
     else:
         if xsec is not None:
             image = interpolate_3d_cross(data, target, x, y, z, None if xsec is True else xsec, kernel, rotation,
@@ -209,44 +203,96 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
     x, y = _default_axes(data, x, y)
     xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
 
-    if image.ndim == 1:
-        lineplot = sns.lineplot(x=np.linspace(0, np.sqrt((xlim[1] - xlim[0]) ** 2 + (ylim[1] - ylim[0]) ** 2),
-                                              image.size), y=image, ax=ax, **kwargs)
+    kwargs.setdefault("origin", 'lower')
+    kwargs.setdefault("extent", [xlim[0], xlim[1], ylim[0], ylim[1]])
+    if log_scale:
+        kwargs.setdefault("norm", LogNorm(clip=True))
 
-        if log_scale:
-            lineplot.set(yscale='log')
+    graphic = ax.imshow(image, cmap=cmap, **kwargs)
+    if rotation is not None and data.get_dim() == 3:
+        ax.set_xticks([])
+        ax.set_yticks([])
+    else:
+        ax.set_xlabel(x)
+        ax.set_ylabel(y)
 
-        ax.margins(x=0, y=0)
-        ax.set_xlabel(f'cross-section ({x}, {y})')
-
+    if cbar:
+        colorbar = ax.figure.colorbar(graphic, cbar_ax, ax, **cbar_kws)
         label = target
+        if data.get_dim() == 3 and xsec is None:
+            label = f"column {label}"
         if log_scale:
             label = f"log ({label})"
-        ax.set_ylabel(label)
-    else:
-        kwargs.setdefault("origin", 'lower')
-        kwargs.setdefault("extent", [xlim[0], xlim[1], ylim[0], ylim[1]])
-        if log_scale:
-            kwargs.setdefault("norm", LogNorm(clip=True))
-
-        graphic = ax.imshow(image, cmap=cmap, **kwargs)
-        if rotation is not None and data.get_dim() == 3:
-            ax.set_xticks([])
-            ax.set_yticks([])
-        else:
-            ax.set_xlabel(x)
-            ax.set_ylabel(y)
-
-        if cbar:
-            colorbar = ax.figure.colorbar(graphic, cbar_ax, ax, **cbar_kws)
-            label = target
-            if data.get_dim() == 3 and xsec is None:
-                label = f"column {label}"
-            if log_scale:
-                label = f"log ({label})"
-            colorbar.ax.set_ylabel(label)
+        colorbar.ax.set_ylabel(label)
 
     return ax
+
+
+def lineplot(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
+             kernel: BaseKernel = None, pixels: int = None, xlim: tuple[float, float] = None,
+             ylim: tuple[float, float] = None, zlim: tuple[float, float] = None, ax: Axes = None, backend: str = None,
+             log_scale: bool = False, **kwargs):
+    """ Render a scalar SPH target variable to line plot.
+
+    Parameters
+    ----------
+    data : SarracenDataFrame
+        Particle data, in a SarracenDataFrame.
+    target: str
+        Column label of the target variable.
+    x, y, z: str, optional
+        Column labels of the x, y & z directional axes. Defaults to the columns detected in `data`.
+    kernel: BaseKernel, optional
+        Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
+    pixels: int, optional
+        Number of samples taken across the x axis in the final plot.
+    xlim, ylim, zlim: tuple of float, optional
+        Coordinates of the two points that make up the cross-sectional line.
+    ax: Axes
+        The main axes in which to draw the final plot.
+    backend: ['cpu', 'gpu']
+        The computation backend to use when performing the underlying interpolation. Defaults to the backend
+        specified in `data`.
+    log_scale: bool
+        Whether to use a logarithmic scale for color coding.
+    kwargs: other keyword arguments
+        Keyword arguments to pass to sns.lineplot.
+
+    Returns
+    -------
+    Axes
+        The resulting matplotlib axes, which contain the 2d rendered image.
+
+    Raises
+    -------
+    ValueError
+        If `x_pixels` or `y_pixels` are less than or equal to zero, or
+        if the specified `x` and `y` minimum and maximums result in an invalid region.
+    KeyError
+        If `target`, `x`, `y`, mass, density, or smoothing length columns do not
+        exist in `data`.
+    """
+    if data.get_dim() == 2:
+        image = interpolate_2d_line(data, target, x, y, kernel, pixels, xlim, ylim, backend)
+    else:
+        pass
+        # image = interpolate_3d_line(data, target, x, y, z, kernel, pixels, xlim, ylim, zlim, backend)
+    x, y = _default_axes(data, x, y)
+    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
+
+    plot = sns.lineplot(x=np.linspace(0, np.sqrt((xlim[1] - xlim[0]) ** 2 + (ylim[1] - ylim[0]) ** 2),
+                                          image.size), y=image, ax=ax, **kwargs)
+
+    if log_scale:
+        plot.set(yscale='log')
+
+    ax.margins(x=0, y=0)
+    ax.set_xlabel(f'cross-section ({x}, {y})')
+
+    label = target
+    if log_scale:
+        label = f"log ({label})"
+    ax.set_ylabel(label)
 
 
 def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[str, str, str]], x: str = None,

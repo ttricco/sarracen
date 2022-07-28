@@ -10,7 +10,7 @@ from scipy.spatial.transform import Rotation
 
 from sarracen import SarracenDataFrame
 from sarracen.kernels import CubicSplineKernel, QuarticSplineKernel, QuinticSplineKernel
-from sarracen.interpolate import interpolate_2d, interpolate_2d_cross, interpolate_3d_cross, interpolate_3d, \
+from sarracen.interpolate import interpolate_2d, interpolate_2d_line, interpolate_3d_cross, interpolate_3d, \
     interpolate_2d_vec, interpolate_3d_vec, interpolate_3d_cross_vec
 
 backends = ['cpu']
@@ -50,7 +50,7 @@ def test_single_particle(backend):
             assert image_vec[1][y][x] == \
                    approx(w[0] * sdf['B'][0] * kernel.w(np.sqrt(real[x] ** 2 + real[y] ** 2) / sdf['h'][0], 2))
 
-    image = interpolate_2d_cross(sdf, 'A', pixels=25, xlim=(-kernel.get_radius(), kernel.get_radius()),
+    image = interpolate_2d_line(sdf, 'A', pixels=25, xlim=(-kernel.get_radius(), kernel.get_radius()),
                                  ylim=(-kernel.get_radius(), kernel.get_radius()))
     for x in range(25):
         assert image[x] == approx(w[0] * sdf['A'][0] * kernel.w(np.sqrt(2) * np.abs(real[x]) / sdf['h'][0], 2))
@@ -135,7 +135,7 @@ def test_single_repeated_particle(backend):
             assert image_vec[1][y][x] == \
                    approx(w[0] * sdf['B'][0] * kernel.w(np.sqrt(real[x] ** 2 + real[y] ** 2) / sdf['h'][0], 2))
 
-    image = interpolate_2d_cross(sdf, 'A', pixels=25, xlim=(-kernel.get_radius(), kernel.get_radius()),
+    image = interpolate_2d_line(sdf, 'A', pixels=25, xlim=(-kernel.get_radius(), kernel.get_radius()),
                                  ylim=(-kernel.get_radius(), kernel.get_radius()))
     for x in range(25):
         assert image[x] == approx(w[0] * sdf['A'][0] * kernel.w(np.sqrt(2) * np.abs(real[x]) / sdf['h'][0], 2))
@@ -206,7 +206,7 @@ def test_dimension_check(backend):
     sdf = SarracenDataFrame(df, params=dict())
     sdf.backend = backend
 
-    for func in [interpolate_2d, interpolate_2d_cross]:
+    for func in [interpolate_2d, interpolate_2d_line]:
         with raises(TypeError):
             func(sdf, 'P')
     with raises(TypeError):
@@ -273,12 +273,12 @@ def test_2d_xsec_equivalency(backend):
 
     reconstructed_image = np.zeros((50, 50))
     for y in range(50):
-        reconstructed_image[y, :] = interpolate_2d_cross(sdf, 'A', pixels=50, xlim=(-1, 1), ylim=(real[y], real[y]))
+        reconstructed_image[y, :] = interpolate_2d_line(sdf, 'A', pixels=50, xlim=(-1, 1), ylim=(real[y], real[y]))
     assert_allclose(reconstructed_image, true_image)
 
     reconstructed_image = np.zeros((50, 50))
     for x in range(50):
-        reconstructed_image[:, x] = interpolate_2d_cross(sdf, 'A', pixels=50, xlim=(real[x], real[x]), ylim=(-1, 1))
+        reconstructed_image[:, x] = interpolate_2d_line(sdf, 'A', pixels=50, xlim=(real[x], real[x]), ylim=(-1, 1))
     assert_allclose(reconstructed_image, true_image)
 
 
@@ -321,7 +321,7 @@ def test_corner_particles(backend):
                           + w[1] * sdf_2['B'][1] * kernel.w(np.sqrt(real[24 - x] ** 2 + real[24 - y] ** 2)
                                                             / sdf_2['h'][1], 2)) == image_vec[1][y][x]
 
-    image = interpolate_2d_cross(sdf_2, 'A', pixels=25)
+    image = interpolate_2d_line(sdf_2, 'A', pixels=25)
     for x in range(25):
         assert approx(w[0] * sdf_2['A'][0] * kernel.w(np.sqrt(real[x] ** 2 + real[x] ** 2) / sdf_2['h'][0], 2)
                       + w[1] * sdf_2['A'][1] * kernel.w(np.sqrt(real[24 - x] ** 2 + real[24 - x] ** 2)
@@ -429,7 +429,7 @@ def test_default_kernel(backend):
     assert image[0] == kernel.w(0, 2)
     assert image[1] == kernel.w(0, 2)
 
-    image = interpolate_2d_cross(sdf_2, 'A', pixels=1, xlim=(-1, 1), ylim=(-1, 1))
+    image = interpolate_2d_line(sdf_2, 'A', pixels=1, xlim=(-1, 1), ylim=(-1, 1))
     assert image == kernel.w(0, 2)
 
     image = interpolate_3d(sdf_3, 'A', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1))
@@ -452,7 +452,7 @@ def test_default_kernel(backend):
     assert image[0] == kernel.w(0, 2)
     assert image[1] == kernel.w(0, 2)
 
-    image = interpolate_2d_cross(sdf_2, 'A', pixels=1, xlim=(-1, 1), ylim=(-1, 1), kernel=kernel)
+    image = interpolate_2d_line(sdf_2, 'A', pixels=1, xlim=(-1, 1), ylim=(-1, 1), kernel=kernel)
     assert image == kernel.w(0, 2)
 
     image = interpolate_3d(sdf_3, 'A', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), kernel=kernel)
@@ -674,7 +674,7 @@ def test_oob_particles(backend):
 
     image = interpolate_2d(sdf_2, 'A', x_pixels=25, y_pixels=25, xlim=(1, 2), ylim=(1, 2))
     image_vec = interpolate_2d_vec(sdf_2, 'A', 'B', x_pixels=25, y_pixels=25, xlim=(1, 2), ylim=(1, 2))
-    line = interpolate_2d_cross(sdf_2, 'A', pixels=25, xlim=(1, 2), ylim=(1, 2))
+    line = interpolate_2d_line(sdf_2, 'A', pixels=25, xlim=(1, 2), ylim=(1, 2))
     for y in range(25):
         assert line[y] == approx(
             w[0] * sdf_2['A'][0] * kernel.w(np.sqrt(real_x[y] ** 2 + real_y[y] ** 2) / sdf_2['h'][0], 2))
@@ -1007,7 +1007,7 @@ def test_invalid_region(backend):
         # the first case will not fail for this type of interpolation.
         if not b[0] == -3 and not b[3] == -3:
             with raises(ValueError):
-                interpolate_2d_cross(sdf_2, 'A', xlim=(b[0], b[1]), ylim=(b[2], b[3]), pixels=b[4])
+                interpolate_2d_line(sdf_2, 'A', xlim=(b[0], b[1]), ylim=(b[2], b[3]), pixels=b[4])
         with raises(ValueError):
             interpolate_3d(sdf_3, 'A', xlim=(b[0], b[1]), ylim=(b[2], b[3]), x_pixels=b[4], y_pixels=b[5])
         with raises(ValueError):
@@ -1043,7 +1043,7 @@ def test_required_columns(backend):
         with raises(KeyError):
             interpolate_2d(sdf_dropped, 'A')
         with raises(KeyError):
-            interpolate_2d_cross(sdf_dropped, 'A')
+            interpolate_2d_line(sdf_dropped, 'A')
         with raises(KeyError):
             interpolate_2d_vec(sdf_dropped, 'A', 'B')
 
