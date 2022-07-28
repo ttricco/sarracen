@@ -202,9 +202,10 @@ class SarracenDataFrame(DataFrame):
                   y: str = None, z: str = None, kernel: BaseKernel = None, integral_samples: int = 1000,
                   rotation: np.ndarray = None, rot_origin: np.ndarray = None, x_arrows: int = None,
                   y_arrows: int = None, x_min: float = None, x_max: float = None, y_min: float = None,
-                  y_max: float = None, ax: Axes = None, exact: bool = None, backend: str='cpu', **kwargs) -> Axes:
+                  y_max: float = None, ax: Axes = None, qkey: bool = True, qkey_kws: dict = None, exact: bool = None,
+                  backend: str='cpu', **kwargs) -> Axes:
         return arrowplot(self, target, z_slice, x, y, z, kernel, integral_samples, rotation, rot_origin, x_arrows,
-                         y_arrows, x_min, x_max, y_min, y_max, ax, exact, backend, **kwargs)
+                         y_arrows, x_min, x_max, y_min, y_max, ax, qkey, qkey_kws, exact, backend, **kwargs)
 
     @property
     def params(self):
