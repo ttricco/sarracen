@@ -316,7 +316,7 @@ def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[st
               x: str = None, y: str = None, z: str = None, kernel: BaseKernel = None, integral_samples: int = 1000,
               rotation: np.ndarray = None, origin: np.ndarray = None, x_arrows: int = None, y_arrows: int = None,
               x_min: float = None, x_max: float = None, y_min: float = None, y_max: float = None, ax: Axes = None,
-              exact: bool = None, backend: str = None, **kwargs) -> Axes:
+              qkey: bool = True, qkey_kws=None, exact: bool = None, backend: str = None, **kwargs) -> Axes:
     """ Create an SPH interpolated vector field plot of a target vector.
 
     Render the data within a SarracenDataFrame to a 2D matplotlib object, by rendering the values
@@ -351,6 +351,10 @@ def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[st
         to the minimum and maximum values of `x` and `y`.
     ax: Axes
         The main axes in which to draw the rendered image.
+    qkey: bool
+        Whether to include a quiver key on the final plot.
+    qkey_kws: dict
+        Keywords to pass through to ax.quiver.
     exact: bool
         Whether to use exact interpolation of the data. For cross-sections this is ignored. Defaults to False.
     backend: ['cpu', 'gpu']
@@ -406,8 +410,26 @@ def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[st
 
     kwargs.setdefault("angles", 'uv')
     kwargs.setdefault("pivot", 'mid')
-    ax.quiver(np.linspace(x_min, x_max, np.size(img[0], 1)), np.linspace(y_min, y_max, np.size(img[0], 0)), img[0],
-              img[1], **kwargs)
+    Q = ax.quiver(np.linspace(x_min, x_max, np.size(img[0], 1)), np.linspace(y_min, y_max, np.size(img[0], 0)), img[0],
+                  img[1], **kwargs)
+
+    if qkey:
+        if qkey_kws is None:
+            qkey_kws = dict()
+        # approximately equivalent to the top right of the plot.
+        qkey_kws.setdefault('X', 0.85)
+        qkey_kws.setdefault('Y', 1.02)
+
+        # find a reasonable default value for the quiver key length.
+        key_length = float(np.format_float_positional(np.mean(np.sqrt(img[0] ** 2 + img[1] ** 2)), precision=1,
+                                                      unique=False, fractional=False, trim='k'))
+        qkey_kws.setdefault('U', key_length)
+        qkey_kws.setdefault('label', f"= {qkey_kws['U']}")
+
+        qkey_kws.setdefault('labelpos', 'E')
+        qkey_kws.setdefault('coordinates', 'axes')
+
+        ax.quiverkey(Q, **qkey_kws)
 
     ax.set_xlim(x_min, x_max)
     ax.set_ylim(y_min, y_max)
