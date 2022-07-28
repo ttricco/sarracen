@@ -5,8 +5,8 @@ from numba import cuda
 from numpy.testing import assert_array_equal
 from pytest import mark
 
-from sarracen import SarracenDataFrame, interpolate_2d, interpolate_2d_cross, interpolate_3d, interpolate_3d_cross
-from sarracen.render import render, streamlines, arrowplot
+from sarracen import SarracenDataFrame, interpolate_2d, interpolate_2d_line, interpolate_3d, interpolate_3d_cross
+from sarracen.render import render, streamlines, arrowplot, lineplot
 
 backends = ['cpu']
 if cuda.is_available():
@@ -27,8 +27,8 @@ def test_interpolation_passthrough(backend):
     assert_array_equal(ax.images[0].get_array().filled(0), interpolate_2d(sdf, 'P'))
 
     fig, ax = plt.subplots()
-    render(sdf, 'P', xsec=True, xlim=(3, 6), ylim=(5, 1), ax=ax)
-    assert_array_equal(ax.lines[0].get_ydata(), interpolate_2d_cross(sdf, 'P', xlim=(3, 6), ylim=(5, 1)))
+    lineplot(sdf, 'P', xlim=(3, 6), ylim=(1, 5), ax=ax)
+    assert_array_equal(ax.lines[0].get_ydata(), interpolate_2d_line(sdf, 'P', xlim=(3, 6), ylim=(1, 5)))
 
     df = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'z': [2, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
     sdf = SarracenDataFrame(df)
@@ -143,7 +143,7 @@ def test_kwargs(backend):
     assert ax.collections[0].zorder == 5
 
     fig, ax = plt.subplots()
-    render(sdf_2, 'P', xsec=True, xlim=(3, 6), ylim=(5, 1), ax=ax, linestyle='--')
+    lineplot(sdf_2, 'P', xlim=(3, 6), ylim=(1, 5), ax=ax, linestyle='--')
 
     assert ax.lines[0].get_linestyle() == '--'
 
@@ -188,20 +188,21 @@ def test_plot_labels(backend):
     sdf_3 = SarracenDataFrame(df_3)
     sdf_3.backend = backend
 
-    for args in [{'data': sdf_2, 'xsec': None}, {'data': sdf_3, 'xsec': None}, {'data': sdf_3, 'xsec': True}]:
+    for args in [{'data': sdf_2, 'xsec': None}, {'data': sdf_3, 'xsec': None}, {'data': sdf_3, 'xsec': 0}]:
         fig, ax = plt.subplots()
         render(args['data'], 'P', xsec=args['xsec'], ax=ax)
 
         assert ax.get_xlabel() == 'x'
         assert ax.get_ylabel() == 'y'
-        assert ax.figure.axes[1].get_ylabel() == ('column ' if args['data'] is sdf_3 and not args['xsec'] else '') + 'P'
+        assert ax.figure.axes[1].get_ylabel() == \
+               ('column ' if args['data'] is sdf_3 and args['xsec'] is None else '') + 'P'
 
         fig, ax = plt.subplots()
         render(args['data'], 'rho', x='y', y='x', xsec=args['xsec'], ax=ax)
 
         assert ax.get_xlabel() == 'y'
         assert ax.get_ylabel() == 'x'
-        assert ax.figure.axes[1].get_ylabel() == ('column ' if args['data'] is sdf_3 and not args['xsec'] else '')\
+        assert ax.figure.axes[1].get_ylabel() == ('column ' if args['data'] is sdf_3 and args['xsec'] is None else '')\
                + 'rho'
 
     for func in [streamlines, arrowplot]:
@@ -218,13 +219,13 @@ def test_plot_labels(backend):
         assert ax.get_ylabel() == 'x'
 
     fig, ax = plt.subplots()
-    render(sdf_2, 'P', xsec=True, ax=ax)
+    lineplot(sdf_2, 'P', ax=ax)
 
     assert ax.get_xlabel() == 'cross-section (x, y)'
     assert ax.get_ylabel() == 'P'
 
     fig, ax = plt.subplots()
-    render(sdf_2, 'rho', x='y', y='x', xsec=True, ax=ax)
+    lineplot(sdf_2, 'rho', x='y', y='x', ax=ax)
 
     assert ax.get_xlabel() == 'cross-section (y, x)'
     assert ax.get_ylabel() == 'rho'
@@ -249,25 +250,25 @@ def test_plot_bounds(backend):
         fig, ax = plt.subplots()
         render(args['data'], 'P', xsec=args['xsec'], ax=ax)
 
-        if args['data'] is sdf_2 and args['xsec']:
-            assert ax.get_xlim() == (0, 5)
-
-            # 512 pixels across (by default), and both particles are in corners
-            # therefore closest pixel to a particle is sqrt(41)/1024 units away
-            # use default kernel to determine the max pressure value
-            assert ax.get_ylim() == (0, interpolate_2d_cross(sdf_2, 'P').max())
-        else:
-            assert ax.get_xlim() == (3, 6)
-            assert ax.get_ylim() == (1, 5)
+        assert ax.get_xlim() == (3, 6)
+        assert ax.get_ylim() == (1, 5)
 
         if args['data'] is sdf_2:
-            if not args['xsec']:
-                assert ax.figure.axes[1].get_ylim() == (0, interpolate_2d(sdf_2, 'P').max())
+            assert ax.figure.axes[1].get_ylim() == (0, interpolate_2d(sdf_2, 'P').max())
         else:
             if args['xsec']:
                 assert ax.figure.axes[1].get_ylim() == (0, interpolate_3d_cross(sdf_3, 'P').max())
             else:
                 assert ax.figure.axes[1].get_ylim() == (0, interpolate_3d(sdf_3, 'P').max())
+
+    fig, ax = plt.subplots()
+    lineplot(sdf_2, 'P', ax=ax)
+
+    assert ax.get_xlim() == (0, 5)
+    # 512 pixels across (by default), and both particles are in corners
+    # therefore closest pixel to a particle is sqrt(41)/1024 units away
+    # use default kernel to determine the max pressure value
+    assert ax.get_ylim() == (0, interpolate_2d_line(sdf_2, 'P').max())
 
     for func in [arrowplot, streamlines]:
         fig, ax = plt.subplots()
