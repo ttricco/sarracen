@@ -162,8 +162,8 @@ class SarracenDataFrame(DataFrame):
     @_copy_doc(lineplot)
     def lineplot(self, target: str, x: str = None, y: str = None, z: str = None,
                  kernel: BaseKernel = None, pixels: int = None, xlim: tuple[float, float] = None,
-                 ylim: tuple[float, float] = None, zlim: tuple[float, float] = None, ax: Axes = None, backend: str = None,
-                 log_scale: bool = False, **kwargs):
+                 ylim: tuple[float, float] = None, zlim: tuple[float, float] = None, ax: Axes = None,
+                 backend: str = None, log_scale: bool = False, **kwargs):
         return lineplot(self, target, x, y, z, kernel, pixels, xlim, ylim, zlim, ax, backend, log_scale, **kwargs)
 
     @_copy_doc(streamlines)
@@ -180,9 +180,10 @@ class SarracenDataFrame(DataFrame):
                   z: str = None, z_slice: int = None, kernel: BaseKernel = None, integral_samples: int = 1000,
                   rotation: np.ndarray = None, rot_origin: np.ndarray = None, x_arrows: int = None,
                   y_arrows: int = None, xlim: tuple[float, float] = None, ylim: tuple[float, float] = None,
-                  ax: Axes = None, exact: bool = None, backend: str = None, **kwargs) -> Axes:
+                  ax: Axes = None, qkey: bool = True, qkey_kws: dict = None, exact: bool = None, backend: str = None,
+                  **kwargs) -> Axes:
         return arrowplot(self, target, z_slice, x, y, z, kernel, integral_samples, rotation, rot_origin, x_arrows,
-                         y_arrows, xlim, ylim, ax, exact, backend, **kwargs)
+                         y_arrows, xlim, ylim, ax, qkey, qkey_kws, exact, backend, **kwargs)
 
     @property
     def params(self):
