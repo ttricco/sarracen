@@ -127,10 +127,10 @@ class SarracenDataFrame(DataFrame):
         KeyError
             If the 'massoftype' column does not exist in `params`.
         """
-        if 'massoftype' not in self.params:
-            raise KeyError("'massoftype' column does not exist in this SarracenDataFrame.")
+        if 'mass' not in self.params:
+            raise KeyError("'mass' value does not exist in this SarracenDataFrame.")
 
-        self['m'] = self.params['massoftype']
+        self['m'] = self.params['mass']
         self._mcol = 'm'
 
     def derive_density(self):
