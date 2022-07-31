@@ -186,7 +186,7 @@ def _read_array_blocks(fp, def_int_dtype, def_real_dtype):
     return df, df_sinks
 
 
-def read_phantom(filename: str, separate_types: str = 'sinks') -> Union[SarracenDataFrame, list[SarracenDataFrame]]:
+def read_phantom(filename: str, separate_types: str = 'sinks'):
     """
     Read data from a Phantom dump file.
 
@@ -229,4 +229,3 @@ def read_phantom(filename: str, separate_types: str = 'sinks') -> Union[Sarracen
                     SarracenDataFrame(df_sinks, params=header_vars)]
 
         return SarracenDataFrame(pd.concat([df, df_sinks], ignore_index=True), params=header_vars)
-
