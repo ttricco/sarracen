@@ -39,7 +39,7 @@ def test_interpolation_passthrough(backend):
     assert_array_equal(ax.images[0].get_array().filled(0), interpolate_3d(sdf, 'P'))
 
     fig, ax = plt.subplots()
-    render(sdf, 'P', xsec=True, ax=ax)
+    render(sdf, 'P', xsec=1.5, ax=ax)
     assert_array_equal(ax.images[0].get_array().filled(0), interpolate_3d_cross(sdf, 'P'))
 
 
@@ -67,7 +67,7 @@ def test_cmap(backend):
     assert ax.images[0].cmap.name == 'magma'
 
     fig, ax = plt.subplots()
-    render(sdf, 'P', xsec=True, cmap='magma', ax=ax)
+    render(sdf, 'P', xsec=1.5, cmap='magma', ax=ax)
 
     assert ax.images[0].cmap.name == 'magma'
 
@@ -84,7 +84,7 @@ def test_cbar_exclusion(backend):
     sdf_3 = SarracenDataFrame(df_3)
     sdf_3.backend = backend
 
-    for args in [{'data': sdf_2, 'xsec': None}, {'data': sdf_3, 'xsec': None}, {'data': sdf_3, 'xsec': True}]:
+    for args in [{'data': sdf_2, 'xsec': None}, {'data': sdf_3, 'xsec': None}, {'data': sdf_3, 'xsec': 1.5}]:
         fig, ax = plt.subplots()
         render(args['data'], 'P', xsec=args['xsec'], cbar=True, ax=ax)
 
@@ -108,7 +108,7 @@ def test_cbar_keywords(backend):
     sdf_3 = SarracenDataFrame(df_3)
     sdf_3.backend = backend
 
-    for args in [{'data': sdf_2, 'xsec': None}, {'data': sdf_3, 'xsec': None}, {'data': sdf_3, 'xsec': True}]:
+    for args in [{'data': sdf_2, 'xsec': None}, {'data': sdf_3, 'xsec': None}, {'data': sdf_3, 'xsec': 1.5}]:
         fig, ax = plt.subplots()
         render(args['data'], 'P', xsec=args['xsec'], cbar_kws={'orientation': 'horizontal'}, ax=ax)
 
@@ -128,7 +128,7 @@ def test_kwargs(backend):
     sdf_3 = SarracenDataFrame(df_3)
     sdf_3.backend = backend
 
-    for args in [{'data': sdf_2, 'xsec': None}, {'data': sdf_3, 'xsec': None}, {'data': sdf_3, 'xsec': True}]:
+    for args in [{'data': sdf_2, 'xsec': None}, {'data': sdf_3, 'xsec': None}, {'data': sdf_3, 'xsec': 1.5}]:
         fig, ax = plt.subplots()
         render(args['data'], 'P', xsec=args['xsec'], ax=ax, origin='upper')
 
@@ -158,7 +158,7 @@ def test_rotated_ticks(backend):
     sdf = SarracenDataFrame(df)
     sdf.backend = backend
 
-    for xsec in [False, True]:
+    for xsec in [None, 1.5]:
         fig, ax = plt.subplots()
         render(sdf, 'P', xsec=xsec, ax=ax, rotation=[34, 23, 50])
 
@@ -245,8 +245,7 @@ def test_plot_bounds(backend):
     sdf_3 = SarracenDataFrame(df_3)
     sdf_3.backend = backend
 
-    for args in [{'data': sdf_2, 'xsec': None}, {'data': sdf_2, 'xsec': True}, {'data': sdf_3, 'xsec': None},
-                 {'data': sdf_3, 'xsec': True}]:
+    for args in [{'data': sdf_2, 'xsec': None}, {'data': sdf_3, 'xsec': None}, {'data': sdf_3, 'xsec': 1.5}]:
         fig, ax = plt.subplots()
         render(args['data'], 'P', xsec=args['xsec'], ax=ax)
 
