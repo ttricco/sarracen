@@ -1,10 +1,16 @@
+.. _sarracen:
+
 =================
 SarracenDataFrame
 =================
 
-.. currentmodule:: sarracen
-
 A SarracenDataFrame holds particle data.
+
+.. automodule:: sarracen
+   :no-members:
+   :no-inherited-members:
+
+.. currentmodule:: sarracen
 
 
 Constructor
@@ -24,8 +30,9 @@ Rendering
 .. autosummary::
    :toctree: api/
 
-   SarracenDataFrame.render_1d_cross
    SarracenDataFrame.render_2d
+   SarracenDataFrame.streamlines
+   SarracenDataFrame.arrowplot
 
 Interpolation
 -------------

@@ -1,3 +1,5 @@
+from typing import Union
+
 import numpy as np
 import pandas as pd
 
@@ -181,11 +183,10 @@ def _read_array_blocks(fp, def_int_dtype, def_real_dtype):
         else:
             df = _read_array_block(fp, df, n[i], nums[i], def_int_dtype, def_real_dtype)
 
-    return pd.concat([df, df_sinks], ignore_index=True)
+    return df, df_sinks
 
 
-
-def read_phantom(filename: str) -> SarracenDataFrame:
+def read_phantom(filename: str, separate_types: str = 'sinks'):
     """
     Read data from a Phantom dump file.
 
@@ -193,10 +194,14 @@ def read_phantom(filename: str) -> SarracenDataFrame:
     ----------
     filename : str
         Name of the file to be loaded.
+    separate_types: [None, 'sinks', 'all']
+        Whether to separate different particle types into several dataframes. None returns all particle types in one
+        data frame. 'sinks' separates sink particles into a second dataframe, and 'all' returns all particle types in
+        different dataframes.
 
     Returns
     -------
-    SarracenDataFrame
+    SarracenDataFrame or list of SarracenDataFrame
     """
     with open(filename, 'rb') as fp:
         def_int_dtype, def_real_dtype = _read_capture_pattern(fp)
@@ -205,6 +210,23 @@ def read_phantom(filename: str) -> SarracenDataFrame:
         header_vars = _read_global_header(fp, def_int_dtype, def_real_dtype)
         header_vars['file_identifier'] = file_identifier
 
-        df = _read_array_blocks(fp, def_int_dtype, def_real_dtype)
+        df, df_sinks = _read_array_blocks(fp, def_int_dtype, def_real_dtype)
 
-        return SarracenDataFrame(df, params=header_vars)
+        if separate_types == 'all' and 'itype' in df and df['itype'].nunique() > 1:
+            df_list = []
+            for _, group in df.groupby('itype'):
+                itype = int(group["itype"].iloc[0])
+                mass_key = 'massoftype' if itype == 1 else f'massoftype_{itype}'
+                df_list.append(SarracenDataFrame(group.dropna(axis=1),
+                                                 params={**header_vars, **{"mass": header_vars[mass_key]}}))
+
+            df_list.append(SarracenDataFrame(df_sinks, params=header_vars))
+
+            return df_list
+
+        if (separate_types == 'sinks' or separate_types == 'all') and not df_sinks.empty:
+            return [SarracenDataFrame(df, params={**header_vars, **{"mass": header_vars['massoftype']}}),
+                    SarracenDataFrame(df_sinks, params=header_vars)]
+
+        return SarracenDataFrame(pd.concat([df, df_sinks], ignore_index=True),
+                                 params={**header_vars, **{"mass": header_vars['massoftype']}})
