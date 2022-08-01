@@ -137,9 +137,8 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
         Column label of the target variable.
     x, y, z: str, optional
         Column labels of the x, y & z directional axes. Defaults to the columns detected in `data`.
-    xsec: float or bool, optional.
-        For a 3D dataset, the z to take a cross-section at. If none, column interpolation is performed. 'True' takes
-        the cross section at the middle z value of the data.
+    xsec: float, optional.
+        For a 3D dataset, the z value to take a cross-section at. If none, column interpolation is performed.
     kernel: BaseKernel, optional
         Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
     x_pixels, y_pixels: int, optional
@@ -191,7 +190,7 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
         image = interpolate_2d(data, target, x, y, kernel, x_pixels, y_pixels, xlim, ylim, exact, backend)
     else:
         if xsec is not None:
-            image = interpolate_3d_cross(data, target, x, y, z, None if xsec is True else xsec, kernel, rotation,
+            image = interpolate_3d_cross(data, target, x, y, z, xsec, kernel, rotation,
                                          rot_origin, x_pixels, y_pixels, xlim, ylim, backend)
         else:
             image = interpolate_3d(data, target, x, y, kernel, integral_samples, rotation, rot_origin, x_pixels,
@@ -296,7 +295,7 @@ def lineplot(data: 'SarracenDataFrame', target: str, x: str = None, y: str = Non
 
 
 def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[str, str, str]], x: str = None,
-                y: str = None, z: str = None, z_slice: int = None, kernel: BaseKernel = None,
+                y: str = None, z: str = None, xsec: int = None, kernel: BaseKernel = None,
                 integral_samples: int = 1000, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
                 x_pixels: int = None, y_pixels: int = None, xlim: tuple[float, float] = None,
                 ylim: tuple[float, float] = None, ax: Axes = None, exact: bool = None, backend: str = None,
@@ -314,7 +313,7 @@ def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[
         Particle data, in a SarracenDataFrame.
     target: str tuple of shape (2) or (3).
         Column label of the target vector. Shape must match the # of dimensions in `data`.
-    z_slice: float
+    xsec: float
         The z to take a cross-section at. If none, column interpolation is performed.
     x, y, z: str, optional
         Column label of the x, y & z directional axes. Defaults to the columns detected in `data`.
@@ -368,11 +367,11 @@ def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[
     elif data.get_dim() == 3:
         if not len(target) == 3:
             raise ValueError('Target vector is not 3-dimensional.')
-        if z_slice is None:
+        if xsec is None:
             img = interpolate_3d_vec(data, target[0], target[1], target[2], x, y, kernel, integral_samples, rotation,
                                      rot_origin, x_pixels, y_pixels, xlim, ylim, exact, backend)
         else:
-            img = interpolate_3d_cross_vec(data, target[0], target[1], target[2], z_slice, x, y, z, kernel, rotation,
+            img = interpolate_3d_cross_vec(data, target[0], target[1], target[2], xsec, x, y, z, kernel, rotation,
                                            rot_origin, x_pixels, y_pixels, xlim, ylim, backend)
     else:
         raise ValueError('`data` is not a valid number of dimensions.')
@@ -403,7 +402,7 @@ def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[
 
 
 def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[str, str, str]], x: str = None,
-              y: str = None, z: str = None, z_slice: int = None, kernel: BaseKernel = None,
+              y: str = None, z: str = None, xsec: float = None, kernel: BaseKernel = None,
               integral_samples: int = 1000, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
               x_arrows: int = None, y_arrows: int = None, xlim: tuple[float, float] = None,
               ylim: tuple[float, float] = None, ax: Axes = None, qkey: bool = True, qkey_kws=None, exact: bool = None,
@@ -421,7 +420,7 @@ def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[st
         Particle data, in a SarracenDataFrame.
     target: str tuple of shape (2) or (3).
         Column label of the target vector. Shape must match the # of dimensions in `data`.
-    z_slice: float
+    xsec: float
         The z to take a cross-section at. If none, column interpolation is performed.
     x, y, z: str, optional
         Column label of the x, y & z directional axes. Defaults to the columns detected in `data`.
@@ -481,14 +480,14 @@ def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[st
     elif data.get_dim() == 3:
         if not len(target) == 3:
             raise ValueError('Target vector is not 3-dimensional.')
-        if z_slice is None:
+        if xsec is None:
             img = interpolate_3d_vec(data, target[0], target[1], target[2], x, y, kernel, integral_samples, rotation,
                                      rot_origin, x_arrows, y_arrows, xlim, ylim, exact, backend)
         else:
             if exact:
                 raise UserWarning("Exact interpolation is not supported for 3D cross-sections.")
 
-            img = interpolate_3d_cross_vec(data, target[0], target[1], target[2], z_slice, x, y, z, kernel, rotation,
+            img = interpolate_3d_cross_vec(data, target[0], target[1], target[2], xsec, x, y, z, kernel, rotation,
                                            rot_origin, x_arrows, y_arrows, xlim, ylim, backend)
     else:
         raise ValueError('`data` is not a valid number of dimensions.')
