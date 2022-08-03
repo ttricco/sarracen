@@ -78,6 +78,22 @@ class GPUBackend(BaseBackend):
                 GPUBackend._fast_2d(z_slice, x, y, z, weight_y, h, weight_function, kernel_radius, x_pixels, y_pixels,
                                     x_min, x_max, y_min, y_max, 3))
 
+    @staticmethod
+    def interpolate_3d_grid(x: ndarray, y: ndarray, z: ndarray, weight: ndarray, h: ndarray,
+                            weight_function: CPUDispatcher, kernel_radius: float, x_pixels: int, y_pixels: int,
+                            z_pixels: int, x_min: float, x_max: float, y_min: float, y_max: float, z_min: float,
+                            z_max: float) -> ndarray:
+        image = np.zeros((z_pixels, y_pixels, x_pixels))
+        pixwidthz = (z_max - z_min) / z_pixels
+
+        # todo: this should be separated from _fast_2d to reduce the unnecessary transfer of data to the graphics card.
+        for z_i in np.arange(z_pixels):
+            z_val = z_min + (z_i + 0.5) * pixwidthz
+            image[z_i] = GPUBackend._fast_2d(z_val, x, y, z, weight, h, weight_function, kernel_radius, x_pixels,
+                                             y_pixels, x_min, x_max, y_min, y_max, 3)
+
+        return image
+
     # For the GPU, the numba code is compiled using a factory function approach. This is required
     # since a CUDA numba kernel cannot easily take weight_function as an argument.
     @staticmethod
