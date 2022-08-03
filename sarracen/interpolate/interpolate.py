@@ -855,6 +855,103 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y:
                                   kernel.get_radius(), x_pixels, y_pixels, x_min, x_max, y_min, y_max)
 
 
+def interpolate_3d_grid(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
+                        kernel: BaseKernel = None, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
+                        x_pixels: int = None, y_pixels: int = None, z_pixels: int = None,
+                        xlim: tuple[float, float] = None, ylim: tuple[float, float] = None,
+                        zlim: tuple[float, float] = None, backend: str = None):
+    """ Interpolate 3D particle data to a 3D grid of pixels
+
+    Interpolates particle data in a SarracenDataFrame across three directional axes to a 3D
+    grid of pixels. The contributions of all particles near each 3D cell are summed and
+    stored in the 3D grid.
+
+    Parameters
+    ----------
+    data : SarracenDataFrame
+        The particle data to interpolate over.
+    target: str
+        The column label of the target data.
+    x, y, z: str
+        The column labels of the directional data to interpolate over. Defaults to the x, y, and z columns
+        detected in `data`.
+    kernel: BaseKernel
+        The kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
+    rotation: array_like or Rotation, optional
+        The rotation to apply to the data before interpolation. If defined as an array, the
+        order of rotations is [z, y, x] in degrees.
+    rot_origin: array_like, optional
+        Point of rotation of the data, in [x, y, z] form. Defaults to the centre
+        point of the bounds of the data.
+    x_pixels, y_pixels, z_pixels: int, optional
+        Number of pixels in the output image in the x, y & z directions. Default values are chosen to keep
+        a consistent aspect ratio.
+    xlim, ylim, zlim: tuple of float, optional
+        The minimum and maximum values to use in interpolation, in particle data space. Defaults
+        to the minimum and maximum values of `x`, `y` and `z`.
+    backend: ['cpu', 'gpu']
+        The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+
+    Returns
+    -------
+    ndarray (3-Dimensional)
+        The interpolated output image, in a 3-dimensional numpy array. Dimensions are structured in reverse order,
+        where (x, y, z) -> [z, y, x].
+
+    Raises
+    -------
+    ValueError
+        If `x_pixels`, `y_pixels` or `z_pixels` are less than or equal to zero, or
+        if the specified `x`, `y` and `z` minimum and maximum values result in an invalid region, or
+        if `data` is not 3-dimensional.
+    KeyError
+        If `target`, `x`, `y`, `z`, mass, density, or smoothing length columns do not
+        exist in `data`.
+    """
+    _check_dimension(data, 3)
+    x, y = _default_xy(data, x, y)
+
+    if z is None:
+        z = data.zcol
+    if z not in data.columns:
+        raise KeyError(f"z-directional column '{z}' does not exist in the provided dataset.")
+
+    mass_data = _get_mass(data)
+    rho_data = _get_density(data)
+
+    if target == 'rho':
+        target_data = rho_data
+    else:
+        _verify_columns(data, target, x, y)
+        target_data = data[target].to_numpy()
+
+    w_data = target_data * mass_data / rho_data
+
+    if not xlim:
+        xlim = (None, None)
+    if not ylim:
+        ylim = (None, None)
+    x_min, x_max, y_min, y_max = _snap_boundaries(data, x, y, xlim[0], xlim[1], ylim[0], ylim[1])
+    z_min, z_max = zlim if zlim else (_snap(data.loc[:, z].min()), _snap(data.loc[:, z].max()))
+
+    x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
+    z_pixels = int(np.rint(x_pixels * ((z_max - z_min) / (x_max - x_min)))) if z_pixels is None else z_pixels
+    _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
+    if z_max - z_min <= 0:
+        raise ValueError("`z_max` must be greater than `z_min`!")
+    if z_pixels <= 0:
+        raise ValueError("`z_pixels` must be greater than zero!")
+
+    kernel = kernel if kernel is not None else data.kernel
+    backend = backend if backend is not None else data.backend
+
+    x_data, y_data, z_data = _rotate_xyz(data, x, y, data.zcol, rotation, rot_origin)
+
+    return get_backend(backend) \
+        .interpolate_3d_grid(x_data, y_data, z_data, w_data, data['h'].to_numpy(), kernel.w, kernel.get_radius(),
+                             x_pixels, y_pixels, z_pixels, x_min, x_max, y_min, y_max, z_min, z_max)
+
+
 def get_backend(code: str) -> BaseBackend:
     """ Get the interpolation backend assocated with a string code.
 
