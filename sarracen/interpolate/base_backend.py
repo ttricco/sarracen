@@ -29,6 +29,13 @@ class BaseBackend:
         return zeros(pixels)
 
     @staticmethod
+    def interpolate_3d_line(x: ndarray, y: ndarray, z: ndarray, weight: ndarray, h: ndarray,
+                            weight_function: CPUDispatcher, kernel_radius: float, pixels: int, x1: float, x2: float,
+                            y1: float, y2: float, z1: float, z2: float) -> ndarray:
+        """ Interpolate 3D particle data to a 1D cross-sectional line. """
+        return zeros(pixels)
+
+    @staticmethod
     def interpolate_3d_projection(x: ndarray, y: ndarray, z: ndarray, weight: ndarray, h: ndarray,
                                   weight_function: CPUDispatcher, kernel_radius: float, x_pixels: int, y_pixels: int,
                                   x_min: float, x_max: float, y_min: float, y_max: float, exact: bool) -> ndarray:

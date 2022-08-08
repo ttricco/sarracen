@@ -493,6 +493,62 @@ def interpolate_2d_cross(data: 'SarracenDataFrame', target: str, x: str = None, 
                               kernel.get_radius(), pixels, x1, x2, y1, y2)
 
 
+def interpolate_3d_line(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
+                        kernel: BaseKernel = None, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
+                        pixels: int = None, xlim: tuple[float, float] = None, ylim: tuple[float, float] = None,
+                        zlim: tuple[float, float] = None, backend: str = None):
+    _check_dimension(data, 3)
+    x, y = _default_xy(data, x, y)
+
+    if z is None:
+        z = data.zcol
+    if z not in data.columns:
+        raise KeyError(f"z-directional column '{z}' does not exist in the provided dataset.")
+
+    mass_data = _get_mass(data)
+    rho_data = _get_density(data)
+
+    if target == 'rho':
+        target_data = rho_data
+    else:
+        _verify_columns(data, x, y, target)
+        target_data = data[target].to_numpy()
+
+    w_data = target_data * mass_data / rho_data
+
+    if xlim:
+        x1, x2 = xlim
+    else:
+        x1, x2 = None, None
+    if ylim:
+        y1, y2 = ylim
+    else:
+        y1, y2 = None, None
+
+    if zlim is None or zlim[0] is None:
+        z1 = _snap(data.loc[:, z].min())
+    else:
+        z1 = zlim[0]
+    if zlim is None or zlim[1] is None:
+        z2 = _snap(data.loc[:, z].max())
+    else:
+        z2 = zlim[1]
+
+    x1, x2, y1, y2 = _snap_boundaries(data, x, y, x1, x2, y1, y2)
+    if y2 == y1 and x2 == x1 and z2 == z1:
+        raise ValueError('Zero length cross section!')
+
+    kernel = kernel if kernel is not None else data.kernel
+    backend = backend if backend is not None else data.backend
+
+    if pixels <= 0:
+        raise ValueError('pixcount must be greater than zero!')
+
+    return get_backend(backend) \
+        .interpolate_3d_line(data[x].to_numpy(), data[y].to_numpy(), data[z].to_numpy(), w_data, data['h'].to_numpy(),
+                             kernel.w, kernel.get_radius(), pixels, x1, x2, y1, y2, z1, z2)
+
+
 def interpolate_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
                    integral_samples: int = 1000, rotation: np.ndarray = None, origin: np.ndarray = None,
                    x_pixels: int = None, y_pixels: int = None, x_min: float = None, x_max: float = None,

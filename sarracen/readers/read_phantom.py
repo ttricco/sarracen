@@ -228,4 +228,4 @@ def read_phantom(filename: str, separate_types: str = 'sinks'):
             return [SarracenDataFrame(df, params={**header_vars, **{"mass": header_vars['massoftype']}}),
                     SarracenDataFrame(df_sinks, params=header_vars)]
 
-        return SarracenDataFrame(pd.concat([df, df_sinks], ignore_index=True), params=header_vars)
+        return SarracenDataFrame(pd.concat([df, df_sinks], ignore_index=True), params={**header_vars, **{"mass": header_vars['massoftype']}})
