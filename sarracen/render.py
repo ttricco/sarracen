@@ -18,6 +18,7 @@ from matplotlib.colors import Colormap, LogNorm
 
 from sarracen.interpolate import interpolate_2d_cross, interpolate_2d, interpolate_3d, interpolate_3d_cross, \
     interpolate_3d_vec, interpolate_3d_cross_vec, interpolate_2d_vec
+from sarracen.interpolate.interpolate import interpolate_3d_line
 from sarracen.kernels import BaseKernel
 
 
@@ -510,6 +511,59 @@ def render_2d_cross(data: 'SarracenDataFrame', target: str, x: str = None, y: st
 
     ax.margins(x=0, y=0)
     ax.set_xlabel(f'cross-section ({x}, {y})')
+
+    label = target
+    if log_scale:
+        label = f"log ({label})"
+    ax.set_ylabel(label)
+
+    return ax
+
+
+def render_3d_line(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
+                   kernel: BaseKernel = None, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
+                   pixels: int = 512, xlim: tuple[float, float] = None, ylim: tuple[float, float] = None,
+                   zlim: tuple[float, float] = None, ax: Axes = None, backend: str = None, log_scale: bool = False,
+                   **kwargs) -> Axes:
+    output = interpolate_3d_line(data, target, x, y, z, kernel, rotation, rot_origin, pixels, xlim, ylim, zlim, backend)
+
+    if ax is None:
+        ax = plt.gca()
+
+    if xlim:
+        x1, x2 = xlim
+    else:
+        x1, x2 = None, None
+    if ylim:
+        y1, y2 = ylim
+    else:
+        y1, y2 = None, None
+
+    x, y = _default_axes(data, x, y)
+    x1, x2, y1, y2 = _default_bounds(data, x, y, x1, x2, y1, y2)
+
+    if z is None:
+        z = data.zcol
+    if z not in data.columns:
+        raise KeyError(f"z-directional column '{z}' does not exist in the provided dataset.")
+
+    if zlim is None or zlim[0] is None:
+        z1 = _snap(data.loc[:, z].min())
+    else:
+        z1 = zlim[0]
+    if zlim is None or zlim[1] is None:
+        z2 = _snap(data.loc[:, z].max())
+    else:
+        z2 = zlim[1]
+
+    lineplot = sns.lineplot(x=np.linspace(0, np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2), pixels),
+                            y=output, ax=ax, **kwargs)
+
+    if log_scale:
+        lineplot.set(yscale='log')
+
+    ax.margins(x=0, y=0)
+    ax.set_xlabel(f'cross-section ({x}, {y}, {z})')
 
     label = target
     if log_scale:

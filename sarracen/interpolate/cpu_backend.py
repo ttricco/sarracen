@@ -39,6 +39,13 @@ class CPUBackend(BaseBackend):
         return CPUBackend._fast_2d_cross_cpu(x, y, weight, h, weight_function, kernel_radius, pixels, x1, x2, y1, y2)
 
     @staticmethod
+    def interpolate_3d_line(x: ndarray, y: ndarray, z: ndarray, weight: ndarray, h: ndarray,
+                            weight_function: CPUDispatcher, kernel_radius: float, pixels: int, x1: float, x2: float,
+                            y1: float, y2: float, z1: float, z2: float) -> ndarray:
+        return CPUBackend._fast_3d_line(x, y, z, weight, h, weight_function, kernel_radius, pixels, x1, x2, y1, y2, z1,
+                                        z2)
+
+    @staticmethod
     def interpolate_3d_projection(x: ndarray, y: ndarray, z: ndarray, weight: ndarray, h: ndarray,
                                   weight_function: CPUDispatcher, kernel_radius: float, x_pixels: int, y_pixels: int,
                                   x_min: float, x_max: float, y_min: float, y_max: float, exact: bool) -> ndarray:
@@ -311,7 +318,6 @@ class CPUBackend(BaseBackend):
         ipixmax = np.rint(rend / pixwidth).clip(a_min=0, a_max=pixels)
         rstart, rend = None, None
 
-
         output_local = np.zeros((get_num_threads(), pixels))
 
         # thread safety: each thread has its own grid, which are combined after interpolation
@@ -340,6 +346,59 @@ class CPUBackend(BaseBackend):
             output += output_local[i]
 
         return output
+
+
+    @staticmethod
+    def _fast_3d_line(x_data, y_data, z_data, w_data, h_data, weight_function, kernel_radius, pixels, x1, x2, y1, y2,
+                      z1, z2):
+        output_local = np.zeros((get_num_threads(), pixels))
+
+        dx = x2 - x1
+        dy = y2 - y1
+        dz = z2 - z1
+
+        length = np.sqrt(dx ** 2 + dy ** 2 + dz ** 2)
+        ux, uy, uz = dx / length, dy / length, dz / length
+        term = w_data / h_data ** 3
+
+        for thread in prange(get_num_threads()):
+            block_size = x_data.size / get_num_threads()
+            range_start = int(thread * block_size)
+            range_end = int((thread + 1) * block_size)
+
+            for i in range(range_start, range_end):
+
+                delta = (ux * (x1 - x_data[i]) + uy * (y1 - y_data[i]) + uz * (z1 - z_data[i])) ** 2 - ((x1 - x_data[i]) ** 2 + (y1 - y_data[i]) ** 2 + (z1 - z_data[i]) ** 2) + (kernel_radius * h_data[i]) ** 2
+                if delta < 0:
+                    continue
+
+                d1 = -(ux * (x1 - x_data[i]) + uy * (y1 - y_data[i]) + uz * (z1 - z_data[i])) - np.sqrt(delta)
+                d2 = -(ux * (x1 - x_data[i]) + uy * (y1 - y_data[i]) + uz * (z1 - z_data[i])) + np.sqrt(delta)
+
+                pixmin = min(max(0, int((d1 / length) * pixels)), pixels)
+                pixmax = min(max(0, int((d2 / length) * pixels)), pixels)
+
+                xpix = x1 + (np.arange(pixmin, pixmax) + 0.5) * (x2 - x1) / pixels
+                ypix = y1 + (np.arange(pixmin, pixmax) + 0.5) * (y2 - y1) / pixels
+                zpix = z1 + (np.arange(pixmin, pixmax) + 0.5) * (z2 - z1) / pixels
+
+                xdiff = xpix - x_data[i]
+                ydiff = ypix - y_data[i]
+                zdiff = zpix - z_data[i]
+
+                q2 = (xdiff ** 2 + ydiff ** 2 + zdiff ** 2) * (1 / (h_data[i] ** 2))
+                wab = weight_function(np.sqrt(q2), 2)
+
+                for ipix in range(pixmax - pixmin):
+                    output_local[thread][ipix + pixmin] += term[i] * wab[ipix]
+
+        output = np.zeros(pixels)
+
+        for i in range(get_num_threads()):
+            output += output_local[i]
+
+        return output
+
 
     @staticmethod
     @njit(parallel=True)
