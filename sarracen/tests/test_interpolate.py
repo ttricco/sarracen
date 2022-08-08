@@ -11,7 +11,7 @@ from scipy.spatial.transform import Rotation
 from sarracen import SarracenDataFrame
 from sarracen.kernels import CubicSplineKernel, QuarticSplineKernel, QuinticSplineKernel
 from sarracen.interpolate import interpolate_2d, interpolate_2d_cross, interpolate_3d_cross, interpolate_3d, \
-    interpolate_2d_vec, interpolate_3d_vec, interpolate_3d_cross_vec
+    interpolate_2d_vec, interpolate_3d_vec, interpolate_3d_cross_vec, interpolate_3d_line
 
 backends = ['cpu']
 if cuda.is_available():
@@ -92,6 +92,14 @@ def test_single_particle(backend):
             assert image_vec[1][y][x] == approx(w[0] * sdf['B'][0] *
                                                 kernel.w(np.sqrt(real[x] ** 2 + real[y] ** 2 + 0.5 ** 2)
                                                          / sdf['h'][0], 3))
+
+    image = interpolate_3d_line(sdf, 'A', pixels=25, xlim=(-kernel.get_radius(), kernel.get_radius()),
+                                ylim=(-kernel.get_radius(), kernel.get_radius()),
+                                zlim=(-kernel.get_radius(), kernel.get_radius()))
+
+    for x in range(25):
+        assert image[x] == approx(w[0] * sdf['A'][0] *
+                                  kernel.w(np.sqrt(2 * real[x] ** 2 + (real[x] + 0.5) ** 2) / sdf['h'][0], 3))
 
 
 @mark.parametrize("backend", backends)
@@ -174,6 +182,14 @@ def test_single_repeated_particle(backend):
                                                 kernel.w(np.sqrt(real[x] ** 2 + real[y] ** 2 + 0.5 ** 2)
                                                          / sdf['h'][0], 3))
 
+    image = interpolate_3d_line(sdf, 'A', pixels=25, xlim=(-kernel.get_radius(), kernel.get_radius()),
+                                ylim=(-kernel.get_radius(), kernel.get_radius()),
+                                zlim=(-kernel.get_radius(), kernel.get_radius()))
+
+    for x in range(25):
+        assert image[x] == approx(w[0] * sdf['A'][0] *
+                                  kernel.w(np.sqrt(2 * real[x] ** 2 + (real[x] + 0.5) ** 2) / sdf['h'][0], 3))
+
 
 @mark.parametrize("backend", backends)
 def test_dimension_check(backend):
@@ -199,7 +215,7 @@ def test_dimension_check(backend):
     sdf = SarracenDataFrame(df, params=dict())
     sdf.backend = backend
 
-    for func in [interpolate_2d, interpolate_2d_cross]:
+    for func in [interpolate_2d, interpolate_2d_cross, interpolate_3d_line]:
         with raises(TypeError):
             func(sdf, 'P')
     with raises(TypeError):
@@ -437,6 +453,9 @@ def test_default_kernel(backend):
     assert image[0] == kernel.w(0, 3)
     assert image[1] == kernel.w(0, 3)
 
+    image = interpolate_3d_line(sdf_3, 'A', pixels=1, xlim=(-1, 1), ylim=(-1, 1))
+    assert image == kernel.w(0, 3)
+
     # Next, test that the kernel supplied to the function is actually used.
     kernel = QuinticSplineKernel()
     image = interpolate_2d(sdf_2, 'A', x_pixels=1, y_pixels=1, x_min=-1, x_max=1, y_min=-1, y_max=1, kernel=kernel)
@@ -463,6 +482,9 @@ def test_default_kernel(backend):
                                      kernel=kernel)
     assert image[0] == kernel.w(0, 3)
     assert image[1] == kernel.w(0, 3)
+
+    image = interpolate_3d_line(sdf_3, 'A', pixels=1, xlim=(-1, 1), ylim=(-1, 1), kernel=kernel)
+    assert image == kernel.w(0, 3)
 
 
 @mark.parametrize("backend", backends)

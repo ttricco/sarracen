@@ -521,11 +521,10 @@ def render_2d_cross(data: 'SarracenDataFrame', target: str, x: str = None, y: st
 
 
 def render_3d_line(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
-                   kernel: BaseKernel = None, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
-                   pixels: int = 512, xlim: tuple[float, float] = None, ylim: tuple[float, float] = None,
-                   zlim: tuple[float, float] = None, ax: Axes = None, backend: str = None, log_scale: bool = False,
-                   **kwargs) -> Axes:
-    output = interpolate_3d_line(data, target, x, y, z, kernel, rotation, rot_origin, pixels, xlim, ylim, zlim, backend)
+                   kernel: BaseKernel = None, pixels: int = 512, xlim: tuple[float, float] = None,
+                   ylim: tuple[float, float] = None, zlim: tuple[float, float] = None, ax: Axes = None,
+                   backend: str = None, log_scale: bool = False, **kwargs) -> Axes:
+    output = interpolate_3d_line(data, target, x, y, z, kernel, pixels, xlim, ylim, zlim, backend)
 
     if ax is None:
         ax = plt.gca()
