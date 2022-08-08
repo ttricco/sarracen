@@ -5,7 +5,8 @@ from matplotlib.colors import Colormap
 from pandas import DataFrame, Series
 import numpy as np
 
-from sarracen.render import render_2d, render_2d_cross, render_3d, render_3d_cross, streamlines, arrowplot
+from sarracen.render import render_2d, render_2d_cross, render_3d, render_3d_cross, streamlines, arrowplot, \
+    render_3d_line
 from sarracen.kernels import CubicSplineKernel, BaseKernel
 
 
@@ -187,6 +188,13 @@ class SarracenDataFrame(DataFrame):
 
         return render_3d_cross(self, target, z_slice, x, y, z, kernel, rotation, rot_origin, x_pixels, y_pixels, x_min,
                                x_max, y_min, y_max, cmap, cbar, cbar_kws, cbar_ax, ax, backend, log_scale, **kwargs)
+
+    @_copy_doc(render_3d_line)
+    def render_3d_line(self, target: str, x: str = None, y: str = None, z: str = None, kernel: BaseKernel = None,
+                       pixels: int = 512, xlim: tuple[float, float] = None, ylim: tuple[float, float] = None,
+                       zlim: tuple[float, float] = None, ax: Axes = None, backend: str = None, log_scale: bool = False,
+                       **kwargs) -> Axes:
+        return render_3d_line(self, target, x, y, z, kernel, pixels, xlim, ylim, zlim, ax, backend, log_scale, **kwargs)
 
     @_copy_doc(streamlines)
     def streamlines(self, target: Union[Tuple[str, str], Tuple[str, str, str]], z_slice: int = None, x: str = None,

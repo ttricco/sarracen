@@ -347,8 +347,8 @@ class CPUBackend(BaseBackend):
 
         return output
 
-
     @staticmethod
+    @njit(parallel=True, fastmath=True)
     def _fast_3d_line(x_data, y_data, z_data, w_data, h_data, weight_function, kernel_radius, pixels, x1, x2, y1, y2,
                       z1, z2):
         output_local = np.zeros((get_num_threads(), pixels))
@@ -375,8 +375,8 @@ class CPUBackend(BaseBackend):
                 d1 = -(ux * (x1 - x_data[i]) + uy * (y1 - y_data[i]) + uz * (z1 - z_data[i])) - np.sqrt(delta)
                 d2 = -(ux * (x1 - x_data[i]) + uy * (y1 - y_data[i]) + uz * (z1 - z_data[i])) + np.sqrt(delta)
 
-                pixmin = min(max(0, int((d1 / length) * pixels)), pixels)
-                pixmax = min(max(0, int((d2 / length) * pixels)), pixels)
+                pixmin = min(max(0, round((d1 / length) * pixels)), pixels)
+                pixmax = min(max(0, round((d2 / length) * pixels)), pixels)
 
                 xpix = x1 + (np.arange(pixmin, pixmax) + 0.5) * (x2 - x1) / pixels
                 ypix = y1 + (np.arange(pixmin, pixmax) + 0.5) * (y2 - y1) / pixels
@@ -387,7 +387,7 @@ class CPUBackend(BaseBackend):
                 zdiff = zpix - z_data[i]
 
                 q2 = (xdiff ** 2 + ydiff ** 2 + zdiff ** 2) * (1 / (h_data[i] ** 2))
-                wab = weight_function(np.sqrt(q2), 2)
+                wab = weight_function(np.sqrt(q2), 3)
 
                 for ipix in range(pixmax - pixmin):
                     output_local[thread][ipix + pixmin] += term[i] * wab[ipix]
@@ -398,7 +398,6 @@ class CPUBackend(BaseBackend):
             output += output_local[i]
 
         return output
-
 
     @staticmethod
     @njit(parallel=True)

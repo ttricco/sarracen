@@ -494,9 +494,47 @@ def interpolate_2d_cross(data: 'SarracenDataFrame', target: str, x: str = None, 
 
 
 def interpolate_3d_line(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
-                        kernel: BaseKernel = None, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
-                        pixels: int = None, xlim: tuple[float, float] = None, ylim: tuple[float, float] = None,
-                        zlim: tuple[float, float] = None, backend: str = None):
+                        kernel: BaseKernel = None, pixels: int = None, xlim: tuple[float, float] = None,
+                        ylim: tuple[float, float] = None, zlim: tuple[float, float] = None, backend: str = None):
+    """ Interpolate vector particle data across three directional axes to a 1D line.
+
+    Interpolate the data within a SarracenDataFrame to a 1D line, by interpolating the values
+    of a target variable. The contributions of all particles near the interpolation line are
+    summed and stored to a 1D array.
+
+    Parameters
+    ----------
+    data : SarracenDataFrame
+            Particle data, in a SarracenDataFrame.
+    target: str
+        Column label of the target variable.
+    x, y, z: str
+        Column labels of the directional axes. Defaults to the x, y & z columns detected in `data`.
+    kernel: BaseKernel, optional
+        Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
+    pixels: int, optional
+        Number of pixels in the output image in the x & y directions. Default values are chosen to keep
+        a consistent aspect ratio.
+    xlim, ylim, zlim: tuple of float, optional
+        Starting and ending coordinates of the cross-section line (in particle data space). Defaults to
+        the minimum and maximum values of `x`, `y`, and `z`.
+    backend: ['cpu', 'gpu']
+        The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+
+    Returns
+    -------
+    output: ndarray (1-Dimensional)
+        The interpolated output line.
+
+    Raises
+    -------
+    ValueError
+        If `pixels` are less than or equal to zero, or
+        if the specified `x`, `y`, and `z` minimum and maximum values result in a zero area cross-section, or
+        if `data` is not 3-dimensional.
+    KeyError
+        If `target`, `x`, `y`, mass, density, or smoothing length data does not exist in `data`.
+    """
     _check_dimension(data, 3)
     x, y = _default_xy(data, x, y)
 
