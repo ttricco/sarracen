@@ -275,6 +275,12 @@ def lineplot(data: 'SarracenDataFrame', target: str, x: str = None, y: str = Non
         image = interpolate_2d_line(data, target, x, y, kernel, pixels, xlim, ylim, backend)
     else:
         image = interpolate_3d_line(data, target, x, y, z, kernel, pixels, xlim, ylim, zlim, backend)
+
+    if isinstance(xlim, float) or isinstance(xlim, int):
+        xlim = xlim, xlim
+    if isinstance(ylim, float) or isinstance(ylim, int):
+        ylim = ylim, ylim
+
     x, y = _default_axes(data, x, y)
     xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
 
@@ -286,6 +292,8 @@ def lineplot(data: 'SarracenDataFrame', target: str, x: str = None, y: str = Non
         if z not in data.columns:
             raise KeyError(f"z-directional column '{z}' does not exist in the provided dataset.")
 
+        if isinstance(zlim, float) or isinstance(zlim, int):
+            zlim = zlim, zlim
         if zlim is None or zlim[0] is None:
             z1 = _snap(data.loc[:, z].min())
         else:
@@ -298,10 +306,10 @@ def lineplot(data: 'SarracenDataFrame', target: str, x: str = None, y: str = Non
 
         upper_lim = np.sqrt((xlim[1] - xlim[0]) ** 2 + (ylim[1] - ylim[0]) ** 2 + (zlim[1] - zlim[0]) ** 2)
 
-    plot = sns.lineplot(x=np.linspace(0, upper_lim, image.size), y=image, ax=ax, **kwargs)
+    ax = sns.lineplot(x=np.linspace(0, upper_lim, image.size), y=image, ax=ax, **kwargs)
 
     if log_scale:
-        plot.set(yscale='log')
+        ax.set(yscale='log')
 
     ax.margins(x=0, y=0)
 
@@ -311,6 +319,8 @@ def lineplot(data: 'SarracenDataFrame', target: str, x: str = None, y: str = Non
     if log_scale:
         label = f"log ({label})"
     ax.set_ylabel(label)
+
+    return ax
 
 
 def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[str, str, str]], x: str = None,

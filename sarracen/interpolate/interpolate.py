@@ -480,6 +480,11 @@ def interpolate_2d_line(data: 'SarracenDataFrame', target: str, x: str = None, y
 
     w_data = target_data * mass_data / rho_data
 
+    if isinstance(xlim, float) or isinstance(xlim, int):
+        xlim = xlim, xlim
+    if isinstance(ylim, float) or isinstance(ylim, int):
+        ylim = ylim, ylim
+
     xlim, ylim = _snap_boundaries(data, x, y, xlim, ylim)
     if xlim[0] == xlim[1] and ylim[0] == ylim[1]:
         raise ValueError('Zero length cross section!')
@@ -556,6 +561,13 @@ def interpolate_3d_line(data: 'SarracenDataFrame', target: str, x: str = None, y
         target_data = data[target].to_numpy()
 
     w_data = target_data * mass_data / rho_data
+
+    if isinstance(xlim, float) or isinstance(xlim, int):
+        xlim = xlim, xlim
+    if isinstance(ylim, float) or isinstance(ylim, int):
+        ylim = ylim, ylim
+    if isinstance(zlim, float) or isinstance(zlim, int):
+        zlim = zlim, zlim
 
     if zlim is None or zlim[0] is None:
         z1 = _snap(data.loc[:, z].min())
