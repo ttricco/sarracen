@@ -169,7 +169,7 @@ class SarracenDataFrame(DataFrame):
     @_copy_doc(render)
     def render(self, target: str, x: str = None, y: str = None, z: str = None, xsec: float = None,
                kernel: BaseKernel = None, x_pixels: int = None, y_pixels: int = None, xlim: tuple[float, float] = None,
-               ylim: tuple[float, float] = None, cmap: Union[str, Colormap] = 'RdBu', cbar: bool = True,
+               ylim: tuple[float, float] = None, cmap: Union[str, Colormap] = 'gist_heat', cbar: bool = True,
                cbar_kws: dict = {}, cbar_ax: Axes = None, ax: Axes = None, exact: bool = None, backend: str = None,
                integral_samples: int = 1000, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
                log_scale: bool = None, **kwargs) -> Axes:
