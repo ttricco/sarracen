@@ -77,6 +77,22 @@ class CPUBackend(BaseBackend):
                 CPUBackend._fast_2d(x, y, z, z_slice, weight_y, h, weight_function, kernel_radius, x_pixels, y_pixels,
                                     x_min, x_max, y_min, y_max, 3))
 
+    @staticmethod
+    def interpolate_3d_grid(x: ndarray, y: ndarray, z: ndarray, weight: ndarray, h: ndarray,
+                            weight_function: CPUDispatcher, kernel_radius: float, x_pixels: int, y_pixels: int,
+                            z_pixels: int, x_min: float, x_max: float, y_min: float, y_max: float, z_min: float,
+                            z_max: float) -> ndarray:
+        image = np.zeros((z_pixels, y_pixels, x_pixels))
+        pixwidthz = (z_max - z_min) / z_pixels
+
+        for z_i in np.arange(z_pixels):
+            z_val = z_min + (z_i + 0.5) * pixwidthz
+            image[z_i] = CPUBackend._fast_2d(z_val, x, y, z, weight, h, weight_function, kernel_radius, x_pixels,
+                                             y_pixels, x_min, x_max, y_min, y_max, 3)
+
+        return image
+
+
     # Underlying CPU numba-compiled code for interpolation to a 2D grid. Used in interpolation of 2D data,
     # and column integration / cross-sections of 3D data.
     @staticmethod
