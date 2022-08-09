@@ -2,7 +2,7 @@
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from sarracen import SarracenDataFrame, render_2d, render_2d_cross, render_3d, render_3d_cross
+from sarracen import SarracenDataFrame, render
 
 
 def test_special_columns():
@@ -114,15 +114,15 @@ def test_render_passthrough():
 
     fig1, ax1 = plt.subplots()
     fig2, ax2 = plt.subplots()
-    ax1 = sdf.render_2d('P', ax=ax1)
-    ax2 = render_2d(sdf, 'P', ax=ax2)
+    ax1 = sdf.render('P', ax=ax1)
+    ax2 = render(sdf, 'P', ax=ax2)
 
     assert repr(ax1) == repr(ax2)
 
     fig1, ax1 = plt.subplots()
     fig2, ax2 = plt.subplots()
-    ax1 = sdf.render_2d_cross('P', ax=ax1)
-    ax2 = render_2d_cross(sdf, 'P', ax=ax2)
+    ax1 = sdf.render('P', xsec=True, ax=ax1)
+    ax2 = render(sdf, 'P', xsec=True, ax=ax2)
 
     assert repr(ax1) == repr(ax2)
 
@@ -133,14 +133,14 @@ def test_render_passthrough():
 
     fig1, ax1 = plt.subplots()
     fig2, ax2 = plt.subplots()
-    ax1 = sdf.render_3d('P', ax=ax1)
-    ax2 = render_3d(sdf, 'P', ax=ax2)
+    ax1 = sdf.render('P', ax=ax1)
+    ax2 = render(sdf, 'P', ax=ax2)
 
     assert repr(ax1) == repr(ax2)
 
     fig1, ax1 = plt.subplots()
     fig2, ax2 = plt.subplots()
-    ax1 = sdf.render_3d_cross('P', ax=ax1)
-    ax2 = render_3d_cross(sdf, 'P', ax=ax2)
+    ax1 = sdf.render('P', xsec=True, ax=ax1)
+    ax2 = render(sdf, 'P', xsec=True, ax=ax2)
 
     assert repr(ax1) == repr(ax2)
