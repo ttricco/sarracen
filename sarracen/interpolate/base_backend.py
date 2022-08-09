@@ -23,7 +23,7 @@ class BaseBackend:
         return zeros((y_pixels, x_pixels)), zeros((y_pixels, x_pixels))
 
     @staticmethod
-    def interpolate_2d_cross(x: ndarray, y: ndarray, weight: ndarray, h: ndarray, weight_function: CPUDispatcher,
+    def interpolate_2d_line(x: ndarray, y: ndarray, weight: ndarray, h: ndarray, weight_function: CPUDispatcher,
                              kernel_radius: float, pixels: int, x1: float, x2: float, y1: float, y2: float) -> ndarray:
         """ Interpolate 2D particle data to a 1D cross-sectional line. """
         return zeros(pixels)
@@ -44,7 +44,7 @@ class BaseBackend:
         return zeros((y_pixels, x_pixels)), zeros((y_pixels, x_pixels))
 
     @staticmethod
-    def interpolate_3d_cross(z_slice: float, x: ndarray, y: ndarray, z: ndarray, weight: ndarray, h: ndarray,
+    def interpolate_3d_cross(x: ndarray, y: ndarray, z: ndarray, z_slice: float, weight: ndarray, h: ndarray,
                              weight_function: CPUDispatcher, kernel_radius: float, x_pixels: int, y_pixels: int,
                              x_min: float, x_max: float, y_min: float, y_max: float) -> ndarray:
         """
@@ -53,7 +53,7 @@ class BaseBackend:
         return zeros((y_pixels, x_pixels))
 
     @staticmethod
-    def interpolate_3d_cross_vec(z_slice: float, x: ndarray, y: ndarray, z: ndarray, weight_x: ndarray,
+    def interpolate_3d_cross_vec(x: ndarray, y: ndarray, z: ndarray, z_slice: float, weight_x: ndarray,
                                  weight_y: ndarray, h: ndarray, weight_function: CPUDispatcher, kernel_radius: float,
                                  x_pixels: int, y_pixels: int, x_min: float, x_max: float, y_min: float,
                                  y_max: float) -> Tuple[ndarray, ndarray]:
