@@ -94,7 +94,7 @@ class CPUBackend(BaseBackend):
 
         for z_i in np.arange(z_pixels):
             z_val = z_min + (z_i + 0.5) * pixwidthz
-            image[z_i] = CPUBackend._fast_2d(z_val, x, y, z, weight, h, weight_function, kernel_radius, x_pixels,
+            image[z_i] = CPUBackend._fast_2d(x, y, z, z_val, weight, h, weight_function, kernel_radius, x_pixels,
                                              y_pixels, x_min, x_max, y_min, y_max, 3)
 
         return image

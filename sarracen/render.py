@@ -228,7 +228,7 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
 
 
 def lineplot(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
-             kernel: BaseKernel = None, pixels: int = None, xlim: tuple[float, float] = None,
+             kernel: BaseKernel = None, pixels: int = 512, xlim: tuple[float, float] = None,
              ylim: tuple[float, float] = None, zlim: tuple[float, float] = None, ax: Axes = None, backend: str = None,
              log_scale: bool = False, **kwargs):
     """ Render a scalar SPH target variable to line plot.
@@ -294,6 +294,7 @@ def lineplot(data: 'SarracenDataFrame', target: str, x: str = None, y: str = Non
             z2 = _snap(data.loc[:, z].max())
         else:
             z2 = zlim[1]
+        zlim = z2, z1
 
         upper_lim = np.sqrt((xlim[1] - xlim[0]) ** 2 + (ylim[1] - ylim[0]) ** 2 + (zlim[1] - zlim[0]) ** 2)
 
@@ -304,7 +305,7 @@ def lineplot(data: 'SarracenDataFrame', target: str, x: str = None, y: str = Non
 
     ax.margins(x=0, y=0)
 
-    ax.set_xlabel('cross-section' + (f'({x}, {y})' if data.get_dim() == 2 else f'({x}, {y}, {z})'))
+    ax.set_xlabel('cross-section ' + (f'({x}, {y})' if data.get_dim() == 2 else f'({x}, {y}, {z})'))
 
     label = target
     if log_scale:

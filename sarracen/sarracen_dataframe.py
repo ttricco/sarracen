@@ -162,7 +162,7 @@ class SarracenDataFrame(DataFrame):
 
     @_copy_doc(lineplot)
     def lineplot(self, target: str, x: str = None, y: str = None, z: str = None,
-                 kernel: BaseKernel = None, pixels: int = None, xlim: tuple[float, float] = None,
+                 kernel: BaseKernel = None, pixels: int = 512, xlim: tuple[float, float] = None,
                  ylim: tuple[float, float] = None, zlim: tuple[float, float] = None, ax: Axes = None,
                  backend: str = None, log_scale: bool = False, **kwargs):
         return lineplot(self, target, x, y, z, kernel, pixels, xlim, ylim, zlim, ax, backend, log_scale, **kwargs)

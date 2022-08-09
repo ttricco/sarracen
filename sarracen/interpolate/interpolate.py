@@ -557,15 +557,6 @@ def interpolate_3d_line(data: 'SarracenDataFrame', target: str, x: str = None, y
 
     w_data = target_data * mass_data / rho_data
 
-    if xlim:
-        x1, x2 = xlim
-    else:
-        x1, x2 = None, None
-    if ylim:
-        y1, y2 = ylim
-    else:
-        y1, y2 = None, None
-
     if zlim is None or zlim[0] is None:
         z1 = _snap(data.loc[:, z].min())
     else:
@@ -574,9 +565,10 @@ def interpolate_3d_line(data: 'SarracenDataFrame', target: str, x: str = None, y
         z2 = _snap(data.loc[:, z].max())
     else:
         z2 = zlim[1]
+    zlim = z1, z2
 
-    x1, x2, y1, y2 = _snap_boundaries(data, x, y, x1, x2, y1, y2)
-    if y2 == y1 and x2 == x1 and z2 == z1:
+    xlim, ylim = _snap_boundaries(data, x, y, xlim, ylim)
+    if ylim[1] == ylim[0] and xlim[1] == xlim[0] and zlim[1] == zlim[0]:
         raise ValueError('Zero length cross section!')
 
     kernel = kernel if kernel is not None else data.kernel
@@ -587,7 +579,8 @@ def interpolate_3d_line(data: 'SarracenDataFrame', target: str, x: str = None, y
 
     return get_backend(backend) \
         .interpolate_3d_line(data[x].to_numpy(), data[y].to_numpy(), data[z].to_numpy(), w_data, data['h'].to_numpy(),
-                             kernel.w, kernel.get_radius(), pixels, x1, x2, y1, y2, z1, z2)
+                             kernel.w, kernel.get_radius(), pixels, xlim[0], xlim[1], ylim[0], ylim[1], zlim[0],
+                             zlim[1])
 
 
 def interpolate_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
@@ -1029,13 +1022,13 @@ def interpolate_3d_grid(data: 'SarracenDataFrame', target: str, x: str = None, y
         xlim = (None, None)
     if not ylim:
         ylim = (None, None)
-    x_min, x_max, y_min, y_max = _snap_boundaries(data, x, y, xlim[0], xlim[1], ylim[0], ylim[1])
-    z_min, z_max = zlim if zlim else (_snap(data.loc[:, z].min()), _snap(data.loc[:, z].max()))
+    xlim, ylim = _snap_boundaries(data, x, y, xlim, ylim)
+    zlim = zlim if zlim else (_snap(data.loc[:, z].min()), _snap(data.loc[:, z].max()))
 
-    x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
-    z_pixels = int(np.rint(x_pixels * ((z_max - z_min) / (x_max - x_min)))) if z_pixels is None else z_pixels
-    _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
-    if z_max - z_min <= 0:
+    x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
+    z_pixels = int(np.rint(x_pixels * ((zlim[1] - zlim[0]) / (xlim[1] - xlim[0])))) if z_pixels is None else z_pixels
+    _check_boundaries(x_pixels, y_pixels, xlim, ylim)
+    if zlim[1] - zlim[0] <= 0:
         raise ValueError("`z_max` must be greater than `z_min`!")
     if z_pixels <= 0:
         raise ValueError("`z_pixels` must be greater than zero!")
@@ -1047,7 +1040,7 @@ def interpolate_3d_grid(data: 'SarracenDataFrame', target: str, x: str = None, y
 
     return get_backend(backend) \
         .interpolate_3d_grid(x_data, y_data, z_data, w_data, data['h'].to_numpy(), kernel.w, kernel.get_radius(),
-                             x_pixels, y_pixels, z_pixels, x_min, x_max, y_min, y_max, z_min, z_max)
+                             x_pixels, y_pixels, z_pixels, xlim[0], xlim[1], ylim[0], ylim[1], zlim[0], zlim[1])
 
 
 def get_backend(code: str) -> BaseBackend:
