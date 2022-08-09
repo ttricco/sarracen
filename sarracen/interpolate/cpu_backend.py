@@ -17,7 +17,7 @@ class CPUBackend(BaseBackend):
                               y_min: float, y_max: float, exact: bool) -> ndarray:
         if exact:
             return CPUBackend._exact_2d_render(x, y, weight, h, x_pixels, y_pixels, x_min, x_max, y_min, y_max)
-        return CPUBackend._fast_2d(0, x, y, np.zeros(x.size), weight, h, weight_function, kernel_radius, x_pixels,
+        return CPUBackend._fast_2d(x, y, np.zeros(x.size), 0, weight, h, weight_function, kernel_radius, x_pixels,
                                    y_pixels, x_min, x_max, y_min, y_max, 2)
 
     @staticmethod
@@ -28,9 +28,9 @@ class CPUBackend(BaseBackend):
         if exact:
             return (CPUBackend._exact_2d_render(x, y, weight_x, h, x_pixels, y_pixels, x_min, x_max, y_min, y_max),
                     CPUBackend._exact_2d_render(x, y, weight_y, h, x_pixels, y_pixels, x_min, x_max, y_min, y_max))
-        return (CPUBackend._fast_2d(0, x, y, np.zeros(x.size), weight_x, h, weight_function, kernel_radius, x_pixels,
+        return (CPUBackend._fast_2d(x, y, np.zeros(x.size), 0, weight_x, h, weight_function, kernel_radius, x_pixels,
                                     y_pixels, x_min, x_max, y_min, y_max, 2),
-                CPUBackend._fast_2d(0, x, y, np.zeros(x.size), weight_y, h, weight_function, kernel_radius, x_pixels,
+                CPUBackend._fast_2d(x, y, np.zeros(x.size), 0, weight_y, h, weight_function, kernel_radius, x_pixels,
                                     y_pixels, x_min, x_max, y_min, y_max, 2))
 
     @staticmethod
@@ -51,7 +51,7 @@ class CPUBackend(BaseBackend):
                                   x_min: float, x_max: float, y_min: float, y_max: float, exact: bool) -> ndarray:
         if exact:
             return CPUBackend._exact_3d_project(x, y, weight, h, x_pixels, y_pixels, x_min, x_max, y_min, y_max)
-        return CPUBackend._fast_2d(0, x, y, np.zeros(x.size), weight, h, weight_function, kernel_radius, x_pixels,
+        return CPUBackend._fast_2d(x, y, np.zeros(x.size), 0, weight, h, weight_function, kernel_radius, x_pixels,
                                    y_pixels, x_min, x_max, y_min, y_max, 2)
 
     @staticmethod
@@ -62,33 +62,49 @@ class CPUBackend(BaseBackend):
         if exact:
             return (CPUBackend._exact_3d_project(x, y, weight_x, h, x_pixels, y_pixels, x_min, x_max, y_min, y_max),
                     CPUBackend._exact_3d_project(x, y, weight_y, h, x_pixels, y_pixels, x_min, x_max, y_min, y_max))
-        return (CPUBackend._fast_2d(0, x, y, np.zeros(x.size), weight_x, h, weight_function, kernel_radius, x_pixels,
+        return (CPUBackend._fast_2d(x, y, np.zeros(x.size), 0, weight_x, h, weight_function, kernel_radius, x_pixels,
                                     y_pixels, x_min, x_max, y_min, y_max, 2),
-                CPUBackend._fast_2d(0, x, y, np.zeros(y.size), weight_y, h, weight_function, kernel_radius, x_pixels,
+                CPUBackend._fast_2d(x, y, np.zeros(y.size), 0, weight_y, h, weight_function, kernel_radius, x_pixels,
                                     y_pixels, x_min, x_max, y_min, y_max, 2))
 
     @staticmethod
-    def interpolate_3d_cross(z_slice: float, x: ndarray, y: ndarray, z: ndarray, weight: ndarray, h: ndarray,
+    def interpolate_3d_cross(x: ndarray, y: ndarray, z: ndarray, z_slice: float, weight: ndarray, h: ndarray,
                              weight_function: CPUDispatcher, kernel_radius: float, x_pixels: int, y_pixels: int,
                              x_min: float, x_max: float, y_min: float, y_max: float) -> ndarray:
-        return CPUBackend._fast_2d(z_slice, x, y, z, weight, h, weight_function, kernel_radius, x_pixels, y_pixels,
+        return CPUBackend._fast_2d(x, y, z, z_slice, weight, h, weight_function, kernel_radius, x_pixels, y_pixels,
                                    x_min, x_max, y_min, y_max, 3)
 
     @staticmethod
-    def interpolate_3d_cross_vec(z_slice: float, x: ndarray, y: ndarray, z: ndarray, weight_x: ndarray,
+    def interpolate_3d_cross_vec(x: ndarray, y: ndarray, z: ndarray, z_slice: float, weight_x: ndarray,
                                  weight_y: ndarray, h: ndarray, weight_function: CPUDispatcher, kernel_radius: float,
                                  x_pixels: int, y_pixels: int, x_min: float, x_max: float, y_min: float,
                                  y_max: float) -> Tuple[ndarray, ndarray]:
-        return (CPUBackend._fast_2d(z_slice, x, y, z, weight_x, h, weight_function, kernel_radius, x_pixels, y_pixels,
+        return (CPUBackend._fast_2d(x, y, z, z_slice, weight_x, h, weight_function, kernel_radius, x_pixels, y_pixels,
                                     x_min, x_max, y_min, y_max, 3),
-                CPUBackend._fast_2d(z_slice, x, y, z, weight_y, h, weight_function, kernel_radius, x_pixels, y_pixels,
+                CPUBackend._fast_2d(x, y, z, z_slice, weight_y, h, weight_function, kernel_radius, x_pixels, y_pixels,
                                     x_min, x_max, y_min, y_max, 3))
+
+    @staticmethod
+    def interpolate_3d_grid(x: ndarray, y: ndarray, z: ndarray, weight: ndarray, h: ndarray,
+                            weight_function: CPUDispatcher, kernel_radius: float, x_pixels: int, y_pixels: int,
+                            z_pixels: int, x_min: float, x_max: float, y_min: float, y_max: float, z_min: float,
+                            z_max: float) -> ndarray:
+        image = np.zeros((z_pixels, y_pixels, x_pixels))
+        pixwidthz = (z_max - z_min) / z_pixels
+
+        for z_i in np.arange(z_pixels):
+            z_val = z_min + (z_i + 0.5) * pixwidthz
+            image[z_i] = CPUBackend._fast_2d(z_val, x, y, z, weight, h, weight_function, kernel_radius, x_pixels,
+                                             y_pixels, x_min, x_max, y_min, y_max, 3)
+
+        return image
+
 
     # Underlying CPU numba-compiled code for interpolation to a 2D grid. Used in interpolation of 2D data,
     # and column integration / cross-sections of 3D data.
     @staticmethod
     @njit(parallel=True, fastmath=True)
-    def _fast_2d(z_slice, x_data, y_data, z_data, w_data, h_data, weight_function, kernel_radius, x_pixels, y_pixels,
+    def _fast_2d(x_data, y_data, z_data, z_slice, w_data, h_data, weight_function, kernel_radius, x_pixels, y_pixels,
                  x_min, x_max, y_min, y_max, n_dims):
         output = np.zeros((y_pixels, x_pixels))
         pixwidthx = (x_max - x_min) / x_pixels

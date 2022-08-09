@@ -224,8 +224,9 @@ def read_phantom(filename: str, separate_types: str = 'sinks'):
 
             return df_list
 
-        if separate_types == 'sinks' or separate_types == 'all' and not df_sinks.empty:
+        if (separate_types == 'sinks' or separate_types == 'all') and not df_sinks.empty:
             return [SarracenDataFrame(df, params={**header_vars, **{"mass": header_vars['massoftype']}}),
                     SarracenDataFrame(df_sinks, params=header_vars)]
 
-        return SarracenDataFrame(pd.concat([df, df_sinks], ignore_index=True), params={**header_vars, **{"mass": header_vars['massoftype']}})
+        return SarracenDataFrame(pd.concat([df, df_sinks], ignore_index=True),
+                                 params={**header_vars, **{"mass": header_vars['massoftype']}})
