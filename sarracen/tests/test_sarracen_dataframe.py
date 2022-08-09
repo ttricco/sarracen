@@ -144,3 +144,27 @@ def test_render_passthrough():
     ax2 = render(sdf, 'P', xsec=True, ax=ax2)
 
     assert repr(ax1) == repr(ax2)
+
+
+def test_calc_density():
+    # Tests that the density calculation is working as intended.
+
+    # 2D Data
+    df = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'h': [0.00683, 4.2166]})
+    params = {'mass': 89.3452, 'hfact': 1.2}
+    sdf = SarracenDataFrame(df, params)
+
+    sdf.calc_density()
+
+    assert sdf['rho'][0] == sdf.params['mass'] * (sdf.params['hfact'] / sdf['h'][0])**2
+    assert sdf['rho'][1] == sdf.params['mass'] * (sdf.params['hfact'] / sdf['h'][1])**2
+
+    # 3D Data
+    df = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'z': [2, 1], 'h': [0.0234, 7.3452]})
+    params = {'mass': 63.2353, 'hfact': 1.2}
+    sdf = SarracenDataFrame(df, params)
+
+    sdf.calc_density()
+
+    assert sdf['rho'][0] == sdf.params['mass'] * (sdf.params['hfact'] / sdf['h'][0])**3
+    assert sdf['rho'][1] == sdf.params['mass'] * (sdf.params['hfact'] / sdf['h'][1])**3
