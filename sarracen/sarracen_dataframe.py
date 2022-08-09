@@ -134,21 +134,37 @@ class SarracenDataFrame(DataFrame):
         self['m'] = self.params['mass']
         self._mcol = 'm'
 
-    def derive_density(self):
-        """ Create a new column 'rho', derived from columns 'hfact', 'h', and 'm'.
+    def calc_density(self):
+        """ Create a new column 'rho' that contains particle densities.
 
-        Intended for use with Phantom data dumps.
+        Density for each particle is calculated according to
+
+            .. math::
+
+                \\rho = m \\left( \\frac{h_{\\rm fact}}{h} \\right)^{n_{\\rm dim}}
+
+        where :math:`m` is the particle mass, :math:`h` is the smoothing length, and :math:`h_{\\rm fact}` defines the ratio of smoothing length to particle spacing. Smoothing lengths are taken from the smoothing length column, particle masses from the mass column if present, or params if not, and hfact from params.
 
         Raises
         ------
         KeyError
-            If the `hcol` and `mcol` columns do not exist, or 'hfact' does not exist in `params`.
+            If the `hcol` column does not exist, there is no `mcol` column or `mass` in params, or if `hfact` does not exist in `params`.
         """
-        if not {self.hcol, self.mcol}.issubset(self.columns) or 'hfact' not in self.params:
-            raise KeyError('Density cannot be derived from the columns in this SarracenDataFrame.')
+        if not {self.hcol}.issubset(self.columns):
+            raise KeyError('Missing smoothing length data in this SarracenDataFrame')
+        if 'hfact' not in self.params:
+            raise KeyError('hfact missing from params in this SarracenDataFrame.')
+        if not {self.mcol}.issubset(self.columns) and 'mass' not in self.params:
+            raise KeyError('Missing particle mass data in this SarracenDataFrame.')
 
-        self['rho'] = (self.params['hfact'] / self['h']) ** (self.get_dim()) * self['m']
+        mass = self.params['mass']
+        # prioritize using mass per particle, if present
+        if {self.mcol}.issubset(self.columns):
+            mass = self[self._mcol]
+
+        self['rho'] = (self.params['hfact'] / self['h']) ** (self.get_dim()) * mass
         self._rhocol = 'rho'
+
 
     @_copy_doc(render)
     def render(self, target: str, x: str = None, y: str = None, z: str = None, xsec: float = None,
