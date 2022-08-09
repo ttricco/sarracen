@@ -5,8 +5,8 @@ from matplotlib.colors import Colormap
 from pandas import DataFrame, Series
 import numpy as np
 
-from sarracen.render import render_2d, render_2d_cross, render_3d, render_3d_cross, streamlines, arrowplot, \
-    render_3d_line
+from sarracen.render import streamlines, arrowplot, render, lineplot
+from sarracen.interpolate import interpolate_2d, interpolate_3d_grid
 from sarracen.kernels import CubicSplineKernel, BaseKernel
 
 
@@ -150,70 +150,103 @@ class SarracenDataFrame(DataFrame):
         self['rho'] = (self.params['hfact'] / self['h']) ** (self.get_dim()) * self['m']
         self._rhocol = 'rho'
 
-    @_copy_doc(render_2d)
-    def render_2d(self, target: str, x: str = None, y: str = None, kernel: BaseKernel = None, x_pixels: int = None,
-                  y_pixels: int = None, x_min: float = None, x_max: float = None, y_min: float = None,
-                  y_max: float = None, cmap: Union[str, Colormap] = 'RdBu', cbar: bool = True, cbar_kws: dict = {},
-                  cbar_ax: Axes = None, ax: Axes = None, exact: bool = None, backend: str = None, log_scale: bool = None,
-                  **kwargs) -> Axes:
+    @_copy_doc(render)
+    def render(self, target: str, x: str = None, y: str = None, z: str = None, xsec: float = None,
+               kernel: BaseKernel = None, x_pixels: int = None, y_pixels: int = None, xlim: tuple[float, float] = None,
+               ylim: tuple[float, float] = None, cmap: Union[str, Colormap] = 'RdBu', cbar: bool = True,
+               cbar_kws: dict = {}, cbar_ax: Axes = None, ax: Axes = None, exact: bool = None, backend: str = None,
+               integral_samples: int = 1000, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
+               log_scale: bool = None, **kwargs) -> Axes:
+        return render(self, target, x, y, z, xsec, kernel, x_pixels, y_pixels, xlim, ylim, cmap, cbar, cbar_kws,
+                      cbar_ax, ax, exact, backend, integral_samples, rotation, rot_origin, log_scale, **kwargs)
 
-        return render_2d(self, target, x, y, kernel, x_pixels, y_pixels, x_min, x_max, y_min, y_max, cmap, cbar,
-                         cbar_kws, cbar_ax, ax, exact, backend, log_scale, **kwargs)
-
-    @_copy_doc(render_2d_cross)
-    def render_2d_cross(self, target: str, x: str = None, y: str = None, kernel: BaseKernel = None, pixels: int = 512,
-                        x1: float = None, y1: float = None, x2: float = None, y2: float = None, ax: Axes = None,
-                        backend: str = None, log_scale: bool = None, **kwargs) -> Axes:
-
-        return render_2d_cross(self, target, x, y, kernel, pixels, x1, x2, y1, y2, ax, backend, log_scale, **kwargs)
-
-    @_copy_doc(render_3d)
-    def render_3d(self, target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
-                  int_samples: int = 1000, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
-                  x_pixels: int = None, y_pixels: int = None, x_min: float = None, x_max: float = None,
-                  y_min: float = None, y_max: float = None, cmap: Union[str, Colormap] = 'RdBu', cbar: bool = True,
-                  cbar_kws: dict = {}, cbar_ax: Axes = None, ax: Axes = None, exact: bool = None, backend: str = None,
-                  log_scale: bool = None, **kwargs) -> Axes:
-
-        return render_3d(self, target, x, y, kernel, int_samples, rotation, rot_origin, x_pixels, y_pixels, x_min,
-                         x_max, y_min, y_max, cmap, cbar, cbar_kws, cbar_ax, ax, exact, backend, log_scale, **kwargs)
-
-    @_copy_doc(render_3d_cross)
-    def render_3d_cross(self, target: str, z_slice: float = None, x: str = None, y: str = None, z: str = None,
-                        kernel: BaseKernel = None, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
-                        x_pixels: int = None, y_pixels: int = None, x_min: float = None, x_max: float = None,
-                        y_min: float = None, y_max: float = None, cmap: Union[str, Colormap] = 'RdBu',
-                        cbar: bool = True, cbar_kws: dict = {}, cbar_ax: Axes = None, ax: Axes = None,
-                        backend: str = None, log_scale: bool = None, **kwargs) -> Axes:
-
-        return render_3d_cross(self, target, z_slice, x, y, z, kernel, rotation, rot_origin, x_pixels, y_pixels, x_min,
-                               x_max, y_min, y_max, cmap, cbar, cbar_kws, cbar_ax, ax, backend, log_scale, **kwargs)
-
-    @_copy_doc(render_3d_line)
-    def render_3d_line(self, target: str, x: str = None, y: str = None, z: str = None, kernel: BaseKernel = None,
-                       pixels: int = 512, xlim: tuple[float, float] = None, ylim: tuple[float, float] = None,
-                       zlim: tuple[float, float] = None, ax: Axes = None, backend: str = None, log_scale: bool = False,
-                       **kwargs) -> Axes:
-        return render_3d_line(self, target, x, y, z, kernel, pixels, xlim, ylim, zlim, ax, backend, log_scale, **kwargs)
+    @_copy_doc(lineplot)
+    def lineplot(self, target: str, x: str = None, y: str = None, z: str = None,
+                 kernel: BaseKernel = None, pixels: int = None, xlim: tuple[float, float] = None,
+                 ylim: tuple[float, float] = None, zlim: tuple[float, float] = None, ax: Axes = None,
+                 backend: str = None, log_scale: bool = False, **kwargs):
+        return lineplot(self, target, x, y, z, kernel, pixels, xlim, ylim, zlim, ax, backend, log_scale, **kwargs)
 
     @_copy_doc(streamlines)
-    def streamlines(self, target: Union[Tuple[str, str], Tuple[str, str, str]], z_slice: int = None, x: str = None,
-                    y: str = None, z: str = None, kernel: BaseKernel = None, integral_samples: int = 1000,
+    def streamlines(self, target: Union[Tuple[str, str], Tuple[str, str, str]], x: str = None, y: str = None,
+                    z: str = None, xsec: int = None, kernel: BaseKernel = None, integral_samples: int = 1000,
                     rotation: np.ndarray = None, rot_origin: np.ndarray = None, x_pixels: int = None,
-                    y_pixels: int = None, x_min: float = None, x_max: float = None, y_min: float = None,
-                    y_max: float = None, ax: Axes = None, exact: bool = None, backend: str='cpu', **kwargs) -> Axes:
-        return streamlines(self, target, z_slice, x, y, z, kernel, integral_samples, rotation, rot_origin, x_pixels,
-                           y_pixels, x_min, x_max, y_min, y_max, ax, exact, backend, **kwargs)
+                    y_pixels: int = None, xlim: tuple[float, float] = None, ylim: tuple[float, float] = None,
+                    ax: Axes = None, exact: bool = None, backend: str = None, **kwargs) -> Axes:
+        return streamlines(self, target, x, y, z, xsec, kernel, integral_samples, rotation, rot_origin, x_pixels,
+                           y_pixels, xlim, ylim, ax, exact, backend, **kwargs)
 
     @_copy_doc(arrowplot)
-    def arrowplot(self, target: Union[Tuple[str, str], Tuple[str, str, str]], z_slice: int = None, x: str = None,
-                  y: str = None, z: str = None, kernel: BaseKernel = None, integral_samples: int = 1000,
+    def arrowplot(self, target: Union[Tuple[str, str], Tuple[str, str, str]], x: str = None, y: str = None,
+                  z: str = None, xsec: int = None, kernel: BaseKernel = None, integral_samples: int = 1000,
                   rotation: np.ndarray = None, rot_origin: np.ndarray = None, x_arrows: int = None,
-                  y_arrows: int = None, x_min: float = None, x_max: float = None, y_min: float = None,
-                  y_max: float = None, ax: Axes = None, qkey: bool = True, qkey_kws: dict = None, exact: bool = None,
-                  backend: str='cpu', **kwargs) -> Axes:
-        return arrowplot(self, target, z_slice, x, y, z, kernel, integral_samples, rotation, rot_origin, x_arrows,
-                         y_arrows, x_min, x_max, y_min, y_max, ax, qkey, qkey_kws, exact, backend, **kwargs)
+                  y_arrows: int = None, xlim: tuple[float, float] = None, ylim: tuple[float, float] = None,
+                  ax: Axes = None, qkey: bool = True, qkey_kws: dict = None, exact: bool = None, backend: str = None,
+                  **kwargs) -> Axes:
+        return arrowplot(self, target, x, y, z, xsec, kernel, integral_samples, rotation, rot_origin, x_arrows,
+                         y_arrows, xlim, ylim, ax, qkey, qkey_kws, exact, backend, **kwargs)
+
+    def sph_interpolate(self, target: str, x: str = None, y: str = None, z: str = None, kernel: BaseKernel = None,
+                        rotation: np.ndarray = None, rot_origin: np.ndarray = None, x_pixels: int = None,
+                        y_pixels: int = None, z_pixels: int = None, xlim: tuple[float, float] = None,
+                        ylim: tuple[float, float] = None, zlim: tuple[float, float] = None,
+                        exact: bool = None, backend: str = 'cpu') -> np.ndarray:
+        """ Interpolate this data to a 2D or 3D grid, depending on the dimensionality of the data.
+
+        Parameters
+        ----------
+        data : SarracenDataFrame
+            The particle data to interpolate over.
+        target: str
+            The column label of the target data.
+        x, y, z: str
+            The column labels of the directional data to interpolate over. Defaults to the x, y, and z columns
+            detected in `data`.
+        kernel: BaseKernel
+            The kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
+        rotation: array_like or Rotation, optional
+            The rotation to apply to the data before interpolation. If defined as an array, the
+            order of rotations is [z, y, x] in degrees. Only applicable to 3D datasets.
+        rot_origin: array_like, optional
+            Point of rotation of the data, in [x, y, z] form. Defaults to the centre
+            point of the bounds of the data. Only applicable to 3D datasets.
+        x_pixels, y_pixels, z_pixels: int, optional
+            Number of pixels in the output image in the x, y & z directions. Default values are chosen to keep
+            a consistent aspect ratio.
+        xlim, ylim, zlim: tuple of float, optional
+            The minimum and maximum values to use in interpolation, in particle data space. Defaults
+            to the minimum and maximum values of `x`, `y` and `z`.
+        exact: bool
+            Whether to use exact interpolation of the data. Only applies to 2D datasets.
+        backend: ['cpu', 'gpu']
+            The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+
+        Returns
+        -------
+        ndarray (n-Dimensional)
+            The interpolated output image, in a multi-dimensional numpy array. The number of dimensions match the
+            dimensions of the data. Dimensions are structured in reverse order, where (x, y, z) -> [z, y, x].
+
+        Raises
+        -------
+        ValueError
+            If `x_pixels`, `y_pixels` or `z_pixels` are less than or equal to zero, or
+            if the specified `x`, `y` and `z` minimum and maximum values result in an invalid region, or
+            if `data` is not 2 or 3 dimensional.
+        KeyError
+            If `target`, `x`, `y`, `z`, mass, density, or smoothing length columns do not
+            exist in `data`.
+        """
+        if self.get_dim() == 2:
+            if xlim is None:
+                xlim = (None, None)
+            if ylim is None:
+                ylim = (None, None)
+            return interpolate_2d(self, target, x, y, kernel, x_pixels, y_pixels, xlim[0], xlim[1], ylim[0], ylim[1],
+                                  exact, backend)
+        elif self.get_dim() == 3:
+            return interpolate_3d_grid(self, target, x, y, z, kernel, rotation, rot_origin, x_pixels, y_pixels,
+                                       z_pixels, xlim, ylim, zlim, backend)
 
     @property
     def params(self):
