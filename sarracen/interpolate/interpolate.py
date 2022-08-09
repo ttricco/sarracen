@@ -496,6 +496,93 @@ def interpolate_2d_line(data: 'SarracenDataFrame', target: str, x: str = None, y
                               kernel.get_radius(), pixels, xlim[0], xlim[1], ylim[0], ylim[1])
 
 
+def interpolate_3d_line(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
+                        kernel: BaseKernel = None, pixels: int = None, xlim: tuple[float, float] = None,
+                        ylim: tuple[float, float] = None, zlim: tuple[float, float] = None, backend: str = None):
+    """ Interpolate vector particle data across three directional axes to a 1D line.
+
+    Interpolate the data within a SarracenDataFrame to a 1D line, by interpolating the values
+    of a target variable. The contributions of all particles near the interpolation line are
+    summed and stored to a 1D array.
+
+    Parameters
+    ----------
+    data : SarracenDataFrame
+            Particle data, in a SarracenDataFrame.
+    target: str
+        Column label of the target variable.
+    x, y, z: str
+        Column labels of the directional axes. Defaults to the x, y & z columns detected in `data`.
+    kernel: BaseKernel, optional
+        Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
+    pixels: int, optional
+        Number of pixels in the output image in the x & y directions. Default values are chosen to keep
+        a consistent aspect ratio.
+    xlim, ylim, zlim: tuple of float, optional
+        Starting and ending coordinates of the cross-section line (in particle data space). Defaults to
+        the minimum and maximum values of `x`, `y`, and `z`.
+    backend: ['cpu', 'gpu']
+        The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+
+    Returns
+    -------
+    output: ndarray (1-Dimensional)
+        The interpolated output line.
+
+    Raises
+    -------
+    ValueError
+        If `pixels` are less than or equal to zero, or
+        if the specified `x`, `y`, and `z` minimum and maximum values result in a zero area cross-section, or
+        if `data` is not 3-dimensional.
+    KeyError
+        If `target`, `x`, `y`, mass, density, or smoothing length data does not exist in `data`.
+    """
+    _check_dimension(data, 3)
+    x, y = _default_xy(data, x, y)
+
+    if z is None:
+        z = data.zcol
+    if z not in data.columns:
+        raise KeyError(f"z-directional column '{z}' does not exist in the provided dataset.")
+
+    mass_data = _get_mass(data)
+    rho_data = _get_density(data)
+
+    if target == 'rho':
+        target_data = rho_data
+    else:
+        _verify_columns(data, x, y, target)
+        target_data = data[target].to_numpy()
+
+    w_data = target_data * mass_data / rho_data
+
+    if zlim is None or zlim[0] is None:
+        z1 = _snap(data.loc[:, z].min())
+    else:
+        z1 = zlim[0]
+    if zlim is None or zlim[1] is None:
+        z2 = _snap(data.loc[:, z].max())
+    else:
+        z2 = zlim[1]
+    zlim = z1, z2
+
+    xlim, ylim = _snap_boundaries(data, x, y, xlim, ylim)
+    if ylim[1] == ylim[0] and xlim[1] == xlim[0] and zlim[1] == zlim[0]:
+        raise ValueError('Zero length cross section!')
+
+    kernel = kernel if kernel is not None else data.kernel
+    backend = backend if backend is not None else data.backend
+
+    if pixels <= 0:
+        raise ValueError('pixcount must be greater than zero!')
+
+    return get_backend(backend) \
+        .interpolate_3d_line(data[x].to_numpy(), data[y].to_numpy(), data[z].to_numpy(), w_data, data['h'].to_numpy(),
+                             kernel.w, kernel.get_radius(), pixels, xlim[0], xlim[1], ylim[0], ylim[1], zlim[0],
+                             zlim[1])
+
+
 def interpolate_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
                    integral_samples: int = 1000, rotation: np.ndarray = None, origin: np.ndarray = None,
                    x_pixels: int = None, y_pixels: int = None, xlim: tuple[float, float] = None,
@@ -935,13 +1022,13 @@ def interpolate_3d_grid(data: 'SarracenDataFrame', target: str, x: str = None, y
         xlim = (None, None)
     if not ylim:
         ylim = (None, None)
-    x_min, x_max, y_min, y_max = _snap_boundaries(data, x, y, xlim[0], xlim[1], ylim[0], ylim[1])
-    z_min, z_max = zlim if zlim else (_snap(data.loc[:, z].min()), _snap(data.loc[:, z].max()))
+    xlim, ylim = _snap_boundaries(data, x, y, xlim, ylim)
+    zlim = zlim if zlim else (_snap(data.loc[:, z].min()), _snap(data.loc[:, z].max()))
 
-    x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
-    z_pixels = int(np.rint(x_pixels * ((z_max - z_min) / (x_max - x_min)))) if z_pixels is None else z_pixels
-    _check_boundaries(x_pixels, y_pixels, x_min, x_max, y_min, y_max)
-    if z_max - z_min <= 0:
+    x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
+    z_pixels = int(np.rint(x_pixels * ((zlim[1] - zlim[0]) / (xlim[1] - xlim[0])))) if z_pixels is None else z_pixels
+    _check_boundaries(x_pixels, y_pixels, xlim, ylim)
+    if zlim[1] - zlim[0] <= 0:
         raise ValueError("`z_max` must be greater than `z_min`!")
     if z_pixels <= 0:
         raise ValueError("`z_pixels` must be greater than zero!")
@@ -953,7 +1040,7 @@ def interpolate_3d_grid(data: 'SarracenDataFrame', target: str, x: str = None, y
 
     return get_backend(backend) \
         .interpolate_3d_grid(x_data, y_data, z_data, w_data, data['h'].to_numpy(), kernel.w, kernel.get_radius(),
-                             x_pixels, y_pixels, z_pixels, x_min, x_max, y_min, y_max, z_min, z_max)
+                             x_pixels, y_pixels, z_pixels, xlim[0], xlim[1], ylim[0], ylim[1], zlim[0], zlim[1])
 
 
 def get_backend(code: str) -> BaseBackend:
