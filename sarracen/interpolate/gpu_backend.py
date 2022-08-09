@@ -40,6 +40,13 @@ class GPUBackend(BaseBackend):
         return GPUBackend._fast_2d_cross(x, y, weight, h, weight_function, kernel_radius, pixels, x1, x2, y1, y2)
 
     @staticmethod
+    def interpolate_3d_line(x: ndarray, y: ndarray, z: ndarray, weight: ndarray, h: ndarray,
+                            weight_function: CPUDispatcher, kernel_radius: float, pixels: int, x1: float, x2: float,
+                            y1: float, y2: float, z1: float, z2: float) -> ndarray:
+        return GPUBackend._fast_3d_line(x, y, z, weight, h, weight_function, kernel_radius, pixels, x1, x2, y1, y2, z1,
+                                        z2)
+
+    @staticmethod
     def interpolate_3d_projection(x: ndarray, y: ndarray, z: ndarray, weight: ndarray, h: ndarray,
                                   weight_function: CPUDispatcher, kernel_radius: float, x_pixels: int, y_pixels: int,
                                   x_min: float, x_max: float, y_min: float, y_max: float, exact: bool) -> ndarray:
@@ -89,7 +96,7 @@ class GPUBackend(BaseBackend):
         # todo: this should be separated from _fast_2d to reduce the unnecessary transfer of data to the graphics card.
         for z_i in np.arange(z_pixels):
             z_val = z_min + (z_i + 0.5) * pixwidthz
-            image[z_i] = GPUBackend._fast_2d(z_val, x, y, z, weight, h, weight_function, kernel_radius, x_pixels,
+            image[z_i] = GPUBackend._fast_2d(x, y, z, z_val, weight, h, weight_function, kernel_radius, x_pixels,
                                              y_pixels, x_min, x_max, y_min, y_max, 3)
 
         return image
@@ -379,6 +386,69 @@ class GPUBackend(BaseBackend):
 
         # execute the newly compiled GPU kernel
         _2d_func[blockspergrid, threadsperblock](d_x, d_y, d_w, d_h, kernel_radius, pixels, x1, x2, y1, y2, d_image)
+
+        return d_image.copy_to_host()
+
+    @staticmethod
+    def _fast_3d_line(x_data, y_data, z_data, w_data, h_data, weight_function, kernel_radius, pixels, x1, x2, y1, y2,
+                      z1, z2):
+        dx = x2 - x1
+        dy = y2 - y1
+        dz = z2 - z1
+
+        length = np.sqrt(dx ** 2 + dy ** 2 + dz ** 2)
+        ux, uy, uz = dx / length, dy / length, dz / length
+
+        @cuda.jit(fastmath=True)
+        def _2d_func(x_data, y_data, z_data, w_data, h_data, kernel_radius, pixels, x1, x2, y1, y2, z1, z2, image):
+            i = cuda.grid(1)
+
+            if i < x_data.size:
+                delta = (ux * (x1 - x_data[i]) + uy * (y1 - y_data[i]) + uz * (z1 - z_data[i])) ** 2 \
+                        - ((x1 - x_data[i]) ** 2 + (y1 - y_data[i]) ** 2 + (z1 - z_data[i]) ** 2)\
+                        + (kernel_radius * h_data[i]) ** 2
+                if delta < 0:
+                    return
+
+                term = w_data[i] / h_data[i] ** 3
+
+                d1 = -(ux * (x1 - x_data[i]) + uy * (y1 - y_data[i]) + uz * (z1 - z_data[i])) - math.sqrt(delta)
+                d2 = -(ux * (x1 - x_data[i]) + uy * (y1 - y_data[i]) + uz * (z1 - z_data[i])) + math.sqrt(delta)
+
+                pixmin = min(max(0, round((d1 / length) * pixels)), pixels)
+                pixmax = min(max(0, round((d2 / length) * pixels)), pixels)
+
+                for ipix in range(pixmin, pixmax):
+                    xpix = x1 + (ipix + 0.5) * (x2 - x1) / pixels
+                    ypix = y1 + (ipix + 0.5) * (y2 - y1) / pixels
+                    zpix = z1 + (ipix + 0.5) * (z2 - z1) / pixels
+
+                    xdiff = xpix - x_data[i]
+                    ydiff = ypix - y_data[i]
+                    zdiff = zpix - z_data[i]
+
+                    q2 = (xdiff ** 2 + ydiff ** 2 + zdiff ** 2) * (1 / (h_data[i] ** 2))
+                    wab = weight_function(math.sqrt(q2), 3)
+
+                    cuda.atomic.add(image, ipix, wab * term)
+
+        threadsperblock = 32
+        blockspergrid = (x_data.size + (threadsperblock - 1)) // threadsperblock
+
+        # transfer relevant data to the GPU
+        d_x = cuda.to_device(x_data)
+        d_y = cuda.to_device(y_data)
+        d_z = cuda.to_device(z_data)
+        d_w = cuda.to_device(w_data)
+        d_h = cuda.to_device(h_data)
+
+        # CUDA kernels have no return values, so the image data must be
+        # allocated on the device beforehand.
+        d_image = cuda.to_device(np.zeros(pixels))
+
+        # execute the newly compiled GPU kernel
+        _2d_func[blockspergrid, threadsperblock](d_x, d_y, d_z, d_w, d_h, kernel_radius, pixels, x1, x2, y1, y2, z1, z2,
+                                                 d_image)
 
         return d_image.copy_to_host()
 

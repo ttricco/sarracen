@@ -17,7 +17,7 @@ from matplotlib.axes import Axes
 from matplotlib.colors import Colormap, LogNorm
 
 from sarracen.interpolate import interpolate_2d_line, interpolate_2d, interpolate_3d, interpolate_3d_cross, \
-    interpolate_3d_vec, interpolate_3d_cross_vec, interpolate_2d_vec
+    interpolate_3d_vec, interpolate_3d_cross_vec, interpolate_2d_vec, interpolate_3d_line
 from sarracen.kernels import BaseKernel
 
 
@@ -228,7 +228,7 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
 
 
 def lineplot(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
-             kernel: BaseKernel = None, pixels: int = None, xlim: tuple[float, float] = None,
+             kernel: BaseKernel = None, pixels: int = 512, xlim: tuple[float, float] = None,
              ylim: tuple[float, float] = None, zlim: tuple[float, float] = None, ax: Axes = None, backend: str = None,
              log_scale: bool = False, **kwargs):
     """ Render a scalar SPH target variable to line plot.
@@ -274,19 +274,38 @@ def lineplot(data: 'SarracenDataFrame', target: str, x: str = None, y: str = Non
     if data.get_dim() == 2:
         image = interpolate_2d_line(data, target, x, y, kernel, pixels, xlim, ylim, backend)
     else:
-        pass
-        # image = interpolate_3d_line(data, target, x, y, z, kernel, pixels, xlim, ylim, zlim, backend)
+        image = interpolate_3d_line(data, target, x, y, z, kernel, pixels, xlim, ylim, zlim, backend)
     x, y = _default_axes(data, x, y)
     xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
 
-    plot = sns.lineplot(x=np.linspace(0, np.sqrt((xlim[1] - xlim[0]) ** 2 + (ylim[1] - ylim[0]) ** 2),
-                                          image.size), y=image, ax=ax, **kwargs)
+    if data.get_dim() == 2:
+        upper_lim = np.sqrt((xlim[1] - xlim[0]) ** 2 + (ylim[1] - ylim[0]) ** 2)
+    else:
+        if z is None:
+            z = data.zcol
+        if z not in data.columns:
+            raise KeyError(f"z-directional column '{z}' does not exist in the provided dataset.")
+
+        if zlim is None or zlim[0] is None:
+            z1 = _snap(data.loc[:, z].min())
+        else:
+            z1 = zlim[0]
+        if zlim is None or zlim[1] is None:
+            z2 = _snap(data.loc[:, z].max())
+        else:
+            z2 = zlim[1]
+        zlim = z2, z1
+
+        upper_lim = np.sqrt((xlim[1] - xlim[0]) ** 2 + (ylim[1] - ylim[0]) ** 2 + (zlim[1] - zlim[0]) ** 2)
+
+    plot = sns.lineplot(x=np.linspace(0, upper_lim, image.size), y=image, ax=ax, **kwargs)
 
     if log_scale:
         plot.set(yscale='log')
 
     ax.margins(x=0, y=0)
-    ax.set_xlabel(f'cross-section ({x}, {y})')
+
+    ax.set_xlabel('cross-section ' + (f'({x}, {y})' if data.get_dim() == 2 else f'({x}, {y}, {z})'))
 
     label = target
     if log_scale:

@@ -11,7 +11,7 @@ from scipy.spatial.transform import Rotation
 from sarracen import SarracenDataFrame
 from sarracen.kernels import CubicSplineKernel, QuarticSplineKernel, QuinticSplineKernel
 from sarracen.interpolate import interpolate_2d, interpolate_2d_line, interpolate_3d_cross, interpolate_3d, \
-    interpolate_2d_vec, interpolate_3d_vec, interpolate_3d_cross_vec, interpolate_3d_grid
+    interpolate_2d_vec, interpolate_3d_vec, interpolate_3d_cross_vec, interpolate_3d_grid, interpolate_3d_line
 
 
 backends = ['cpu']
@@ -100,13 +100,19 @@ def test_single_particle(backend):
     bounds = (-kernel.get_radius(), kernel.get_radius())
     image = interpolate_3d_grid(sdf, 'A', x_pixels=25, y_pixels=25, z_pixels=25, xlim=bounds, ylim=bounds,
                                 zlim=bounds)
-
     for z in range(25):
         for y in range(25):
             for x in range(25):
                 assert image[z][y][x] == approx(w[0] * sdf['A'][0] *
                                                 kernel.w(np.sqrt(real[x] ** 2 + real[y] ** 2 + (real[z] + 0.5) ** 2)
                                                          / sdf['h'][0], 3))
+
+    image = interpolate_3d_line(sdf, 'A', pixels=25, xlim=(-kernel.get_radius(), kernel.get_radius()),
+                                ylim=(-kernel.get_radius(), kernel.get_radius()),
+                                zlim=(-kernel.get_radius(), kernel.get_radius()))
+    for x in range(25):
+        assert image[x] == approx(w[0] * sdf['A'][0] *
+                                  kernel.w(np.sqrt(2 * real[x] ** 2 + (real[x] + 0.5) ** 2) / sdf['h'][0], 3))
 
 
 @mark.parametrize("backend", backends)
@@ -195,13 +201,19 @@ def test_single_repeated_particle(backend):
 
     bounds = (-kernel.get_radius(), kernel.get_radius())
     image = interpolate_3d_grid(sdf, 'A', x_pixels=25, y_pixels=25, z_pixels=25, xlim=bounds, ylim=bounds, zlim=bounds)
-
     for z in range(25):
         for y in range(25):
             for x in range(25):
                 assert image[z][y][x] == approx(w[0] * sdf['A'][0] *
                                                 kernel.w(np.sqrt(real[x] ** 2 + real[y] ** 2 + (real[z] + 0.5) ** 2)
                                                          / sdf['h'][0], 3))
+
+    image = interpolate_3d_line(sdf, 'A', pixels=25, xlim=(-kernel.get_radius(), kernel.get_radius()),
+                                ylim=(-kernel.get_radius(), kernel.get_radius()),
+                                zlim=(-kernel.get_radius(), kernel.get_radius()))
+    for x in range(25):
+        assert image[x] == approx(w[0] * sdf['A'][0] *
+                                  kernel.w(np.sqrt(2 * real[x] ** 2 + (real[x] + 0.5) ** 2) / sdf['h'][0], 3))
 
 
 @mark.parametrize("backend", backends)
@@ -228,7 +240,7 @@ def test_dimension_check(backend):
     sdf = SarracenDataFrame(df, params=dict())
     sdf.backend = backend
 
-    for func in [interpolate_2d, interpolate_2d_line]:
+    for func in [interpolate_2d, interpolate_2d_line, interpolate_3d_line]:
         with raises(TypeError):
             func(sdf, 'P')
     with raises(TypeError):
@@ -382,7 +394,6 @@ def test_corner_particles(backend):
                           + w[1] * sdf_3['B'][1] * kernel.w(np.sqrt(real[24 - x] ** 2 + real[24 - y] ** 2 + 1)
                                                             / sdf_3['h'][1], 3)) == image_vec[1][y][x]
 
-
     image = interpolate_3d_grid(sdf_3, 'A', x_pixels=25, y_pixels=25, z_pixels=25)
     for z in range(25):
         for y in range(25):
@@ -485,6 +496,9 @@ def test_default_kernel(backend):
                                 zlim=(-1, 1))
     assert image == kernel.w(0, 3)
 
+    image = interpolate_3d_line(sdf_3, 'A', pixels=1, xlim=(-1, 1), ylim=(-1, 1))
+    assert image == kernel.w(0, 3)
+
     # Next, test that the kernel supplied to the function is actually used.
     kernel = QuinticSplineKernel()
     image = interpolate_2d(sdf_2, 'A', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), kernel=kernel)
@@ -513,6 +527,9 @@ def test_default_kernel(backend):
                                 zlim=(-1, 1), kernel=kernel)
     assert image == kernel.w(0, 3)
 
+    image = interpolate_3d_line(sdf_3, 'A', pixels=1, xlim=(-1, 1), ylim=(-1, 1), kernel=kernel)
+    assert image == kernel.w(0, 3)
+
 
 @mark.parametrize("backend", backends)
 def test_column_samples(backend):
@@ -531,6 +548,8 @@ def test_column_samples(backend):
     assert image == kernel.get_column_kernel(2)[0]
 
 
+# this test is incredibly slow on the GPU backend (30min+) so it only runs on the CPU
+# backend for now.
 #@mark.parametrize("backend", backends)
 def test_pixel_arguments():
     """
@@ -718,7 +737,6 @@ def test_irregular_bounds(backend):
     limit = -kernel.get_radius(), kernel.get_radius()
 
     image = interpolate_3d_grid(sdf, 'A', x_pixels=50, y_pixels=25, z_pixels=15, xlim=limit, ylim=limit, zlim=limit)
-
     for z in range(15):
         for y in range(25):
             for x in range(50):
