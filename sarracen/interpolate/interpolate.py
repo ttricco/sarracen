@@ -30,7 +30,7 @@ def _snap(value: float):
 
 
 def _default_xy(data, x, y):
-    """Utility function to determine the x & y columns to use during interpolation.
+    """ Utility function to determine the x & y columns to use during 2D interpolation.
 
     Parameters
     ----------
@@ -42,14 +42,42 @@ def _default_xy(data, x, y):
     Returns
     -------
     x, y: str
-        The directional column labels to use in interpolation. Defaults to the x-column detected in `data`
+        The directional column labels to use in interpolation.
     """
     if x is None:
-        x = data.xcol
+        x = data.xcol if not y == data.xcol else data.ycol
     if y is None:
-        y = data.ycol
+        y = data.ycol if not x == data.ycol else data.xcol
 
     return x, y
+
+
+def _default_xyz(data, x, y, z):
+    """ Utility function to determine the x, y and z columns to use during 3-D interpolation.
+
+    Parameters
+    ----------
+    data: SarracenDataFrame
+        The particle dataset to interpolate over.
+    x, y, z: str
+        The x, y and z directional column labels passed to the interpolation function.
+
+    Returns
+    -------
+    x, y, z: str
+        The directional column labels to use in interpolation.
+    """
+    if x is None:
+        x = data.xcol if not y == data.xcol and not z == data.xcol else \
+            data.ycol if not y == data.ycol and not z == data.ycol else data.zcol
+    if y is None:
+        y = data.ycol if not x == data.ycol and not z == data.ycol else \
+            data.xcol if not x == data.xcol and not z == data.xcol else data.zcol
+    if z is None:
+        z = data.zcol if not x == data.zcol and not y == data.zcol else \
+            data.ycol if not x == data.ycol and not y == data.ycol else data.xcol
+
+    return x, y, z
 
 
 def _snap_boundaries(data, x, y, xlim, ylim) -> tuple[tuple[float, float], tuple[float, float]]:
@@ -544,12 +572,7 @@ def interpolate_3d_line(data: 'SarracenDataFrame', target: str, x: str = None, y
         If `target`, `x`, `y`, mass, density, or smoothing length data does not exist in `data`.
     """
     _check_dimension(data, 3)
-    x, y = _default_xy(data, x, y)
-
-    if z is None:
-        z = data.zcol
-    if z not in data.columns:
-        raise KeyError(f"z-directional column '{z}' does not exist in the provided dataset.")
+    x, y, z = _default_xyz(data, x, y, z)
 
     mass_data = _get_mass(data)
     rho_data = _get_density(data)
@@ -656,7 +679,7 @@ def interpolate_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
     is not required for this type of interpolation.
     """
     _check_dimension(data, 3)
-    x, y = _default_xy(data, x, y)
+    x, y, z = _default_xyz(data, x, y, None)
 
     mass_data = _get_mass(data)
     rho_data = _get_density(data)
@@ -673,7 +696,7 @@ def interpolate_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     _check_boundaries(x_pixels, y_pixels, xlim, ylim)
 
-    x_data, y_data, z_data = _rotate_xyz(data, x, y, data.zcol, rotation, origin)
+    x_data, y_data, z_data = _rotate_xyz(data, x, y, z, rotation, origin)
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
 
@@ -745,7 +768,7 @@ def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
         is not required for this type of interpolation.
         """
     _check_dimension(data, 3)
-    x, y = _default_xy(data, x, y)
+    x, y, z = _default_xyz(data, x, y, None)
     _verify_columns(data, x, y, target_x)
     _verify_columns(data, x, y, target_y)
     _verify_columns(data, x, y, target_z)
@@ -754,7 +777,7 @@ def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     _check_boundaries(x_pixels, y_pixels, xlim, ylim)
 
-    x_data, y_data, _ = _rotate_xyz(data, x, y, data.zcol, rotation, origin)
+    x_data, y_data, _ = _rotate_xyz(data, x, y, z, rotation, origin)
     if target_z not in data.columns:
         raise KeyError(f"z-directional target column '{target_z}' does not exist in the provided dataset.")
     target_x_data, target_y_data, _ = _rotate_data(data, target_x, target_y, target_z, rotation, origin)
@@ -831,12 +854,7 @@ def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, x: str = None, 
     _check_dimension(data, 3)
 
     # x & y columns default to the variables determined by the SarracenDataFrame.
-    x, y = _default_xy(data, x, y)
-
-    if z is None:
-        z = data.zcol
-    if z not in data.columns:
-        raise KeyError(f"z-directional column '{z}' does not exist in the provided dataset.")
+    x, y, z = _default_xyz(data, x, y, z)
 
     # set default slice to be through the data's average z-value.
     if z_slice is None:
@@ -928,10 +946,7 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y:
     _verify_columns(data, x, y, target_y)
     _verify_columns(data, x, y, target_z)
 
-    if z is None:
-        z = data.zcol
-    if z not in data.columns:
-        raise KeyError(f"z-directional column '{z}' does not exist in the provided dataset.")
+    x, y, z = _default_xyz(data, x, y, z)
 
     # set default slice to be through the data's average z-value.
     if z_slice is None:
@@ -942,7 +957,7 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y:
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     _check_boundaries(x_pixels, y_pixels, xlim, ylim)
 
-    x_data, y_data, z_data = _rotate_xyz(data, x, y, data.zcol, rotation, origin)
+    x_data, y_data, z_data = _rotate_xyz(data, x, y, z, rotation, origin)
     target_x_data, target_y_data, _ = _rotate_data(data, target_x, target_y, target_z, rotation, origin)
 
     mass_data = _get_mass(data)
@@ -1012,12 +1027,7 @@ def interpolate_3d_grid(data: 'SarracenDataFrame', target: str, x: str = None, y
         exist in `data`.
     """
     _check_dimension(data, 3)
-    x, y = _default_xy(data, x, y)
-
-    if z is None:
-        z = data.zcol
-    if z not in data.columns:
-        raise KeyError(f"z-directional column '{z}' does not exist in the provided dataset.")
+    x, y, z = _default_xyz(data, x, y, z)
 
     mass_data = _get_mass(data)
     rho_data = _get_density(data)
