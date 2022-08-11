@@ -171,9 +171,22 @@ def _marisa_count_slices(fp, tags):
 	return Ns
 
 
-def read_marisa(filename, slicenumber=0):
-    """ Read data from a Marisa dump file. """
-	
+
+def read_marisa(filename : str,
+                slicenumber: int = 0) -> SarracenDataFrame:
+	""" Read data from a Marisa dump file.
+
+	Parameters
+	----------
+	filename : str
+	    Name of the file to be loaded.
+	slicenumber : int, default=0
+	    The time slice to read from the data file.
+
+	Returns
+	-------
+	SarracenDataFrame
+	"""
 	fp = open(filename, "rb")
 	ntags = 0
 	tags = 0
@@ -181,7 +194,6 @@ def read_marisa(filename, slicenumber=0):
 	offsets = 0
 	tags, offsets = _marisa_parse_tags(fp)
 	Ns = _marisa_count_slices(fp, tags)
-
 
 	if slicenumber < 0:
 		slicenumber = Ns + slicenumber
