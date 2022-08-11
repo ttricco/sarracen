@@ -170,8 +170,10 @@ def _marisa_count_slices(fp, tags):
 			Ns = Ns + 1
 	return Ns
 
-def read_marisa(filename, slicenumber=0):
 
+def read_marisa(filename, slicenumber=0):
+    """ Read data from a Marisa dump file. """
+	
 	fp = open(filename, "rb")
 	ntags = 0
 	tags = 0

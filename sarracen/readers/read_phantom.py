@@ -190,18 +190,40 @@ def read_phantom(filename: str, separate_types: str = 'sinks'):
     """
     Read data from a Phantom dump file.
 
+    This reads the native binary format of Phantom dump files, which in turn were derived from the binary file format
+    used by sphNG.
+
+    Global values stored in the dump file (time step, initial momentum, hfact, Courant factor, etc) are stored within the
+    data frame in the dictionary ``params``.
+
     Parameters
     ----------
     filename : str
         Name of the file to be loaded.
-    separate_types: [None, 'sinks', 'all']
-        Whether to separate different particle types into several dataframes. None returns all particle types in one
-        data frame. 'sinks' separates sink particles into a second dataframe, and 'all' returns all particle types in
+    separate_types : {None, 'sinks', 'all'}, default='sinks'
+        Whether to separate different particle types into several dataframes. ``None`` returns all particle types in one
+        data frame. '`sinks`' separates sink particles into a second dataframe, and '`all`' returns all particle types in
         different dataframes.
 
     Returns
     -------
     SarracenDataFrame or list of SarracenDataFrame
+
+    Notes
+    -----
+    See the `Phantom documentation <https://phantomsph.readthedocs.io/en/latest/dumpfile.html>`_ for a full description
+    of the Phantom binary file format.
+
+    Examples
+    --------
+    By default, SPH particles are grouped into one data frame and sink particles into a second data frame.
+
+    >>> sdf, sdf_sinks = sarracen.read_phantom('dumpfile_00000')
+
+    A dump file containing multiple particle types, say gas + dust + sinks, can separated into their own data frames
+    by specifying ``separate_types='all'``.
+
+    >>> sdf_gas, sdf_dust, sdf_sinks = sarracen.read_phantom('multiple_types_00000', separate_types='all')
     """
     with open(filename, 'rb') as fp:
         def_int_dtype, def_real_dtype = _read_capture_pattern(fp)
