@@ -258,8 +258,7 @@ class SarracenDataFrame(DataFrame):
                 xlim = (None, None)
             if ylim is None:
                 ylim = (None, None)
-            return interpolate_2d(self, target, x, y, kernel, x_pixels, y_pixels, xlim[0], xlim[1], ylim[0], ylim[1],
-                                  exact, backend)
+            return interpolate_2d(self, target, x, y, kernel, x_pixels, y_pixels, xlim, ylim, exact, backend)
         elif self.get_dim() == 3:
             return interpolate_3d_grid(self, target, x, y, z, kernel, rotation, rot_origin, x_pixels, y_pixels,
                                        z_pixels, xlim, ylim, zlim, backend)
