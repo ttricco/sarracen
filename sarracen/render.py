@@ -20,6 +20,7 @@ from sarracen.interpolate import interpolate_2d_line, interpolate_2d, interpolat
     interpolate_3d_vec, interpolate_3d_cross_vec, interpolate_2d_vec, interpolate_3d_line
 from sarracen.kernels import BaseKernel
 
+from typing import Tuple
 
 def _snap(value: float):
     """ Snap a number to the nearest integer
@@ -65,7 +66,7 @@ def _default_axes(data, x, y):
     return x, y
 
 
-def _default_bounds(data, x, y, xlim, ylim) -> tuple[tuple[float, float], tuple[float, float]]:
+def _default_bounds(data, x, y, xlim, ylim) -> Tuple[Tuple[float, float], Tuple[float, float]]:
     """Utility function to determine the 2-dimensional boundaries to use in 2D rendering.
 
     Parameters
@@ -123,7 +124,7 @@ def _set_pixels(x_pixels, y_pixels, xlim, ylim, default):
 
 def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
            xsec: Union[float, bool] = None, kernel: BaseKernel = None, x_pixels: int = None, y_pixels: int = None,
-           xlim: tuple[float, float] = None, ylim: tuple[float, float] = None, cmap: Union[str, Colormap] = 'gist_heat',
+           xlim: Tuple[float, float] = None, ylim: Tuple[float, float] = None, cmap: Union[str, Colormap] = 'gist_heat',
            cbar: bool = True, cbar_kws: dict = {}, cbar_ax: Axes = None, ax: Axes = None, exact: bool = None,
            backend: str = None, integral_samples: int = 1000, rotation: np.ndarray = None,
            rot_origin: np.ndarray = None, log_scale: bool = False, **kwargs) -> Axes:
@@ -228,8 +229,8 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
 
 
 def lineplot(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
-             kernel: BaseKernel = None, pixels: int = 512, xlim: tuple[float, float] = None,
-             ylim: tuple[float, float] = None, zlim: tuple[float, float] = None, ax: Axes = None, backend: str = None,
+             kernel: BaseKernel = None, pixels: int = 512, xlim: Tuple[float, float] = None,
+             ylim: Tuple[float, float] = None, zlim: Tuple[float, float] = None, ax: Axes = None, backend: str = None,
              log_scale: bool = False, **kwargs):
     """ Render a scalar SPH target variable to line plot.
 
@@ -326,8 +327,8 @@ def lineplot(data: 'SarracenDataFrame', target: str, x: str = None, y: str = Non
 def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[str, str, str]], x: str = None,
                 y: str = None, z: str = None, xsec: int = None, kernel: BaseKernel = None,
                 integral_samples: int = 1000, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
-                x_pixels: int = None, y_pixels: int = None, xlim: tuple[float, float] = None,
-                ylim: tuple[float, float] = None, ax: Axes = None, exact: bool = None, backend: str = None,
+                x_pixels: int = None, y_pixels: int = None, xlim: Tuple[float, float] = None,
+                ylim: Tuple[float, float] = None, ax: Axes = None, exact: bool = None, backend: str = None,
                 **kwargs) -> Axes:
     """ Create an SPH interpolated streamline plot of a target vector.
 
@@ -433,8 +434,8 @@ def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[
 def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[str, str, str]], x: str = None,
               y: str = None, z: str = None, xsec: float = None, kernel: BaseKernel = None,
               integral_samples: int = 1000, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
-              x_arrows: int = None, y_arrows: int = None, xlim: tuple[float, float] = None,
-              ylim: tuple[float, float] = None, ax: Axes = None, qkey: bool = True, qkey_kws=None, exact: bool = None,
+              x_arrows: int = None, y_arrows: int = None, xlim: Tuple[float, float] = None,
+              ylim: Tuple[float, float] = None, ax: Axes = None, qkey: bool = True, qkey_kws=None, exact: bool = None,
               backend: str = None, **kwargs) -> Axes:
     """ Create an SPH interpolated vector field plot of a target vector.
 
