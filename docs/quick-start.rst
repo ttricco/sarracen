@@ -30,7 +30,7 @@ Loading Phantom data is as straightforward as
 
 .. code-block::
 
-   sdf = sarracen.load_phantom('dumpfile')
+   sdf = sarracen.read_phantom('dumpfile')
 
 This call can separate different particle species into their own SarracenDataFrame. Sink particles are split off by default.
 
