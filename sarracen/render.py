@@ -16,9 +16,9 @@ from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.colors import Colormap, LogNorm
 
-from sarracen.interpolate import interpolate_2d_line, interpolate_2d, interpolate_3d, interpolate_3d_cross, \
+from .interpolate import interpolate_2d_line, interpolate_2d, interpolate_3d, interpolate_3d_cross, \
     interpolate_3d_vec, interpolate_3d_cross_vec, interpolate_2d_vec, interpolate_3d_line
-from sarracen.kernels import BaseKernel
+from .kernels import BaseKernel
 
 from typing import Tuple
 

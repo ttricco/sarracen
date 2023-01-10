@@ -5,9 +5,9 @@ from matplotlib.colors import Colormap
 from pandas import DataFrame, Series
 import numpy as np
 
-from sarracen.render import streamlines, arrowplot, render, lineplot
-from sarracen.interpolate import interpolate_2d, interpolate_3d_grid
-from sarracen.kernels import CubicSplineKernel, BaseKernel
+from .render import streamlines, arrowplot, render, lineplot
+from .interpolate import interpolate_2d, interpolate_3d_grid
+from .kernels import CubicSplineKernel, BaseKernel
 
 from typing import Tuple
 

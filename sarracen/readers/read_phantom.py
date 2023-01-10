@@ -3,7 +3,7 @@ from typing import Union
 import numpy as np
 import pandas as pd
 
-from sarracen.sarracen_dataframe import SarracenDataFrame
+from ..sarracen_dataframe import SarracenDataFrame
 
 def _read_fortran_block(fp, bytesize):
     """ Helper function to read Fortran data, which is also buffered before and after by 4 bytes."""
