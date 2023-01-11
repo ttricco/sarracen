@@ -7,16 +7,20 @@ Quick Start Guide
 Installation
 ------------
 
-In future, Sarracen will be set up on PyPi so that it can be installed using ``pip``.
-
-Until then, we recommend cloning the repository from github and importing locally. All that needs to be done is to define the path to Sarracen. See below.
+The latest stable release and associated dependencies can be installed from PyPi:
 
 .. code-block::
 
-   import sys
-   sys.path.append('/path/to/sarracen') # replace with your path to sarracen
+    pip install sarracen
 
-   import sarracen
+This is the recommended way to install Sarracen.
+
+The latest development snapshot is available on the GitHub repository. Either clone the repository and add it to your path so that it can be imported, or install directly through pip:
+
+.. code-block::
+
+    pip install git+https://github.com/ttricco/sarracen.git
+
 
 
 Loading data into a SarracenDataFrame
