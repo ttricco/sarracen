@@ -126,7 +126,7 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
            xlim: tuple[float, float] = None, ylim: tuple[float, float] = None, cmap: Union[str, Colormap] = 'gist_heat',
            cbar: bool = True, cbar_kws: dict = {}, cbar_ax: Axes = None, ax: Axes = None, exact: bool = None,
            backend: str = None, integral_samples: int = 1000, rotation: np.ndarray = None,
-           rot_origin: np.ndarray = None, log_scale: bool = False, **kwargs) -> Axes:
+           rot_origin: np.ndarray = None, log_scale: bool = False, dens_weight: bool = None, **kwargs) -> Axes:
     """ Render a scalar SPH target variable to a grid plot.
 
     Parameters
@@ -187,14 +187,14 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
         exist in `data`.
     """
     if data.get_dim() == 2:
-        image = interpolate_2d(data, target, x, y, kernel, x_pixels, y_pixels, xlim, ylim, exact, backend)
+        image = interpolate_2d(data, target, x, y, kernel, x_pixels, y_pixels, xlim, ylim, exact, backend, dens_weight)
     else:
         if xsec is not None:
             image = interpolate_3d_cross(data, target, x, y, z, xsec, kernel, rotation,
-                                         rot_origin, x_pixels, y_pixels, xlim, ylim, backend)
+                                         rot_origin, x_pixels, y_pixels, xlim, ylim, backend, dens_weight)
         else:
             image = interpolate_3d(data, target, x, y, kernel, integral_samples, rotation, rot_origin, x_pixels,
-                                   y_pixels, xlim, ylim, exact, backend)
+                                   y_pixels, xlim, ylim, exact, backend, dens_weight)
 
     if ax is None:
         ax = plt.gca()
@@ -230,7 +230,7 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
 def lineplot(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
              kernel: BaseKernel = None, pixels: int = 512, xlim: tuple[float, float] = None,
              ylim: tuple[float, float] = None, zlim: tuple[float, float] = None, ax: Axes = None, backend: str = None,
-             log_scale: bool = False, **kwargs):
+             log_scale: bool = False, dens_weight: bool = None, **kwargs):
     """ Render a scalar SPH target variable to line plot.
 
     Parameters
@@ -272,9 +272,9 @@ def lineplot(data: 'SarracenDataFrame', target: str, x: str = None, y: str = Non
         exist in `data`.
     """
     if data.get_dim() == 2:
-        image = interpolate_2d_line(data, target, x, y, kernel, pixels, xlim, ylim, backend)
+        image = interpolate_2d_line(data, target, x, y, kernel, pixels, xlim, ylim, backend, dens_weight)
     else:
-        image = interpolate_3d_line(data, target, x, y, z, kernel, pixels, xlim, ylim, zlim, backend)
+        image = interpolate_3d_line(data, target, x, y, z, kernel, pixels, xlim, ylim, zlim, backend, dens_weight)
 
     if isinstance(xlim, float) or isinstance(xlim, int):
         xlim = xlim, xlim
@@ -328,7 +328,7 @@ def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[
                 integral_samples: int = 1000, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
                 x_pixels: int = None, y_pixels: int = None, xlim: tuple[float, float] = None,
                 ylim: tuple[float, float] = None, ax: Axes = None, exact: bool = None, backend: str = None,
-                **kwargs) -> Axes:
+                dens_weight: bool = None, **kwargs) -> Axes:
     """ Create an SPH interpolated streamline plot of a target vector.
 
     Render the data within a SarracenDataFrame to a 2D matplotlib object, by rendering the values
@@ -392,16 +392,16 @@ def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[
         if not len(target) == 2:
             raise ValueError('Target vector is not 2-dimensional.')
         img = interpolate_2d_vec(data, target[0], target[1], x, y, kernel, x_pixels, y_pixels, xlim, ylim, exact,
-                                 backend)
+                                 backend, dens_weight)
     elif data.get_dim() == 3:
         if not len(target) == 3:
             raise ValueError('Target vector is not 3-dimensional.')
         if xsec is None:
             img = interpolate_3d_vec(data, target[0], target[1], target[2], x, y, kernel, integral_samples, rotation,
-                                     rot_origin, x_pixels, y_pixels, xlim, ylim, exact, backend)
+                                     rot_origin, x_pixels, y_pixels, xlim, ylim, exact, backend, dens_weight)
         else:
             img = interpolate_3d_cross_vec(data, target[0], target[1], target[2], xsec, x, y, z, kernel, rotation,
-                                           rot_origin, x_pixels, y_pixels, xlim, ylim, backend)
+                                           rot_origin, x_pixels, y_pixels, xlim, ylim, backend, dens_weight)
     else:
         raise ValueError('`data` is not a valid number of dimensions.')
 
@@ -435,7 +435,7 @@ def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[st
               integral_samples: int = 1000, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
               x_arrows: int = None, y_arrows: int = None, xlim: tuple[float, float] = None,
               ylim: tuple[float, float] = None, ax: Axes = None, qkey: bool = True, qkey_kws=None, exact: bool = None,
-              backend: str = None, **kwargs) -> Axes:
+              backend: str = None, dens_weight: str = None, **kwargs) -> Axes:
     """ Create an SPH interpolated vector field plot of a target vector.
 
     Render the data within a SarracenDataFrame to a 2D matplotlib object, by rendering the values
@@ -505,19 +505,19 @@ def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[st
         if not len(target) == 2:
             raise ValueError('Target vector is not 2-dimensional.')
         img = interpolate_2d_vec(data, target[0], target[1], x, y, kernel, x_arrows, y_arrows, xlim, ylim, exact,
-                                 backend)
+                                 backend, dens_weight)
     elif data.get_dim() == 3:
         if not len(target) == 3:
             raise ValueError('Target vector is not 3-dimensional.')
         if xsec is None:
             img = interpolate_3d_vec(data, target[0], target[1], target[2], x, y, kernel, integral_samples, rotation,
-                                     rot_origin, x_arrows, y_arrows, xlim, ylim, exact, backend)
+                                     rot_origin, x_arrows, y_arrows, xlim, ylim, exact, backend, dens_weight)
         else:
             if exact:
                 raise UserWarning("Exact interpolation is not supported for 3D cross-sections.")
 
             img = interpolate_3d_cross_vec(data, target[0], target[1], target[2], xsec, x, y, z, kernel, rotation,
-                                           rot_origin, x_arrows, y_arrows, xlim, ylim, backend)
+                                           rot_origin, x_arrows, y_arrows, xlim, ylim, backend, dens_weight)
     else:
         raise ValueError('`data` is not a valid number of dimensions.')
 
