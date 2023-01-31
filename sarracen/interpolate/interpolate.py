@@ -429,6 +429,9 @@ def interpolate_2d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
         Whether to use exact interpolation of the data.
     backend: ['cpu', 'gpu']
         The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+    dens_weight: bool
+        Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density, defaults
+        to false otherwise.
 
     Returns
     -------
@@ -492,6 +495,9 @@ def interpolate_2d_line(data: 'SarracenDataFrame', target: str, x: str = None, y
         the minimum and maximum values of `x` and `y`.
     backend: ['cpu', 'gpu']
         The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+    dens_weight: bool
+        Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density, defaults
+        to false otherwise.
 
     Returns
     -------
@@ -563,6 +569,9 @@ def interpolate_3d_line(data: 'SarracenDataFrame', target: str, x: str = None, y
         the minimum and maximum values of `x`, `y`, and `z`.
     backend: ['cpu', 'gpu']
         The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+    dens_weight: bool
+        Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density, defaults
+        to false otherwise.
 
     Returns
     -------
@@ -656,6 +665,9 @@ def interpolate_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
         Whether to use exact interpolation of the data.
     backend: ['cpu', 'gpu']
         The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+    dens_weight: bool
+        Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density, defaults
+        to false otherwise.
 
     Returns
     -------
@@ -738,6 +750,9 @@ def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
             Whether to use exact interpolation of the data.
         backend: ['cpu', 'gpu']
             The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+        dens_weight: bool
+            Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density, defaults
+            to false otherwise.
 
         Returns
         -------
@@ -823,6 +838,9 @@ def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, x: str = None, 
         to the minimum and maximum values of `x` and `y`.
     backend: ['cpu', 'gpu']
         The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+    dens_weight: bool
+        Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density, defaults
+        to false otherwise.
 
     Returns
     -------
@@ -905,6 +923,9 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y:
             to the minimum and maximum values of `x` and `y`.
         backend: ['cpu', 'gpu']
             The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+        dens_weight: bool
+            Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density, defaults
+            to false otherwise.
 
         Returns
         -------
@@ -984,6 +1005,9 @@ def interpolate_3d_grid(data: 'SarracenDataFrame', target: str, x: str = None, y
         to the minimum and maximum values of `x`, `y` and `z`.
     backend: ['cpu', 'gpu']
         The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+    dens_weight: bool
+        Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density, defaults
+        to false otherwise.
 
     Returns
     -------
