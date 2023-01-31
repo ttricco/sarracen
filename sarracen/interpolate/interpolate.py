@@ -2,12 +2,12 @@
 Contains several interpolation functions which produce interpolated 2D or 1D arrays of SPH data.
 """
 import numpy as np
-from python.Lib.typing import Union
 from scipy.spatial.transform import Rotation
 
-from sarracen.interpolate import BaseBackend, CPUBackend, GPUBackend
-from sarracen.kernels import BaseKernel
+from ..interpolate import BaseBackend, CPUBackend, GPUBackend
+from ..kernels import BaseKernel
 
+from typing import Tuple, Union
 
 def _snap(value: float):
     """ Snap a number to the nearest integer
@@ -81,7 +81,7 @@ def _default_xyz(data, x, y, z):
     return x, y, z
 
 
-def _snap_boundaries(data, x, y, xlim, ylim) -> tuple[tuple[float, float], tuple[float, float]]:
+def _snap_boundaries(data, x, y, xlim, ylim) -> Tuple[Tuple[float, float], Tuple[float, float]]:
     """Utility function to determine the 2-dimensional boundaries to use in 2D interpolation.
 
     Parameters
@@ -113,7 +113,7 @@ def _snap_boundaries(data, x, y, xlim, ylim) -> tuple[tuple[float, float], tuple
     return (x_min, x_max), (y_min, y_max)
 
 
-def _set_pixels(x_pixels: int, y_pixels: int, xlim: tuple[float, float], ylim: tuple[float, float]) -> tuple[int, int]:
+def _set_pixels(x_pixels: int, y_pixels: int, xlim: Tuple[float, float], ylim: Tuple[float, float]) -> Tuple[int, int]:
     """Utility function to determine the number of pixels to interpolate over in 2D interpolation.
 
     Parameters
@@ -165,7 +165,7 @@ def _verify_columns(data, x, y):
         raise KeyError("Smoothing length column does not exist in the provided dataset.")
 
 
-def _check_boundaries(x_pixels: int, y_pixels: int, xlim: tuple[float, float], ylim: tuple[float, float]):
+def _check_boundaries(x_pixels: int, y_pixels: int, xlim: Tuple[float, float], ylim: Tuple[float, float]):
     """ Verify that the pixel count and boundaries of a 2D plot describe a valid region.
 
     Parameters
@@ -333,8 +333,8 @@ def _get_weight(data: 'SarracenDataFrame', target: Union[str, np.ndarray], dens_
 
 
 def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
-                   x_pixels: int = None, y_pixels: int = None, xlim: tuple[float, float] = None,
-                   ylim: tuple[float, float] = None, exact: bool = False,
+                   x_pixels: int = None, y_pixels: int = None, xlim: Tuple[float, float] = None,
+                   ylim: Tuple[float, float] = None, exact: bool = False,
                    backend: str = None, dens_weight: bool = None) -> np.ndarray:
     """ Interpolate particle data across two directional axes to a 2D grid of pixels.
 
@@ -401,7 +401,7 @@ def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
 
 def interpolate_2d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, x: str = None, y: str = None,
                        kernel: BaseKernel = None, x_pixels: int = None, y_pixels: int = None,
-                       xlim: tuple[float, float] = None, ylim: tuple[float, float] = None, exact: bool = False,
+                       xlim: Tuple[float, float] = None, ylim: Tuple[float, float] = None, exact: bool = False,
                        backend: str = None, dens_weight: bool = None):
     """ Interpolate vector particle data across two directional axes to a 2D grid of particles.
 
@@ -467,8 +467,8 @@ def interpolate_2d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
 
 
 def interpolate_2d_line(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
-                         kernel: BaseKernel = None, pixels: int = None, xlim: tuple[float, float] = None,
-                         ylim: tuple[float, float] = None, backend: str = None, dens_weight: bool = None) -> np.ndarray:
+                         kernel: BaseKernel = None, pixels: int = None, xlim: Tuple[float, float] = None,
+                         ylim: Tuple[float, float] = None, backend: str = None, dens_weight: bool = None) -> np.ndarray:
     """ Interpolate particle data across two directional axes to a 1D cross-section line.
 
     Interpolate the data within a SarracenDataFrame to a 1D line, by interpolating the values
@@ -536,8 +536,8 @@ def interpolate_2d_line(data: 'SarracenDataFrame', target: str, x: str = None, y
 
 
 def interpolate_3d_line(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
-                        kernel: BaseKernel = None, pixels: int = None, xlim: tuple[float, float] = None,
-                        ylim: tuple[float, float] = None, zlim: tuple[float, float] = None, backend: str = None,
+                        kernel: BaseKernel = None, pixels: int = None, xlim: Tuple[float, float] = None,
+                        ylim: Tuple[float, float] = None, zlim: Tuple[float, float] = None, backend: str = None,
                         dens_weight: bool = None):
     """ Interpolate vector particle data across three directional axes to a 1D line.
 
@@ -619,8 +619,8 @@ def interpolate_3d_line(data: 'SarracenDataFrame', target: str, x: str = None, y
 
 def interpolate_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
                    integral_samples: int = 1000, rotation: np.ndarray = None, origin: np.ndarray = None,
-                   x_pixels: int = None, y_pixels: int = None, xlim: tuple[float, float] = None,
-                   ylim: tuple[float, float] = None, exact: bool = False, backend: str = None,
+                   x_pixels: int = None, y_pixels: int = None, xlim: Tuple[float, float] = None,
+                   ylim: Tuple[float, float] = None, exact: bool = False, backend: str = None,
                    dens_weight: bool = None):
     """ Interpolate 3D particle data to a 2D grid of pixels.
 
@@ -702,7 +702,7 @@ def interpolate_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
 def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, target_z: str, x: str = None,
                        y: str = None, kernel: BaseKernel = None, integral_samples: int = 1000,
                        rotation: np.ndarray = None, origin: np.ndarray = None, x_pixels: int = None,
-                       y_pixels: int = None, xlim: tuple[float, float] = None, ylim: tuple[float, float] = None,
+                       y_pixels: int = None, xlim: Tuple[float, float] = None, ylim: Tuple[float, float] = None,
                        exact: bool = False, backend: str = None, dens_weight: bool = None):
     """ Interpolate 3D vector particle data to a 2D grid of pixels.
 
@@ -788,7 +788,7 @@ def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
 def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
                          z_slice: float = None, kernel: BaseKernel = None, rotation: np.ndarray = None,
                          origin: np.ndarray = None, x_pixels: int = None, y_pixels: int = None,
-                         xlim: tuple[float, float] = None, ylim: tuple[float, float] = None, backend: str = None,
+                         xlim: Tuple[float, float] = None, ylim: Tuple[float, float] = None, backend: str = None,
                          dens_weight: bool = None):
     """ Interpolate 3D particle data to a 2D grid, using a 3D cross-section.
 
@@ -870,8 +870,8 @@ def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, x: str = None, 
 def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, target_z: str,
                              z_slice: float = None, x: str = None, y: str = None, z: str = None,
                              kernel: BaseKernel = None, rotation: np.ndarray = None, origin: np.ndarray = None,
-                             x_pixels: int = None, y_pixels: int = None, xlim: tuple[float, float] = None,
-                             ylim: tuple[float, float] = None, backend: str = None, dens_weight: bool = None):
+                             x_pixels: int = None, y_pixels: int = None, xlim: Tuple[float, float] = None,
+                             ylim: Tuple[float, float] = None, backend: str = None, dens_weight: bool = None):
     """ Interpolate 3D vector particle data to a 2D grid, using a 3D cross-section.
 
         Interpolates vector particle data in a SarracenDataFrame across three directional axes to a 2D
@@ -951,8 +951,8 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y:
 def interpolate_3d_grid(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
                         kernel: BaseKernel = None, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
                         x_pixels: int = None, y_pixels: int = None, z_pixels: int = None,
-                        xlim: tuple[float, float] = None, ylim: tuple[float, float] = None,
-                        zlim: tuple[float, float] = None, backend: str = None, dens_weight: bool = None):
+                        xlim: Tuple[float, float] = None, ylim: Tuple[float, float] = None,
+                        zlim: Tuple[float, float] = None, backend: str = None, dens_weight: bool = None):
     """ Interpolate 3D particle data to a 3D grid of pixels
 
     Interpolates particle data in a SarracenDataFrame across three directional axes to a 3D

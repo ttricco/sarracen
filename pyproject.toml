@@ -1,0 +1,22 @@
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "sarracen"
+description = "SPH analysis and visualization"
+authors = [{name = "Terrence S. Tricco", email = "tstricco@mun.ca"}]
+readme = "README.md"
+dynamic = ["version"]
+requires-python = ">=3.8"
+dependencies = [
+    "matplotlib>=3.6",
+    "numba>=0.55.1",
+    "pandas>=1.4",
+    "scipy>=1.8.0",
+    "seaborn>=0.11",
+]
+
+[project.urls]
+Source = "https://github.com/ttricco/sarracen"
+Docs = "https://sarracen.readthedocs.io"

@@ -5,8 +5,8 @@ from numba.core.registry import CPUDispatcher
 from numpy import ndarray
 import numpy as np
 
-from sarracen.interpolate.base_backend import BaseBackend
-from sarracen.kernels.cubic_spline_exact import line_int, surface_int
+from ..interpolate.base_backend import BaseBackend
+from ..kernels.cubic_spline_exact import line_int, surface_int
 
 
 class CPUBackend(BaseBackend):

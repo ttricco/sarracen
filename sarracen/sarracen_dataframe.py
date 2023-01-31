@@ -5,10 +5,11 @@ from matplotlib.colors import Colormap
 from pandas import DataFrame, Series
 import numpy as np
 
-from sarracen.render import streamlines, arrowplot, render, lineplot
-from sarracen.interpolate import interpolate_2d, interpolate_3d_grid
-from sarracen.kernels import CubicSplineKernel, BaseKernel
+from .render import streamlines, arrowplot, render, lineplot
+from .interpolate import interpolate_2d, interpolate_3d_grid
+from .kernels import CubicSplineKernel, BaseKernel
 
+from typing import Tuple
 
 def _copy_doc(copy_func: Callable) -> Callable:
     """Copy documentation from another function to this function."""
@@ -168,8 +169,8 @@ class SarracenDataFrame(DataFrame):
 
     @_copy_doc(render)
     def render(self, target: str, x: str = None, y: str = None, z: str = None, xsec: float = None,
-               kernel: BaseKernel = None, x_pixels: int = None, y_pixels: int = None, xlim: tuple[float, float] = None,
-               ylim: tuple[float, float] = None, cmap: Union[str, Colormap] = 'gist_heat', cbar: bool = True,
+               kernel: BaseKernel = None, x_pixels: int = None, y_pixels: int = None, xlim: Tuple[float, float] = None,
+               ylim: Tuple[float, float] = None, cmap: Union[str, Colormap] = 'gist_heat', cbar: bool = True,
                cbar_kws: dict = {}, cbar_ax: Axes = None, ax: Axes = None, exact: bool = None, backend: str = None,
                integral_samples: int = 1000, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
                log_scale: bool = None, **kwargs) -> Axes:
@@ -178,8 +179,8 @@ class SarracenDataFrame(DataFrame):
 
     @_copy_doc(lineplot)
     def lineplot(self, target: str, x: str = None, y: str = None, z: str = None,
-                 kernel: BaseKernel = None, pixels: int = 512, xlim: tuple[float, float] = None,
-                 ylim: tuple[float, float] = None, zlim: tuple[float, float] = None, ax: Axes = None,
+                 kernel: BaseKernel = None, pixels: int = 512, xlim: Tuple[float, float] = None,
+                 ylim: Tuple[float, float] = None, zlim: Tuple[float, float] = None, ax: Axes = None,
                  backend: str = None, log_scale: bool = False, **kwargs):
         return lineplot(self, target, x, y, z, kernel, pixels, xlim, ylim, zlim, ax, backend, log_scale, **kwargs)
 
@@ -187,7 +188,7 @@ class SarracenDataFrame(DataFrame):
     def streamlines(self, target: Union[Tuple[str, str], Tuple[str, str, str]], x: str = None, y: str = None,
                     z: str = None, xsec: int = None, kernel: BaseKernel = None, integral_samples: int = 1000,
                     rotation: np.ndarray = None, rot_origin: np.ndarray = None, x_pixels: int = None,
-                    y_pixels: int = None, xlim: tuple[float, float] = None, ylim: tuple[float, float] = None,
+                    y_pixels: int = None, xlim: Tuple[float, float] = None, ylim: Tuple[float, float] = None,
                     ax: Axes = None, exact: bool = None, backend: str = None, **kwargs) -> Axes:
         return streamlines(self, target, x, y, z, xsec, kernel, integral_samples, rotation, rot_origin, x_pixels,
                            y_pixels, xlim, ylim, ax, exact, backend, **kwargs)
@@ -196,7 +197,7 @@ class SarracenDataFrame(DataFrame):
     def arrowplot(self, target: Union[Tuple[str, str], Tuple[str, str, str]], x: str = None, y: str = None,
                   z: str = None, xsec: int = None, kernel: BaseKernel = None, integral_samples: int = 1000,
                   rotation: np.ndarray = None, rot_origin: np.ndarray = None, x_arrows: int = None,
-                  y_arrows: int = None, xlim: tuple[float, float] = None, ylim: tuple[float, float] = None,
+                  y_arrows: int = None, xlim: Tuple[float, float] = None, ylim: Tuple[float, float] = None,
                   ax: Axes = None, qkey: bool = True, qkey_kws: dict = None, exact: bool = None, backend: str = None,
                   **kwargs) -> Axes:
         return arrowplot(self, target, x, y, z, xsec, kernel, integral_samples, rotation, rot_origin, x_arrows,
@@ -204,8 +205,8 @@ class SarracenDataFrame(DataFrame):
 
     def sph_interpolate(self, target: str, x: str = None, y: str = None, z: str = None, kernel: BaseKernel = None,
                         rotation: np.ndarray = None, rot_origin: np.ndarray = None, x_pixels: int = None,
-                        y_pixels: int = None, z_pixels: int = None, xlim: tuple[float, float] = None,
-                        ylim: tuple[float, float] = None, zlim: tuple[float, float] = None,
+                        y_pixels: int = None, z_pixels: int = None, xlim: Tuple[float, float] = None,
+                        ylim: Tuple[float, float] = None, zlim: Tuple[float, float] = None,
                         exact: bool = None, backend: str = 'cpu') -> np.ndarray:
         """ Interpolate this data to a 2D or 3D grid, depending on the dimensionality of the data.
 
