@@ -11,12 +11,15 @@ Sarracen is built upon the pandas, Matplotlib and NumPy libraries. It can load S
 Installation
 ------------
 
-Clone the Sarracen repository and add it to your path so that it can be imported.
+The latest stable release and associated dependencies can be installed from PyPi:
 
-    import sys
-    sys.path.append('/path/to/sarracen') # replace with your path to sarracen
+    pip install sarracen
 
-    import sarracen
+This is the recommended way to install Sarracen.
+
+To install the latest development snapshot, install using this GitHub repository. Either clone the repository and add it to your path so that it can be imported, or install directly through pip:
+
+    pip install git+https://github.com/ttricco/sarracen.git
 
 Documentation
 -------------

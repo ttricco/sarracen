@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from enum import IntEnum
 
-from sarracen.sarracen_dataframe import SarracenDataFrame
+from ..sarracen_dataframe import SarracenDataFrame
 
 
 class MARISAIO_TAGS(IntEnum):

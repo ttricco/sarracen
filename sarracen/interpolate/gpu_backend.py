@@ -6,8 +6,8 @@ from numba import cuda
 from numba.core.registry import CPUDispatcher
 from numpy import ndarray
 
-from sarracen.interpolate.base_backend import BaseBackend
-from sarracen.kernels.cubic_spline_exact import line_int, surface_int
+from ..interpolate.base_backend import BaseBackend
+from ..kernels.cubic_spline_exact import line_int, surface_int
 
 
 class GPUBackend(BaseBackend):

@@ -1,7 +1,7 @@
 import numpy as np
 from numba import jit
 
-from sarracen.kernels import BaseKernel
+from ..kernels import BaseKernel
 
 
 class QuarticSplineKernel(BaseKernel):
