@@ -170,6 +170,9 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
         point of the bounds of the data. Only applies to 3D datasets.
     log_scale: bool
         Whether to use a logarithmic scale for color coding.
+    dens_weight: bool
+        Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density, defaults
+        to false otherwise.
     kwargs: other keyword arguments
         Keyword arguments to pass to ax.imshow.
 
@@ -255,6 +258,9 @@ def lineplot(data: 'SarracenDataFrame', target: str, x: str = None, y: str = Non
         specified in `data`.
     log_scale: bool
         Whether to use a logarithmic scale for color coding.
+    dens_weight: bool
+        Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density, defaults
+        to false otherwise.
     kwargs: other keyword arguments
         Keyword arguments to pass to sns.lineplot.
 
@@ -369,6 +375,9 @@ def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[
         Whether to use exact interpolation of the data. For cross-sections this is ignored. Defaults to False.
     backend: ['cpu', 'gpu']
         The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
+    dens_weight: bool
+        Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density, defaults
+        to false otherwise.
     kwargs: other keyword arguments
         Keyword arguments to pass to ax.streamlines()
 
@@ -479,6 +488,9 @@ def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[st
         Whether to use exact interpolation of the data. For cross-sections this is ignored. Defaults to False.
     backend: ['cpu', 'gpu']
         The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
+    dens_weight: bool
+        Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density, defaults
+        to false otherwise.
     kwargs: other keyword arguments
         Keyword arguments to pass to ax.quiver()
 
