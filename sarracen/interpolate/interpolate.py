@@ -183,7 +183,7 @@ def _check_boundaries(x_pixels: int, y_pixels: int, xlim: Tuple[float, float], y
     """
     if xlim[1] - xlim[0] <= 0:
         raise ValueError("`xlim` max must be greater than min!")
-    if ylim[1] - xlim[0] <= 0:
+    if ylim[1] - ylim[0] <= 0:
         raise ValueError("`ylim` max must be greater than min!")
     if x_pixels <= 0:
         raise ValueError("`x_pixels` must be greater than zero!")
