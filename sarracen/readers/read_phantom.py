@@ -186,7 +186,7 @@ def _read_array_blocks(fp, def_int_dtype, def_real_dtype):
     return df, df_sinks
 
 
-def read_phantom(filename: str, separate_types: str = 'sinks'):
+def read_phantom(filename: str, separate_types: str = 'sinks', ignore_inactive: bool = True):
     """
     Read data from a Phantom dump file.
 
@@ -204,6 +204,9 @@ def read_phantom(filename: str, separate_types: str = 'sinks'):
         Whether to separate different particle types into several dataframes. ``None`` returns all particle types in one
         data frame. '`sinks`' separates sink particles into a second dataframe, and '`all`' returns all particle types in
         different dataframes.
+    ignore_inactive : {True, False}, default=True
+        If True, particles with negative smoothing length will not be read on import. These are
+        typically particles that have been accreted onto a sink particle or are otherwise inactive.
 
     Returns
     -------
@@ -233,6 +236,9 @@ def read_phantom(filename: str, separate_types: str = 'sinks'):
         header_vars['file_identifier'] = file_identifier
 
         df, df_sinks = _read_array_blocks(fp, def_int_dtype, def_real_dtype)
+
+        if ignore_inactive:
+            df = df[df['h'] > 0]
 
         if separate_types == 'all' and 'itype' in df and df['itype'].nunique() > 1:
             df_list = []
