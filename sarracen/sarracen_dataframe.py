@@ -3,13 +3,13 @@ from typing import Union, Callable, Tuple
 from matplotlib.axes import Axes
 from matplotlib.colors import Colormap
 from pandas import DataFrame, Series
+from numba import cuda
 import numpy as np
 
 from .render import streamlines, arrowplot, render, lineplot
 from .interpolate import interpolate_2d, interpolate_3d_grid
 from .kernels import CubicSplineKernel, BaseKernel
 
-from typing import Tuple
 
 def _copy_doc(copy_func: Callable) -> Callable:
     """Copy documentation from another function to this function."""
@@ -63,7 +63,7 @@ class SarracenDataFrame(DataFrame):
         self._identify_special_columns()
 
         self._kernel = CubicSplineKernel()
-        self._backend = 'cpu'
+        self._backend = 'gpu' if cuda.is_available() else 'cpu'
 
     @property
     def _constructor(self):
