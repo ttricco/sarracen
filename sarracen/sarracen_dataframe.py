@@ -236,7 +236,8 @@ class SarracenDataFrame(DataFrame):
         exact: bool
             Whether to use exact interpolation of the data. Only applies to 2D datasets.
         backend: ['cpu', 'gpu']
-            The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+            The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
+            'cpu' is used. A manually specified backend in `data` will override the default.
 
         Returns
         -------

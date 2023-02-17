@@ -339,7 +339,8 @@ def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
     exact: bool
         Whether to use exact interpolation of the data.
     backend: ['cpu', 'gpu']
-        The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+        The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
+        'cpu' is used. A manually specified backend in `data` will override the default.
 
     Returns
     -------
@@ -412,7 +413,8 @@ def interpolate_2d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
     exact: bool
         Whether to use exact interpolation of the data.
     backend: ['cpu', 'gpu']
-        The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+        The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
+        'cpu' is used. A manually specified backend in `data` will override the default.
 
     Returns
     -------
@@ -478,7 +480,8 @@ def interpolate_2d_line(data: 'SarracenDataFrame', target: str, x: str = None, y
         Starting and ending coordinates of the cross-section line (in particle data space). Defaults to
         the minimum and maximum values of `x` and `y`.
     backend: ['cpu', 'gpu']
-        The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+        The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
+        'cpu' is used. A manually specified backend in `data` will override the default.
 
     Returns
     -------
@@ -556,7 +559,8 @@ def interpolate_3d_line(data: 'SarracenDataFrame', target: str, x: str = None, y
         Starting and ending coordinates of the cross-section line (in particle data space). Defaults to
         the minimum and maximum values of `x`, `y`, and `z`.
     backend: ['cpu', 'gpu']
-        The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+        The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
+        'cpu' is used. A manually specified backend in `data` will override the default.
 
     Returns
     -------
@@ -656,7 +660,8 @@ def interpolate_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
     exact: bool
         Whether to use exact interpolation of the data.
     backend: ['cpu', 'gpu']
-        The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+        The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
+        'cpu' is used. A manually specified backend in `data` will override the default.
 
     Returns
     -------
@@ -746,7 +751,8 @@ def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
         exact: bool
             Whether to use exact interpolation of the data.
         backend: ['cpu', 'gpu']
-            The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+            The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
+        'cpu' is used. A manually specified backend in `data` will override the default.
 
         Returns
         -------
@@ -834,7 +840,8 @@ def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, x: str = None, 
         The minimum and maximum values to use in interpolation, in particle data space. Defaults
         to the minimum and maximum values of `x` and `y`.
     backend: ['cpu', 'gpu']
-        The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+        The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
+        'cpu' is used. A manually specified backend in `data` will override the default.
 
     Returns
     -------
@@ -924,7 +931,8 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y:
             The minimum and maximum values to use in interpolation, in particle data space. Defaults
             to the minimum and maximum values of `x` and `y`.
         backend: ['cpu', 'gpu']
-            The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+            The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
+        'cpu' is used. A manually specified backend in `data` will override the default.
 
         Returns
         -------
@@ -1009,7 +1017,8 @@ def interpolate_3d_grid(data: 'SarracenDataFrame', target: str, x: str = None, y
         The minimum and maximum values to use in interpolation, in particle data space. Defaults
         to the minimum and maximum values of `x`, `y` and `z`.
     backend: ['cpu', 'gpu']
-        The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+        The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
+        'cpu' is used. A manually specified backend in `data` will override the default.
 
     Returns
     -------
@@ -1067,12 +1076,12 @@ def interpolate_3d_grid(data: 'SarracenDataFrame', target: str, x: str = None, y
 
 
 def get_backend(code: str) -> BaseBackend:
-    """ Get the interpolation backend assocated with a string code.
+    """ Get the interpolation backend associated with a string code.
 
     Parameters
     ----------
     code: str
-        The code assocated with the particular backend. At the moment, 'cpu' for the CPU backend, and 'gpu' for
+        The code associated with the particular backend. At the moment, 'cpu' for the CPU backend, and 'gpu' for
         the GPU backend are supported.
 
     Returns
