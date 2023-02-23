@@ -32,7 +32,7 @@ def test_single_particle(backend):
     sdf.backend = backend
 
     # Weight for 2D interpolation & 3D column interpolation.
-    w = sdf['m'] / (sdf['rho'] * sdf['h'] ** 2)
+    w = sdf['m'] / (sdf['h'] ** 2)
 
     # A mapping of pixel indices to x / y values in particle space.
     real = -kernel.get_radius() + (np.arange(0, 25) + 0.5) * (2 * kernel.get_radius() / 25)
@@ -78,7 +78,7 @@ def test_single_particle(backend):
                    approx(w[0] * sdf['B'][0] * column_func(np.sqrt(real[x] ** 2 + real[y] ** 2) / sdf['h'][0], 2))
 
     # Weight for 3D cross-sections.
-    w = sdf['m'] / (sdf['rho'] * sdf['h'] ** 3)
+    w = sdf['m'] / (sdf['h'] ** 3)
 
     image = interpolate_3d_cross(sdf, 'A', z_slice=0, x_pixels=25, y_pixels=25,
                                  xlim=(-kernel.get_radius(), kernel.get_radius()),
@@ -134,7 +134,7 @@ def test_single_repeated_particle(backend):
     sdf.backend = backend
 
     # Multiplying by repetitions here is done for ease of use.
-    w = repetitions * sdf['m'] / (sdf['rho'] * sdf['h'] ** 2)
+    w = repetitions * sdf['m'] / (sdf['h'] ** 2)
 
     # A mapping of pixel indices to x / y values in particle space.
     real = -kernel.get_radius() + (np.arange(0, 25) + 0.5) * (2 * kernel.get_radius() / 25)
@@ -180,7 +180,7 @@ def test_single_repeated_particle(backend):
                    approx(w[0] * sdf['B'][0] * column_func(np.sqrt(real[x] ** 2 + real[y] ** 2) / sdf['h'][0], 2))
 
     # Weight for 3D cross-sections
-    w = repetitions * sdf['m'] / (sdf['rho'] * sdf['h'] ** 3)
+    w = repetitions * sdf['m'] / (sdf['h'] ** 3)
 
     image = interpolate_3d_cross(sdf, 'A', z_slice=0, x_pixels=25, y_pixels=25,
                                  xlim=(-kernel.get_radius(), kernel.get_radius()),
@@ -336,7 +336,7 @@ def test_corner_particles(backend):
     sdf_3.backend = backend
 
     # Weight for 2D interpolation, and 3D column interpolation.
-    w = sdf_2['m'] / (sdf_2['rho'] * sdf_2['h'] ** 2)
+    w = sdf_2['m'] / (sdf_2['h'] ** 2)
 
     # A mapping of pixel indices to x / y values in particle space.
     real = (np.arange(0, 25) + 0.5) * (2 / 25)
@@ -378,7 +378,7 @@ def test_corner_particles(backend):
                                                             / sdf_3['h'][1], 2)) == image_vec[1][y][x]
 
     # Weight for 3D cross-section interpolation.
-    w = sdf_3['m'] / (sdf_3['rho'] * sdf_3['h'] ** 3)
+    w = sdf_3['m'] / (sdf_3['h'] ** 3)
 
     image = interpolate_3d_cross(sdf_3, 'A', x_pixels=25, y_pixels=25)
     image_vec = interpolate_3d_cross_vec(sdf_3, 'A', 'B', 'C', x_pixels=25, y_pixels=25)
@@ -674,7 +674,7 @@ def test_irregular_bounds(backend):
     sdf.backend = backend
 
     # Weight for 2D interpolation and 3D column interpolation.
-    w = sdf['m'] / (sdf['rho'] * sdf['h'] ** 2)
+    w = sdf['m'] / (sdf['h'] ** 2)
 
     # A mapping of pixel indices to x / y values in particle space.
     real_x = -kernel.get_radius() + (np.arange(0, 50) + 0.5) * (2 * kernel.get_radius() / 50)
@@ -716,7 +716,7 @@ def test_irregular_bounds(backend):
                 w[0] * sdf['B'][0] * column_func(np.sqrt(real_x[x] ** 2 + real_y[y] ** 2) / sdf['h'][0], 2))
 
     # Weight for 3D cross-section interpolation.
-    w = sdf['m'] / (sdf['rho'] * sdf['h'] ** 3)
+    w = sdf['m'] / (sdf['h'] ** 3)
 
     image = interpolate_3d_cross(sdf, 'A', z_slice=0, x_pixels=50, y_pixels=25,
                                  xlim=(-kernel.get_radius(), kernel.get_radius()),
@@ -763,7 +763,7 @@ def test_oob_particles(backend):
     sdf_3.backend = backend
 
     # Weight for 2D interpolation, and 3D column interpolation.
-    w = sdf_2['m'] / (sdf_2['rho'] * sdf_2['h'] ** 2)
+    w = sdf_2['m'] / (sdf_2['h'] ** 2)
 
     # A mapping of pixel indices to x / y values in particle space.
     real_x = 1 + (np.arange(0, 25) + 0.5) * (1 / 25)
@@ -797,7 +797,7 @@ def test_oob_particles(backend):
                 w[0] * sdf_3['B'][0] * column_func(np.sqrt(real_x[x] ** 2 + real_y[y] ** 2) / sdf_3['h'][0], 2))
 
     # Weight for 3D cross-sections.
-    w = sdf_3['m'] / (sdf_3['rho'] * sdf_3['h'] ** 3)
+    w = sdf_3['m'] / (sdf_3['h'] ** 3)
 
     image = interpolate_3d_cross(sdf_3, 'A', z_slice=0, x_pixels=25, y_pixels=25, xlim=(1, 2), ylim=(1, 2))
     image_vec = interpolate_3d_cross_vec(sdf_3, 'A', 'B', 'C', 0, x_pixels=25, y_pixels=25, xlim=(1, 2), ylim=(1, 2))
@@ -877,8 +877,8 @@ def test_nonstandard_rotation(backend):
     image_crossvec = interpolate_3d_cross_vec(sdf, 'A', 'B', 'C', 0, x_pixels=50, y_pixels=50, xlim=(-1, 1),
                                               ylim=(-1, 1), rotation=[rot_z, rot_y, rot_x], origin=[0, 0, 0])
 
-    w_col = sdf['m'] / (sdf['rho'] * sdf['h'] ** 2)
-    w_cross = sdf['m'] / (sdf['rho'] * sdf['h'] ** 3)
+    w_col = sdf['m'] / (sdf['h'] ** 2)
+    w_cross = sdf['m'] / (sdf['h'] ** 3)
 
     pos_x, pos_y, pos_z = rotate((1, 1, 1), rot_z, rot_y, rot_x)
     target_x, target_y, target_z = rotate((4, 5, 6), rot_z, rot_y, rot_x)
@@ -988,8 +988,8 @@ def test_quaternion_rotation(backend):
     image_crossvec = interpolate_3d_cross_vec(sdf, 'A', 'B', 'C', 0, x_pixels=50, y_pixels=50, xlim=(-1, 1),
                                               ylim=(-1, 1), rotation=quat, origin=[0, 0, 0])
 
-    w_col = sdf['m'] / (sdf['rho'] * sdf['h'] ** 2)
-    w_cross = sdf['m'] / (sdf['rho'] * sdf['h'] ** 3)
+    w_col = sdf['m'] / (sdf['h'] ** 2)
+    w_cross = sdf['m'] / (sdf['h'] ** 3)
 
     pos = quat.apply([1, 1, 1])
     val = quat.apply([sdf['A'][0], sdf['B'][0], sdf['C'][0]])
@@ -1183,7 +1183,7 @@ def test_required_columns(backend):
     sdf_2.backend = backend
     sdf_3.backend = backend
 
-    for column in ['m', 'rho', 'h']:
+    for column in ['m', 'h']:
         sdf_dropped = sdf_2.drop(column, axis=1)
         with raises(KeyError):
             interpolate_2d(sdf_dropped, 'A')
@@ -1218,7 +1218,7 @@ def test_exact_interpolation(backend):
     sdf_3.backend = backend
 
     kernel = CubicSplineKernel()
-    w = sdf_2['m'] * sdf_2['A'] / (sdf_2['rho'] * sdf_2['h'] ** 2)
+    w = sdf_2['m'] * sdf_2['A'] / (sdf_2['h'] ** 2)
 
     bound = kernel.get_radius() * sdf_2['h'][0]
     image = interpolate_2d(sdf_2, 'A', xlim=(-bound, bound), ylim=(-bound, bound), x_pixels=1, exact=True)
@@ -1228,3 +1228,56 @@ def test_exact_interpolation(backend):
     image = interpolate_3d(sdf_3, 'A', xlim=(-bound, bound), ylim=(-bound, bound), x_pixels=1, exact=True)
 
     assert image.sum() == approx(w[0] * sdf_2['h'][0] ** 2 / (4 * bound ** 2))
+
+
+@mark.parametrize("backend", backends)
+def test_density_weighted(backend):
+    """
+    Enabling density weighted interpolation will change the resultant image
+    """
+    df_2 = pd.DataFrame({'x': [0], 'y': [0], 'A': [2], 'B': [3], 'h': [0.5], 'rho': [0.25], 'm': [0.75]})
+    sdf_2 = SarracenDataFrame(df_2, params=dict())
+    df_3 = pd.DataFrame({'x': [0], 'y': [0], 'z': [0], 'A': [2], 'B': [3], 'C': [4], 'h': [0.5], 'rho': [0.25],
+                         'm': [0.75]})
+    sdf_3 = SarracenDataFrame(df_3, params=dict())
+
+    kernel = CubicSplineKernel()
+    sdf_2.backend = backend
+    sdf_3.backend = backend
+
+    for dens_weight in [True, False]:
+        if dens_weight:
+            weight2d = sdf_2['m'][0] / (sdf_2['h'][0] ** 2 * sdf_2['rho'][0])
+            weight3d = sdf_2['m'][0] / (sdf_2['h'][0] ** 3 * sdf_2['rho'][0])
+        else:
+            weight2d = sdf_2['m'][0] / (sdf_2['h'][0] ** 2)
+            weight3d = sdf_2['m'][0] / (sdf_2['h'][0] ** 3)
+
+        image = interpolate_2d(sdf_2, 'A', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), dens_weight=dens_weight)
+        assert image == weight2d * sdf_2['A'][0] * kernel.w(0, 2)
+        image = interpolate_2d_vec(sdf_2, 'A', 'B', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), dens_weight=dens_weight)
+        assert image[0] == weight2d * sdf_2['A'][0] * kernel.w(0, 2)
+        assert image[1] == weight2d * sdf_2['B'][0] * kernel.w(0, 2)
+
+        image = interpolate_2d_line(sdf_2, 'A', pixels=1, xlim=(-1, 1), ylim=(-1, 1), dens_weight=dens_weight)
+        assert image[0] == weight2d * sdf_2['A'][0] * kernel.w(0, 2)
+
+        image = interpolate_3d(sdf_3, 'A', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), dens_weight=dens_weight)
+        assert image[0] == weight2d * sdf_2['A'][0] * kernel.get_column_kernel()[0]
+        image = interpolate_3d_vec(sdf_3, 'A', 'B', 'C', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), dens_weight=dens_weight)
+        assert image[0] == weight2d * sdf_2['A'][0] * kernel.get_column_kernel()[0]
+        assert image[1] == weight2d * sdf_2['B'][0] * kernel.get_column_kernel()[0]
+
+        image = interpolate_3d_cross(sdf_3, 'A', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), dens_weight=dens_weight)
+        assert image[0] == weight3d * sdf_2['A'][0] * kernel.w(0, 3)
+        image = interpolate_3d_cross_vec(sdf_3, 'A', 'B', 'C', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), dens_weight=dens_weight)
+        assert image[0] == weight3d * sdf_2['A'][0] * kernel.w(0, 3)
+        assert image[1] == weight3d * sdf_2['B'][0] * kernel.w(0, 3)
+
+        image = interpolate_3d_grid(sdf_3, 'A', x_pixels=1, y_pixels=1, z_pixels=1, xlim=(-1, 1), ylim=(-1, 1),
+                                    zlim=(-1, 1), dens_weight=dens_weight)
+        assert image[0] == weight3d * sdf_2['A'][0] * kernel.w(0, 3)
+
+        image = interpolate_3d_line(sdf_3, 'A', pixels=1, xlim=(-1, 1), ylim=(-1, 1), dens_weight=dens_weight)
+        assert image[0] == weight3d * sdf_2['A'][0] * kernel.w(0, 3)
+
