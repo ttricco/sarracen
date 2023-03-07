@@ -23,7 +23,8 @@ from .kernels import BaseKernel
 from typing import Tuple
 
 def _snap(value: float):
-    """ Snap a number to the nearest integer
+    """
+    Snap a number to the nearest integer
 
     Return a number which is rounded to the nearest integer,
     with a 1e-4 absolute range of tolerance.
@@ -44,7 +45,8 @@ def _snap(value: float):
 
 
 def _default_axes(data, x, y):
-    """Utility function to determine the x & y columns to use for rendering.
+    """
+    Utility function to determine the x & y columns to use for rendering.
 
     Parameters
     ----------
@@ -67,7 +69,8 @@ def _default_axes(data, x, y):
 
 
 def _default_bounds(data, x, y, xlim, ylim) -> Tuple[Tuple[float, float], Tuple[float, float]]:
-    """Utility function to determine the 2-dimensional boundaries to use in 2D rendering.
+    """
+    Utility function to determine the 2-dimensional boundaries to use in 2D rendering.
 
     Parameters
     ----------
@@ -99,7 +102,8 @@ def _default_bounds(data, x, y, xlim, ylim) -> Tuple[Tuple[float, float], Tuple[
 
 
 def _set_pixels(x_pixels, y_pixels, xlim, ylim, default):
-    """Utility function to determine the number of pixels to interpolate over in 2D interpolation.
+    """
+    Utility function to determine the number of pixels to interpolate over in 2D interpolation.
     Parameters
     ----------
     x_pixels, y_pixels: int
@@ -128,7 +132,8 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
            cbar: bool = True, cbar_kws: dict = {}, cbar_ax: Axes = None, ax: Axes = None, exact: bool = None,
            backend: str = None, integral_samples: int = 1000, rotation: np.ndarray = None,
            rot_origin: np.ndarray = None, log_scale: bool = False, dens_weight: bool = None, **kwargs) -> Axes:
-    """ Render a scalar SPH target variable to a grid plot.
+    """
+    Render a scalar SPH target variable to a grid plot.
 
     Parameters
     ----------
@@ -246,7 +251,8 @@ def lineplot(data: 'SarracenDataFrame', target: str, x: str = None, y: str = Non
              kernel: BaseKernel = None, pixels: int = 512, xlim: Tuple[float, float] = None,
              ylim: Tuple[float, float] = None, zlim: Tuple[float, float] = None, ax: Axes = None, backend: str = None,
              log_scale: bool = False, dens_weight: bool = False, **kwargs):
-    """ Render a scalar SPH target variable to line plot.
+    """
+    Render a scalar SPH target variable to line plot.
 
     Parameters
     ----------
@@ -347,7 +353,8 @@ def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[
                 x_pixels: int = None, y_pixels: int = None, xlim: Tuple[float, float] = None,
                 ylim: Tuple[float, float] = None, ax: Axes = None, exact: bool = None, backend: str = None,
                 dens_weight: bool = None, **kwargs) -> Axes:
-    """ Create an SPH interpolated streamline plot of a target vector.
+    """
+    Create an SPH interpolated streamline plot of a target vector.
 
     Render the data within a SarracenDataFrame to a 2D matplotlib object, by rendering the values
     of a target vector. The contributions of all particles near the rendered area are summed and
@@ -466,7 +473,8 @@ def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[st
               x_arrows: int = None, y_arrows: int = None, xlim: Tuple[float, float] = None,
               ylim: Tuple[float, float] = None, ax: Axes = None, qkey: bool = True, qkey_kws=None, exact: bool = None,
               backend: str = None, dens_weight: str = None, **kwargs) -> Axes:
-    """ Create an SPH interpolated vector field plot of a target vector.
+    """
+    Create an SPH interpolated vector field plot of a target vector.
 
     Render the data within a SarracenDataFrame to a 2D matplotlib object, by rendering the values
     of a target vector. The contributions of all particles near the rendered area are summed and
