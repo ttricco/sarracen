@@ -17,8 +17,8 @@ class CPUBackend(BaseBackend):
                               y_min: float, y_max: float, exact: bool) -> ndarray:
         if exact:
             return CPUBackend._exact_2d_render(x, y, weight, h, x_pixels, y_pixels, x_min, x_max, y_min, y_max)
-        return CPUBackend._fast_2d(x, y, np.zeros(x.size), 0, weight, h, weight_function, kernel_radius, x_pixels,
-                                   y_pixels, x_min, x_max, y_min, y_max, 2)
+        return CPUBackend._fast_2d(x, y, np.zeros(x.size), 0, weight, h, weight_function, kernel_radius,
+                                   x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2)
 
     @staticmethod
     def interpolate_2d_render_vec(x: ndarray, y: ndarray, weight_x: ndarray, weight_y: ndarray, h: ndarray,
@@ -117,6 +117,9 @@ class CPUBackend(BaseBackend):
         term = w_data / h_data ** n_dims
 
         output_local = np.zeros((get_num_threads(), y_pixels, x_pixels))
+        # normalization_local = None
+        # if normalize:
+            # normalization_local = np.zeros((get_num_threads(), y_pixels, x_pixels))
 
         # thread safety: each thread has its own grid, which are combined after interpolation
         for thread in prange(get_num_threads()):
@@ -164,6 +167,8 @@ class CPUBackend(BaseBackend):
                             continue
                         wab = weight_function(np.sqrt(q2[jpix][ipix]), n_dims)
                         output_local[thread][jpix + jpixmin, ipix + ipixmin] += term[i] * wab
+                        # if normalize:
+                        #     normalization_local[thread][jpix + jpixmin, ipix + ipixmin] +=
 
         for i in range(get_num_threads()):
             output += output_local[i]

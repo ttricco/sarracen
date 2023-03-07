@@ -320,18 +320,21 @@ def _get_density(data: 'SarracenDataFrame'):
 
 
 def _get_weight(data: 'SarracenDataFrame', target: Union[str, np.ndarray], dens_weight: bool):
-    mass_data = _get_mass(data)
 
-    if target == 'rho':
-        target_data = _get_density(data)
-    elif type(target) == str:
-        if target not in data.columns:
-            raise KeyError(f"Target column '{target}' does not exist in provided dataset.")
+    if type(target) is str:
+        if target == 'rho':
+            target_data = _get_density(data)
+        else:
+            if target not in data.columns:
+                raise KeyError(f"Target column '{target}' does not exist in provided dataset.")
 
-        target_data = data[target].to_numpy()
-    else:
+            target_data = data[target].to_numpy()
+    elif type(target) is np.ndarray:
         target_data = target
+    else:
+        raise KeyError(f"Target must be of type str or ndarray. Found: '{type(target)}'")
 
+    mass_data = _get_mass(data)
     if dens_weight:
         return target_data * mass_data
     else:
@@ -342,7 +345,7 @@ def _get_weight(data: 'SarracenDataFrame', target: Union[str, np.ndarray], dens_
 def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
                    x_pixels: int = None, y_pixels: int = None, xlim: Tuple[float, float] = None,
                    ylim: Tuple[float, float] = None, exact: bool = False,
-                   backend: str = None, dens_weight: bool = False) -> np.ndarray:
+                   backend: str = None, dens_weight: bool = False, normalize: bool = False) -> np.ndarray:
     """
     Interpolate particle data across two directional axes to a 2D grid of pixels.
 
@@ -401,15 +404,25 @@ def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
 
-    return get_backend(backend). \
-        interpolate_2d_render(data[x].to_numpy(), data[y].to_numpy(), w_data, data[data._hcol].to_numpy(), kernel.w,
+    grid = get_backend(backend). \
+           interpolate_2d_render(data[x].to_numpy(), data[y].to_numpy(), w_data, data[data._hcol].to_numpy(), kernel.w,
                               kernel.get_radius(), x_pixels, y_pixels, xlim[0], xlim[1], ylim[0], ylim[1], exact)
+
+    if normalize:
+        w_norm = _get_weight(data, np.array([1] * len(w_data)), dens_weight)
+        norm_grid = get_backend(backend). \
+                    interpolate_2d_render(data[x].to_numpy(), data[y].to_numpy(), w_norm, data[data._hcol].to_numpy(),
+                                          kernel.w, kernel.get_radius(), x_pixels, y_pixels, xlim[0], xlim[1], ylim[0],
+                                          ylim[1], exact)
+        grid = grid / norm_grid
+
+    return grid
 
 
 def interpolate_2d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, x: str = None, y: str = None,
                        kernel: BaseKernel = None, x_pixels: int = None, y_pixels: int = None,
                        xlim: Tuple[float, float] = None, ylim: Tuple[float, float] = None, exact: bool = False,
-                       backend: str = None, dens_weight: bool = False):
+                       backend: str = None, dens_weight: bool = False, normalize: bool = False):
     """
     Interpolate vector particle data across two directional axes to a 2D grid of particles.
 
@@ -467,18 +480,32 @@ def interpolate_2d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
     wx_data = _get_weight(data, target_x, dens_weight)
     wy_data = _get_weight(data, target_y, dens_weight)
 
+
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
 
-    return get_backend(backend).\
-        interpolate_2d_render_vec(data[x].to_numpy(), data[y].to_numpy(), wx_data, wy_data, data['h'].to_numpy(),
-                                  kernel.w, kernel.get_radius(), x_pixels, y_pixels, xlim[0], xlim[1], ylim[0], ylim[1],
-                                  exact)
+    gridx, gridy = get_backend(backend).\
+           interpolate_2d_render_vec(data[x].to_numpy(), data[y].to_numpy(), wx_data, wy_data, data['h'].to_numpy(),
+                                     kernel.w, kernel.get_radius(), x_pixels, y_pixels, xlim[0], xlim[1], ylim[0],
+                                     ylim[1], exact)
 
+    if normalize:
+        wx_norm = _get_weight(data, np.array([1] * len(wx_data)), dens_weight)
+        wy_norm = _get_weight(data, np.array([1] * len(wy_data)), dens_weight)
+        norm_gridx, norm_gridy = get_backend(backend).\
+                                 interpolate_2d_render_vec(data[x].to_numpy(), data[y].to_numpy(), wx_norm, wy_norm,
+                                                           data['h'].to_numpy(), kernel.w, kernel.get_radius(),
+                                                           x_pixels, y_pixels, xlim[0], xlim[1], ylim[0], ylim[1],
+                                                           exact)
+        gridx = gridx / norm_gridx
+        gridy = gridy / norm_gridy
+
+    return (gridx, gridy)
 
 def interpolate_2d_line(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
-                         kernel: BaseKernel = None, pixels: int = None, xlim: Tuple[float, float] = None,
-                         ylim: Tuple[float, float] = None, backend: str = None, dens_weight: bool = False) -> np.ndarray:
+                        kernel: BaseKernel = None, pixels: int = None, xlim: Tuple[float, float] = None,
+                        ylim: Tuple[float, float] = None, backend: str = None, dens_weight: bool = False,
+                        normalize: bool = False) -> np.ndarray:
     """
     Interpolate particle data across two directional axes to a 1D cross-section line.
 
@@ -543,15 +570,24 @@ def interpolate_2d_line(data: 'SarracenDataFrame', target: str, x: str = None, y
     if pixels <= 0:
         raise ValueError('pixcount must be greater than zero!')
 
-    return get_backend(backend)\
-        .interpolate_2d_cross(data[x].to_numpy(), data[y].to_numpy(), w_data, data['h'].to_numpy(), kernel.w,
-                              kernel.get_radius(), pixels, xlim[0], xlim[1], ylim[0], ylim[1])
+    grid = get_backend(backend).\
+           interpolate_2d_cross(data[x].to_numpy(), data[y].to_numpy(), w_data, data['h'].to_numpy(), kernel.w,
+                                kernel.get_radius(), pixels, xlim[0], xlim[1], ylim[0], ylim[1])
+
+    if normalize:
+        w_norm = _get_weight(data, np.array([1] * len(w_data)), dens_weight)
+        norm_grid = get_backend(backend). \
+                    interpolate_2d_cross(data[x].to_numpy(), data[y].to_numpy(), w_norm, data['h'].to_numpy(),
+                                         kernel.w, kernel.get_radius(), pixels, xlim[0], xlim[1], ylim[0], ylim[1])
+        grid = grid / norm_grid
+
+    return grid
 
 
 def interpolate_3d_line(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
                         kernel: BaseKernel = None, pixels: int = None, xlim: Tuple[float, float] = None,
                         ylim: Tuple[float, float] = None, zlim: Tuple[float, float] = None, backend: str = None,
-                        dens_weight: bool = False):
+                        dens_weight: bool = False, normalize: bool = False):
     """
     Interpolate vector particle data across three directional axes to a 1D line.
 
@@ -627,17 +663,27 @@ def interpolate_3d_line(data: 'SarracenDataFrame', target: str, x: str = None, y
     if pixels <= 0:
         raise ValueError('pixcount must be greater than zero!')
 
-    return get_backend(backend) \
-        .interpolate_3d_line(data[x].to_numpy(), data[y].to_numpy(), data[z].to_numpy(), w_data, data['h'].to_numpy(),
-                             kernel.w, kernel.get_radius(), pixels, xlim[0], xlim[1], ylim[0], ylim[1], zlim[0],
-                             zlim[1])
+    grid = get_backend(backend) \
+           .interpolate_3d_line(data[x].to_numpy(), data[y].to_numpy(), data[z].to_numpy(), w_data, data['h'].to_numpy(),
+                                kernel.w, kernel.get_radius(), pixels, xlim[0], xlim[1], ylim[0], ylim[1], zlim[0],
+                                zlim[1])
+
+    if normalize:
+        w_norm = _get_weight(data, np.array([1] * len(w_data)), dens_weight)
+        norm_grid = get_backend(backend) \
+                    .interpolate_3d_line(data[x].to_numpy(), data[y].to_numpy(), data[z].to_numpy(), w_norm,
+                                         data['h'].to_numpy(), kernel.w, kernel.get_radius(), pixels, xlim[0], xlim[1],
+                                         ylim[0], ylim[1], zlim[0], zlim[1])
+        grid = grid / norm_grid
+
+    return grid
 
 
 def interpolate_3d_proj(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
                    integral_samples: int = 1000, rotation: np.ndarray = None, origin: np.ndarray = None,
                    x_pixels: int = None, y_pixels: int = None, xlim: Tuple[float, float] = None,
                    ylim: Tuple[float, float] = None, exact: bool = False, backend: str = None,
-                   dens_weight: bool = None):
+                   dens_weight: bool = None, normalize: bool = False):
     """
     Interpolate 3D particle data to a 2D grid of pixels.
 
@@ -717,16 +763,25 @@ def interpolate_3d_proj(data: 'SarracenDataFrame', target: str, x: str = None, y
 
     weight_function = kernel.get_column_kernel_func(integral_samples)
 
-    return get_backend(backend). \
-        interpolate_3d_projection(x_data, y_data, z_data, w_data, data['h'].to_numpy(), weight_function,
+    grid = get_backend(backend) \
+           .interpolate_3d_projection(x_data, y_data, z_data, w_data, data['h'].to_numpy(), weight_function,
                                   kernel.get_radius(), x_pixels, y_pixels, xlim[0], xlim[1], ylim[0], ylim[1], exact)
 
+    if normalize:
+        w_norm = _get_weight(data, np.array([1] * len(w_data)), dens_weight)
+        norm_grid = get_backend(backend) \
+                    .interpolate_3d_projection(x_data, y_data, z_data, w_norm, data['h'].to_numpy(), weight_function,
+                                              kernel.get_radius(), x_pixels, y_pixels, xlim[0], xlim[1], ylim[0],
+                                              ylim[1], exact)
+        grid = grid / norm_grid
+
+    return grid
 
 def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, target_z: str, x: str = None,
                        y: str = None, kernel: BaseKernel = None, integral_samples: int = 1000,
                        rotation: np.ndarray = None, origin: np.ndarray = None, x_pixels: int = None,
                        y_pixels: int = None, xlim: Tuple[float, float] = None, ylim: Tuple[float, float] = None,
-                       exact: bool = False, backend: str = None, dens_weight: bool = True):
+                       exact: bool = False, backend: str = None, dens_weight: bool = True, normalize: bool = False):
     """
     Interpolate 3D vector particle data to a 2D grid of pixels.
 
@@ -806,17 +861,29 @@ def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
     backend = backend if backend is not None else data.backend
 
     weight_function = kernel.get_column_kernel_func(integral_samples)
-    return get_backend(backend). \
-        interpolate_3d_projection_vec(x_data, y_data, wx_data, wy_data, data['h'].to_numpy(), weight_function,
-                                      kernel.get_radius(), x_pixels, y_pixels, xlim[0], xlim[1], ylim[0], ylim[1],
-                                      exact)
+    gridx, gridy = get_backend(backend) \
+                   .interpolate_3d_projection_vec(x_data, y_data, wx_data, wy_data, data['h'].to_numpy(),
+                                                  weight_function, kernel.get_radius(), x_pixels, y_pixels, xlim[0],
+                                                  xlim[1], ylim[0], ylim[1], exact)
+    if normalize:
+        wx_norm = _get_weight(data, np.array([1] * len(wx_data)), dens_weight)
+        wy_norm = _get_weight(data, np.array([1] * len(wy_data)), dens_weight)
+        norm_gridx, norm_gridy = get_backend(backend) \
+                    .interpolate_3d_projection_vec(x_data, y_data, wx_norm, wy_norm, data['h'].to_numpy(),
+                                                  weight_function, kernel.get_radius(), x_pixels, y_pixels, xlim[0],
+                                                  xlim[1], ylim[0], ylim[1], exact)
+        gridx = gridx / norm_gridx
+        gridy = gridy / norm_gridy
+
+    return (gridx, gridy)
+
 
 
 def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
                          z_slice: float = None, kernel: BaseKernel = None, rotation: np.ndarray = None,
                          origin: np.ndarray = None, x_pixels: int = None, y_pixels: int = None,
                          xlim: Tuple[float, float] = None, ylim: Tuple[float, float] = None, backend: str = None,
-                         dens_weight: bool = False):
+                         dens_weight: bool = False, normalize: bool = False):
     """
     Interpolate 3D particle data to a 2D grid, using a 3D cross-section.
 
@@ -892,16 +959,26 @@ def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, x: str = None, 
 
     x_data, y_data, z_data = _rotate_xyz(data, x, y, z, rotation, origin)
 
-    return get_backend(backend) \
-        .interpolate_3d_cross(x_data, y_data, z_data, z_slice, w_data, data['h'].to_numpy(), kernel.w,
+    grid = get_backend(backend) \
+           .interpolate_3d_cross(x_data, y_data, z_data, z_slice, w_data, data['h'].to_numpy(), kernel.w,
                               kernel.get_radius(), x_pixels, y_pixels, xlim[0], xlim[1], ylim[0], ylim[1])
+
+    if normalize:
+        w_norm = _get_weight(data, np.array([1] * len(w_data)), dens_weight)
+        norm_grid = get_backend(backend) \
+                    .interpolate_3d_cross(x_data, y_data, z_data, z_slice, w_norm, data['h'].to_numpy(), kernel.w,
+                                          kernel.get_radius(), x_pixels, y_pixels, xlim[0], xlim[1], ylim[0], ylim[1])
+        grid = grid / norm_grid
+
+    return grid
 
 
 def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, target_z: str,
                              z_slice: float = None, x: str = None, y: str = None, z: str = None,
                              kernel: BaseKernel = None, rotation: np.ndarray = None, origin: np.ndarray = None,
                              x_pixels: int = None, y_pixels: int = None, xlim: Tuple[float, float] = None,
-                             ylim: Tuple[float, float] = None, backend: str = None, dens_weight: bool = False):
+                             ylim: Tuple[float, float] = None, backend: str = None, dens_weight: bool = False,
+                             normalize: bool = False):
     """
     Interpolate 3D vector particle data to a 2D grid, using a 3D cross-section.
 
@@ -976,16 +1053,30 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y:
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
 
-    return get_backend(backend) \
-        .interpolate_3d_cross_vec(x_data, y_data, z_data, z_slice, wx_data, wy_data, data['h'].to_numpy(), kernel.w,
-                                  kernel.get_radius(), x_pixels, y_pixels, xlim[0], xlim[1], ylim[0], ylim[1])
+    gridx, gridy = get_backend(backend) \
+                   .interpolate_3d_cross_vec(x_data, y_data, z_data, z_slice, wx_data, wy_data, data['h'].to_numpy(),
+                                             kernel.w, kernel.get_radius(), x_pixels, y_pixels, xlim[0], xlim[1],
+                                             ylim[0], ylim[1])
+
+    if normalize:
+        wx_norm = _get_weight(data, np.array([1] * len(wx_data)), dens_weight)
+        wy_norm = _get_weight(data, np.array([1] * len(wy_data)), dens_weight)
+        norm_gridx, norm_gridy = get_backend(backend) \
+                                 .interpolate_3d_cross_vec(x_data, y_data, z_data, z_slice, wx_norm, wy_norm,
+                                                           data['h'].to_numpy(), kernel.w, kernel.get_radius(),
+                                                           x_pixels, y_pixels, xlim[0], xlim[1], ylim[0], ylim[1])
+        gridx = gridx / norm_gridx
+        gridy = gridy / norm_gridy
+
+    return (gridx, gridy)
 
 
 def interpolate_3d_grid(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
                         kernel: BaseKernel = None, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
                         x_pixels: int = None, y_pixels: int = None, z_pixels: int = None,
                         xlim: Tuple[float, float] = None, ylim: Tuple[float, float] = None,
-                        zlim: Tuple[float, float] = None, backend: str = None, dens_weight: bool = False):
+                        zlim: Tuple[float, float] = None, backend: str = None, dens_weight: bool = False,
+                        normalize: bool = False):
     """
     Interpolate 3D particle data to a 3D grid of pixels
 
@@ -1063,9 +1154,19 @@ def interpolate_3d_grid(data: 'SarracenDataFrame', target: str, x: str = None, y
 
     x_data, y_data, z_data = _rotate_xyz(data, x, y, data.zcol, rotation, rot_origin)
 
-    return get_backend(backend) \
-        .interpolate_3d_grid(x_data, y_data, z_data, w_data, data['h'].to_numpy(), kernel.w, kernel.get_radius(),
-                             x_pixels, y_pixels, z_pixels, xlim[0], xlim[1], ylim[0], ylim[1], zlim[0], zlim[1])
+    grid = get_backend(backend) \
+           .interpolate_3d_grid(x_data, y_data, z_data, w_data, data['h'].to_numpy(), kernel.w, kernel.get_radius(),
+                                x_pixels, y_pixels, z_pixels, xlim[0], xlim[1], ylim[0], ylim[1], zlim[0], zlim[1])
+
+    if normalize:
+        w_norm = _get_weight(data, np.array([1] * len(w_data)), dens_weight)
+        norm_grid = get_backend(backend) \
+                    .interpolate_3d_grid(x_data, y_data, z_data, w_norm, data['h'].to_numpy(), kernel.w,
+                                         kernel.get_radius(), x_pixels, y_pixels, z_pixels, xlim[0], xlim[1],
+                                         ylim[0], ylim[1], zlim[0], zlim[1])
+        grid = grid / norm_grid
+
+    return grid
 
 
 def get_backend(code: str) -> BaseBackend:
