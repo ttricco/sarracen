@@ -1280,3 +1280,68 @@ def test_density_weighted(backend):
 
         image = interpolate_3d_line(sdf_3, 'A', pixels=1, xlim=(-1, 1), ylim=(-1, 1), dens_weight=dens_weight)
         assert image[0] == weight3d * sdf_2['A'][0] * kernel.w(0, 3)
+
+
+
+@mark.parametrize("backend", backends)
+def test_normalize_interpolation(backend):
+    sdf_2 = SarracenDataFrame({'x': [0], 'y': [0], 'A': [2], 'B': [3], 'h': [0.5], 'rho': [0.25], 'm': [0.75]},
+                              params=dict())
+    sdf_3 = SarracenDataFrame({'x': [0], 'y': [0], 'z': [0], 'A': [2], 'B': [3], 'C': [4], 'h': [0.5], 'rho': [0.25],
+                               'm': [0.75]}, params=dict())
+
+    kernel = CubicSplineKernel()
+    sdf_2.backend = backend
+    sdf_3.backend = backend
+
+    weight2d = sdf_2['m'][0] / (sdf_2['rho'][0] * sdf_2['h'][0] ** 2) * kernel.w(0, 2)
+    weight3d = sdf_2['m'][0] / (sdf_2['rho'][0] * sdf_2['h'][0] ** 3) * kernel.w(0, 3)
+    weight3d_column = sdf_2['m'][0] / (sdf_2['rho'][0] * sdf_2['h'][0] ** 2) * kernel.get_column_kernel()[0]
+
+    for normalize in [True, False]:
+
+        norm2d = 1.0
+        norm3d = 1.0
+        norm3d_column = 1.0
+        if normalize:
+            norm2d = sdf_2['m'][0] / (sdf_2['rho'][0] * sdf_2['h'][0] ** 2) * kernel.w(0, 2)
+            norm3d = sdf_2['m'][0] / (sdf_2['rho'][0] * sdf_2['h'][0] ** 3) * kernel.w(0, 3)
+            norm3d_column = sdf_2['m'][0] / (sdf_2['rho'][0] * sdf_2['h'][0] ** 2) * kernel.get_column_kernel()[0]
+
+        image = interpolate_2d(sdf_2, 'A', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1),
+                               dens_weight=False, normalize=normalize)
+        assert image == weight2d * sdf_2['A'][0] / norm2d
+
+        image = interpolate_2d_vec(sdf_2, 'A', 'B', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1),
+                                   dens_weight=False, normalize=normalize)
+        assert image[0] == weight2d * sdf_2['A'][0] / norm2d
+        assert image[1] == weight2d * sdf_2['B'][0] / norm2d
+
+        image = interpolate_2d_line(sdf_2, 'A', pixels=1, xlim=(-1, 1), ylim=(-1, 1),
+                                    dens_weight=False, normalize=normalize)
+        assert image[0] == weight2d * sdf_2['A'][0] / norm2d
+
+        image = interpolate_3d_proj(sdf_3, 'A', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1),
+                                    dens_weight=False, normalize=normalize)
+        assert image[0] == weight3d_column * sdf_2['A'][0] / norm3d_column
+        image = interpolate_3d_vec(sdf_3, 'A', 'B', 'C', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1),
+                                   dens_weight=False, normalize=normalize)
+        assert image[0] == weight3d_column * sdf_2['A'][0] / norm3d_column
+        assert image[1] == weight3d_column * sdf_2['B'][0] / norm3d_column
+
+        image = interpolate_3d_cross(sdf_3, 'A', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1),
+                                     dens_weight=False, normalize=normalize)
+        assert image[0] == weight3d * sdf_2['A'][0] / norm3d
+        image = interpolate_3d_cross_vec(sdf_3, 'A', 'B', 'C', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1),
+                                         dens_weight=False, normalize=normalize)
+        assert image[0] == weight3d * sdf_2['A'][0] / norm3d
+        assert image[1] == weight3d * sdf_2['B'][0] / norm3d
+
+        image = interpolate_3d_grid(sdf_3, 'A', x_pixels=1, y_pixels=1, z_pixels=1, xlim=(-1, 1), ylim=(-1, 1),
+                                    zlim=(-1, 1), dens_weight=False, normalize=normalize)
+        assert image[0] == weight3d * sdf_2['A'][0] / norm3d
+
+        image = interpolate_3d_line(sdf_3, 'A', pixels=1, xlim=(-1, 1), ylim=(-1, 1),
+                                    dens_weight=False, normalize=normalize)
+        assert image[0] == weight3d * sdf_2['A'][0] / norm3d
+
