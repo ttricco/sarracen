@@ -312,9 +312,6 @@ def _get_density(data: 'SarracenDataFrame'):
 def _get_weight(data: 'SarracenDataFrame', target: Union[str, np.ndarray], dens_weight: bool):
     mass_data = _get_mass(data)
 
-    if dens_weight == "None":
-        dens_weight = (target == 'rho')
-
     if target == 'rho':
         target_data = _get_density(data)
     elif type(target) == str:
@@ -326,16 +323,16 @@ def _get_weight(data: 'SarracenDataFrame', target: Union[str, np.ndarray], dens_
         target_data = target
 
     if dens_weight:
+        return target_data * mass_data
+    else:
         rho_data = _get_density(data)
         return target_data * mass_data / rho_data
-    else:
-        return target_data * mass_data
 
 
 def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
                    x_pixels: int = None, y_pixels: int = None, xlim: Tuple[float, float] = None,
                    ylim: Tuple[float, float] = None, exact: bool = False,
-                   backend: str = None, dens_weight: bool = None) -> np.ndarray:
+                   backend: str = None, dens_weight: bool = False) -> np.ndarray:
     """ Interpolate particle data across two directional axes to a 2D grid of pixels.
 
     Interpolate the data within a SarracenDataFrame to a 2D grid, by interpolating the values
@@ -363,8 +360,7 @@ def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
     backend: ['cpu', 'gpu']
         The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
     dens_weight: bool
-        Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density, defaults
-        to false otherwise.
+        If True, will plot the target mutliplied by the density. Defaults to False.
 
     Returns
     -------
@@ -402,7 +398,7 @@ def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
 def interpolate_2d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, x: str = None, y: str = None,
                        kernel: BaseKernel = None, x_pixels: int = None, y_pixels: int = None,
                        xlim: Tuple[float, float] = None, ylim: Tuple[float, float] = None, exact: bool = False,
-                       backend: str = None, dens_weight: bool = None):
+                       backend: str = None, dens_weight: bool = False):
     """ Interpolate vector particle data across two directional axes to a 2D grid of particles.
 
     Interpolate the data within a SarracenDataFrame to a 2D grid, by interpolating the values
@@ -430,8 +426,7 @@ def interpolate_2d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
     backend: ['cpu', 'gpu']
         The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
     dens_weight: bool
-        Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density, defaults
-        to false otherwise.
+        If True, will plot the target mutliplied by the density. Defaults to False.
 
     Returns
     -------
@@ -471,7 +466,7 @@ def interpolate_2d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
 
 def interpolate_2d_line(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
                          kernel: BaseKernel = None, pixels: int = None, xlim: Tuple[float, float] = None,
-                         ylim: Tuple[float, float] = None, backend: str = None, dens_weight: bool = None) -> np.ndarray:
+                         ylim: Tuple[float, float] = None, backend: str = None, dens_weight: bool = False) -> np.ndarray:
     """ Interpolate particle data across two directional axes to a 1D cross-section line.
 
     Interpolate the data within a SarracenDataFrame to a 1D line, by interpolating the values
@@ -496,8 +491,7 @@ def interpolate_2d_line(data: 'SarracenDataFrame', target: str, x: str = None, y
     backend: ['cpu', 'gpu']
         The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
     dens_weight: bool
-        Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density, defaults
-        to false otherwise.
+        If True, will plot the target mutliplied by the density. Defaults to False.
 
     Returns
     -------
@@ -544,7 +538,7 @@ def interpolate_2d_line(data: 'SarracenDataFrame', target: str, x: str = None, y
 def interpolate_3d_line(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
                         kernel: BaseKernel = None, pixels: int = None, xlim: Tuple[float, float] = None,
                         ylim: Tuple[float, float] = None, zlim: Tuple[float, float] = None, backend: str = None,
-                        dens_weight: bool = None):
+                        dens_weight: bool = False):
     """ Interpolate vector particle data across three directional axes to a 1D line.
 
     Interpolate the data within a SarracenDataFrame to a 1D line, by interpolating the values
@@ -570,8 +564,7 @@ def interpolate_3d_line(data: 'SarracenDataFrame', target: str, x: str = None, y
     backend: ['cpu', 'gpu']
         The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
     dens_weight: bool
-        Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density, defaults
-        to false otherwise.
+        If True, will plot the target mutliplied by the density. Defaults to False.
 
     Returns
     -------
@@ -626,7 +619,7 @@ def interpolate_3d_line(data: 'SarracenDataFrame', target: str, x: str = None, y
                              zlim[1])
 
 
-def interpolate_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
+def interpolate_3d_proj(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
                    integral_samples: int = 1000, rotation: np.ndarray = None, origin: np.ndarray = None,
                    x_pixels: int = None, y_pixels: int = None, xlim: Tuple[float, float] = None,
                    ylim: Tuple[float, float] = None, exact: bool = False, backend: str = None,
@@ -666,8 +659,8 @@ def interpolate_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
     backend: ['cpu', 'gpu']
         The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
     dens_weight: bool
-        Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density, defaults
-        to false otherwise.
+        If True, will plot the target mutliplied by the density. Defaults to True for column-integrated views,
+        when the target is not density, and False for everything else.
 
     Returns
     -------
@@ -694,6 +687,9 @@ def interpolate_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
     x, y, z = _default_xyz(data, x, y, None)
     _verify_columns(data, x, y)
 
+    if dens_weight is None:
+        dens_weight = (target != 'rho')
+
     w_data = _get_weight(data, target, dens_weight)
 
     xlim, ylim = _snap_boundaries(data, x, y, xlim, ylim)
@@ -715,7 +711,7 @@ def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
                        y: str = None, kernel: BaseKernel = None, integral_samples: int = 1000,
                        rotation: np.ndarray = None, origin: np.ndarray = None, x_pixels: int = None,
                        y_pixels: int = None, xlim: Tuple[float, float] = None, ylim: Tuple[float, float] = None,
-                       exact: bool = False, backend: str = None, dens_weight: bool = None):
+                       exact: bool = False, backend: str = None, dens_weight: bool = True):
     """ Interpolate 3D vector particle data to a 2D grid of pixels.
 
         Interpolates three-dimensional vector particle data in a SarracenDataFrame. The data
@@ -751,8 +747,7 @@ def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
         backend: ['cpu', 'gpu']
             The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
         dens_weight: bool
-            Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density, defaults
-            to false otherwise.
+            If True, will plot the target mutliplied by the density. Defaults to True.
 
         Returns
         -------
@@ -804,7 +799,7 @@ def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, x: str = None, 
                          z_slice: float = None, kernel: BaseKernel = None, rotation: np.ndarray = None,
                          origin: np.ndarray = None, x_pixels: int = None, y_pixels: int = None,
                          xlim: Tuple[float, float] = None, ylim: Tuple[float, float] = None, backend: str = None,
-                         dens_weight: bool = None):
+                         dens_weight: bool = False):
     """ Interpolate 3D particle data to a 2D grid, using a 3D cross-section.
 
     Interpolates particle data in a SarracenDataFrame across three directional axes to a 2D
@@ -839,8 +834,7 @@ def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, x: str = None, 
     backend: ['cpu', 'gpu']
         The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
     dens_weight: bool
-        Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density, defaults
-        to false otherwise.
+        If True, will plot the target mutliplied by the density. Defaults to False.
 
     Returns
     -------
@@ -889,7 +883,7 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y:
                              z_slice: float = None, x: str = None, y: str = None, z: str = None,
                              kernel: BaseKernel = None, rotation: np.ndarray = None, origin: np.ndarray = None,
                              x_pixels: int = None, y_pixels: int = None, xlim: Tuple[float, float] = None,
-                             ylim: Tuple[float, float] = None, backend: str = None, dens_weight: bool = None):
+                             ylim: Tuple[float, float] = None, backend: str = None, dens_weight: bool = False):
     """ Interpolate 3D vector particle data to a 2D grid, using a 3D cross-section.
 
         Interpolates vector particle data in a SarracenDataFrame across three directional axes to a 2D
@@ -924,8 +918,7 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y:
         backend: ['cpu', 'gpu']
             The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
         dens_weight: bool
-            Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density, defaults
-            to false otherwise.
+            If True, will plot the target mutliplied by the density. Defaults to False.
 
         Returns
         -------
@@ -973,7 +966,7 @@ def interpolate_3d_grid(data: 'SarracenDataFrame', target: str, x: str = None, y
                         kernel: BaseKernel = None, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
                         x_pixels: int = None, y_pixels: int = None, z_pixels: int = None,
                         xlim: Tuple[float, float] = None, ylim: Tuple[float, float] = None,
-                        zlim: Tuple[float, float] = None, backend: str = None, dens_weight: bool = None):
+                        zlim: Tuple[float, float] = None, backend: str = None, dens_weight: bool = False):
     """ Interpolate 3D particle data to a 3D grid of pixels
 
     Interpolates particle data in a SarracenDataFrame across three directional axes to a 3D
@@ -1006,8 +999,7 @@ def interpolate_3d_grid(data: 'SarracenDataFrame', target: str, x: str = None, y
     backend: ['cpu', 'gpu']
         The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
     dens_weight: bool
-        Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density, defaults
-        to false otherwise.
+        If True, will plot the target mutliplied by the density. Defaults to False.
 
     Returns
     -------

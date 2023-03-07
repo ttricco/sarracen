@@ -5,7 +5,7 @@ from numba import cuda
 from numpy.testing import assert_array_equal
 from pytest import mark
 
-from sarracen import SarracenDataFrame, interpolate_2d, interpolate_2d_line, interpolate_3d, interpolate_3d_cross
+from sarracen import SarracenDataFrame, interpolate_2d, interpolate_2d_line, interpolate_3d_proj, interpolate_3d_cross
 from sarracen.render import render, streamlines, arrowplot, lineplot
 
 backends = ['cpu']
@@ -36,7 +36,7 @@ def test_interpolation_passthrough(backend):
 
     fig, ax = plt.subplots()
     render(sdf, 'P', ax=ax)
-    assert_array_equal(ax.images[0].get_array().filled(0), interpolate_3d(sdf, 'P'))
+    assert_array_equal(ax.images[0].get_array().filled(0), interpolate_3d_proj(sdf, 'P'))
 
     fig, ax = plt.subplots()
     render(sdf, 'P', xsec=1.5, ax=ax)
@@ -258,7 +258,7 @@ def test_plot_bounds(backend):
             if args['xsec']:
                 assert ax.figure.axes[1].get_ylim() == (0, interpolate_3d_cross(sdf_3, 'P').max())
             else:
-                assert ax.figure.axes[1].get_ylim() == (0, interpolate_3d(sdf_3, 'P').max())
+                assert ax.figure.axes[1].get_ylim() == (0, interpolate_3d_proj(sdf_3, 'P').max())
 
     fig, ax = plt.subplots()
     lineplot(sdf_2, 'P', ax=ax)

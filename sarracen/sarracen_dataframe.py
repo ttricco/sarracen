@@ -209,7 +209,7 @@ class SarracenDataFrame(DataFrame):
                         rotation: np.ndarray = None, rot_origin: np.ndarray = None, x_pixels: int = None,
                         y_pixels: int = None, z_pixels: int = None, xlim: Tuple[float, float] = None,
                         ylim: Tuple[float, float] = None, zlim: Tuple[float, float] = None,
-                        exact: bool = None, backend: str = 'cpu', dens_weight: bool = None) -> np.ndarray:
+                        exact: bool = None, backend: str = 'cpu', dens_weight: bool = False) -> np.ndarray:
         """ Interpolate this data to a 2D or 3D grid, depending on the dimensionality of the data.
 
         Parameters
@@ -238,8 +238,7 @@ class SarracenDataFrame(DataFrame):
         backend: ['cpu', 'gpu']
             The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
         dens_weight: bool
-            Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density,
-            defaults to false otherwise.
+            If True, will plot the target mutliplied by the density. Defaults to False.
 
         Returns
         -------
