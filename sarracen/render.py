@@ -16,7 +16,7 @@ from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.colors import Colormap, LogNorm
 
-from .interpolate import interpolate_2d_line, interpolate_2d, interpolate_3d, interpolate_3d_cross, \
+from .interpolate import interpolate_2d_line, interpolate_2d, interpolate_3d_proj, interpolate_3d_cross, \
     interpolate_3d_vec, interpolate_3d_cross_vec, interpolate_2d_vec, interpolate_3d_line
 from .kernels import BaseKernel
 
@@ -171,8 +171,8 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
     log_scale: bool
         Whether to use a logarithmic scale for color coding.
     dens_weight: bool
-        Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density, defaults
-        to false otherwise.
+        If True, will plot the target mutliplied by the density. Defaults to True for column-integrated views,
+        when the target is not density, and False for everything else.
     kwargs: other keyword arguments
         Keyword arguments to pass to ax.imshow.
 
@@ -190,15 +190,26 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
         If `target`, `x`, `y`, mass, density, or smoothing length columns do not
         exist in `data`.
     """
+    interpolation_type = None
+
     if data.get_dim() == 2:
-        image = interpolate_2d(data, target, x, y, kernel, x_pixels, y_pixels, xlim, ylim, exact, backend, dens_weight)
+        interpolation_type = '2d'
     else:
         if xsec is not None:
-            image = interpolate_3d_cross(data, target, x, y, z, xsec, kernel, rotation,
-                                         rot_origin, x_pixels, y_pixels, xlim, ylim, backend, dens_weight)
+            interpolation_type = '3d_cross'
         else:
-            image = interpolate_3d(data, target, x, y, kernel, integral_samples, rotation, rot_origin, x_pixels,
-                                   y_pixels, xlim, ylim, exact, backend, dens_weight)
+            interpolation_type = '3d'
+
+    if interpolation_type == '2d':
+        img = interpolate_2d(data, target, x, y, kernel, x_pixels, y_pixels, xlim, ylim, exact, backend, dens_weight)
+    elif interpolation_type == '3d_cross':
+        img = interpolate_3d_cross(data, target, x, y, z, xsec, kernel, rotation,
+                                   rot_origin, x_pixels, y_pixels, xlim, ylim, backend, dens_weight)
+    elif interpolation_type == '3d':
+        img = interpolate_3d_proj(data, target, x, y, kernel, integral_samples, rotation, rot_origin, x_pixels,
+                             y_pixels, xlim, ylim, exact, backend, dens_weight)
+    else:
+        raise ValueError('`data` is not a valid number of dimensions.')
 
     if ax is None:
         ax = plt.gca()
@@ -211,7 +222,7 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
     if log_scale:
         kwargs.setdefault("norm", LogNorm(clip=True))
 
-    graphic = ax.imshow(image, cmap=cmap, **kwargs)
+    graphic = ax.imshow(img, cmap=cmap, **kwargs)
     if rotation is not None and data.get_dim() == 3:
         ax.set_xticks([])
         ax.set_yticks([])
@@ -234,7 +245,7 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
 def lineplot(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
              kernel: BaseKernel = None, pixels: int = 512, xlim: Tuple[float, float] = None,
              ylim: Tuple[float, float] = None, zlim: Tuple[float, float] = None, ax: Axes = None, backend: str = None,
-             log_scale: bool = False, dens_weight: bool = None, **kwargs):
+             log_scale: bool = False, dens_weight: bool = False, **kwargs):
     """ Render a scalar SPH target variable to line plot.
 
     Parameters
@@ -259,8 +270,7 @@ def lineplot(data: 'SarracenDataFrame', target: str, x: str = None, y: str = Non
     log_scale: bool
         Whether to use a logarithmic scale for color coding.
     dens_weight: bool
-        Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density, defaults
-        to false otherwise.
+        If True, will plot the target mutliplied by the density. Defaults to False.
     kwargs: other keyword arguments
         Keyword arguments to pass to sns.lineplot.
 
@@ -278,10 +288,11 @@ def lineplot(data: 'SarracenDataFrame', target: str, x: str = None, y: str = Non
         If `target`, `x`, `y`, mass, density, or smoothing length columns do not
         exist in `data`.
     """
+
     if data.get_dim() == 2:
-        image = interpolate_2d_line(data, target, x, y, kernel, pixels, xlim, ylim, backend, dens_weight)
+        img = interpolate_2d_line(data, target, x, y, kernel, pixels, xlim, ylim, backend, dens_weight)
     else:
-        image = interpolate_3d_line(data, target, x, y, z, kernel, pixels, xlim, ylim, zlim, backend, dens_weight)
+        img = interpolate_3d_line(data, target, x, y, z, kernel, pixels, xlim, ylim, zlim, backend, dens_weight)
 
     if isinstance(xlim, float) or isinstance(xlim, int):
         xlim = xlim, xlim
@@ -313,7 +324,7 @@ def lineplot(data: 'SarracenDataFrame', target: str, x: str = None, y: str = Non
 
         upper_lim = np.sqrt((xlim[1] - xlim[0]) ** 2 + (ylim[1] - ylim[0]) ** 2 + (zlim[1] - zlim[0]) ** 2)
 
-    ax = sns.lineplot(x=np.linspace(0, upper_lim, image.size), y=image, ax=ax, **kwargs)
+    ax = sns.lineplot(x=np.linspace(0, upper_lim, img.size), y=img, ax=ax, **kwargs)
 
     if log_scale:
         ax.set(yscale='log')
@@ -376,8 +387,8 @@ def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[
     backend: ['cpu', 'gpu']
         The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
     dens_weight: bool
-        Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density, defaults
-        to false otherwise.
+        If True, will plot the target mutliplied by the density. Defaults to True for column-integrated views
+        and False for everything else.
     kwargs: other keyword arguments
         Keyword arguments to pass to ax.streamlines()
 
@@ -398,20 +409,29 @@ def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[
         exist in `data`.
     """
     # Choose between the various interpolation functions available, based on initial data passed to this function.
+    interpolation_type = None
+
     if data.get_dim() == 2:
         if not len(target) == 2:
             raise ValueError('Target vector is not 2-dimensional.')
-        img = interpolate_2d_vec(data, target[0], target[1], x, y, kernel, x_pixels, y_pixels, xlim, ylim, exact,
-                                 backend, dens_weight)
+        interpolation_type = '2d'
     elif data.get_dim() == 3:
         if not len(target) == 3:
             raise ValueError('Target vector is not 3-dimensional.')
-        if xsec is None:
-            img = interpolate_3d_vec(data, target[0], target[1], target[2], x, y, kernel, integral_samples, rotation,
-                                     rot_origin, x_pixels, y_pixels, xlim, ylim, exact, backend, dens_weight)
+        if xsec is not None:
+            interpolation_type = '3d_cross'
         else:
-            img = interpolate_3d_cross_vec(data, target[0], target[1], target[2], xsec, x, y, z, kernel, rotation,
-                                           rot_origin, x_pixels, y_pixels, xlim, ylim, backend, dens_weight)
+            interpolation_type = '3d'
+
+    if interpolation_type == '2d':
+        img = interpolate_2d_vec(data, target[0], target[1], x, y, kernel, x_pixels, y_pixels, xlim, ylim, exact,
+                                 backend, dens_weight)
+    elif interpolation_type == '3d_cross':
+        img = interpolate_3d_cross_vec(data, target[0], target[1], target[2], xsec, x, y, z, kernel, rotation,
+                                       rot_origin, x_pixels, y_pixels, xlim, ylim, backend, dens_weight)
+    elif interpolation_type == '3d':
+        img = interpolate_3d_vec(data, target[0], target[1], target[2], x, y, kernel, integral_samples, rotation,
+                                 rot_origin, x_pixels, y_pixels, xlim, ylim, exact, backend, dens_weight)
     else:
         raise ValueError('`data` is not a valid number of dimensions.')
 
@@ -489,8 +509,8 @@ def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[st
     backend: ['cpu', 'gpu']
         The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
     dens_weight: bool
-        Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density, defaults
-        to false otherwise.
+        If True, will plot the target mutliplied by the density. Defaults to True for column-integrated views
+        and False for everything else.
     kwargs: other keyword arguments
         Keyword arguments to pass to ax.quiver()
 
@@ -514,25 +534,32 @@ def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[st
     xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
     x_arrows, y_arrows = _set_pixels(x_arrows, y_arrows, xlim, ylim, 20)
 
+    interpolation_type = None
+
     if data.get_dim() == 2:
         if not len(target) == 2:
             raise ValueError('Target vector is not 2-dimensional.')
-        img = interpolate_2d_vec(data, target[0], target[1], x, y, kernel, x_arrows, y_arrows, xlim, ylim, exact,
-                                 backend, dens_weight)
+        interpolation_type = '2d'
     elif data.get_dim() == 3:
         if not len(target) == 3:
             raise ValueError('Target vector is not 3-dimensional.')
-        if xsec is None:
-            img = interpolate_3d_vec(data, target[0], target[1], target[2], x, y, kernel, integral_samples, rotation,
-                                     rot_origin, x_arrows, y_arrows, xlim, ylim, exact, backend, dens_weight)
+        if xsec is not None:
+            interpolation_type = '3d_cross'
         else:
-            if exact:
-                raise UserWarning("Exact interpolation is not supported for 3D cross-sections.")
+            interpolation_type = '3d'
 
-            img = interpolate_3d_cross_vec(data, target[0], target[1], target[2], xsec, x, y, z, kernel, rotation,
-                                           rot_origin, x_arrows, y_arrows, xlim, ylim, backend, dens_weight)
+    if interpolation_type == '2d':
+        img = interpolate_2d_vec(data, target[0], target[1], x, y, kernel, x_arrows, y_arrows, xlim, ylim, exact,
+                                 backend, dens_weight)
+    elif interpolation_type == '3d_cross':
+        img = interpolate_3d_cross_vec(data, target[0], target[1], target[2], xsec, x, y, z, kernel, rotation,
+                                       rot_origin, x_arrows, y_arrows, xlim, ylim, backend, dens_weight)
+    elif interpolation_type == '3d':
+        img = interpolate_3d_vec(data, target[0], target[1], target[2], x, y, kernel, integral_samples, rotation,
+                                 rot_origin, x_arrows, y_arrows, xlim, ylim, exact, backend, dens_weight)
     else:
         raise ValueError('`data` is not a valid number of dimensions.')
+
 
     if ax is None:
         ax = plt.gca()
