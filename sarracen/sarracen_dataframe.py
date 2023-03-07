@@ -20,7 +20,8 @@ def _copy_doc(copy_func: Callable) -> Callable:
 
 
 class SarracenDataFrame(DataFrame):
-    """ A pandas DataFrame which contains relevant data for SPH data visualizations.
+    """
+    A pandas DataFrame which contains relevant data for SPH data visualizations.
 
     This is an extended version of the pandas DataFrame class, which contains several
     derived parameters used in the `render.py` and `interpolate.py` modules. The labels
@@ -35,7 +36,8 @@ class SarracenDataFrame(DataFrame):
     _metadata = ['_params', '_units', '_xcol', '_ycol', '_zcol', '_hcol', '_mcol', '_rhocol', '_kernel']
 
     def __init__(self, data=None, params=None, *args, **kwargs):
-        """ Create a new `SarracenDataFrame`, and automatically detect important columns.
+        """
+        Create a new `SarracenDataFrame`, and automatically detect important columns.
 
         Parameters
         ----------
@@ -70,7 +72,8 @@ class SarracenDataFrame(DataFrame):
         return SarracenDataFrame
 
     def _identify_special_columns(self):
-        """ Identify special columns commonly used in analysis functions.
+        """
+        Identify special columns commonly used in analysis functions.
 
         Identify which columns in this dataset correspond to important data columns commonly used in
         analysis functions. The columns which contain x, y, and z positional values are detected and
@@ -120,7 +123,8 @@ class SarracenDataFrame(DataFrame):
             self._rhocol = 'density'
 
     def create_mass_column(self):
-        """ Create a new column 'm', copied from the 'massoftype' dataset parameter.
+        """
+        Create a new column 'm', copied from the 'massoftype' dataset parameter.
 
         Intended for use with Phantom data dumps.
 
@@ -136,7 +140,8 @@ class SarracenDataFrame(DataFrame):
         self._mcol = 'm'
 
     def calc_density(self):
-        """ Create a new column 'rho' that contains particle densities.
+        """
+        Create a new column 'rho' that contains particle densities.
 
         Density for each particle is calculated according to
 
@@ -210,7 +215,8 @@ class SarracenDataFrame(DataFrame):
                         y_pixels: int = None, z_pixels: int = None, xlim: Tuple[float, float] = None,
                         ylim: Tuple[float, float] = None, zlim: Tuple[float, float] = None,
                         exact: bool = None, backend: str = 'cpu', dens_weight: bool = False) -> np.ndarray:
-        """ Interpolate this data to a 2D or 3D grid, depending on the dimensionality of the data.
+        """
+        Interpolate this data to a 2D or 3D grid, depending on the dimensionality of the data.
 
         Parameters
         ----------
@@ -238,7 +244,7 @@ class SarracenDataFrame(DataFrame):
         backend: ['cpu', 'gpu']
             The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
         dens_weight: bool
-            If True, will plot the target mutliplied by the density. Defaults to False.
+            If True, the target will be multiplied by density. Defaults to False.
 
         Returns
         -------
@@ -269,7 +275,8 @@ class SarracenDataFrame(DataFrame):
 
     @property
     def params(self):
-        """dict: Miscellaneous dataset-level parameters.
+        """
+        dict: Miscellaneous dataset-level parameters.
 
         Raises
         ------
@@ -298,7 +305,8 @@ class SarracenDataFrame(DataFrame):
 
     @property
     def xcol(self):
-        """str : Label of the column which contains x-positional data.
+        """
+        str : Label of the column which contains x-positional data.
 
         If this is set to a column which does not exist in the dataset, the column
         label will remain set to the old value.
@@ -312,7 +320,8 @@ class SarracenDataFrame(DataFrame):
 
     @property
     def ycol(self):
-        """str : Label of the column which contains y-positional data.
+        """
+        str : Label of the column which contains y-positional data.
 
         If this is set to a column which does not exist in the dataset, the column
         label will remain set to the old value.
@@ -326,7 +335,8 @@ class SarracenDataFrame(DataFrame):
 
     @property
     def zcol(self):
-        """str : Label of the column which contains z-positional data.
+        """
+        str : Label of the column which contains z-positional data.
 
         If this is set to a column which does not exist in the dataset, the column
         label will remain set to the old value.
@@ -340,7 +350,8 @@ class SarracenDataFrame(DataFrame):
 
     @property
     def hcol(self):
-        """str : Label of the column which contains smoothing length data.
+        """
+        str : Label of the column which contains smoothing length data.
 
         If this is set to a column which does not exist in the dataset, the column
         label will remain set to the old value.
@@ -354,7 +365,8 @@ class SarracenDataFrame(DataFrame):
 
     @property
     def mcol(self):
-        """str : Label of the column which contains particle mass data.
+        """
+        str : Label of the column which contains particle mass data.
 
         If this is set to a column which does not exist in the dataset, the column
         label will remain set to the old value.
@@ -368,7 +380,8 @@ class SarracenDataFrame(DataFrame):
 
     @property
     def rhocol(self):
-        """str : Label of the column which contains particle density data.
+        """
+        str : Label of the column which contains particle density data.
 
         If this is set to a column which does not exist in the dataset, the column
         label will remain set to the old value.
@@ -382,7 +395,8 @@ class SarracenDataFrame(DataFrame):
 
     @property
     def kernel(self):
-        """BaseKernel : The default kernel to use for interpolation operations with this dataset.
+        """
+        BaseKernel : The default kernel to use for interpolation operations with this dataset.
 
         If this is set to an object which is not a BaseKernel, the kernel will remain set as
         the old value.
@@ -396,7 +410,8 @@ class SarracenDataFrame(DataFrame):
 
     @property
     def backend(self):
-        """['cpu', 'gpu'] : The default backend to use for interpolation operations with this dataset.
+        """
+        ['cpu', 'gpu'] : The default backend to use for interpolation operations with this dataset.
 
         'cpu' - Best for small datasets, or cases where a GPU is not available.
         'gpu' - Best for large datasets, with a CUDA-enabled GPU.
@@ -408,7 +423,8 @@ class SarracenDataFrame(DataFrame):
         self._backend = new_backend
 
     def get_dim(self):
-        """ Get the dimensionality of the data in this dataframe.
+        """
+        Get the dimensionality of the data in this dataframe.
 
         Returns
         -------
