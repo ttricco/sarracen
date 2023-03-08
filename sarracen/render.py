@@ -190,13 +190,51 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
         The resulting matplotlib axes, which contain the 2d rendered image.
 
     Raises
-    -------
+    ------
     ValueError
         If `x_pixels` or `y_pixels` are less than or equal to zero, or
         if the specified `x` and `y` minimum and maximums result in an invalid region.
     KeyError
         If `target`, `x`, `y`, mass, density, or smoothing length columns do not
         exist in `data`.
+
+    Notes
+    -----
+    The standard render will interpolate the target quantity, :math:`A`, from the particles to a pixel
+    grid using the following equation:
+
+        .. math::
+
+            A_{pixel} = \\sum_b \\frac{m_b}{\\rho_b} A_b W_{ab}(h_b)
+
+    where :math:`m` is the mass, :math:`\\rho` is the density, and :math:`W` is the smoothing kernel with
+    smoothing length, :math:`h`.
+
+    Normalized interpolation divides the above summation by an interpolation of a constant scalar field
+    equal to 1:
+
+        .. math::
+
+            A_{pixel} = \\frac{\\sum_b \\frac{m_b}{\\rho_b} A_b W_{ab}(h_b)}{\\sum_b \\frac{m_b}{\\rho_b} W_{ab}(h_b)}
+
+    In theory, the denominator will be equal to 1 and dividing by 1 has no impact. In practice, the
+    particle arrangement and the smoothing kernel affects the quality of interpolation. Normalizing by
+    this approximation of 1 helps to account for this.
+
+    For when to use normalized interpolation, the advice given by Splash is recommended: in general use
+    it for smoother renderings, but avoid when there are free surfaces, as it can cause them to be
+    over-exaggerated.
+
+    Density-weighted interpolation will interpolate the quantity :math:`\\rho A`, that is, the target
+    :math:`A` multiplied by the density, :math:`\\rho`.
+
+    Column-integrated views of 3D data (i.e., xsec=None) will calculate the following:
+
+        .. math::
+
+            A_{pixel} = \\sum_b \\frac{m_b}{\\rho_b} A_b \int W_{ab}(h_b) dz ,
+
+    which uses the integral of the kernel along the chosen line of sight.
     """
     interpolation_type = None
 
