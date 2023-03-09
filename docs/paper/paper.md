@@ -86,15 +86,15 @@ as default.
 
 For 3D data, a quantity may be interpolated to a 3D fixed grid, to a 2D grid 
 representing a slice through the data, or to a 1D line that cuts through the volume. 
-Column integrated line-of-sight interpolation is included. 2D data is also supported.
-Additionally, `Sarracen` supports the mapping method of [@petkova:2018], which 
-exactly computes the volume-averaged quantity within each cell of a fixed grid by 
-analytically computing the integral of the kernel function over the volume of each 
-cell. `Sarracen` can render interpolated grids with `Matplotlib` using API syntax 
-inspired by `Seaborn` [@seaborn]. Vector quantities, such as velocity, can be 
-rendered with streamlines or arrow plots. `Sarracen` uses `SciPy` to support view 
-rotation, with the rotation specified by Euler angles, a rotation vector, rotation 
-matrix or quaternions.
+Column integrated line-of-sight interpolation is included. Interpolation of 2D data 
+is also supported. Additionally, `Sarracen` implements the mapping method of 
+[@petkova:2018], which exactly computes the volume-averaged quantity within each 
+cell of a fixed grid by analytically computing the integral of the kernel function 
+over the volume of each cell. `Sarracen` can render interpolated grids with 
+`Matplotlib` using API syntax inspired by `Seaborn` [@seaborn]. Vector quantities, 
+such as velocity, can be rendered with streamlines or arrow plots. `Sarracen` uses 
+`SciPy` to support view rotation, with the rotation specified by Euler angles, a 
+rotation vector, rotation matrix or quaternions.
 
 The interpolation routines in `Sarracen` use `Numba` [@numba] to implement 
 multi-threaded CPU parallelization and CUDA-enabled GPU acceleration. Furthermore,
