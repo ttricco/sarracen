@@ -24,7 +24,7 @@ def test_interpolation_passthrough(backend):
 
     fig, ax = plt.subplots()
     render(sdf, 'P', ax=ax)
-    assert_array_equal(ax.images[0].get_array().filled(0), interpolate_2d(sdf, 'P'))
+    assert_array_equal(ax.images[0].get_array(), interpolate_2d(sdf, 'P'))
     plt.close(fig)
 
     fig, ax = plt.subplots()
@@ -38,12 +38,12 @@ def test_interpolation_passthrough(backend):
 
     fig, ax = plt.subplots()
     render(sdf, 'P', ax=ax)
-    assert_array_equal(ax.images[0].get_array().filled(0), interpolate_3d_proj(sdf, 'P'))
+    assert_array_equal(ax.images[0].get_array(), interpolate_3d_proj(sdf, 'P'))
     plt.close(fig)
 
     fig, ax = plt.subplots()
     render(sdf, 'P', xsec=1.5, ax=ax)
-    assert_array_equal(ax.images[0].get_array().filled(0), interpolate_3d_cross(sdf, 'P'))
+    assert_array_equal(ax.images[0].get_array(), interpolate_3d_cross(sdf, 'P'))
     plt.close(fig)
 
 
