@@ -237,13 +237,15 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
 
     which uses the integral of the kernel along the chosen line of sight.
     """
-    interpolation_type = None
-
     if data.get_dim() == 2:
         interpolation_type = '2d'
+        if dens_weight is None:
+            dens_weight = False
     else:
         if xsec is not None:
             interpolation_type = '3d_cross'
+            if dens_weight is None:
+                dens_weight = False
         else:
             interpolation_type = '3d'
 
