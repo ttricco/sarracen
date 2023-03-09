@@ -31,7 +31,7 @@ hydrodynamics (SPH) data. SPH is a method of fluid simulation that discretizes
 fluid elements into a collection of particles [@gm:1977; @lucy:1977; @monaghan:2005;
 @price:2012]. This approach works well for many astrophysical problems of interest,
 and as such there are a number of SPH codes widely used for astrophysical 
-simulations, e.g., `@gasoline2`, `@phantom`, `@swift`. `Sarracen` offers a variety of 
+simulations, e.g., @gasoline2, @phantom, @swift. `Sarracen` offers a variety of 
 SPH interpolation methods to aid in analysis and visualization of SPH data. It is 
 built in Python so that users can leverage the robust scientific libraries that are 
 available. Much of the core of `Sarracen` is built upon `pandas` and `Matplotlib`. 
@@ -88,7 +88,7 @@ For 3D data, a quantity may be interpolated to a 3D fixed grid, to a 2D grid
 representing a slice through the data, or to a 1D line that cuts through the volume. 
 Column integrated line-of-sight interpolation is included. Interpolation of 2D data 
 is also supported. Additionally, `Sarracen` implements the mapping method of 
-`@petkova:2018`, which exactly computes the volume-averaged quantity within each 
+@petkova:2018, which exactly computes the volume-averaged quantity within each 
 cell of a fixed grid by analytically computing the integral of the kernel function 
 over the volume of each cell. `Sarracen` can render interpolated grids with 
 `Matplotlib` using API syntax inspired by `Seaborn` [@seaborn]. Vector quantities, 
