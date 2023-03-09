@@ -818,8 +818,8 @@ def test_oob_particles(backend):
     for z in range(25):
         for y in range(25):
             for x in range(25):
-                image[z][y][x] == approx(w[0] * sdf_3['A'][0] * kernel.w(np.sqrt(real_x[x] ** 2 + real_y[y] ** 2 +
-                                                                                 real_z[z] ** 2), 3))
+                assert image[z][y][x] == approx(
+                    w[0] * sdf_3['A'][0] * kernel.w(np.sqrt(real_x[x]**2 + real_y[y]**2 + real_z[z]**2) / sdf_3['h'][0], 3))
 
 
 def rotate(target, rot_z, rot_y, rot_x):
