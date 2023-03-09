@@ -30,10 +30,10 @@ bibliography: paper.bib
 hydrodynamics (SPH) data. SPH is a method of fluid simulation that discretizes
 fluid elements into a collection of particles [@gm:1977; @lucy:1977; @monaghan:2005;
 @price:2012]. This approach works well for many astrophysical problems of interest,
-and as such there a number of SPH codes widely used for astrophysical simulations 
-(e.g., [@phantom; @gasoline2; @swift]). `Sarracen` offers a variety of SPH 
-interpolation methods to aid in analysis and visualization of SPH data. It is built
-in Python so that users can leverage the robust scientific libraries that are 
+and as such there are a number of SPH codes widely used for astrophysical 
+simulations, e.g., [@gasoline2; @phantom; @swift]. `Sarracen` offers a variety of 
+SPH interpolation methods to aid in analysis and visualization of SPH data. It is 
+built in Python so that users can leverage the robust scientific libraries that are 
 available. Much of the core of `Sarracen` is built upon `pandas` and `Matplotlib`. 
 Users familiar with these packages should be able to use `Sarracen` to do complex 
 analyses without difficulty. Our intended use is for astrophysical SPH data, but 
@@ -65,7 +65,7 @@ use `Matplotlib` [@matplotlib] for visualization, and an extension of the `panda
 [@pandas] DataFrame structure for storing particle data. Using `Sarracen` should 
 be familiar for most users. Furthermore, Python has many high-quality scientific 
 libraries for data manipulation and statistical analysis, such as `NumPy` [@numpy] 
-and`SciPy` [@scipy]. A user will be able to easily write custom analysis scripts 
+and `SciPy` [@scipy]. A user will be able to easily write custom analysis scripts 
 specific to their simulation or area of astronomy and astrophysics. These factors 
 should aid in making analyses more reproducible, efficient, and less error prone. 
 Finally, `Sarracen` can be run interactively inside of a Jupyter notebook 
@@ -79,20 +79,22 @@ smoothing kernel. The basic approach for interpolation of a quantity, $A$, is
 \begin{equation}
 A_a = \sum_b \frac{m_b}{\rho_b} A_b W_{ab}(h_b),
 \end{equation}
-where the summation is over neighbouring particles, $m_b$ is the mass, $\rho_b$ is 
-density, and $W_{ab}(h_b)$ is the smoothing kernel with smoothing length, $h_b$. 
+where the summation is over neighbouring particles, $m$ is the mass, $\rho$ is 
+density, and $W(h_b)$ is the smoothing kernel with smoothing length, $h$. 
 `Sarracen` includes multiple choices for the smoothing kernel, with the cubic spline 
 as default. 
 
 For 3D data, a quantity may be interpolated to a 3D fixed grid, to a 2D grid 
 representing a slice through the data, or to a 1D line that cuts through the volume. 
-Column integrated line-of-sight interpolation is included. Additionally, `Sarracen` 
-supports the mapping method of [@petkova:2018], which exactly computes the 
-volume-averaged quantity within each cell of a fixed grid by analytically computing 
-the integral of the kernel function over the volume of each cell. `Sarracen` can 
-render interpolated grids using `Matplotlib` using API syntax inspired by `Seaborn` 
-[@seaborn]. Vector quantities, such as velocity, can be rendered with streamlines or 
-arrow plots. `Sarracen` supports view rotation.
+Column integrated line-of-sight interpolation is included. 2D data is also supported.
+Additionally, `Sarracen` supports the mapping method of [@petkova:2018], which 
+exactly computes the volume-averaged quantity within each cell of a fixed grid by 
+analytically computing the integral of the kernel function over the volume of each 
+cell. `Sarracen` can render interpolated grids with `Matplotlib` using API syntax 
+inspired by `Seaborn` [@seaborn]. Vector quantities, such as velocity, can be 
+rendered with streamlines or arrow plots. `Sarracen` uses `SciPy` to support view 
+rotation, with the rotation specified by Euler angles, a rotation vector, rotation 
+matrix or quaternions.
 
 The interpolation routines in `Sarracen` use `Numba` [@numba] to implement 
 multi-threaded CPU parallelization and CUDA-enabled GPU acceleration. Furthermore,
