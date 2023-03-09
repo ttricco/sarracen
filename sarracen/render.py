@@ -131,7 +131,7 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
            xlim: Tuple[float, float] = None, ylim: Tuple[float, float] = None, cmap: Union[str, Colormap] = 'gist_heat',
            cbar: bool = True, cbar_kws: dict = {}, cbar_ax: Axes = None, ax: Axes = None, exact: bool = None,
            backend: str = None, integral_samples: int = 1000, rotation: np.ndarray = None,
-           rot_origin: np.ndarray = None, log_scale: bool = False, dens_weight: bool = None, normalize: bool = False,
+           rot_origin: np.ndarray = None, log_scale: bool = False, dens_weight: bool = None, normalize: bool = True,
            **kwargs) -> Axes:
     """
     Render a scalar SPH target variable to a grid plot.
@@ -295,7 +295,7 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
 def lineplot(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
              kernel: BaseKernel = None, pixels: int = 512, xlim: Tuple[float, float] = None,
              ylim: Tuple[float, float] = None, zlim: Tuple[float, float] = None, ax: Axes = None, backend: str = None,
-             log_scale: bool = False, dens_weight: bool = False, normalize: bool = False, **kwargs):
+             log_scale: bool = False, dens_weight: bool = False, normalize: bool = True, **kwargs):
     """
     Render a scalar SPH target variable to line plot.
 
@@ -400,7 +400,7 @@ def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[
                 integral_samples: int = 1000, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
                 x_pixels: int = None, y_pixels: int = None, xlim: Tuple[float, float] = None,
                 ylim: Tuple[float, float] = None, ax: Axes = None, exact: bool = None, backend: str = None,
-                dens_weight: bool = None, normalize: bool = False, **kwargs) -> Axes:
+                dens_weight: bool = None, normalize: bool = True, **kwargs) -> Axes:
     """
     Create an SPH interpolated streamline plot of a target vector.
 
@@ -522,7 +522,7 @@ def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[st
               integral_samples: int = 1000, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
               x_arrows: int = None, y_arrows: int = None, xlim: Tuple[float, float] = None,
               ylim: Tuple[float, float] = None, ax: Axes = None, qkey: bool = True, qkey_kws=None, exact: bool = None,
-              backend: str = None, dens_weight: bool = None, normalize: bool = False, **kwargs) -> Axes:
+              backend: str = None, dens_weight: bool = None, normalize: bool = True, **kwargs) -> Axes:
     """
     Create an SPH interpolated vector field plot of a target vector.
 
