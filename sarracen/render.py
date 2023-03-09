@@ -226,7 +226,8 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
     over-exaggerated.
 
     Density-weighted interpolation will interpolate the quantity :math:`\\rho A`, that is, the target
-    :math:`A` multiplied by the density, :math:`\\rho`.
+    :math:`A` multiplied by the density, :math:`\\rho`. If normalize=True, then density-weighted
+    interpolation will be normalized by the density.
 
     Column-integrated views of 3D data (i.e., xsec=None) will calculate the following:
 
