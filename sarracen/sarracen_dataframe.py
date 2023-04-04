@@ -79,7 +79,7 @@ class SarracenDataFrame(DataFrame):
         1   2.0   2.0   3.5
         2   3.0   2.0   4.0
 
-        Constant mass particles can specify mass in the `   `params`` dictionary, rather than per particle.
+        Constant mass particles can specify mass in the ``params`` dictionary, rather than per particle.
 
         >>> particles = {'x': [1.0, 2.0, 3.0], 'y': [2.0, 2.0, 2.0], 'h': [3.0, 3.5, 4.0]}
         >>> params = {'mass': 0.2, 'hfact': 1.2}
