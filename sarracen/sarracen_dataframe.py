@@ -21,35 +21,74 @@ def _copy_doc(copy_func: Callable) -> Callable:
 
 class SarracenDataFrame(DataFrame):
     """
-    A pandas DataFrame which contains relevant data for SPH data visualizations.
+    A SarracenDataFrame is a pandas DataFrame with support for SPH data.
 
-    This is an extended version of the pandas DataFrame class, which contains several
-    derived parameters used in the `render.py` and `interpolate.py` modules. The labels
-    of columns containing x, y, and z directional data, and the labels of columns containing
-    mass, density, and smoothing length information are all stored. As well, the kernel
-    used for all interpolation operations, and the units for each data column.
+    A SarracenDataFrame is a subclass of the pandas DataFrame class designed to hold SPH particle
+    data. Global simulation values are stored in ``params``, which is a standard Python dictionary.
 
-    See Also
-    --------
-    readers : Functions for creating SarracenDataFrame objects from exported SPH data.
+    Interpolation and rendering functionality requires (at a minimum) particle positions, smoothing
+    lengths and masses. SarracenDataFrames will attempt to identify columns which hold these data.
+    For uniform, constant mass particles, the particle mass can be specified in the ``params``
+    dictionary.
+
     """
+
     _metadata = ['_params', '_units', '_xcol', '_ycol', '_zcol', '_hcol', '_mcol', '_rhocol', '_kernel']
 
     def __init__(self, data=None, params=None, *args, **kwargs):
         """
-        Create a new `SarracenDataFrame`, and automatically detect important columns.
+        Construct a SarracenDataFrame from a NumPy array, dictionary, DataFrame or Iterable object.
 
         Parameters
         ----------
-        data : ndarray (structured or homogeneous), Iterable, DataFrame, or dict.
-            Raw particle data passed to the DataFrame super-initializer.
-        params : dict
-            Miscellaneous dataset-level parameters.
-        *args : tuple
-            Additional arguments to the DataFrame super-initializer.
+        data : ndarray, Iterable, DataFrame, or dict.
+            Raw particle data which is passed to the pandas DataFrame constructor. Data can be specified
+            in a dictionary, NumPy array or another DataFrame.
+        params : dict, optional
+            Global parameters from the simulation (time, hfact, etc). If constant, uniform mass particles
+            are used, then the key ``mass`` stores the particle mass (rather than specifying per particle).
+        *args : tuple, optional
+            Additional arguments to pass to the pandas DataFrame constructor.
         **kwargs : dict, optional
-            Additional keyword arguments to the DataFrame super-initializer.
+            Additional keyword arguments to pass to the pandas DataFrame constructor.
+
+        See Also
+        --------
+        :func:`read_csv` : Read data from a comma separated values (csv) file.
+        :func:`read_phantom` : Read data from the Phantom SPH code.
+
+        Examples
+        --------
+        Constructing using a Python dictionary.
+
+        >>> particles = {'x': [1.0, 2.0, 3.0], 'y': [2.0, 2.0, 2.0], 'h': [3.0, 3.5, 4.0]}
+        >>> sdf = sarracen.SarracenDataFrame(particles)
+        >>> sdf
+            x     y     h
+        0   1.0   2.0   3.0
+        1   2.0   2.0   3.5
+        2   3.0   2.0   4.0
+
+        Constructing using a two-dimensional NumPy array.
+
+        >>> particles = np.array([[1.0, 2.0, 3.0], [2.0, 2.0, 3.5], [3.0, 2.0, 4.0]])
+        >>> sdf = sarracen.SarracenDataFrame(particles, columns=['x', 'y', 'h'])
+        >>> sdf
+            x     y     h
+        0   1.0   2.0   3.0
+        1   2.0   2.0   3.5
+        2   3.0   2.0   4.0
+
+        Constant mass particles can specify mass in the `   `params`` dictionary, rather than per particle.
+
+        >>> particles = {'x': [1.0, 2.0, 3.0], 'y': [2.0, 2.0, 2.0], 'h': [3.0, 3.5, 4.0]}
+        >>> params = {'mass': 0.2, 'hfact': 1.2}
+        >>> sdf = sarracen.SarracenDataFrame(particles, params)
+        >>> sdf.params
+        {'mass': 0.2, 'hfact': 1.2}
+
         """
+
         # call pandas DataFrame constructor
         super().__init__(data, *args, **kwargs)
 
