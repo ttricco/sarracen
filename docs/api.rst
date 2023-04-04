@@ -6,10 +6,32 @@ API Reference
 
 .. currentmodule:: sarracen
 
+File reading
+------------
+
+Sarracen can read all general file formats supported by pandas (csv, notably).
+
+For SPH codes, Sarracen supports reading the native binary format of the `Phantom
+SPH code <https://phantomsph.bitbucket.io>`_. Raise an issue on our GitHub if you
+would like Sarracen to be able to read the file format for other SPH codes (or
+make a pull request!).
+
+.. autosummary::
+   :toctree: api/
+
+   read_csv
+   read_phantom
+   read_marisa
+
+
 SarracenDataFrame
 -----------------
 
-A SarracenDataFrame extends the pandas DataFrame class. It holds SPH particle data. They attempt to find particle position, velocity, smoothing length, mass and density within the data so that they can be used to interpolate and render the data.
+A SarracenDataFrame is a subclass of the pandas DataFrame class. It holds SPH
+particle data. SarracenDataFrames will attempt to identify columns which hold
+particle positions, velocities, smoothing lengths, masses and densities so that
+they can be used for interpolation and rendering. Global simulation values are
+stored in ``params``, which is a standard Python dictionary.
 
 Constructor
 """""""""""
@@ -45,19 +67,6 @@ Interpolation
    :toctree: api/
 
    SarracenDataFrame.sph_interpolate
-
-
-File reading
-------------
-
-Sarracen can read the native binary format of the Phantom SPH code (`https://phantomsph.bitbucket.io <https://phantomsph.bitbucket.io/>`_). Contact us if you want Sarracen to be able to read the file format for other SPH codes (or make a pull request!).
-
-.. autosummary::
-   :toctree: api/
-
-   read_phantom
-   read_csv
-   read_marisa
 
 
 Kernels
