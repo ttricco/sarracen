@@ -1294,7 +1294,6 @@ def test_density_weighted(backend):
         assert image[0] == weight3d * sdf_2['A'][0] * kernel.w(0, 3)
 
 
-
 @mark.parametrize("backend", backends)
 def test_normalize_interpolation(backend):
     sdf_2 = SarracenDataFrame({'x': [0], 'y': [0], 'A': [2], 'B': [3], 'h': [0.5], 'rho': [0.25], 'm': [0.75]},
@@ -1357,3 +1356,52 @@ def test_normalize_interpolation(backend):
                                     dens_weight=False, normalize=normalize)
         assert image[0] == weight3d * sdf_2['A'][0] / norm3d
 
+
+def _lattice_init_square(nx=32, ny=32):
+    """ Create a lattice of particles in square arrangement. """
+
+    if nx < 1 or ny < 1:
+        raise ValueError("Error creating lattice. nx and ny must be positive.")
+
+    rx = [(i + 0.5) / nx for i in range(nx)]
+    ry = [(i + 0.5) / nx for i in range(ny)]
+
+    return pd.DataFrame({'rx': [x for x in rx for y in ry],
+                         'ry': [y for x in rx for y in ry]})
+
+
+@mark.parametrize("backend", backends)
+def test_exact_interpolation_gradient(backend):
+    """
+    Test that exact interpolation exactly returns the gradient.
+    """
+
+    for xpixels in [32, 64, 128, 256]:
+        for ypixels in [16, 24]:
+            for dimensions in [2, 3]:
+                df = _lattice_init_square(xpixels, ypixels)
+
+                # density is set to 1.567 and total mass calculated from this area
+                mass = 1.567 * 1.0 * (ypixels / xpixels) / (xpixels * ypixels)
+
+                df['h'] = 1.2 * np.sqrt(mass / 1.567)
+                df['A'] = 12.347 * df['rx'] + 1.56
+
+                if dimensions == 2:
+                    sdf = SarracenDataFrame(df, params={'hfact': 1.2, 'mass': mass})
+                    sdf.backend = backend
+
+                    interpolation = sdf.sph_interpolate('A', x_pixels=xpixels, y_pixels=ypixels,
+                                                xlim=(0, 1), ylim=(0, ypixels / xpixels), exact=True)
+                else:
+                    df['rz'] = np.zeros_like(df['rx'])
+                    sdf = SarracenDataFrame(df, params={'hfact': 1.2, 'mass': mass})
+                    sdf.backend = backend
+
+                    interpolation = interpolate_3d_proj(sdf, 'A', x_pixels=xpixels, y_pixels=ypixels,
+                                                xlim=(0, 1), ylim=(0, ypixels / xpixels), exact=True)
+
+                for row in interpolation[2:-2, 2:-2]:  # check all rows skipping edge effects
+                    for i, value in zip(range(xpixels-4), row):
+                        expected_value = 12.347 * (i + 2.5) / xpixels + 1.56
+                        assert value - expected_value < 1.0e-13
