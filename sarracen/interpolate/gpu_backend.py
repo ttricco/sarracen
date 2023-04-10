@@ -127,10 +127,10 @@ class GPUBackend(BaseBackend):
                     return
 
                 # determine maximum and minimum pixels that this particle contributes to
-                ipixmin = round((x_data[i] - kernel_radius * h_data[i] - x_min) / pixwidthx)
-                jpixmin = round((y_data[i] - kernel_radius * h_data[i] - y_min) / pixwidthy)
-                ipixmax = round((x_data[i] + kernel_radius * h_data[i] - x_min) / pixwidthx)
-                jpixmax = round((y_data[i] + kernel_radius * h_data[i] - y_min) / pixwidthy)
+                ipixmin = math.floor((x_data[i] - kernel_radius * h_data[i] - x_min) / pixwidthx)
+                jpixmin = math.floor((y_data[i] - kernel_radius * h_data[i] - y_min) / pixwidthy)
+                ipixmax = math.ceil((x_data[i] + kernel_radius * h_data[i] - x_min) / pixwidthx)
+                jpixmax = math.ceil((y_data[i] + kernel_radius * h_data[i] - y_min) / pixwidthy)
 
                 if ipixmax < 0 or ipixmin > x_pixels or jpixmax < 0 or jpixmin > y_pixels:
                     return
@@ -201,10 +201,10 @@ class GPUBackend(BaseBackend):
                 term = w_data[i] / h_data[i] ** 2
 
                 # determine maximum and minimum pixels that this particle contributes to
-                ipixmin = round((x_data[i] - 2 * h_data[i] - x_min) / pixwidthx)
-                jpixmin = round((y_data[i] - 2 * h_data[i] - y_min) / pixwidthy)
-                ipixmax = round((x_data[i] + 2 * h_data[i] - x_min) / pixwidthx)
-                jpixmax = round((y_data[i] + 2 * h_data[i] - y_min) / pixwidthy)
+                ipixmin = math.floor((x_data[i] - 2 * h_data[i] - x_min) / pixwidthx)
+                jpixmin = math.floor((y_data[i] - 2 * h_data[i] - y_min) / pixwidthy)
+                ipixmax = math.ceil((x_data[i] + 2 * h_data[i] - x_min) / pixwidthx)
+                jpixmax = math.ceil((y_data[i] + 2 * h_data[i] - y_min) / pixwidthy)
 
                 if ipixmax < 0 or ipixmin >= x_pixels or jpixmax < 0 or jpixmin >= y_pixels:
                     return
@@ -354,8 +354,8 @@ class GPUBackend(BaseBackend):
                 rend = math.sqrt((xend - x1) ** 2 + (((gradient * xend + yint) - y1) ** 2))
 
                 # the maximum and minimum pixels that each particle contributes to.
-                ipixmin = min(max(0, round(rstart / pixwidth)), pixels)
-                ipixmax = min(max(0, round(rend / pixwidth)), pixels)
+                ipixmin = min(max(0, math.floor(rstart / pixwidth)), pixels)
+                ipixmax = min(max(0, math.ceil(rend / pixwidth)), pixels)
 
                 # iterate through all affected pixels
                 for ipix in range(ipixmin, ipixmax):
@@ -415,8 +415,8 @@ class GPUBackend(BaseBackend):
                 d1 = -(ux * (x1 - x_data[i]) + uy * (y1 - y_data[i]) + uz * (z1 - z_data[i])) - math.sqrt(delta)
                 d2 = -(ux * (x1 - x_data[i]) + uy * (y1 - y_data[i]) + uz * (z1 - z_data[i])) + math.sqrt(delta)
 
-                pixmin = min(max(0, round((d1 / length) * pixels)), pixels)
-                pixmax = min(max(0, round((d2 / length) * pixels)), pixels)
+                pixmin = min(max(0, math.floor((d1 / length) * pixels)), pixels)
+                pixmax = min(max(0, math.ceil((d2 / length) * pixels)), pixels)
 
                 for ipix in range(pixmin, pixmax):
                     xpix = x1 + (ipix + 0.5) * (x2 - x1) / pixels
@@ -467,10 +467,10 @@ class GPUBackend(BaseBackend):
                 term = norm3d * w_data[i] / h_data[i] ** 3
 
                 # determine maximum and minimum pixels that this particle contributes to
-                ipixmin = round((x_data[i] - 2 * h_data[i] - x_min) / pixwidthx)
-                jpixmin = round((y_data[i] - 2 * h_data[i] - y_min) / pixwidthy)
-                ipixmax = round((x_data[i] + 2 * h_data[i] - x_min) / pixwidthx)
-                jpixmax = round((y_data[i] + 2 * h_data[i] - y_min) / pixwidthy)
+                ipixmin = math.floor((x_data[i] - 2 * h_data[i] - x_min) / pixwidthx)
+                jpixmin = math.floor((y_data[i] - 2 * h_data[i] - y_min) / pixwidthy)
+                ipixmax = math.ceil((x_data[i] + 2 * h_data[i] - x_min) / pixwidthx)
+                jpixmax = math.ceil((y_data[i] + 2 * h_data[i] - y_min) / pixwidthy)
 
                 # The width of the z contribution of this particle.
                 # = 2 * kernel_radius * h[i], where kernel_radius is 2 for the cubic spline kernel.
