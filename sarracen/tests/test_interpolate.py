@@ -1294,7 +1294,6 @@ def test_density_weighted(backend):
         assert image[0] == weight3d * sdf_2['A'][0] * kernel.w(0, 3)
 
 
-
 @mark.parametrize("backend", backends)
 def test_normalize_interpolation(backend):
     sdf_2 = SarracenDataFrame({'x': [0], 'y': [0], 'A': [2], 'B': [3], 'h': [0.5], 'rho': [0.25], 'm': [0.75]},
@@ -1357,3 +1356,17 @@ def test_normalize_interpolation(backend):
                                     dens_weight=False, normalize=normalize)
         assert image[0] == weight3d * sdf_2['A'][0] / norm3d
 
+
+@mark.parametrize("backend", backends)
+def test_exact_interpolation_culling(backend):
+    sdf_2 = SarracenDataFrame({'x': [0], 'y': [0], 'A': [2], 'h': [0.4], 'rho': [0.1], 'm': [1]}, params=dict())
+    sdf_2.backend = backend
+    sdf_3 = SarracenDataFrame({'x': [0], 'y': [0], 'z': [0], 'A': [2], 'h': [0.4], 'rho': [0.1], 'm': [1]},
+                              params=dict())
+    sdf_3.backend = backend
+
+    image_2 = sdf_2.sph_interpolate('A', xlim=(-1, 1), ylim=(-1, 1), x_pixels=5, exact=True)
+    image_3 = interpolate_3d_proj(sdf_3, 'A', xlim=(-1, 1), ylim=(-1, 1), x_pixels=5, exact=True)
+
+    assert image_2[2, 4] != 0
+    assert image_3[2, 4] != 0
