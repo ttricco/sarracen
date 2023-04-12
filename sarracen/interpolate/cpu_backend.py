@@ -194,10 +194,10 @@ class CPUBackend(BaseBackend):
             for i in range(range_start, range_end):
 
                 # determine maximum and minimum pixels that this particle contributes to
-                ipixmin = int(np.rint((x_data[i] - 2 * h_data[i] - x_min) / pixwidthx))
-                jpixmin = int(np.rint((y_data[i] - 2 * h_data[i] - y_min) / pixwidthy))
-                ipixmax = int(np.rint((x_data[i] + 2 * h_data[i] - x_min) / pixwidthx))
-                jpixmax = int(np.rint((y_data[i] + 2 * h_data[i] - y_min) / pixwidthy))
+                ipixmin = int(np.floor((x_data[i] - 2 * h_data[i] - x_min) / pixwidthx))
+                jpixmin = int(np.floor((y_data[i] - 2 * h_data[i] - y_min) / pixwidthy))
+                ipixmax = int(np.ceil((x_data[i] + 2 * h_data[i] - x_min) / pixwidthx))
+                jpixmax = int(np.ceil((y_data[i] + 2 * h_data[i] - y_min) / pixwidthy))
 
                 if ipixmax < 0 or ipixmin >= x_pixels or jpixmax < 0 or jpixmin >= y_pixels:
                     continue
@@ -440,10 +440,10 @@ class CPUBackend(BaseBackend):
             for i in range(range_start, range_end):
 
                 # determine maximum and minimum pixels that this particle contributes to
-                ipixmin = int(np.rint((x_data[i] - 2 * h_data[i] - x_min) / pixwidthx))
-                jpixmin = int(np.rint((y_data[i] - 2 * h_data[i] - y_min) / pixwidthy))
-                ipixmax = int(np.rint((x_data[i] + 2 * h_data[i] - x_min) / pixwidthx))
-                jpixmax = int(np.rint((y_data[i] + 2 * h_data[i] - y_min) / pixwidthy))
+                ipixmin = int(np.floor((x_data[i] - 2 * h_data[i] - x_min) / pixwidthx))
+                jpixmin = int(np.floor((y_data[i] - 2 * h_data[i] - y_min) / pixwidthy))
+                ipixmax = int(np.ceil((x_data[i] + 2 * h_data[i] - x_min) / pixwidthx))
+                jpixmax = int(np.ceil((y_data[i] + 2 * h_data[i] - y_min) / pixwidthy))
 
                 # The width of the z contribution of this particle.
                 # = 2 * kernel_radius * h[i], where kernel_radius is 2 for the cubic spline kernel.
