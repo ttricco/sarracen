@@ -133,10 +133,10 @@ class CPUBackend(BaseBackend):
                     continue
 
                 # determine maximum and minimum pixels that this particle contributes to
-                ipixmin = int(np.floor((x_data[i] - kernel_radius * h_data[i] - x_min) / pixwidthx))
-                jpixmin = int(np.floor((y_data[i] - kernel_radius * h_data[i] - y_min) / pixwidthy))
-                ipixmax = int(np.ceil((x_data[i] + kernel_radius * h_data[i] - x_min) / pixwidthx))
-                jpixmax = int(np.ceil((y_data[i] + kernel_radius * h_data[i] - y_min) / pixwidthy))
+                ipixmin = int(np.rint((x_data[i] - kernel_radius * h_data[i] - x_min) / pixwidthx))
+                jpixmin = int(np.rint((y_data[i] - kernel_radius * h_data[i] - y_min) / pixwidthy))
+                ipixmax = int(np.rint((x_data[i] + kernel_radius * h_data[i] - x_min) / pixwidthx))
+                jpixmax = int(np.rint((y_data[i] + kernel_radius * h_data[i] - y_min) / pixwidthy))
 
                 if ipixmax < 0 or ipixmin > x_pixels or jpixmax < 0 or jpixmin > y_pixels:
                     continue
@@ -335,8 +335,8 @@ class CPUBackend(BaseBackend):
         xstart, xend = None, None
 
         # the maximum and minimum pixels that each particle contributes to.
-        ipixmin = np.floor(rstart / pixwidth).clip(a_min=0, a_max=pixels)
-        ipixmax = np.ceil(rend / pixwidth).clip(a_min=0, a_max=pixels)
+        ipixmin = np.rint(rstart / pixwidth).clip(a_min=0, a_max=pixels)
+        ipixmax = np.rint(rend / pixwidth).clip(a_min=0, a_max=pixels)
         rstart, rend = None, None
 
         output_local = np.zeros((get_num_threads(), pixels))
