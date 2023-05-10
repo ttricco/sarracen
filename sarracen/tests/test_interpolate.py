@@ -38,10 +38,10 @@ def test_single_particle(backend):
     real = -kernel.get_radius() + (np.arange(0, 25) + 0.5) * (2 * kernel.get_radius() / 25)
 
     image = interpolate_2d(sdf, 'A', x_pixels=25,  y_pixels=25, xlim=(-kernel.get_radius(), kernel.get_radius()),
-                           ylim=(-kernel.get_radius(), kernel.get_radius()), normalize=False)
+                           ylim=(-kernel.get_radius(), kernel.get_radius()), normalize=False, hmin=False)
     image_vec = interpolate_2d_vec(sdf, 'A', 'B', x_pixels=25, y_pixels=25,
                                    xlim=(-kernel.get_radius(), kernel.get_radius()),
-                                   ylim=(-kernel.get_radius(), kernel.get_radius()), normalize=False)
+                                   ylim=(-kernel.get_radius(), kernel.get_radius()), normalize=False, hmin=False)
     for y in range(25):
         for x in range(25):
             assert image[y][x] ==\
@@ -52,7 +52,7 @@ def test_single_particle(backend):
                    approx(w[0] * sdf['B'][0] * kernel.w(np.sqrt(real[x] ** 2 + real[y] ** 2) / sdf['h'][0], 2))
 
     image = interpolate_2d_line(sdf, 'A', pixels=25, xlim=(-kernel.get_radius(), kernel.get_radius()),
-                                 ylim=(-kernel.get_radius(), kernel.get_radius()), normalize=False)
+                                 ylim=(-kernel.get_radius(), kernel.get_radius()), normalize=False, hmin=False)
     for x in range(25):
         assert image[x] == approx(w[0] * sdf['A'][0] * kernel.w(np.sqrt(2) * np.abs(real[x]) / sdf['h'][0], 2))
 
@@ -64,10 +64,10 @@ def test_single_particle(backend):
     column_func = kernel.get_column_kernel_func(1000)
 
     image = interpolate_3d_proj(sdf, 'A', x_pixels=25, y_pixels=25, xlim=(-kernel.get_radius(), kernel.get_radius()),
-                           ylim=(-kernel.get_radius(), kernel.get_radius()), dens_weight=False, normalize=False)
+                           ylim=(-kernel.get_radius(), kernel.get_radius()), dens_weight=False, normalize=False, hmin=False)
     image_vec = interpolate_3d_vec(sdf, 'A', 'B', 'C', x_pixels=25, y_pixels=25,
                                    xlim=(-kernel.get_radius(), kernel.get_radius()),
-                                   ylim=(-kernel.get_radius(), kernel.get_radius()), dens_weight=False, normalize=False)
+                                   ylim=(-kernel.get_radius(), kernel.get_radius()), dens_weight=False, normalize=False, hmin=False)
     for y in range(25):
         for x in range(25):
             assert image[y][x] ==\
@@ -82,10 +82,10 @@ def test_single_particle(backend):
 
     image = interpolate_3d_cross(sdf, 'A', z_slice=0, x_pixels=25, y_pixels=25,
                                  xlim=(-kernel.get_radius(), kernel.get_radius()),
-                                 ylim=(-kernel.get_radius(), kernel.get_radius()), normalize=False)
+                                 ylim=(-kernel.get_radius(), kernel.get_radius()), normalize=False, hmin=False)
     image_vec = interpolate_3d_cross_vec(sdf, 'A', 'B', 'C', 0, x_pixels=25, y_pixels=25,
                                          xlim=(-kernel.get_radius(), kernel.get_radius()),
-                                         ylim=(-kernel.get_radius(), kernel.get_radius()), normalize=False)
+                                         ylim=(-kernel.get_radius(), kernel.get_radius()), normalize=False, hmin=False)
     for y in range(25):
         for x in range(25):
             assert image[y][x] == approx(w[0] * sdf['A'][0] *
@@ -99,7 +99,7 @@ def test_single_particle(backend):
 
     bounds = (-kernel.get_radius(), kernel.get_radius())
     image = interpolate_3d_grid(sdf, 'A', x_pixels=25, y_pixels=25, z_pixels=25, xlim=bounds, ylim=bounds,
-                                zlim=bounds, normalize=False)
+                                zlim=bounds, normalize=False, hmin=False)
     for z in range(25):
         for y in range(25):
             for x in range(25):
@@ -109,7 +109,7 @@ def test_single_particle(backend):
 
     image = interpolate_3d_line(sdf, 'A', pixels=25, xlim=(-kernel.get_radius(), kernel.get_radius()),
                                 ylim=(-kernel.get_radius(), kernel.get_radius()),
-                                zlim=(-kernel.get_radius(), kernel.get_radius()), normalize=False)
+                                zlim=(-kernel.get_radius(), kernel.get_radius()), normalize=False, hmin=False)
     for x in range(25):
         assert image[x] == approx(w[0] * sdf['A'][0] *
                                   kernel.w(np.sqrt(2 * real[x] ** 2 + (real[x] + 0.5) ** 2) / sdf['h'][0], 3))
@@ -140,10 +140,10 @@ def test_single_repeated_particle(backend):
     real = -kernel.get_radius() + (np.arange(0, 25) + 0.5) * (2 * kernel.get_radius() / 25)
 
     image = interpolate_2d(sdf, 'A', x_pixels=25, y_pixels=25, xlim=(-kernel.get_radius(), kernel.get_radius()),
-                           ylim=(-kernel.get_radius(), kernel.get_radius()), normalize=False)
+                           ylim=(-kernel.get_radius(), kernel.get_radius()), normalize=False, hmin=False)
     image_vec = interpolate_2d_vec(sdf, 'A', 'B', x_pixels=25, y_pixels=25,
                                    xlim=(-kernel.get_radius(), kernel.get_radius()),
-                                   ylim=(-kernel.get_radius(), kernel.get_radius()), normalize=False)
+                                   ylim=(-kernel.get_radius(), kernel.get_radius()), normalize=False, hmin=False)
     for y in range(25):
         for x in range(25):
             assert image[y][x] == \
@@ -154,7 +154,7 @@ def test_single_repeated_particle(backend):
                    approx(w[0] * sdf['B'][0] * kernel.w(np.sqrt(real[x] ** 2 + real[y] ** 2) / sdf['h'][0], 2))
 
     image = interpolate_2d_line(sdf, 'A', pixels=25, xlim=(-kernel.get_radius(), kernel.get_radius()),
-                                 ylim=(-kernel.get_radius(), kernel.get_radius()), normalize=False)
+                                 ylim=(-kernel.get_radius(), kernel.get_radius()), normalize=False, hmin=False)
     for x in range(25):
         assert image[x] == approx(w[0] * sdf['A'][0] * kernel.w(np.sqrt(2) * np.abs(real[x]) / sdf['h'][0], 2))
 
@@ -166,10 +166,10 @@ def test_single_repeated_particle(backend):
     column_func = kernel.get_column_kernel_func(1000)
 
     image = interpolate_3d_proj(sdf, 'A', x_pixels=25, y_pixels=25, xlim=(-kernel.get_radius(), kernel.get_radius()),
-                           ylim=(-kernel.get_radius(), kernel.get_radius()), dens_weight=False, normalize=False)
+                           ylim=(-kernel.get_radius(), kernel.get_radius()), dens_weight=False, normalize=False, hmin=False)
     image_vec = interpolate_3d_vec(sdf, 'A', 'B', 'C', x_pixels=25, y_pixels=25,
                                    xlim=(-kernel.get_radius(), kernel.get_radius()),
-                                   ylim=(-kernel.get_radius(), kernel.get_radius()), dens_weight=False, normalize=False)
+                                   ylim=(-kernel.get_radius(), kernel.get_radius()), dens_weight=False, normalize=False, hmin=False)
     for y in range(25):
         for x in range(25):
             assert image[y][x] == \
@@ -184,10 +184,10 @@ def test_single_repeated_particle(backend):
 
     image = interpolate_3d_cross(sdf, 'A', z_slice=0, x_pixels=25, y_pixels=25,
                                  xlim=(-kernel.get_radius(), kernel.get_radius()),
-                                 ylim=(-kernel.get_radius(), kernel.get_radius()), normalize=False)
+                                 ylim=(-kernel.get_radius(), kernel.get_radius()), normalize=False, hmin=False)
     image_vec = interpolate_3d_cross_vec(sdf, 'A', 'B', 'C', 0, x_pixels=25, y_pixels=25,
                                          xlim=(-kernel.get_radius(), kernel.get_radius()),
-                                         ylim=(-kernel.get_radius(), kernel.get_radius()), normalize=False)
+                                         ylim=(-kernel.get_radius(), kernel.get_radius()), normalize=False, hmin=False)
     for y in range(25):
         for x in range(25):
             assert image[y][x] == approx(w[0] * sdf['A'][0] *
@@ -201,7 +201,7 @@ def test_single_repeated_particle(backend):
 
     bounds = (-kernel.get_radius(), kernel.get_radius())
     image = interpolate_3d_grid(sdf, 'A', x_pixels=25, y_pixels=25, z_pixels=25, xlim=bounds, ylim=bounds, zlim=bounds,
-                                normalize=False)
+                                normalize=False, hmin=False)
     for z in range(25):
         for y in range(25):
             for x in range(25):
@@ -211,7 +211,7 @@ def test_single_repeated_particle(backend):
 
     image = interpolate_3d_line(sdf, 'A', pixels=25, xlim=(-kernel.get_radius(), kernel.get_radius()),
                                 ylim=(-kernel.get_radius(), kernel.get_radius()),
-                                zlim=(-kernel.get_radius(), kernel.get_radius()), normalize=False)
+                                zlim=(-kernel.get_radius(), kernel.get_radius()), normalize=False, hmin=False)
     for x in range(25):
         assert image[x] == approx(w[0] * sdf['A'][0] *
                                   kernel.w(np.sqrt(2 * real[x] ** 2 + (real[x] + 0.5) ** 2) / sdf['h'][0], 3))
@@ -230,10 +230,10 @@ def test_dimension_check(backend):
 
     for func in [interpolate_3d_proj, interpolate_3d_cross]:
         with raises(TypeError):
-            func(sdf, 'P', normalize=False)
+            func(sdf, 'P', normalize=False, hmin=False)
     for func in [interpolate_3d_vec, interpolate_3d_cross_vec, interpolate_3d_grid]:
         with raises(TypeError):
-            func(sdf, 'Ax', 'Ay', 'Az', normalize=False)
+            func(sdf, 'Ax', 'Ay', 'Az', normalize=False, hmin=False)
 
     # Next, test a basic 3D dataframe passed to 2D interpolation functions.
     df = pd.DataFrame({'x': [0, 1], 'y': [0, 1], 'z': [0, 1], 'P': [1, 1], 'Ax': [1, 1], 'Ay': [1, 1], 'Az': [1, 1],
@@ -243,9 +243,9 @@ def test_dimension_check(backend):
 
     for func in [interpolate_2d, interpolate_2d_line, interpolate_3d_line]:
         with raises(TypeError):
-            func(sdf, 'P', normalize=False)
+            func(sdf, 'P', normalize=False, hmin=False)
     with raises(TypeError):
-        interpolate_2d_vec(sdf, 'Ax', 'Ay', normalize=False)
+        interpolate_2d_vec(sdf, 'Ax', 'Ay', normalize=False, hmin=False)
 
 
 @mark.parametrize("backend", backends)
@@ -264,18 +264,18 @@ def test_3d_xsec_equivalency(backend):
     samples = 250
 
     column_image = interpolate_3d_proj(sdf, 'A', x_pixels=50, xlim=(-1, 1), ylim=(-1, 1),
-                                       dens_weight=False, normalize=False)
+                                       dens_weight=False, normalize=False, hmin=False)
     column_image_vec = interpolate_3d_vec(sdf, 'A', 'B', 'C', x_pixels=50, xlim=(-1, 1), ylim=(-1, 1),
-                                          dens_weight=False, normalize=False)
+                                          dens_weight=False, normalize=False, hmin=False)
 
     xsec_image = np.zeros((50, 50))
     xsec_image_vec = [np.zeros((50, 50)), np.zeros((50, 50))]
     for z in np.linspace(0, kernel.get_radius() * sdf['h'][0], samples):
         xsec_image += interpolate_3d_cross(sdf, 'A', z_slice=z, x_pixels=50, xlim=(-1, 1), ylim=(-1, 1),
-                                           normalize=False)
+                                           normalize=False, hmin=False)
 
         vec_sample = interpolate_3d_cross_vec(sdf, 'A', 'B', 'C', z, x_pixels=50, xlim=(-1, 1), ylim=(-1, 1),
-                                              normalize=False)
+                                              normalize=False, hmin=False)
         xsec_image_vec[0] += vec_sample[0]
         xsec_image_vec[1] += vec_sample[1]
 
@@ -305,14 +305,14 @@ def test_2d_xsec_equivalency(backend):
     sdf.kernel = kernel
     sdf.backend = backend
 
-    true_image = interpolate_2d(sdf, 'A', x_pixels=50, xlim=(-1, 1), ylim=(-1, 1), normalize=False)
+    true_image = interpolate_2d(sdf, 'A', x_pixels=50, xlim=(-1, 1), ylim=(-1, 1), normalize=False, hmin=False)
 
     # A mapping of pixel indices to x & y values in particle space.
     real = -1 + (np.arange(0, 50) + 0.5) * (2 / 50)
 
     reconstructed_image = np.zeros((50, 50))
     for y in range(50):
-        reconstructed_image[y, :] = interpolate_2d_line(sdf, 'A', pixels=50, xlim=(-1, 1), ylim=(real[y], real[y]), normalize=False)
+        reconstructed_image[y, :] = interpolate_2d_line(sdf, 'A', pixels=50, xlim=(-1, 1), ylim=(real[y], real[y]), normalize=False, hmin=False)
     assert_allclose(reconstructed_image, true_image)
 
     # reconstructed_image = np.zeros((50, 50))
@@ -346,8 +346,8 @@ def test_corner_particles(backend):
     # A mapping of pixel indices to x / y values in particle space.
     real = (np.arange(0, 25) + 0.5) * (2 / 25)
 
-    image = interpolate_2d(sdf_2, 'A', x_pixels=25,  y_pixels=25, normalize=False)
-    image_vec = interpolate_2d_vec(sdf_2, 'A', 'B', x_pixels=25,  y_pixels=25, normalize=False)
+    image = interpolate_2d(sdf_2, 'A', x_pixels=25,  y_pixels=25, normalize=False, hmin=False)
+    image_vec = interpolate_2d_vec(sdf_2, 'A', 'B', x_pixels=25,  y_pixels=25, normalize=False, hmin=False)
     for y in range(25):
         for x in range(25):
             assert approx(w[0] * sdf_2['A'][0] * kernel.w(np.sqrt(real[x] ** 2 + real[y] ** 2) / sdf_2['h'][0], 2)
@@ -360,7 +360,7 @@ def test_corner_particles(backend):
                           + w[1] * sdf_2['B'][1] * kernel.w(np.sqrt(real[24 - x] ** 2 + real[24 - y] ** 2)
                                                             / sdf_2['h'][1], 2)) == image_vec[1][y][x]
 
-    image = interpolate_2d_line(sdf_2, 'A', pixels=25, normalize=False)
+    image = interpolate_2d_line(sdf_2, 'A', pixels=25, normalize=False, hmin=False)
     for x in range(25):
         assert approx(w[0] * sdf_2['A'][0] * kernel.w(np.sqrt(real[x] ** 2 + real[x] ** 2) / sdf_2['h'][0], 2)
                       + w[1] * sdf_2['A'][1] * kernel.w(np.sqrt(real[24 - x] ** 2 + real[24 - x] ** 2)
@@ -369,9 +369,9 @@ def test_corner_particles(backend):
     c_kernel = kernel.get_column_kernel_func(1000)
 
     image = interpolate_3d_proj(sdf_3, 'A', x_pixels=25, y_pixels=25,
-                                dens_weight=False, normalize=False)
+                                dens_weight=False, normalize=False, hmin=False)
     image_vec = interpolate_3d_vec(sdf_3, 'A', 'B', 'C', x_pixels=25, y_pixels=25,
-                                   dens_weight=False, normalize=False)
+                                   dens_weight=False, normalize=False, hmin=False)
     for y in range(25):
         for x in range(25):
             assert approx(w[0] * sdf_3['A'][0] * c_kernel(np.sqrt(real[x] ** 2 + real[y] ** 2) / sdf_3['h'][0], 2)
@@ -387,8 +387,8 @@ def test_corner_particles(backend):
     # Weight for 3D cross-section interpolation.
     w = sdf_3['m'] / (sdf_3['rho'] * sdf_3['h'] ** 3)
 
-    image = interpolate_3d_cross(sdf_3, 'A', x_pixels=25, y_pixels=25, normalize=False)
-    image_vec = interpolate_3d_cross_vec(sdf_3, 'A', 'B', 'C', x_pixels=25, y_pixels=25, normalize=False)
+    image = interpolate_3d_cross(sdf_3, 'A', x_pixels=25, y_pixels=25, normalize=False, hmin=False)
+    image_vec = interpolate_3d_cross_vec(sdf_3, 'A', 'B', 'C', x_pixels=25, y_pixels=25, normalize=False, hmin=False)
     for y in range(25):
         for x in range(25):
             assert approx(w[0] * sdf_3['A'][0] * kernel.w(np.sqrt(real[x] ** 2 + real[y] ** 2 + 1) / sdf_3['h'][0], 3)
@@ -401,7 +401,7 @@ def test_corner_particles(backend):
                           + w[1] * sdf_3['B'][1] * kernel.w(np.sqrt(real[24 - x] ** 2 + real[24 - y] ** 2 + 1)
                                                             / sdf_3['h'][1], 3)) == image_vec[1][y][x]
 
-    image = interpolate_3d_grid(sdf_3, 'A', x_pixels=25, y_pixels=25, z_pixels=25, normalize=False)
+    image = interpolate_3d_grid(sdf_3, 'A', x_pixels=25, y_pixels=25, z_pixels=25, normalize=False, hmin=False)
     for z in range(25):
         for y in range(25):
             for x in range(25):
@@ -422,12 +422,12 @@ def test_image_transpose(backend):
     sdf = SarracenDataFrame(df, params=dict())
     sdf.backend = backend
 
-    image1 = interpolate_2d(sdf, 'A', x_pixels=20,  y_pixels=20, normalize=False)
-    image2 = interpolate_2d(sdf, 'A', x='y', y='x', x_pixels=20,  y_pixels=20, normalize=False)
+    image1 = interpolate_2d(sdf, 'A', x_pixels=20,  y_pixels=20, normalize=False, hmin=False)
+    image2 = interpolate_2d(sdf, 'A', x='y', y='x', x_pixels=20,  y_pixels=20, normalize=False, hmin=False)
     assert_allclose(image1, image2.T)
 
-    image1 = interpolate_2d_vec(sdf, 'A', 'B', x_pixels=20, y_pixels=20, normalize=False)
-    image2 = interpolate_2d_vec(sdf, 'A', 'B', x='y', y='x', x_pixels=20, y_pixels=20, normalize=False)
+    image1 = interpolate_2d_vec(sdf, 'A', 'B', x_pixels=20, y_pixels=20, normalize=False, hmin=False)
+    image2 = interpolate_2d_vec(sdf, 'A', 'B', x='y', y='x', x_pixels=20, y_pixels=20, normalize=False, hmin=False)
     assert_allclose(image1[0], image2[0].T)
     assert_allclose(image1[1], image2[1].T)
 
@@ -435,26 +435,26 @@ def test_image_transpose(backend):
                        'h': [1.1, 1.3], 'rho': [0.55, 0.45], 'm': [0.04, 0.05]})
     sdf = SarracenDataFrame(df, params=dict())
 
-    image1 = interpolate_3d_proj(sdf, 'A', x_pixels=20,  y_pixels=20, normalize=False)
-    image2 = interpolate_3d_proj(sdf, 'A', x='y', y='x', x_pixels=20,  y_pixels=20, normalize=False)
+    image1 = interpolate_3d_proj(sdf, 'A', x_pixels=20,  y_pixels=20, normalize=False, hmin=False)
+    image2 = interpolate_3d_proj(sdf, 'A', x='y', y='x', x_pixels=20,  y_pixels=20, normalize=False, hmin=False)
     assert_allclose(image1, image2.T)
 
-    image1 = interpolate_3d_vec(sdf, 'A', 'B', 'C', x_pixels=50, y_pixels=50, normalize=False)
-    image2 = interpolate_3d_vec(sdf, 'A', 'B', 'C', x='y', y='x', x_pixels=50, y_pixels=50, normalize=False)
+    image1 = interpolate_3d_vec(sdf, 'A', 'B', 'C', x_pixels=50, y_pixels=50, normalize=False, hmin=False)
+    image2 = interpolate_3d_vec(sdf, 'A', 'B', 'C', x='y', y='x', x_pixels=50, y_pixels=50, normalize=False, hmin=False)
     assert_allclose(image1[0], image2[0].T)
     assert_allclose(image1[1], image2[1].T)
 
-    image1 = interpolate_3d_cross(sdf, 'A', x_pixels=50, y_pixels=50, normalize=False)
-    image2 = interpolate_3d_cross(sdf, 'A', x='y', y='x', x_pixels=50, y_pixels=50, normalize=False)
+    image1 = interpolate_3d_cross(sdf, 'A', x_pixels=50, y_pixels=50, normalize=False, hmin=False)
+    image2 = interpolate_3d_cross(sdf, 'A', x='y', y='x', x_pixels=50, y_pixels=50, normalize=False, hmin=False)
     assert_allclose(image1, image2.T)
 
-    image1 = interpolate_3d_cross_vec(sdf, 'A', 'B', 'C', x_pixels=20, y_pixels=20, normalize=False)
-    image2 = interpolate_3d_cross_vec(sdf, 'A', 'B', 'C', x='y', y='x', x_pixels=20, y_pixels=20, normalize=False)
+    image1 = interpolate_3d_cross_vec(sdf, 'A', 'B', 'C', x_pixels=20, y_pixels=20, normalize=False, hmin=False)
+    image2 = interpolate_3d_cross_vec(sdf, 'A', 'B', 'C', x='y', y='x', x_pixels=20, y_pixels=20, normalize=False, hmin=False)
     assert_allclose(image1[0], image2[0].T)
     assert_allclose(image1[1], image2[1].T)
 
-    image1 = interpolate_3d_grid(sdf, 'A', x_pixels=20, y_pixels=20, normalize=False)
-    image2 = interpolate_3d_grid(sdf, 'A', x='y', y='x', x_pixels=20, y_pixels=20, normalize=False)
+    image1 = interpolate_3d_grid(sdf, 'A', x_pixels=20, y_pixels=20, normalize=False, hmin=False)
+    image2 = interpolate_3d_grid(sdf, 'A', x='y', y='x', x_pixels=20, y_pixels=20, normalize=False, hmin=False)
     assert_allclose(image1, image2.transpose(0, 2, 1))
 
 
@@ -478,63 +478,63 @@ def test_default_kernel(backend):
     # First, test that the dataframe kernel is used in cases with no kernel supplied.
 
     # Each interpolation is performed over one pixel, offering an easy way to check the kernel used by the function.
-    image = interpolate_2d(sdf_2, 'A', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), normalize=False)
+    image = interpolate_2d(sdf_2, 'A', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), normalize=False, hmin=False)
     assert image == kernel.w(0, 2)
-    image = interpolate_2d_vec(sdf_2, 'A', 'B', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), normalize=False)
+    image = interpolate_2d_vec(sdf_2, 'A', 'B', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), normalize=False, hmin=False)
     assert image[0] == kernel.w(0, 2)
     assert image[1] == kernel.w(0, 2)
 
-    image = interpolate_2d_line(sdf_2, 'A', pixels=1, xlim=(-1, 1), ylim=(-1, 1), normalize=False)
+    image = interpolate_2d_line(sdf_2, 'A', pixels=1, xlim=(-1, 1), ylim=(-1, 1), normalize=False, hmin=False)
     assert image == kernel.w(0, 2)
 
-    image = interpolate_3d_proj(sdf_3, 'A', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), normalize=False)
+    image = interpolate_3d_proj(sdf_3, 'A', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), normalize=False, hmin=False)
     assert image == kernel.get_column_kernel()[0]
-    image = interpolate_3d_vec(sdf_3, 'A', 'B', 'C', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), normalize=False)
+    image = interpolate_3d_vec(sdf_3, 'A', 'B', 'C', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), normalize=False, hmin=False)
     assert image[0] == kernel.get_column_kernel()[0]
     assert image[1] == kernel.get_column_kernel()[0]
 
-    image = interpolate_3d_cross(sdf_3, 'A', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), normalize=False)
+    image = interpolate_3d_cross(sdf_3, 'A', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), normalize=False, hmin=False)
     assert image == kernel.w(0, 3)
-    image = interpolate_3d_cross_vec(sdf_3, 'A', 'B', 'C', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), normalize=False)
+    image = interpolate_3d_cross_vec(sdf_3, 'A', 'B', 'C', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), normalize=False, hmin=False)
     assert image[0] == kernel.w(0, 3)
     assert image[1] == kernel.w(0, 3)
 
     image = interpolate_3d_grid(sdf_3, 'A', x_pixels=1, y_pixels=1, z_pixels=1, xlim=(-1, 1), ylim=(-1, 1),
-                                zlim=(-1, 1), normalize=False)
+                                zlim=(-1, 1), normalize=False, hmin=False)
     assert image == kernel.w(0, 3)
 
-    image = interpolate_3d_line(sdf_3, 'A', pixels=1, xlim=(-1, 1), ylim=(-1, 1), normalize=False)
+    image = interpolate_3d_line(sdf_3, 'A', pixels=1, xlim=(-1, 1), ylim=(-1, 1), normalize=False, hmin=False)
     assert image == kernel.w(0, 3)
 
     # Next, test that the kernel supplied to the function is actually used.
     kernel = QuinticSplineKernel()
-    image = interpolate_2d(sdf_2, 'A', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), kernel=kernel, normalize=False)
+    image = interpolate_2d(sdf_2, 'A', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), kernel=kernel, normalize=False, hmin=False)
     assert image == kernel.w(0, 2)
-    image = interpolate_2d_vec(sdf_2, 'A', 'B', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), kernel=kernel, normalize=False)
+    image = interpolate_2d_vec(sdf_2, 'A', 'B', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), kernel=kernel, normalize=False, hmin=False)
     assert image[0] == kernel.w(0, 2)
     assert image[1] == kernel.w(0, 2)
 
-    image = interpolate_2d_line(sdf_2, 'A', pixels=1, xlim=(-1, 1), ylim=(-1, 1), kernel=kernel, normalize=False)
+    image = interpolate_2d_line(sdf_2, 'A', pixels=1, xlim=(-1, 1), ylim=(-1, 1), kernel=kernel, normalize=False, hmin=False)
     assert image == kernel.w(0, 2)
 
-    image = interpolate_3d_proj(sdf_3, 'A', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), kernel=kernel, normalize=False)
+    image = interpolate_3d_proj(sdf_3, 'A', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), kernel=kernel, normalize=False, hmin=False)
     assert image == kernel.get_column_kernel()[0]
-    image = interpolate_3d_vec(sdf_3, 'A', 'B', 'C', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), kernel=kernel, normalize=False)
+    image = interpolate_3d_vec(sdf_3, 'A', 'B', 'C', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), kernel=kernel, normalize=False, hmin=False)
     assert image[0] == kernel.get_column_kernel()[0]
     assert image[1] == kernel.get_column_kernel()[0]
 
-    image = interpolate_3d_cross(sdf_3, 'A', kernel=kernel, x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), normalize=False)
+    image = interpolate_3d_cross(sdf_3, 'A', kernel=kernel, x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), normalize=False, hmin=False)
     assert image == kernel.w(0, 3)
     image = interpolate_3d_cross_vec(sdf_3, 'A', 'B', 'C', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1),
-                                     kernel=kernel, normalize=False)
+                                     kernel=kernel, normalize=False, hmin=False)
     assert image[0] == kernel.w(0, 3)
     assert image[1] == kernel.w(0, 3)
 
     image = interpolate_3d_grid(sdf_3, 'A', x_pixels=1, y_pixels=1, z_pixels=1, xlim=(-1, 1), ylim=(-1, 1),
-                                zlim=(-1, 1), kernel=kernel, normalize=False)
+                                zlim=(-1, 1), kernel=kernel, normalize=False, hmin=False)
     assert image == kernel.w(0, 3)
 
-    image = interpolate_3d_line(sdf_3, 'A', pixels=1, xlim=(-1, 1), ylim=(-1, 1), kernel=kernel, normalize=False)
+    image = interpolate_3d_line(sdf_3, 'A', pixels=1, xlim=(-1, 1), ylim=(-1, 1), kernel=kernel, normalize=False, hmin=False)
     assert image == kernel.w(0, 3)
 
 
@@ -552,7 +552,7 @@ def test_column_samples(backend):
     # 2 samples is used here, since a column kernel with 2 samples will be drastically different than the
     # default kernel of 1000 samples.
     image = interpolate_3d_proj(sdf_3, 'A', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1),
-                                integral_samples=2, normalize=False)
+                                integral_samples=2, normalize=False, hmin=False)
     assert image == kernel.get_column_kernel(2)[0]
 
 
@@ -581,19 +581,19 @@ def test_pixel_arguments():
         ratio02 = np.abs(df_3[axes[0]][1] - df_3[axes[0]][0]) / np.abs(df_3[axes[2]][1] - df_3[axes[2]][0])
         ratio12 = np.abs(df_3[axes[1]][1] - df_3[axes[1]][0]) / np.abs(df_3[axes[2]][1] - df_3[axes[2]][0])
 
-        image = interpolate_3d_grid(sdf_3, 'A', x=axes[0], y=axes[1], z=axes[2], normalize=False)
+        image = interpolate_3d_grid(sdf_3, 'A', x=axes[0], y=axes[1], z=axes[2], normalize=False, hmin=False)
         assert image.shape[2] / image.shape[1] == approx(ratio01, rel=1e-2)
         assert image.shape[1] / image.shape[0] == approx(ratio12, rel=1e-2)
         assert image.shape[2] / image.shape[0] == approx(ratio02, rel=1e-2)
 
-        image = interpolate_3d_grid(sdf_3, 'A', x=axes[0], y=axes[1], z=axes[2], x_pixels=default_pixels, normalize=False)
+        image = interpolate_3d_grid(sdf_3, 'A', x=axes[0], y=axes[1], z=axes[2], x_pixels=default_pixels, normalize=False, hmin=False)
         assert image.shape == (round(default_pixels / ratio02), round(default_pixels / ratio01), default_pixels)
 
-        image = interpolate_3d_grid(sdf_3, 'A', x=axes[0], y=axes[1], z=axes[2], y_pixels=default_pixels, normalize=False)
+        image = interpolate_3d_grid(sdf_3, 'A', x=axes[0], y=axes[1], z=axes[2], y_pixels=default_pixels, normalize=False, hmin=False)
         assert image.shape == (round(default_pixels / ratio12), default_pixels, round(default_pixels * ratio01))
 
         image = interpolate_3d_grid(sdf_3, 'A', x=axes[0], y=axes[1], z=axes[2], x_pixels=default_pixels,
-                                    y_pixels=default_pixels, z_pixels=default_pixels, normalize=False)
+                                    y_pixels=default_pixels, z_pixels=default_pixels, normalize=False, hmin=False)
         assert image.shape == (default_pixels, default_pixels, default_pixels)
 
     # Non-vector functions
@@ -612,18 +612,18 @@ def test_pixel_arguments():
 
             # With no pixels specified, the pixels in the image will match the ratio of the data.
             # The loose tolerance here accounts for the integer rounding.
-            image = func(sdf, 'A', x=axes[0], y=axes[1], normalize=False)
+            image = func(sdf, 'A', x=axes[0], y=axes[1], normalize=False, hmin=False)
             assert image.shape[0] / image.shape[1] == approx(ratio, rel=1e-2)
 
             # With one axis specified, the pixels in the other axis will be selected to match the ratio of the data.
-            image = func(sdf, 'A', x=axes[0], y=axes[1], x_pixels=default_pixels, normalize=False)
+            image = func(sdf, 'A', x=axes[0], y=axes[1], x_pixels=default_pixels, normalize=False, hmin=False)
             assert image.shape == (round(default_pixels * ratio), default_pixels)
 
-            image = func(sdf, 'A', x=axes[0], y=axes[1], y_pixels=default_pixels, normalize=False)
+            image = func(sdf, 'A', x=axes[0], y=axes[1], y_pixels=default_pixels, normalize=False, hmin=False)
             assert image.shape == (default_pixels, round(default_pixels / ratio))
 
             # With both axes specified, the pixels will simply match the specified counts.
-            image = func(sdf, 'A', x_pixels=default_pixels * 2, y_pixels=default_pixels, normalize=False)
+            image = func(sdf, 'A', x_pixels=default_pixels * 2, y_pixels=default_pixels, normalize=False, hmin=False)
             assert image.shape == (default_pixels, default_pixels * 2)
 
     # 3D Vector-based functions
@@ -632,19 +632,19 @@ def test_pixel_arguments():
             ratio = np.abs(df_3[axes[1]][1] - df_3[axes[1]][0]) / np.abs(df_3[axes[0]][1] - df_3[axes[0]][0])
 
             # Here, the tests are performed for both vector directions.
-            image = func(sdf_3, 'A', 'B', 'C', x=axes[0], y=axes[1], normalize=False)
+            image = func(sdf_3, 'A', 'B', 'C', x=axes[0], y=axes[1], normalize=False, hmin=False)
             assert image[0].shape[0] / image[0].shape[1] == approx(ratio, rel=1e-2)
             assert image[1].shape[0] / image[1].shape[1] == approx(ratio, rel=1e-2)
 
-            image = func(sdf_3, 'A', 'B', 'C', x=axes[0], y=axes[1], x_pixels=default_pixels, normalize=False)
+            image = func(sdf_3, 'A', 'B', 'C', x=axes[0], y=axes[1], x_pixels=default_pixels, normalize=False, hmin=False)
             assert image[0].shape == (round(default_pixels * ratio), default_pixels)
             assert image[1].shape == (round(default_pixels * ratio), default_pixels)
 
-            image = func(sdf_3, 'A', 'B', 'C', x=axes[0], y=axes[1], y_pixels=default_pixels, normalize=False)
+            image = func(sdf_3, 'A', 'B', 'C', x=axes[0], y=axes[1], y_pixels=default_pixels, normalize=False, hmin=False)
             assert image[0].shape == (default_pixels, round(default_pixels / ratio))
             assert image[1].shape == (default_pixels, round(default_pixels / ratio))
 
-            image = func(sdf_3, 'A', 'B', 'C', x_pixels=default_pixels * 2, y_pixels=default_pixels, normalize=False)
+            image = func(sdf_3, 'A', 'B', 'C', x_pixels=default_pixels * 2, y_pixels=default_pixels, normalize=False, hmin=False)
             assert image[0].shape == (default_pixels, default_pixels * 2)
             assert image[1].shape == (default_pixels, default_pixels * 2)
 
@@ -652,19 +652,19 @@ def test_pixel_arguments():
     for axes in [('x', 'y'), ('y', 'x')]:
         ratio = np.abs(df_3[axes[1]][1] - df_3[axes[1]][0]) / np.abs(df_3[axes[0]][1] - df_3[axes[0]][0])
 
-        image = interpolate_2d_vec(sdf_2, 'A', 'B', x=axes[0], y=axes[1], normalize=False)
+        image = interpolate_2d_vec(sdf_2, 'A', 'B', x=axes[0], y=axes[1], normalize=False, hmin=False)
         assert image[0].shape[0] / image[0].shape[1] == approx(ratio, rel=1e-2)
         assert image[1].shape[0] / image[1].shape[1] == approx(ratio, rel=1e-2)
 
-        image = interpolate_2d_vec(sdf_2, 'A', 'B', x=axes[0], y=axes[1], x_pixels=default_pixels, normalize=False)
+        image = interpolate_2d_vec(sdf_2, 'A', 'B', x=axes[0], y=axes[1], x_pixels=default_pixels, normalize=False, hmin=False)
         assert image[0].shape == (round(default_pixels * ratio), default_pixels)
         assert image[1].shape == (round(default_pixels * ratio), default_pixels)
 
-        image = interpolate_2d_vec(sdf_2, 'A', 'B', x=axes[0], y=axes[1], y_pixels=default_pixels, normalize=False)
+        image = interpolate_2d_vec(sdf_2, 'A', 'B', x=axes[0], y=axes[1], y_pixels=default_pixels, normalize=False, hmin=False)
         assert image[0].shape == (default_pixels, round(default_pixels / ratio))
         assert image[1].shape == (default_pixels, round(default_pixels / ratio))
 
-        image = interpolate_2d_vec(sdf_2, 'A', 'B', x_pixels=default_pixels * 2, y_pixels=default_pixels, normalize=False)
+        image = interpolate_2d_vec(sdf_2, 'A', 'B', x_pixels=default_pixels * 2, y_pixels=default_pixels, normalize=False, hmin=False)
         assert image[0].shape == (default_pixels, default_pixels * 2)
         assert image[1].shape == (default_pixels, default_pixels * 2)
 
@@ -689,10 +689,10 @@ def test_irregular_bounds(backend):
     real_y = -kernel.get_radius() + (np.arange(0, 25) + 0.5) * (2 * kernel.get_radius() / 25)
 
     image = interpolate_2d(sdf, 'A', x_pixels=50, y_pixels=25, xlim=(-kernel.get_radius(), kernel.get_radius()),
-                           ylim=(-kernel.get_radius(), kernel.get_radius()), normalize=False)
+                           ylim=(-kernel.get_radius(), kernel.get_radius()), normalize=False, hmin=False)
     image_vec = interpolate_2d_vec(sdf, 'A', 'B', x_pixels=50, y_pixels=25,
                                    xlim=(-kernel.get_radius(), kernel.get_radius()),
-                                   ylim=(-kernel.get_radius(), kernel.get_radius()), normalize=False)
+                                   ylim=(-kernel.get_radius(), kernel.get_radius()), normalize=False, hmin=False)
     for y in range(25):
         for x in range(50):
             assert image[y][x] == approx(
@@ -710,10 +710,10 @@ def test_irregular_bounds(backend):
     column_func = kernel.get_column_kernel_func(1000)
 
     image = interpolate_3d_proj(sdf, 'A', x_pixels=50, y_pixels=25, xlim=(-kernel.get_radius(), kernel.get_radius()),
-                           ylim=(-kernel.get_radius(), kernel.get_radius()), dens_weight=False, normalize=False)
+                           ylim=(-kernel.get_radius(), kernel.get_radius()), dens_weight=False, normalize=False, hmin=False)
     image_vec = interpolate_3d_vec(sdf, 'A', 'B', 'C', x_pixels=50, y_pixels=25,
                                    xlim=(-kernel.get_radius(), kernel.get_radius()),
-                                   ylim=(-kernel.get_radius(), kernel.get_radius()), dens_weight=False, normalize=False)
+                                   ylim=(-kernel.get_radius(), kernel.get_radius()), dens_weight=False, normalize=False, hmin=False)
     for y in range(25):
         for x in range(50):
             assert image[y][x] == approx(
@@ -728,10 +728,10 @@ def test_irregular_bounds(backend):
 
     image = interpolate_3d_cross(sdf, 'A', z_slice=0, x_pixels=50, y_pixels=25,
                                  xlim=(-kernel.get_radius(), kernel.get_radius()),
-                                 ylim=(-kernel.get_radius(), kernel.get_radius()), normalize=False)
+                                 ylim=(-kernel.get_radius(), kernel.get_radius()), normalize=False, hmin=False)
     image_vec = interpolate_3d_cross_vec(sdf, 'A', 'B', 'C', 0, x_pixels=50, y_pixels=25,
                                          xlim=(-kernel.get_radius(), kernel.get_radius()),
-                                         ylim=(-kernel.get_radius(), kernel.get_radius()), normalize=False)
+                                         ylim=(-kernel.get_radius(), kernel.get_radius()), normalize=False, hmin=False)
     for y in range(25):
         for x in range(50):
             assert image[y][x] == approx(
@@ -744,7 +744,7 @@ def test_irregular_bounds(backend):
     real_z = -kernel.get_radius() + 0.5 + (np.arange(0, 15) + 0.5) * (2 * kernel.get_radius() / 15)
     limit = -kernel.get_radius(), kernel.get_radius()
 
-    image = interpolate_3d_grid(sdf, 'A', x_pixels=50, y_pixels=25, z_pixels=15, xlim=limit, ylim=limit, zlim=limit, normalize=False)
+    image = interpolate_3d_grid(sdf, 'A', x_pixels=50, y_pixels=25, z_pixels=15, xlim=limit, ylim=limit, zlim=limit, normalize=False, hmin=False)
     for z in range(15):
         for y in range(25):
             for x in range(50):
@@ -777,9 +777,9 @@ def test_oob_particles(backend):
     real_x = 1 + (np.arange(0, 25) + 0.5) * (1 / 25)
     real_y = 1 + (np.arange(0, 25) + 0.5) * (1 / 25)
 
-    image = interpolate_2d(sdf_2, 'A', x_pixels=25, y_pixels=25, xlim=(1, 2), ylim=(1, 2), normalize=False)
-    image_vec = interpolate_2d_vec(sdf_2, 'A', 'B', x_pixels=25, y_pixels=25, xlim=(1, 2), ylim=(1, 2), normalize=False)
-    line = interpolate_2d_line(sdf_2, 'A', pixels=25, xlim=(1, 2), ylim=(1, 2), normalize=False)
+    image = interpolate_2d(sdf_2, 'A', x_pixels=25, y_pixels=25, xlim=(1, 2), ylim=(1, 2), normalize=False, hmin=False)
+    image_vec = interpolate_2d_vec(sdf_2, 'A', 'B', x_pixels=25, y_pixels=25, xlim=(1, 2), ylim=(1, 2), normalize=False, hmin=False)
+    line = interpolate_2d_line(sdf_2, 'A', pixels=25, xlim=(1, 2), ylim=(1, 2), normalize=False, hmin=False)
     for y in range(25):
         assert line[y] == approx(
             w[0] * sdf_2['A'][0] * kernel.w(np.sqrt(real_x[y] ** 2 + real_y[y] ** 2) / sdf_2['h'][0], 2))
@@ -794,9 +794,9 @@ def test_oob_particles(backend):
     column_func = kernel.get_column_kernel_func(1000)
 
     image = interpolate_3d_proj(sdf_3, 'A', x_pixels=25, y_pixels=25, xlim=(1, 2), ylim=(1, 2),
-                                dens_weight=False, normalize=False)
+                                dens_weight=False, normalize=False, hmin=False)
     image_vec = interpolate_3d_vec(sdf_3, 'A', 'B', 'C', x_pixels=25, y_pixels=25, xlim=(1, 2), ylim=(1, 2),
-                                   dens_weight=False, normalize=False)
+                                   dens_weight=False, normalize=False, hmin=False)
     for y in range(25):
         for x in range(25):
             assert image[y][x] == approx(
@@ -809,8 +809,8 @@ def test_oob_particles(backend):
     # Weight for 3D cross-sections.
     w = sdf_3['m'] / (sdf_3['rho'] * sdf_3['h'] ** 3)
 
-    image = interpolate_3d_cross(sdf_3, 'A', z_slice=0, x_pixels=25, y_pixels=25, xlim=(1, 2), ylim=(1, 2), normalize=False)
-    image_vec = interpolate_3d_cross_vec(sdf_3, 'A', 'B', 'C', 0, x_pixels=25, y_pixels=25, xlim=(1, 2), ylim=(1, 2), normalize=False)
+    image = interpolate_3d_cross(sdf_3, 'A', z_slice=0, x_pixels=25, y_pixels=25, xlim=(1, 2), ylim=(1, 2), normalize=False, hmin=False)
+    image_vec = interpolate_3d_cross_vec(sdf_3, 'A', 'B', 'C', 0, x_pixels=25, y_pixels=25, xlim=(1, 2), ylim=(1, 2), normalize=False, hmin=False)
     for y in range(25):
         for x in range(25):
             assert image[y][x] == approx(
@@ -823,7 +823,7 @@ def test_oob_particles(backend):
     real_z = 0.5 + (np.arange(0, 25) + 0.5) * (1 / 25)
 
     image = interpolate_3d_grid(sdf_3, 'A', x_pixels=25, y_pixels=25, z_pixels=25, xlim=(1, 2), ylim=(1, 2),
-                                zlim=(1, 2), normalize=False)
+                                zlim=(1, 2), normalize=False, hmin=False)
 
     for z in range(25):
         for y in range(25):
@@ -879,13 +879,13 @@ def test_nonstandard_rotation(backend):
     rot_z, rot_y, rot_x = 129, 34, 50
 
     image_col = interpolate_3d_proj(sdf, 'A', x_pixels=50, y_pixels=50, xlim=(-1, 1), ylim=(-1, 1),
-                               rotation=[rot_z, rot_y, rot_x], origin=[0, 0, 0], dens_weight=False, normalize=False)
+                               rotation=[rot_z, rot_y, rot_x], origin=[0, 0, 0], dens_weight=False, normalize=False, hmin=False)
     image_cross = interpolate_3d_cross(sdf, 'A', z_slice=0, rotation=[rot_z, rot_y, rot_x], origin=[0, 0, 0],
-                                       x_pixels=50, y_pixels=50, xlim=(-1, 1), ylim=(-1, 1), normalize=False)
+                                       x_pixels=50, y_pixels=50, xlim=(-1, 1), ylim=(-1, 1), normalize=False, hmin=False)
     image_colvec = interpolate_3d_vec(sdf, 'A', 'B', 'C', x_pixels=50, y_pixels=50, xlim=(-1, 1), ylim=(-1, 1),
-                                      rotation=[rot_z, rot_y, rot_x], origin=[0, 0, 0], dens_weight=False, normalize=False)
+                                      rotation=[rot_z, rot_y, rot_x], origin=[0, 0, 0], dens_weight=False, normalize=False, hmin=False)
     image_crossvec = interpolate_3d_cross_vec(sdf, 'A', 'B', 'C', 0, x_pixels=50, y_pixels=50, xlim=(-1, 1),
-                                              ylim=(-1, 1), rotation=[rot_z, rot_y, rot_x], origin=[0, 0, 0], normalize=False)
+                                              ylim=(-1, 1), rotation=[rot_z, rot_y, rot_x], origin=[0, 0, 0], normalize=False, hmin=False)
 
     w_col = sdf['m'] / (sdf['rho'] * sdf['h'] ** 2)
     w_cross = sdf['m'] / (sdf['rho'] * sdf['h'] ** 3)
@@ -911,7 +911,7 @@ def test_nonstandard_rotation(backend):
                 np.sqrt((pos_x - real[x]) ** 2 + (pos_y - real[y]) ** 2 + pos_z ** 2) / sdf['h'][0], 3))
 
     image_grid = interpolate_3d_grid(sdf, 'A', x_pixels=50, y_pixels=50, z_pixels=50, xlim=(-1, 1), ylim=(-1, 1),
-                                     zlim=(-1, 1), rotation=[rot_z, rot_y, rot_x], rot_origin=[0, 0, 0], normalize=False)
+                                     zlim=(-1, 1), rotation=[rot_z, rot_y, rot_x], rot_origin=[0, 0, 0], normalize=False, hmin=False)
 
     for z in range(50):
         for y in range(50):
@@ -938,40 +938,40 @@ def test_scipy_rotation_equivalency(backend):
     rot_z, rot_y, rot_x = 67, -34, 91
 
     image1 = interpolate_3d_proj(sdf, 'A', x_pixels=50, y_pixels=50, xlim=(-1, 1), ylim=(-1, 1),
-                            rotation=[rot_z, rot_y, rot_x], origin=[0, 0, 0], normalize=False)
+                            rotation=[rot_z, rot_y, rot_x], origin=[0, 0, 0], normalize=False, hmin=False)
     image2 = interpolate_3d_proj(sdf, 'A', x_pixels=50, y_pixels=50, xlim=(-1, 1), ylim=(-1, 1),
                                  rotation=Rotation.from_euler('zyx', [rot_z, rot_y, rot_x], degrees=True),
-                                 origin=[0, 0, 0], normalize=False)
+                                 origin=[0, 0, 0], normalize=False, hmin=False)
     assert_allclose(image1, image2)
 
     image1 = interpolate_3d_cross(sdf, 'A', z_slice=0, rotation=[rot_z, rot_y, rot_x], origin=[0, 0, 0], x_pixels=50,
-                                  y_pixels=50, xlim=(-1, 1), ylim=(-1, 1), normalize=False)
+                                  y_pixels=50, xlim=(-1, 1), ylim=(-1, 1), normalize=False, hmin=False)
     image2 = interpolate_3d_cross(sdf, 'A', z_slice=0,
                                   rotation=Rotation.from_euler('zyx', [rot_z, rot_y, rot_x], degrees=True),
-                                  origin=[0, 0, 0], x_pixels=50, y_pixels=50, xlim=(-1, 1), ylim=(-1, 1), normalize=False)
+                                  origin=[0, 0, 0], x_pixels=50, y_pixels=50, xlim=(-1, 1), ylim=(-1, 1), normalize=False, hmin=False)
     assert_allclose(image1, image2)
 
     image1 = interpolate_3d_vec(sdf, 'A', 'B', 'C', x_pixels=50, y_pixels=50, xlim=(-1, 1), ylim=(-1, 1),
-                                  rotation=[rot_z, rot_y, rot_x], origin=[0, 0, 0], normalize=False)
+                                  rotation=[rot_z, rot_y, rot_x], origin=[0, 0, 0], normalize=False, hmin=False)
     image2 = interpolate_3d_vec(sdf, 'A', 'B', 'C', x_pixels=50, y_pixels=50, xlim=(-1, 1), ylim=(-1, 1),
                                   rotation=Rotation.from_euler('zyx', [rot_z, rot_y, rot_x], degrees=True),
-                                  origin=[0, 0, 0], normalize=False)
+                                  origin=[0, 0, 0], normalize=False, hmin=False)
     assert_allclose(image1[0], image2[0])
     assert_allclose(image1[1], image2[1])
 
     image1 = interpolate_3d_cross_vec(sdf, 'A', 'B', 'C', 0, x_pixels=50, y_pixels=50, xlim=(-1, 1), ylim=(-1, 1),
-                                      rotation=[rot_z, rot_y, rot_x], origin=[0, 0, 0], normalize=False)
+                                      rotation=[rot_z, rot_y, rot_x], origin=[0, 0, 0], normalize=False, hmin=False)
     image2 = interpolate_3d_cross_vec(sdf, 'A', 'B', 'C', 0, x_pixels=50, y_pixels=50, xlim=(-1, 1), ylim=(-1, 1),
                                       rotation=Rotation.from_euler('zyx', [rot_z, rot_y, rot_x], degrees=True),
-                                      origin=[0, 0, 0], normalize=False)
+                                      origin=[0, 0, 0], normalize=False, hmin=False)
     assert_allclose(image1[0], image2[0])
     assert_allclose(image1[1], image2[1])
 
     image1 = interpolate_3d_grid(sdf, 'A', x_pixels=50, y_pixels=50, xlim=(-1, 1), ylim=(-1, 1), zlim=(-1, 1),
-                                 rotation=[rot_z, rot_y, rot_x], rot_origin=[0, 0, 0], normalize=False)
+                                 rotation=[rot_z, rot_y, rot_x], rot_origin=[0, 0, 0], normalize=False, hmin=False)
     image2 = interpolate_3d_grid(sdf, 'A', x_pixels=50, y_pixels=50, xlim=(-1, 1), ylim=(-1, 1), zlim=(-1, 1),
                                  rotation=Rotation.from_euler('zyx', [rot_z, rot_y, rot_x], degrees=True),
-                                 rot_origin=[0, 0, 0], normalize=False)
+                                 rot_origin=[0, 0, 0], normalize=False, hmin=False)
     assert_allclose(image1, image2)
 
 
@@ -991,13 +991,13 @@ def test_quaternion_rotation(backend):
 
     quat = Rotation.from_quat([5, 3, 8, 1])
     image_col = interpolate_3d_proj(sdf, 'A', x_pixels=50, y_pixels=50, xlim=(-1, 1), ylim=(-1, 1), rotation=quat,
-                               origin=[0, 0, 0], dens_weight=False, normalize=False)
+                               origin=[0, 0, 0], dens_weight=False, normalize=False, hmin=False)
     image_colvec = interpolate_3d_vec(sdf, 'A', 'B', 'C', x_pixels=50, y_pixels=50, xlim=(-1, 1), ylim=(-1, 1),
-                                      rotation=quat, origin=[0, 0, 0], dens_weight=False, normalize=False)
+                                      rotation=quat, origin=[0, 0, 0], dens_weight=False, normalize=False, hmin=False)
     image_cross = interpolate_3d_cross(sdf, 'A', z_slice=0, rotation=quat, origin=[0, 0, 0], x_pixels=50, y_pixels=50,
-                                       xlim=(-1, 1), ylim=(-1, 1), normalize=False)
+                                       xlim=(-1, 1), ylim=(-1, 1), normalize=False, hmin=False)
     image_crossvec = interpolate_3d_cross_vec(sdf, 'A', 'B', 'C', 0, x_pixels=50, y_pixels=50, xlim=(-1, 1),
-                                              ylim=(-1, 1), rotation=quat, origin=[0, 0, 0], normalize=False)
+                                              ylim=(-1, 1), rotation=quat, origin=[0, 0, 0], normalize=False, hmin=False)
 
     w_col = sdf['m'] / (sdf['rho'] * sdf['h'] ** 2)
     w_cross = sdf['m'] / (sdf['rho'] * sdf['h'] ** 3)
@@ -1025,7 +1025,7 @@ def test_quaternion_rotation(backend):
                 np.sqrt((pos[0] - real[x]) ** 2 + (pos[1] - real[y]) ** 2 + pos[2] ** 2) / sdf['h'][0], 3))
 
     image_grid = interpolate_3d_grid(sdf, 'A', x_pixels=50, y_pixels=50, z_pixels=50, xlim=(-1, 1), ylim=(-1, 1),
-                                     zlim=(-1, 1), rotation=quat, rot_origin=[0, 0, 0], normalize=False)
+                                     zlim=(-1, 1), rotation=quat, rot_origin=[0, 0, 0], normalize=False, hmin=False)
 
     for z in range(50):
         for y in range(50):
@@ -1052,9 +1052,9 @@ def test_rotation_stability(backend):
     pixel_x, pixel_y = 12, 30
 
     for func in [interpolate_3d_proj, interpolate_3d_cross]:
-        image = func(sdf, 'A', x_pixels=50, y_pixels=50, xlim=(-1, 1), ylim=(-1, 1), normalize=False)
+        image = func(sdf, 'A', x_pixels=50, y_pixels=50, xlim=(-1, 1), ylim=(-1, 1), normalize=False, hmin=False)
         image_rot = func(sdf, 'A', x_pixels=50, y_pixels=50, xlim=(-1, 1), ylim=(-1, 1), rotation=[237, 0, 0],
-                         origin=[real[pixel_x], real[pixel_y], 0], normalize=False)
+                         origin=[real[pixel_x], real[pixel_y], 0], normalize=False, hmin=False)
 
         assert image[pixel_y][pixel_x] == approx(image_rot[pixel_y][pixel_x])
 
@@ -1071,35 +1071,35 @@ def test_axes_rotation_separation(backend):
     sdf.backend = backend
 
     image1 = interpolate_3d_proj(sdf, 'A', x_pixels=50,  y_pixels=50, xlim=(-1, 1), ylim=(-1, 1),
-                                 rotation=[234, 90, 48], normalize=False)
+                                 rotation=[234, 90, 48], normalize=False, hmin=False)
     image2 = interpolate_3d_proj(sdf, 'A', x='y', y='x', x_pixels=50,  y_pixels=50, xlim=(-1, 1), ylim=(-1, 1),
-                                 rotation=[234, 90, 48], normalize=False)
+                                 rotation=[234, 90, 48], normalize=False, hmin=False)
     assert_allclose(image1, image2.T)
 
     image1 = interpolate_3d_vec(sdf, 'A', 'B', 'C', x_pixels=50, y_pixels=50, xlim=(-1, 1), ylim=(-1, 1),
-                                rotation=[234, 90, 48], normalize=False)
+                                rotation=[234, 90, 48], normalize=False, hmin=False)
     image2 = interpolate_3d_vec(sdf, 'A', 'B', 'C', x='y', y='x', x_pixels=50, y_pixels=50, xlim=(-1, 1), ylim=(-1, 1),
-                                rotation=[234, 90, 48], normalize=False)
+                                rotation=[234, 90, 48], normalize=False, hmin=False)
     assert_allclose(image1[0], image2[0].T)
     assert_allclose(image1[1], image2[1].T)
 
     image1 = interpolate_3d_cross(sdf, 'A', z_slice=0, rotation=[234, 90, 48], x_pixels=50, y_pixels=50, xlim=(-1, 1),
-                                  ylim=(-1, 1), normalize=False)
+                                  ylim=(-1, 1), normalize=False, hmin=False)
     image2 = interpolate_3d_cross(sdf, 'A', x='y', y='x', z_slice=0, rotation=[234, 90, 48], x_pixels=50, y_pixels=50,
-                                  xlim=(-1, 1), ylim=(-1, 1), normalize=False)
+                                  xlim=(-1, 1), ylim=(-1, 1), normalize=False, hmin=False)
     assert_allclose(image1, image2.T)
 
     image1 = interpolate_3d_cross_vec(sdf, 'A', 'B', 'C', 0, x_pixels=50, y_pixels=50, xlim=(-1, 1), ylim=(-1, 1),
-                                      rotation=[234, 90, 48], normalize=False)
+                                      rotation=[234, 90, 48], normalize=False, hmin=False)
     image2 = interpolate_3d_cross_vec(sdf, 'A', 'B', 'C', 0, x='y', y='x', x_pixels=50, y_pixels=50, xlim=(-1, 1),
-                                      ylim=(-1, 1), rotation=[234, 90, 48], normalize=False)
+                                      ylim=(-1, 1), rotation=[234, 90, 48], normalize=False, hmin=False)
     assert_allclose(image1[0], image2[0].T)
     assert_allclose(image1[1], image2[1].T)
 
     image1 = interpolate_3d_grid(sdf, 'A', x_pixels=50, y_pixels=50, z_pixels=50, xlim=(-1, 1), ylim=(-1, 1),
-                                 zlim=(-1, 1), rotation=[234, 90, 48], normalize=False)
+                                 zlim=(-1, 1), rotation=[234, 90, 48], normalize=False, hmin=False)
     image2 = interpolate_3d_grid(sdf, 'A', x='y', y='x', x_pixels=50, y_pixels=50, z_pixels=50, xlim=(-1, 1),
-                                 ylim=(-1, 1), zlim=(-1, 1), rotation=[234, 90, 48], normalize=False)
+                                 ylim=(-1, 1), zlim=(-1, 1), rotation=[234, 90, 48], normalize=False, hmin=False)
     assert_allclose(image1, image2.transpose(0, 2, 1))
 
 
@@ -1124,8 +1124,8 @@ def test_axes_rotation_equivalency(backend):
 
                 for func in [interpolate_3d_proj, interpolate_3d_cross]:
                     image1 = func(sdf, 'A', x_pixels=50, y_pixels=50, xlim=(-1, 1), ylim=(-1, 1),
-                                  rotation=[rot_z, rot_y, rot_x], origin=[0, 0, 0], normalize=False)
-                    image2 = func(sdf, 'A', x=x, y=y, x_pixels=50, y_pixels=50, xlim=(-1, 1), ylim=(-1, 1), normalize=False)
+                                  rotation=[rot_z, rot_y, rot_x], origin=[0, 0, 0], normalize=False, hmin=False)
+                    image2 = func(sdf, 'A', x=x, y=y, x_pixels=50, y_pixels=50, xlim=(-1, 1), ylim=(-1, 1), normalize=False, hmin=False)
                     image2 = image2 if not flip_x else np.flip(image2, 1)
                     image2 = image2 if not flip_y else np.flip(image2, 0)
                     assert_allclose(image1, image2)
@@ -1154,28 +1154,28 @@ def test_invalid_region(backend):
 
     for b in [(-3, 3, 3, -3, 20, 20), (3, 3, 3, 3, 20, 20), (-3, 3, -3, 3, 0, 0)]:
         with raises(ValueError):
-            interpolate_2d(sdf_2, 'A', xlim=(b[0], b[1]), ylim=(b[2], b[3]), x_pixels=b[4], y_pixels=b[5], normalize=False)
+            interpolate_2d(sdf_2, 'A', xlim=(b[0], b[1]), ylim=(b[2], b[3]), x_pixels=b[4], y_pixels=b[5], normalize=False, hmin=False)
         with raises(ValueError):
             interpolate_2d_vec(sdf_2, 'A', 'B', 'C', xlim=(b[0], b[1]), ylim=(b[2], b[3]), x_pixels=b[4],
-                               y_pixels=b[5], normalize=False)
+                               y_pixels=b[5], normalize=False, hmin=False)
         # the first case will not fail for this type of interpolation.
         if not b[0] == -3 and not b[3] == -3:
             with raises(ValueError):
-                interpolate_2d_line(sdf_2, 'A', xlim=(b[0], b[1]), ylim=(b[2], b[3]), pixels=b[4], normalize=False)
+                interpolate_2d_line(sdf_2, 'A', xlim=(b[0], b[1]), ylim=(b[2], b[3]), pixels=b[4], normalize=False, hmin=False)
         with raises(ValueError):
-            interpolate_3d_proj(sdf_3, 'A', xlim=(b[0], b[1]), ylim=(b[2], b[3]), x_pixels=b[4], y_pixels=b[5], normalize=False)
+            interpolate_3d_proj(sdf_3, 'A', xlim=(b[0], b[1]), ylim=(b[2], b[3]), x_pixels=b[4], y_pixels=b[5], normalize=False, hmin=False)
         with raises(ValueError):
             interpolate_3d_vec(sdf_3, 'A', 'B', 'C', xlim=(b[0], b[1]), ylim=(b[2], b[3]), x_pixels=b[4],
-                               y_pixels=b[5], normalize=False)
+                               y_pixels=b[5], normalize=False, hmin=False)
         with raises(ValueError):
             interpolate_3d_cross(sdf_3, 'A', z_slice=0, x_pixels=b[4], y_pixels=b[5], xlim=(b[0], b[1]),
-                                 ylim=(b[2], b[3]), normalize=False)
+                                 ylim=(b[2], b[3]), normalize=False, hmin=False)
         with raises(ValueError):
             interpolate_3d_cross_vec(sdf_3, 'A', 'B', 'C', 0, xlim=(b[0], b[1]), ylim=(b[2], b[3]), x_pixels=b[4],
-                                     y_pixels=b[5], normalize=False)
+                                     y_pixels=b[5], normalize=False, hmin=False)
         with raises(ValueError):
             interpolate_3d_grid(sdf_3, 'A', xlim=(b[0], b[1]), ylim=(b[2], b[3]), zlim=(-3, 3), x_pixels=b[4],
-                                y_pixels=b[5], z_pixels=10, normalize=False)
+                                y_pixels=b[5], z_pixels=10, normalize=False, hmin=False)
 
 
 @mark.parametrize("backend", backends)
@@ -1198,23 +1198,23 @@ def test_required_columns(backend):
     for column in ['m', 'h']:
         sdf_dropped = sdf_2.drop(column, axis=1)
         with raises(KeyError):
-            interpolate_2d(sdf_dropped, 'A', normalize=False)
+            interpolate_2d(sdf_dropped, 'A', normalize=False, hmin=False)
         with raises(KeyError):
-            interpolate_2d_line(sdf_dropped, 'A', normalize=False)
+            interpolate_2d_line(sdf_dropped, 'A', normalize=False, hmin=False)
         with raises(KeyError):
-            interpolate_2d_vec(sdf_dropped, 'A', 'B', normalize=False)
+            interpolate_2d_vec(sdf_dropped, 'A', 'B', normalize=False, hmin=False)
 
         sdf_dropped = sdf_3.drop(column, axis=1)
         with raises(KeyError):
-            interpolate_3d_proj(sdf_dropped, 'A', normalize=False)
+            interpolate_3d_proj(sdf_dropped, 'A', normalize=False, hmin=False)
         with raises(KeyError):
-            interpolate_3d_cross(sdf_dropped, 'A', normalize=False)
+            interpolate_3d_cross(sdf_dropped, 'A', normalize=False, hmin=False)
         with raises(KeyError):
-            interpolate_3d_vec(sdf_dropped, 'A', 'B', 'C', normalize=False)
+            interpolate_3d_vec(sdf_dropped, 'A', 'B', 'C', normalize=False, hmin=False)
         with raises(KeyError):
-            interpolate_3d_cross_vec(sdf_dropped, 'A', 'B', 'C', normalize=False)
+            interpolate_3d_cross_vec(sdf_dropped, 'A', 'B', 'C', normalize=False, hmin=False)
         with raises(KeyError):
-            interpolate_3d_grid(sdf_dropped, 'A', normalize=False)
+            interpolate_3d_grid(sdf_dropped, 'A', normalize=False, hmin=False)
 
 
 @mark.parametrize("backend", backends)
@@ -1233,11 +1233,11 @@ def test_exact_interpolation(backend):
     w = sdf_2['m'] * sdf_2['A'] / (sdf_2['rho'] * sdf_2['h'] ** 2)
 
     bound = kernel.get_radius() * sdf_2['h'][0]
-    image = interpolate_2d(sdf_2, 'A', xlim=(-bound, bound), ylim=(-bound, bound), x_pixels=1, exact=True, normalize=False)
+    image = interpolate_2d(sdf_2, 'A', xlim=(-bound, bound), ylim=(-bound, bound), x_pixels=1, exact=True, normalize=False, hmin=False)
 
     assert image.sum() == approx(w[0] * sdf_2['h'][0] ** 2 / (4 * bound ** 2))
 
-    image = interpolate_3d_proj(sdf_3, 'A', xlim=(-bound, bound), ylim=(-bound, bound), x_pixels=1, exact=True, dens_weight=False, normalize=False)
+    image = interpolate_3d_proj(sdf_3, 'A', xlim=(-bound, bound), ylim=(-bound, bound), x_pixels=1, exact=True, dens_weight=False, normalize=False, hmin=False)
 
     assert image.sum() == approx(w[0] * sdf_2['h'][0] ** 2 / (4 * bound ** 2))
 
@@ -1265,32 +1265,32 @@ def test_density_weighted(backend):
             weight2d = sdf_2['m'][0] / (sdf_2['rho'][0] * sdf_2['h'][0] ** 2)
             weight3d = sdf_2['m'][0] / (sdf_2['rho'][0] * sdf_2['h'][0] ** 3)
 
-        image = interpolate_2d(sdf_2, 'A', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), dens_weight=dens_weight, normalize=False)
+        image = interpolate_2d(sdf_2, 'A', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), dens_weight=dens_weight, normalize=False, hmin=False)
         assert image == weight2d * sdf_2['A'][0] * kernel.w(0, 2)
-        image = interpolate_2d_vec(sdf_2, 'A', 'B', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), dens_weight=dens_weight, normalize=False)
+        image = interpolate_2d_vec(sdf_2, 'A', 'B', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), dens_weight=dens_weight, normalize=False, hmin=False)
         assert image[0] == weight2d * sdf_2['A'][0] * kernel.w(0, 2)
         assert image[1] == weight2d * sdf_2['B'][0] * kernel.w(0, 2)
 
-        image = interpolate_2d_line(sdf_2, 'A', pixels=1, xlim=(-1, 1), ylim=(-1, 1), dens_weight=dens_weight, normalize=False)
+        image = interpolate_2d_line(sdf_2, 'A', pixels=1, xlim=(-1, 1), ylim=(-1, 1), dens_weight=dens_weight, normalize=False, hmin=False)
         assert image[0] == weight2d * sdf_2['A'][0] * kernel.w(0, 2)
 
-        image = interpolate_3d_proj(sdf_3, 'A', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), dens_weight=dens_weight, normalize=False)
+        image = interpolate_3d_proj(sdf_3, 'A', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), dens_weight=dens_weight, normalize=False, hmin=False)
         assert image[0] == weight2d * sdf_2['A'][0] * kernel.get_column_kernel()[0]
-        image = interpolate_3d_vec(sdf_3, 'A', 'B', 'C', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), dens_weight=dens_weight, normalize=False)
+        image = interpolate_3d_vec(sdf_3, 'A', 'B', 'C', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), dens_weight=dens_weight, normalize=False, hmin=False)
         assert image[0] == weight2d * sdf_2['A'][0] * kernel.get_column_kernel()[0]
         assert image[1] == weight2d * sdf_2['B'][0] * kernel.get_column_kernel()[0]
 
-        image = interpolate_3d_cross(sdf_3, 'A', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), dens_weight=dens_weight, normalize=False)
+        image = interpolate_3d_cross(sdf_3, 'A', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), dens_weight=dens_weight, normalize=False, hmin=False)
         assert image[0] == weight3d * sdf_2['A'][0] * kernel.w(0, 3)
-        image = interpolate_3d_cross_vec(sdf_3, 'A', 'B', 'C', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), dens_weight=dens_weight, normalize=False)
+        image = interpolate_3d_cross_vec(sdf_3, 'A', 'B', 'C', x_pixels=1, y_pixels=1, xlim=(-1, 1), ylim=(-1, 1), dens_weight=dens_weight, normalize=False, hmin=False)
         assert image[0] == weight3d * sdf_2['A'][0] * kernel.w(0, 3)
         assert image[1] == weight3d * sdf_2['B'][0] * kernel.w(0, 3)
 
         image = interpolate_3d_grid(sdf_3, 'A', x_pixels=1, y_pixels=1, z_pixels=1, xlim=(-1, 1), ylim=(-1, 1),
-                                    zlim=(-1, 1), dens_weight=dens_weight, normalize=False)
+                                    zlim=(-1, 1), dens_weight=dens_weight, normalize=False, hmin=False)
         assert image[0] == weight3d * sdf_2['A'][0] * kernel.w(0, 3)
 
-        image = interpolate_3d_line(sdf_3, 'A', pixels=1, xlim=(-1, 1), ylim=(-1, 1), dens_weight=dens_weight, normalize=False)
+        image = interpolate_3d_line(sdf_3, 'A', pixels=1, xlim=(-1, 1), ylim=(-1, 1), dens_weight=dens_weight, normalize=False, hmin=False)
         assert image[0] == weight3d * sdf_2['A'][0] * kernel.w(0, 3)
 
 
@@ -1370,3 +1370,128 @@ def test_exact_interpolation_culling(backend):
 
     assert image_2[2, 4] != 0
     assert image_3[2, 4] != 0
+
+
+@mark.parametrize("backend", backends)
+def test_minimum_smoothing_length_2d(backend):
+    """ Test that the minimum smoothing length evaluates correctly. """
+
+    pixels = 5
+    xlim, ylim = (-1, 1), (-1, 1)
+    hmin = 0.5 * (xlim[1] - xlim[0]) / pixels
+
+    sdf_a = SarracenDataFrame(data={'rx': [0.3, -0.1, 0.1, 0.1, 0.05, -0.05, -0.25, -0.2],
+                                             'ry': [0.0, 0.1, -0.1, 0.0, -0.05, 0.07, -0.3, -0.2],
+                                             'h': [hmin, hmin, 0.3, 0.25, hmin, hmin, 0.2, hmin],
+                                             'm': [0.56] * 8},
+                                       params={'hfact': 1.2})
+
+    sdf_b = SarracenDataFrame(data={'rx': [0.3, -0.1, 0.1, 0.1, 0.05, -0.05, -0.25, -0.2],
+                                             'ry': [0.0, 0.1, -0.1, 0.0, -0.05, 0.07, -0.3, -0.2],
+                                             'h': [0.01, 0.01, 0.3, 0.25, 0.01, 0.01, 0.2, 0.01],
+                                             'm': [0.56] * 8},
+                                       params={'hfact': 1.2})
+
+    sdf_a.backend = backend
+    sdf_b.backend = backend
+
+    for interpolate in [interpolate_2d]:
+        grid = interpolate(data=sdf_a, target='rho', xlim=xlim, ylim=ylim, x_pixels=pixels, y_pixels=pixels,
+                           normalize=False, hmin=False)
+        grid_hmin = interpolate(data=sdf_b, target='rho', xlim=xlim, ylim=ylim, x_pixels=pixels, y_pixels=pixels,
+                                normalize=False, hmin=True)
+
+        assert (grid == grid_hmin).all()
+
+
+@mark.parametrize("backend", backends)
+def test_minimum_smoothing_length_3d(backend):
+    """ Test that the minimum smoothing length evaluates correctly. """
+
+    pixels = 5
+    xlim, ylim = (-1, 1), (-1, 1)
+    hmin = 0.5 * (xlim[1] - xlim[0]) / pixels
+
+    sdf_a = SarracenDataFrame(data={'rx': [0.3, -0.1, 0.1, 0.1, 0.05, -0.05, -0.25, -0.2],
+                                             'ry': [0.0, 0.1, -0.1, 0.0, -0.05, 0.07, -0.3, -0.2],
+                                             'rz': [0.1, 0.32, 0.03, -0.3, -0.2, 0.1, -0.06, 0.22],
+                                             'h': [hmin, hmin, 0.3, 0.25, hmin, hmin, 0.2, hmin],
+                                             'm': [0.56] * 8},
+                                       params={'hfact': 1.2})
+
+    sdf_b = SarracenDataFrame(data={'rx': [0.3, -0.1, 0.1, 0.1, 0.05, -0.05, -0.25, -0.2],
+                                             'ry': [0.0, 0.1, -0.1, 0.0, -0.05, 0.07, -0.3, -0.2],
+                                             'rz': [0.1, 0.32, 0.03, -0.3, -0.2, 0.1, -0.06, 0.22],
+                                             'h': [0.01, 0.01, 0.3, 0.25, 0.01, 0.01, 0.2, 0.01],
+                                             'm': [0.56] * 8},
+                                       params={'hfact': 1.2})
+
+    sdf_a.backend = backend
+    sdf_b.backend = backend
+
+    for interpolate in [interpolate_3d_cross, interpolate_3d_proj, interpolate_3d_grid]:
+        grid = interpolate(data=sdf_a, target='rho', xlim=xlim, ylim=ylim, x_pixels=pixels, y_pixels=pixels,
+                           normalize=False, hmin=False)
+        grid_hmin = interpolate(data=sdf_b, target='rho', xlim=xlim, ylim=ylim, x_pixels=pixels, y_pixels=pixels,
+                                normalize=False, hmin=True)
+
+        assert (grid == grid_hmin).all()
+
+
+@mark.parametrize("backend", backends)
+def test_minimum_smoothing_length_1d_lines(backend):
+    """ Test that the minimum smoothing length evaluates correctly. """
+
+    pixels = 5
+    xlim, ylim, zlim = (-1, 1), (-0.5, 0.5), (-0.5, 0.5)
+
+    hmin = 0.5 * np.sqrt((xlim[1] - xlim[0]) ** 2 + (ylim[1] - ylim[0]) ** 2) / pixels
+
+    sdf_a = SarracenDataFrame(data={'rx': [0.3, -0.1, 0.1, 0.1, 0.05, -0.05, -0.25, -0.2],
+                                             'ry': [0.0, 0.1, -0.1, 0.0, -0.05, 0.07, -0.3, -0.2],
+                                             'h': [hmin, hmin, 0.3, 0.25, hmin, hmin, hmin, hmin],
+                                             'm': [0.56] * 8},
+                                       params={'hfact': 1.2})
+
+    sdf_b = SarracenDataFrame(data={'rx': [0.3, -0.1, 0.1, 0.1, 0.05, -0.05, -0.25, -0.2],
+                                             'ry': [0.0, 0.1, -0.1, 0.0, -0.05, 0.07, -0.3, -0.2],
+                                             'h': [0.01, 0.01, 0.3, 0.25, 0.01, 0.01, 0.2, 0.01],
+                                             'm': [0.56] * 8},
+                                       params={'hfact': 1.2})
+
+    sdf_a.backend = backend
+    sdf_b.backend = backend
+
+    grid = interpolate_2d_line(data=sdf_a, target='rho', xlim=xlim, ylim=ylim, pixels=pixels,
+                               normalize=False, hmin=False)
+    grid_hmin = interpolate_2d_line(data=sdf_b, target='rho', xlim=xlim, ylim=ylim, pixels=pixels,
+                                    normalize=False, hmin=True)
+
+    assert (grid == grid_hmin).all()
+
+    hmin = 0.5 * np.sqrt((xlim[1] - xlim[0]) ** 2 + (ylim[1] - ylim[0]) ** 2 + (zlim[1] - zlim[0]) ** 2) / pixels
+
+    sdf_a = SarracenDataFrame(data={'rx': [0.3, -0.1, 0.1, 0.1, 0.05, -0.05, -0.25, -0.2],
+                                             'ry': [0.0, 0.1, -0.1, 0.0, -0.05, 0.07, -0.3, -0.2],
+                                             'rz': [0.1, 0.32, 0.03, -0.3, -0.2, 0.1, -0.06, 0.22],
+                                             'h': [hmin, hmin, 0.3, 0.25, hmin, hmin, hmin, hmin],
+                                             'm': [0.56] * 8},
+                                       params={'hfact': 1.2})
+
+    sdf_b = SarracenDataFrame(data={'rx': [0.3, -0.1, 0.1, 0.1, 0.05, -0.05, -0.25, -0.2],
+                                             'ry': [0.0, 0.1, -0.1, 0.0, -0.05, 0.07, -0.3, -0.2],
+                                             'rz': [0.1, 0.32, 0.03, -0.3, -0.2, 0.1, -0.06, 0.22],
+                                             'h': [0.01, 0.01, 0.3, 0.25, 0.01, 0.01, 0.2, 0.01],
+                                             'm': [0.56] * 8},
+                                       params={'hfact': 1.2})
+
+    sdf_a.backend = backend
+    sdf_b.backend = backend
+
+    grid = interpolate_3d_line(data=sdf_a, target='rho', xlim=xlim, ylim=ylim, zlim=zlim, pixels=pixels,
+                               normalize=False, hmin=False)
+    grid_hmin = interpolate_3d_line(data=sdf_b, target='rho', xlim=xlim, ylim=ylim, zlim=zlim, pixels=pixels,
+                                    normalize=False, hmin=True)
+
+    assert (grid == grid_hmin).all()
+

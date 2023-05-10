@@ -117,9 +117,6 @@ class CPUBackend(BaseBackend):
         term = w_data / h_data ** n_dims
 
         output_local = np.zeros((get_num_threads(), y_pixels, x_pixels))
-        # normalization_local = None
-        # if normalize:
-            # normalization_local = np.zeros((get_num_threads(), y_pixels, x_pixels))
 
         # thread safety: each thread has its own grid, which are combined after interpolation
         for thread in prange(get_num_threads()):
@@ -167,8 +164,6 @@ class CPUBackend(BaseBackend):
                             continue
                         wab = weight_function(np.sqrt(q2[jpix][ipix]), n_dims)
                         output_local[thread][jpix + jpixmin, ipix + ipixmin] += term[i] * wab
-                        # if normalize:
-                        #     normalization_local[thread][jpix + jpixmin, ipix + ipixmin] +=
 
         for i in range(get_num_threads()):
             output += output_local[i]
