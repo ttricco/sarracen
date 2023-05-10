@@ -25,6 +25,7 @@ consult the :ref:`API reference <api>`. The codebase can be found on `GitHub <ht
    render
    examples
    api
+   contributing
 
 
 Indices and tables
