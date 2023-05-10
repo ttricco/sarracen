@@ -21,5 +21,5 @@ please add any new unit tests that are relevant. Documentation changes should al
 If you are stuck or need help, `raising an issue <https://github.com/ttricco/sarracen/issues>`_ is a good place to start.
 This helps us keep common issues in public view. Feel free to also `email <mailto:tstricco@mun.ca>`_ with questions.
 
-Please note that we adhere to a `code of conduct <https://github.com/ttricco/sarracen/CODE_OF_CONDUCT.md>`_.
+Please note that we adhere to a `code of conduct <https://github.com/ttricco/sarracen/blob/main/CODE_OF_CONDUCT.md>`_.
 
