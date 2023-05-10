@@ -132,7 +132,7 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
            cbar: bool = True, cbar_kws: dict = {}, cbar_ax: Axes = None, ax: Axes = None, exact: bool = None,
            backend: str = None, integral_samples: int = 1000, rotation: np.ndarray = None,
            rot_origin: np.ndarray = None, log_scale: bool = False, dens_weight: bool = None, normalize: bool = True,
-           **kwargs) -> Axes:
+           hmin: bool = False, **kwargs) -> Axes:
     """
     Render a scalar SPH target variable to a grid plot.
 
@@ -181,6 +181,9 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
         when the target is not density, and False for everything else.
     normalize: bool
         If True, will normalize the interpolation. Defaults to False (this may change in future versions).
+    hmin: bool
+        If True, a minimum smoothing length of 0.5 * pixel size will be imposed. This ensures each particle
+        contributes to at least one grid cell / pixel. Defaults to False (this may change in a future verison).
     kwargs: other keyword arguments
         Keyword arguments to pass to ax.imshow.
 
@@ -251,13 +254,13 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
 
     if interpolation_type == '2d':
         img = interpolate_2d(data, target, x, y, kernel, x_pixels, y_pixels, xlim, ylim, exact, backend, dens_weight,
-                             normalize)
+                             normalize, hmin)
     elif interpolation_type == '3d_cross':
         img = interpolate_3d_cross(data, target, x, y, z, xsec, kernel, rotation,
-                                   rot_origin, x_pixels, y_pixels, xlim, ylim, backend, dens_weight, normalize)
+                                   rot_origin, x_pixels, y_pixels, xlim, ylim, backend, dens_weight, normalize, hmin)
     elif interpolation_type == '3d':
         img = interpolate_3d_proj(data, target, x, y, kernel, integral_samples, rotation, rot_origin, x_pixels,
-                             y_pixels, xlim, ylim, exact, backend, dens_weight, normalize)
+                             y_pixels, xlim, ylim, exact, backend, dens_weight, normalize, hmin)
     else:
         raise ValueError('`data` is not a valid number of dimensions.')
 
@@ -295,7 +298,7 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
 def lineplot(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
              kernel: BaseKernel = None, pixels: int = 512, xlim: Tuple[float, float] = None,
              ylim: Tuple[float, float] = None, zlim: Tuple[float, float] = None, ax: Axes = None, backend: str = None,
-             log_scale: bool = False, dens_weight: bool = False, normalize: bool = True, **kwargs):
+             log_scale: bool = False, dens_weight: bool = False, normalize: bool = True, hmin: bool = False, **kwargs):
     """
     Render a scalar SPH target variable to line plot.
 
@@ -324,6 +327,9 @@ def lineplot(data: 'SarracenDataFrame', target: str, x: str = None, y: str = Non
         If True, will plot the target mutliplied by the density. Defaults to False.
     normalize: bool
         If True, will normalize the interpolation. Defaults to False (this may change in future versions).
+    hmin: bool
+        If True, a minimum smoothing length of 0.5 * pixel size will be imposed. This ensures each particle
+        contributes to at least one grid cell / pixel. Defaults to False (this may change in a future verison).
     kwargs: other keyword arguments
         Keyword arguments to pass to sns.lineplot.
 
@@ -343,10 +349,11 @@ def lineplot(data: 'SarracenDataFrame', target: str, x: str = None, y: str = Non
     """
 
     if data.get_dim() == 2:
-        img = interpolate_2d_line(data, target, x, y, kernel, pixels, xlim, ylim, backend, dens_weight, normalize)
+        img = interpolate_2d_line(data, target, x, y, kernel, pixels, xlim, ylim, backend, dens_weight, normalize,
+                                  hmin)
     else:
         img = interpolate_3d_line(data, target, x, y, z, kernel, pixels, xlim, ylim, zlim, backend, dens_weight,
-                                  normalize)
+                                  normalize, hmin)
 
     if isinstance(xlim, float) or isinstance(xlim, int):
         xlim = xlim, xlim
@@ -400,7 +407,7 @@ def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[
                 integral_samples: int = 1000, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
                 x_pixels: int = None, y_pixels: int = None, xlim: Tuple[float, float] = None,
                 ylim: Tuple[float, float] = None, ax: Axes = None, exact: bool = None, backend: str = None,
-                dens_weight: bool = None, normalize: bool = True, **kwargs) -> Axes:
+                dens_weight: bool = None, normalize: bool = True, hmin: bool = False, **kwargs) -> Axes:
     """
     Create an SPH interpolated streamline plot of a target vector.
 
@@ -446,6 +453,9 @@ def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[
         and False for everything else.
     normalize: bool
         If True, will normalize the interpolation. Defaults to False (this may change in future versions).
+    hmin: bool
+        If True, a minimum smoothing length of 0.5 * pixel size will be imposed. This ensures each particle
+        contributes to at least one grid cell / pixel. Defaults to False (this may change in a future verison).
     kwargs: other keyword arguments
         Keyword arguments to pass to ax.streamlines()
 
@@ -482,13 +492,15 @@ def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[
 
     if interpolation_type == '2d':
         img = interpolate_2d_vec(data, target[0], target[1], x, y, kernel, x_pixels, y_pixels, xlim, ylim, exact,
-                                 backend, dens_weight, normalize)
+                                 backend, dens_weight, normalize, hmin)
     elif interpolation_type == '3d_cross':
         img = interpolate_3d_cross_vec(data, target[0], target[1], target[2], xsec, x, y, z, kernel, rotation,
-                                       rot_origin, x_pixels, y_pixels, xlim, ylim, backend, dens_weight, normalize)
+                                       rot_origin, x_pixels, y_pixels, xlim, ylim, backend, dens_weight, normalize,
+                                       hmin)
     elif interpolation_type == '3d':
         img = interpolate_3d_vec(data, target[0], target[1], target[2], x, y, kernel, integral_samples, rotation,
-                                 rot_origin, x_pixels, y_pixels, xlim, ylim, exact, backend, dens_weight, normalize)
+                                 rot_origin, x_pixels, y_pixels, xlim, ylim, exact, backend, dens_weight, normalize,
+                                 hmin)
     else:
         raise ValueError('`data` is not a valid number of dimensions.')
 
@@ -522,7 +534,8 @@ def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[st
               integral_samples: int = 1000, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
               x_arrows: int = None, y_arrows: int = None, xlim: Tuple[float, float] = None,
               ylim: Tuple[float, float] = None, ax: Axes = None, qkey: bool = True, qkey_kws=None, exact: bool = None,
-              backend: str = None, dens_weight: bool = None, normalize: bool = True, **kwargs) -> Axes:
+              backend: str = None, dens_weight: bool = None, normalize: bool = True, hmin: bool = False,
+              **kwargs) -> Axes:
     """
     Create an SPH interpolated vector field plot of a target vector.
 
@@ -571,6 +584,9 @@ def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[st
         and False for everything else.
     normalize: bool
         If True, will normalize the interpolation. Defaults to False (this may change in future versions).
+    hmin: bool
+        If True, a minimum smoothing length of 0.5 * pixel size will be imposed. This ensures each particle
+        contributes to at least one grid cell / pixel. Defaults to False (this may change in a future verison).
     kwargs: other keyword arguments
         Keyword arguments to pass to ax.quiver()
 
@@ -610,13 +626,15 @@ def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[st
 
     if interpolation_type == '2d':
         img = interpolate_2d_vec(data, target[0], target[1], x, y, kernel, x_arrows, y_arrows, xlim, ylim, exact,
-                                 backend, dens_weight, normalize)
+                                 backend, dens_weight, normalize, hmin)
     elif interpolation_type == '3d_cross':
         img = interpolate_3d_cross_vec(data, target[0], target[1], target[2], xsec, x, y, z, kernel, rotation,
-                                       rot_origin, x_arrows, y_arrows, xlim, ylim, backend, dens_weight, normalize)
+                                       rot_origin, x_arrows, y_arrows, xlim, ylim, backend, dens_weight, normalize,
+                                       hmin)
     elif interpolation_type == '3d':
         img = interpolate_3d_vec(data, target[0], target[1], target[2], x, y, kernel, integral_samples, rotation,
-                                 rot_origin, x_arrows, y_arrows, xlim, ylim, exact, backend, dens_weight, normalize)
+                                 rot_origin, x_arrows, y_arrows, xlim, ylim, exact, backend, dens_weight, normalize,
+                                 hmin)
     else:
         raise ValueError('`data` is not a valid number of dimensions.')
 

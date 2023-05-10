@@ -216,19 +216,20 @@ class SarracenDataFrame(DataFrame):
                ylim: Tuple[float, float] = None, cmap: Union[str, Colormap] = 'gist_heat', cbar: bool = True,
                cbar_kws: dict = {}, cbar_ax: Axes = None, ax: Axes = None, exact: bool = None, backend: str = None,
                integral_samples: int = 1000, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
-               log_scale: bool = None, dens_weight: bool = None, normalize: bool = False, **kwargs) -> Axes:
+               log_scale: bool = None, dens_weight: bool = None, normalize: bool = False, hmin: bool = False,
+               **kwargs) -> Axes:
         return render(self, target, x, y, z, xsec, kernel, x_pixels, y_pixels, xlim, ylim, cmap, cbar, cbar_kws,
                       cbar_ax, ax, exact, backend, integral_samples, rotation, rot_origin, log_scale, dens_weight,
-                      normalize, **kwargs)
+                      normalize, hmin, **kwargs)
 
     @_copy_doc(lineplot)
     def lineplot(self, target: str, x: str = None, y: str = None, z: str = None,
                  kernel: BaseKernel = None, pixels: int = 512, xlim: Tuple[float, float] = None,
                  ylim: Tuple[float, float] = None, zlim: Tuple[float, float] = None, ax: Axes = None,
                  backend: str = None, log_scale: bool = False, dens_weight: bool = None, normalize: bool = False,
-                 **kwargs):
+                 hmin: bool = False, **kwargs):
         return lineplot(self, target, x, y, z, kernel, pixels, xlim, ylim, zlim, ax, backend, log_scale, dens_weight,
-                        normalize, **kwargs)
+                        normalize, hmin, **kwargs)
 
     @_copy_doc(streamlines)
     def streamlines(self, target: Union[Tuple[str, str], Tuple[str, str, str]], x: str = None, y: str = None,
@@ -236,9 +237,9 @@ class SarracenDataFrame(DataFrame):
                     rotation: np.ndarray = None, rot_origin: np.ndarray = None, x_pixels: int = None,
                     y_pixels: int = None, xlim: Tuple[float, float] = None, ylim: Tuple[float, float] = None,
                     ax: Axes = None, exact: bool = None, backend: str = None, dens_weight: bool = False,
-                    normalize: bool = False, **kwargs) -> Axes:
+                    normalize: bool = False, hmin: bool = False, **kwargs) -> Axes:
         return streamlines(self, target, x, y, z, xsec, kernel, integral_samples, rotation, rot_origin, x_pixels,
-                           y_pixels, xlim, ylim, ax, exact, backend, dens_weight, normalize, **kwargs)
+                           y_pixels, xlim, ylim, ax, exact, backend, dens_weight, normalize, hmin, **kwargs)
 
     @_copy_doc(arrowplot)
     def arrowplot(self, target: Union[Tuple[str, str], Tuple[str, str, str]], x: str = None, y: str = None,
@@ -246,16 +247,17 @@ class SarracenDataFrame(DataFrame):
                   rotation: np.ndarray = None, rot_origin: np.ndarray = None, x_arrows: int = None,
                   y_arrows: int = None, xlim: Tuple[float, float] = None, ylim: Tuple[float, float] = None,
                   ax: Axes = None, qkey: bool = True, qkey_kws: dict = None, exact: bool = None, backend: str = None,
-                  dens_weight: bool = None, normalize: bool = False, **kwargs) -> Axes:
+                  dens_weight: bool = None, normalize: bool = False, hmin: bool = False, **kwargs) -> Axes:
         return arrowplot(self, target, x, y, z, xsec, kernel, integral_samples, rotation, rot_origin, x_arrows,
-                         y_arrows, xlim, ylim, ax, qkey, qkey_kws, exact, backend, dens_weight, normalize, **kwargs)
+                         y_arrows, xlim, ylim, ax, qkey, qkey_kws, exact, backend, dens_weight, normalize, hmin,
+                         **kwargs)
 
     def sph_interpolate(self, target: str, x: str = None, y: str = None, z: str = None, kernel: BaseKernel = None,
                         rotation: np.ndarray = None, rot_origin: np.ndarray = None, x_pixels: int = None,
                         y_pixels: int = None, z_pixels: int = None, xlim: Tuple[float, float] = None,
                         ylim: Tuple[float, float] = None, zlim: Tuple[float, float] = None,
                         exact: bool = None, backend: str = 'cpu', dens_weight: bool = False,
-                        normalize: bool = False) -> np.ndarray:
+                        normalize: bool = False, hmin: bool = False) -> np.ndarray:
         """
         Interpolate this data to a 2D or 3D grid, depending on the dimensionality of the data.
 
@@ -288,6 +290,9 @@ class SarracenDataFrame(DataFrame):
             If True, the target will be multiplied by density. Defaults to False.
         normalize: bool
             If True, will normalize the interpolation. Defaults to False (this may change in future versions).
+        hmin: bool
+            If True, a minimum smoothing length of 0.5 * pixel size will be imposed. This ensures each particle
+            contributes to at least one grid cell / pixel. Defaults to False (this may change in a future verison).
 
         Returns
         -------
@@ -311,10 +316,10 @@ class SarracenDataFrame(DataFrame):
             if ylim is None:
                 ylim = (None, None)
             return interpolate_2d(self, target, x, y, kernel, x_pixels, y_pixels, xlim, ylim, exact, backend,
-                                  dens_weight, normalize)
+                                  dens_weight, normalize, hmin)
         elif self.get_dim() == 3:
             return interpolate_3d_grid(self, target, x, y, z, kernel, rotation, rot_origin, x_pixels, y_pixels,
-                                       z_pixels, xlim, ylim, zlim, backend, dens_weight, normalize)
+                                       z_pixels, xlim, ylim, zlim, backend, dens_weight, normalize, hmin)
 
     @property
     def params(self):

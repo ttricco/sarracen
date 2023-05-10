@@ -9,4 +9,4 @@ from .interpolate import interpolate_2d, interpolate_2d_line, interpolate_3d_pro
 from .render import render, streamlines, arrowplot
 
 
-__version__ = "1.1"
+__version__ = "1.2.0"
