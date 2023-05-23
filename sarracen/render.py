@@ -152,6 +152,8 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
         Number of pixels present in the final image.
     xlim, ylim: tuple of float, optional
         The starting and ending corners of the final 2D image.
+    vmin, vmax: float, optional
+        Lower and upper limits of the range of values for the colour bar.
     cmap: str or Colormap, optional
         The color map to use when plotting a 2D image.
     cbar: bool, optional
@@ -273,7 +275,9 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
     kwargs.setdefault("origin", 'lower')
     kwargs.setdefault("extent", [xlim[0], xlim[1], ylim[0], ylim[1]])
     if log_scale:
-        kwargs.setdefault("norm", LogNorm(clip=True))
+        kwargs.setdefault("norm", LogNorm(clip=True, vmin=kwargs.get('vmin'), vmax=kwargs.get('vmax')))
+        kwargs.pop("vmin", None)
+        kwargs.pop("vmax", None)
 
     graphic = ax.imshow(img, cmap=cmap, **kwargs)
     if rotation is not None and data.get_dim() == 3:
