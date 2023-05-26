@@ -10,7 +10,8 @@ from ..kernels import BaseKernel
 from typing import Tuple, Union
 
 def _snap(value: float):
-    """ Snap a number to the nearest integer
+    """
+    Snap a number to the nearest integer.
 
     Return a number which is rounded to the nearest integer,
     with a 1e-4 absolute range of tolerance.
@@ -31,7 +32,8 @@ def _snap(value: float):
 
 
 def _default_xy(data, x, y):
-    """ Utility function to determine the x & y columns to use during 2D interpolation.
+    """
+    Utility function to determine the x & y columns to use during 2D interpolation.
 
     Parameters
     ----------
@@ -54,7 +56,8 @@ def _default_xy(data, x, y):
 
 
 def _default_xyz(data, x, y, z):
-    """ Utility function to determine the x, y and z columns to use during 3-D interpolation.
+    """
+    Utility function to determine the x, y and z columns to use during 3-D interpolation.
 
     Parameters
     ----------
@@ -82,7 +85,8 @@ def _default_xyz(data, x, y, z):
 
 
 def _snap_boundaries(data, x, y, xlim, ylim) -> Tuple[Tuple[float, float], Tuple[float, float]]:
-    """Utility function to determine the 2-dimensional boundaries to use in 2D interpolation.
+    """
+    Utility function to determine the 2-dimensional boundaries to use in 2D interpolation.
 
     Parameters
     ----------
@@ -114,7 +118,8 @@ def _snap_boundaries(data, x, y, xlim, ylim) -> Tuple[Tuple[float, float], Tuple
 
 
 def _set_pixels(x_pixels: int, y_pixels: int, xlim: Tuple[float, float], ylim: Tuple[float, float]) -> Tuple[int, int]:
-    """Utility function to determine the number of pixels to interpolate over in 2D interpolation.
+    """
+    Utility function to determine the number of pixels to interpolate over in 2D interpolation.
 
     Parameters
     ----------
@@ -140,7 +145,8 @@ def _set_pixels(x_pixels: int, y_pixels: int, xlim: Tuple[float, float], ylim: T
 
 
 def _verify_columns(data, x, y):
-    """ Verify that columns required for 2D interpolation exist in `data`.
+    """
+    Verify that columns required for 2D interpolation exist in `data`.
 
     Parameters
     ----------
@@ -166,7 +172,8 @@ def _verify_columns(data, x, y):
 
 
 def _check_boundaries(x_pixels: int, y_pixels: int, xlim: Tuple[float, float], ylim: Tuple[float, float]):
-    """ Verify that the pixel count and boundaries of a 2D plot describe a valid region.
+    """
+    Verify that the pixel count and boundaries of a 2D plot describe a valid region.
 
     Parameters
     ----------
@@ -192,7 +199,8 @@ def _check_boundaries(x_pixels: int, y_pixels: int, xlim: Tuple[float, float], y
 
 
 def _check_dimension(data, dim):
-    """ Verify that a given dataset describes data with a required number of dimensions.
+    """
+    Verify that a given dataset describes data with a required number of dimensions.
 
     Parameters
     ----------
@@ -211,7 +219,8 @@ def _check_dimension(data, dim):
 
 
 def _rotate_data(data, x, y, z, rotation, origin):
-    """ Rotate vector data in a particle dataset.
+    """
+    Rotate vector data in a particle dataset.
 
     Parameters
     ----------
@@ -253,29 +262,30 @@ def _rotate_data(data, x, y, z, rotation, origin):
 
 
 def _rotate_xyz(data, x, y, z, rotation, origin):
-    """ Rotate positional data in a particle dataset.
+    """
+    Rotate positional data in a particle dataset.
 
-        Differs from _rotate_data() in that the returned data values are shuffled to ensure that
-        the rotation is always applied to the global x, y, and z columns of the dataset, no matter
-        the order of x, y, and z provided to this function.
+    Differs from _rotate_data() in that the returned data values are shuffled to ensure that
+    the rotation is always applied to the global x, y, and z columns of the dataset, no matter
+    the order of x, y, and z provided to this function.
 
-        Parameters
-        ----------
-        data: SarracenDataFrame
-            The particle dataset to interpolate over.
-        x, y, z: str
-            Directional column labels containing the positional column labels
-        rotation: array_like or Rotation, optional
-            The rotation to apply to the data. If defined as an array, the
-            order of rotations is [z, y, x] in degrees
-        origin: array_like, optional
-            Point of rotation of the data, in [x, y, z] form.
+    Parameters
+    ----------
+    data: SarracenDataFrame
+        The particle dataset to interpolate over.
+    x, y, z: str
+        Directional column labels containing the positional column labels
+    rotation: array_like or Rotation, optional
+        The rotation to apply to the data. If defined as an array, the
+        order of rotations is [z, y, x] in degrees
+    origin: array_like, optional
+        Point of rotation of the data, in [x, y, z] form.
 
-        Returns
-        -------
-        x_data, y_data, z_data: ndarray
-            The rotated x, y, and z directional data.
-        """
+    Returns
+    -------
+    x_data, y_data, z_data: ndarray
+        The rotated x, y, and z directional data.
+    """
     rotated_x, rotated_y, rotated_z = _rotate_data(data, data.xcol, data.ycol, data.zcol, rotation, origin)
     x_data = rotated_x if x == data.xcol else \
         rotated_y if x == data.ycol else \
@@ -310,33 +320,47 @@ def _get_density(data: 'SarracenDataFrame'):
 
 
 def _get_weight(data: 'SarracenDataFrame', target: Union[str, np.ndarray], dens_weight: bool):
-    mass_data = _get_mass(data)
 
-    if dens_weight == "None":
-        dens_weight = (target == 'rho')
+    if type(target) is str:
+        if target == 'rho':
+            target_data = _get_density(data)
+        else:
+            if target not in data.columns:
+                raise KeyError(f"Target column '{target}' does not exist in provided dataset.")
 
-    if target == 'rho':
-        target_data = _get_density(data)
-    elif type(target) == str:
-        if target not in data.columns:
-            raise KeyError(f"Target column '{target}' does not exist in provided dataset.")
-
-        target_data = data[target].to_numpy()
-    else:
+            target_data = data[target].to_numpy()
+    elif type(target) is np.ndarray:
         target_data = target
+    else:
+        raise KeyError(f"Target must be of type str or ndarray. Found: '{type(target)}'")
 
+    mass_data = _get_mass(data)
     if dens_weight:
+        return target_data * mass_data
+    else:
         rho_data = _get_density(data)
         return target_data * mass_data / rho_data
+
+def _get_smoothing_lengths(data: 'SarracenDataFrame', hmin: float, x_pixels: int, y_pixels: int,
+                           xlim: Tuple[float, float], ylim: Tuple[float, float]):
+    """ Return the smoothing length data, imposing a minimum length if hmin is True. """
+    
+    if hmin:
+        pix_size = (xlim[1] - xlim[0]) / x_pixels
+        pix_size = np.maximum(pix_size, (ylim[1] - ylim[0]) / y_pixels)
+        h_data = np.maximum(data[data._hcol].to_numpy(), 0.5 * pix_size)
     else:
-        return target_data * mass_data
+        h_data = data[data._hcol].to_numpy()
+
+    return h_data
 
 
 def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
                    x_pixels: int = None, y_pixels: int = None, xlim: Tuple[float, float] = None,
-                   ylim: Tuple[float, float] = None, exact: bool = False,
-                   backend: str = None, dens_weight: bool = None) -> np.ndarray:
-    """ Interpolate particle data across two directional axes to a 2D grid of pixels.
+                   ylim: Tuple[float, float] = None, exact: bool = False, backend: str = None,
+                   dens_weight: bool = False, normalize: bool = True, hmin: bool = False) -> np.ndarray:
+    """
+    Interpolate particle data across two directional axes to a 2D grid of pixels.
 
     Interpolate the data within a SarracenDataFrame to a 2D grid, by interpolating the values
     of a target variable. The contributions of all particles near the interpolation area are
@@ -364,8 +388,10 @@ def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
         The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
         'cpu' is used. A manually specified backend in `data` will override the default.
     dens_weight: bool
-        Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density, defaults
-        to false otherwise.
+        If True, the target will be multiplied by density. Defaults to False.
+    hmin: bool
+        If True, a minimum smoothing length of 0.5 * pixel size will be imposed. This ensures each particle
+        contributes to at least one grid cell / pixel. Defaults to False (this may change in a future verison).
 
     Returns
     -------
@@ -395,16 +421,29 @@ def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
 
-    return get_backend(backend). \
-        interpolate_2d_render(data[x].to_numpy(), data[y].to_numpy(), w_data, data[data._hcol].to_numpy(), kernel.w,
+    h_data = _get_smoothing_lengths(data, hmin, x_pixels, y_pixels, xlim, ylim)
+
+    grid = get_backend(backend). \
+           interpolate_2d_render(data[x].to_numpy(), data[y].to_numpy(), w_data, h_data, kernel.w,
                               kernel.get_radius(), x_pixels, y_pixels, xlim[0], xlim[1], ylim[0], ylim[1], exact)
+
+    if normalize:
+        w_norm = _get_weight(data, np.array([1] * len(w_data)), dens_weight)
+        norm_grid = get_backend(backend). \
+                    interpolate_2d_render(data[x].to_numpy(), data[y].to_numpy(), w_norm, h_data,
+                                          kernel.w, kernel.get_radius(), x_pixels, y_pixels, xlim[0], xlim[1], ylim[0],
+                                          ylim[1], exact)
+        grid = np.nan_to_num(grid / norm_grid)
+
+    return grid
 
 
 def interpolate_2d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, x: str = None, y: str = None,
                        kernel: BaseKernel = None, x_pixels: int = None, y_pixels: int = None,
                        xlim: Tuple[float, float] = None, ylim: Tuple[float, float] = None, exact: bool = False,
-                       backend: str = None, dens_weight: bool = None):
-    """ Interpolate vector particle data across two directional axes to a 2D grid of particles.
+                       backend: str = None, dens_weight: bool = False, normalize: bool = True, hmin: bool = False):
+    """
+    Interpolate vector particle data across two directional axes to a 2D grid of particles.
 
     Interpolate the data within a SarracenDataFrame to a 2D grid, by interpolating the values
     of a target vector. The contributions of all vectors near the interpolation area are
@@ -432,8 +471,10 @@ def interpolate_2d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
         The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
         'cpu' is used. A manually specified backend in `data` will override the default.
     dens_weight: bool
-        Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density, defaults
-        to false otherwise.
+        If True, the target will be multiplied by density. Defaults to False.
+    hmin: bool
+        If True, a minimum smoothing length of 0.5 * pixel size will be imposed. This ensures each particle
+        contributes to at least one grid cell / pixel. Defaults to False (this may change in a future verison).
 
     Returns
     -------
@@ -465,16 +506,32 @@ def interpolate_2d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
 
-    return get_backend(backend).\
-        interpolate_2d_render_vec(data[x].to_numpy(), data[y].to_numpy(), wx_data, wy_data, data['h'].to_numpy(),
-                                  kernel.w, kernel.get_radius(), x_pixels, y_pixels, xlim[0], xlim[1], ylim[0], ylim[1],
-                                  exact)
+    h_data = _get_smoothing_lengths(data, hmin, x_pixels, y_pixels, xlim, ylim)
 
+    gridx, gridy = get_backend(backend).\
+           interpolate_2d_render_vec(data[x].to_numpy(), data[y].to_numpy(), wx_data, wy_data, h_data,
+                                     kernel.w, kernel.get_radius(), x_pixels, y_pixels, xlim[0], xlim[1], ylim[0],
+                                     ylim[1], exact)
+
+    if normalize:
+        wx_norm = _get_weight(data, np.array([1] * len(wx_data)), dens_weight)
+        wy_norm = _get_weight(data, np.array([1] * len(wy_data)), dens_weight)
+        norm_gridx, norm_gridy = get_backend(backend).\
+                                 interpolate_2d_render_vec(data[x].to_numpy(), data[y].to_numpy(), wx_norm, wy_norm,
+                                                           h_data, kernel.w, kernel.get_radius(),
+                                                           x_pixels, y_pixels, xlim[0], xlim[1], ylim[0], ylim[1],
+                                                           exact)
+        gridx = np.nan_to_num(gridx / norm_gridx)
+        gridy = np.nan_to_num(gridy / norm_gridy)
+
+    return (gridx, gridy)
 
 def interpolate_2d_line(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
-                         kernel: BaseKernel = None, pixels: int = None, xlim: Tuple[float, float] = None,
-                         ylim: Tuple[float, float] = None, backend: str = None, dens_weight: bool = None) -> np.ndarray:
-    """ Interpolate particle data across two directional axes to a 1D cross-section line.
+                        kernel: BaseKernel = None, pixels: int = None, xlim: Tuple[float, float] = None,
+                        ylim: Tuple[float, float] = None, backend: str = None, dens_weight: bool = False,
+                        normalize: bool = True, hmin: bool = False) -> np.ndarray:
+    """
+    Interpolate particle data across two directional axes to a 1D cross-section line.
 
     Interpolate the data within a SarracenDataFrame to a 1D line, by interpolating the values
     of a target variable. The contributions of all particles near the specified line are
@@ -499,8 +556,10 @@ def interpolate_2d_line(data: 'SarracenDataFrame', target: str, x: str = None, y
         The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
         'cpu' is used. A manually specified backend in `data` will override the default.
     dens_weight: bool
-        Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density, defaults
-        to false otherwise.
+        If True, the target will be multiplied by density. Defaults to False.
+    hmin: bool
+        If True, a minimum smoothing length of 0.5 * pixel size will be imposed. This ensures each particle
+        contributes to at least one grid cell / pixel. Defaults to False (this may change in a future verison).
 
     Returns
     -------
@@ -539,16 +598,32 @@ def interpolate_2d_line(data: 'SarracenDataFrame', target: str, x: str = None, y
     if pixels <= 0:
         raise ValueError('pixcount must be greater than zero!')
 
-    return get_backend(backend)\
-        .interpolate_2d_cross(data[x].to_numpy(), data[y].to_numpy(), w_data, data['h'].to_numpy(), kernel.w,
-                              kernel.get_radius(), pixels, xlim[0], xlim[1], ylim[0], ylim[1])
+    if hmin:
+        pix_size = np.sqrt((xlim[1] - xlim[0])**2 + (ylim[1] - ylim[0])**2) / pixels
+        h_data = np.maximum(data[data._hcol].to_numpy(), 0.5 * pix_size)
+    else:
+        h_data = data[data._hcol].to_numpy()
+
+    grid = get_backend(backend).\
+           interpolate_2d_cross(data[x].to_numpy(), data[y].to_numpy(), w_data, h_data, kernel.w,
+                                kernel.get_radius(), pixels, xlim[0], xlim[1], ylim[0], ylim[1])
+
+    if normalize:
+        w_norm = _get_weight(data, np.array([1] * len(w_data)), dens_weight)
+        norm_grid = get_backend(backend). \
+                    interpolate_2d_cross(data[x].to_numpy(), data[y].to_numpy(), w_norm, h_data,
+                                         kernel.w, kernel.get_radius(), pixels, xlim[0], xlim[1], ylim[0], ylim[1])
+        grid = np.nan_to_num(grid / norm_grid)
+
+    return grid
 
 
 def interpolate_3d_line(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
                         kernel: BaseKernel = None, pixels: int = None, xlim: Tuple[float, float] = None,
                         ylim: Tuple[float, float] = None, zlim: Tuple[float, float] = None, backend: str = None,
-                        dens_weight: bool = None):
-    """ Interpolate vector particle data across three directional axes to a 1D line.
+                        dens_weight: bool = False, normalize: bool = True, hmin: bool = False):
+    """
+    Interpolate vector particle data across three directional axes to a 1D line.
 
     Interpolate the data within a SarracenDataFrame to a 1D line, by interpolating the values
     of a target variable. The contributions of all particles near the interpolation line are
@@ -574,8 +649,10 @@ def interpolate_3d_line(data: 'SarracenDataFrame', target: str, x: str = None, y
         The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
         'cpu' is used. A manually specified backend in `data` will override the default.
     dens_weight: bool
-        Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density, defaults
-        to false otherwise.
+       If True, the target will be multiplied by density. Defaults to False.
+    hmin: bool
+        If True, a minimum smoothing length of 0.5 * pixel size will be imposed. This ensures each particle
+        contributes to at least one grid cell / pixel. Defaults to False (this may change in a future verison).
 
     Returns
     -------
@@ -624,18 +701,35 @@ def interpolate_3d_line(data: 'SarracenDataFrame', target: str, x: str = None, y
     if pixels <= 0:
         raise ValueError('pixcount must be greater than zero!')
 
-    return get_backend(backend) \
-        .interpolate_3d_line(data[x].to_numpy(), data[y].to_numpy(), data[z].to_numpy(), w_data, data['h'].to_numpy(),
-                             kernel.w, kernel.get_radius(), pixels, xlim[0], xlim[1], ylim[0], ylim[1], zlim[0],
-                             zlim[1])
+    if hmin:
+        pix_size = np.sqrt((xlim[1] - xlim[0])**2 + (ylim[1] - ylim[0])**2 + (zlim[1] - zlim[0])**2) / pixels
+        h_data = np.maximum(data[data._hcol].to_numpy(), 0.5 * pix_size)
+    else:
+        h_data = data[data._hcol].to_numpy()
+
+    grid = get_backend(backend) \
+           .interpolate_3d_line(data[x].to_numpy(), data[y].to_numpy(), data[z].to_numpy(), w_data, h_data,
+                                kernel.w, kernel.get_radius(), pixels, xlim[0], xlim[1], ylim[0], ylim[1], zlim[0],
+                                zlim[1])
+
+    if normalize:
+        w_norm = _get_weight(data, np.array([1] * len(w_data)), dens_weight)
+        norm_grid = get_backend(backend) \
+                    .interpolate_3d_line(data[x].to_numpy(), data[y].to_numpy(), data[z].to_numpy(), w_norm,
+                                         h_data, kernel.w, kernel.get_radius(), pixels, xlim[0], xlim[1],
+                                         ylim[0], ylim[1], zlim[0], zlim[1])
+        grid = np.nan_to_num(grid / norm_grid)
+
+    return grid
 
 
-def interpolate_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
+def interpolate_3d_proj(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
                    integral_samples: int = 1000, rotation: np.ndarray = None, origin: np.ndarray = None,
                    x_pixels: int = None, y_pixels: int = None, xlim: Tuple[float, float] = None,
                    ylim: Tuple[float, float] = None, exact: bool = False, backend: str = None,
-                   dens_weight: bool = None):
-    """ Interpolate 3D particle data to a 2D grid of pixels.
+                   dens_weight: bool = None, normalize: bool = True, hmin: bool = False):
+    """
+    Interpolate 3D particle data to a 2D grid of pixels.
 
     Interpolates three-dimensional particle data in a SarracenDataFrame. The data
     is interpolated to a 2D grid of pixels, by summing contributions in columns which
@@ -671,8 +765,11 @@ def interpolate_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
         The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
         'cpu' is used. A manually specified backend in `data` will override the default.
     dens_weight: bool
-        Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density, defaults
-        to false otherwise.
+        If True, the target will be multiplied by density. Defaults to True for column-integrated views,
+        when the target is not density, and False for everything else.
+    hmin: bool
+        If True, a minimum smoothing length of 0.5 * pixel size will be imposed. This ensures each particle
+        contributes to at least one grid cell / pixel. Defaults to False (this may change in a future verison).
 
     Returns
     -------
@@ -699,6 +796,9 @@ def interpolate_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
     x, y, z = _default_xyz(data, x, y, None)
     _verify_columns(data, x, y)
 
+    if dens_weight is None:
+        dens_weight = (target != 'rho')
+
     w_data = _get_weight(data, target, dens_weight)
 
     xlim, ylim = _snap_boundaries(data, x, y, xlim, ylim)
@@ -711,75 +811,91 @@ def interpolate_3d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
 
     weight_function = kernel.get_column_kernel_func(integral_samples)
 
-    return get_backend(backend). \
-        interpolate_3d_projection(x_data, y_data, z_data, w_data, data['h'].to_numpy(), weight_function,
+    h_data = _get_smoothing_lengths(data, hmin, x_pixels, y_pixels, xlim, ylim)
+
+    grid = get_backend(backend) \
+           .interpolate_3d_projection(x_data, y_data, z_data, w_data, h_data, weight_function,
                                   kernel.get_radius(), x_pixels, y_pixels, xlim[0], xlim[1], ylim[0], ylim[1], exact)
 
+    if normalize:
+        w_norm = _get_weight(data, np.array([1] * len(w_data)), dens_weight)
+        norm_grid = get_backend(backend) \
+                    .interpolate_3d_projection(x_data, y_data, z_data, w_norm, h_data, weight_function,
+                                              kernel.get_radius(), x_pixels, y_pixels, xlim[0], xlim[1], ylim[0],
+                                              ylim[1], exact)
+        grid = np.nan_to_num(grid / norm_grid)
+
+    return grid
 
 def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, target_z: str, x: str = None,
                        y: str = None, kernel: BaseKernel = None, integral_samples: int = 1000,
                        rotation: np.ndarray = None, origin: np.ndarray = None, x_pixels: int = None,
                        y_pixels: int = None, xlim: Tuple[float, float] = None, ylim: Tuple[float, float] = None,
-                       exact: bool = False, backend: str = None, dens_weight: bool = None):
-    """ Interpolate 3D vector particle data to a 2D grid of pixels.
+                       exact: bool = False, backend: str = None, dens_weight: bool = False, normalize: bool = True,
+                       hmin: bool = False):
+    """
+    Interpolate 3D vector particle data to a 2D grid of pixels.
 
-        Interpolates three-dimensional vector particle data in a SarracenDataFrame. The data
-        is interpolated to a 2D grid of pixels, by summing contributions in columns which
-        span the z-axis.
+    Interpolates three-dimensional vector particle data in a SarracenDataFrame. The data
+    is interpolated to a 2D grid of pixels, by summing contributions in columns which
+    span the z-axis.
 
-        Parameters
-        ----------
-        data : SarracenDataFrame
-            Particle data, in a SarracenDataFrame.
-        target_x, target_y, target_z: str
-            Column labels of the target vector.
-        x, y: str
-            Column labels of the directional axes. Defaults to the x & y columns detected in `data`.
-        kernel: BaseKernel, optional
-            Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
-        integral_samples: int, optional
-            Number of sample points to take when approximating the 2D column kernel.
-        rotation: array_like or Rotation, optional
-            The rotation to apply to the data before interpolation. If defined as an array, the
-            order of rotations is [z, y, x] in degrees.
-        origin: array_like, optional
-            Point of rotation of the data, in [x, y, z] form. Defaults to the centre
-            point of the bounds of the data.
-        x_pixels, y_pixels: int, optional
-            Number of pixels in the output image in the x & y directions. Default values are chosen to keep
-            a consistent aspect ratio.
-        xlim, ylim: tuple of float, optional
-            The minimum and maximum values to use in interpolation, in particle data space. Defaults
-            to the minimum and maximum values of `x` and `y`.
-        exact: bool
-            Whether to use exact interpolation of the data.
-        backend: ['cpu', 'gpu']
-            The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
-            'cpu' is used. A manually specified backend in `data` will override the default.
-        dens_weight: bool
-            Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density,
-            defaults to false otherwise.
+    Parameters
+    ----------
+    data : SarracenDataFrame
+        Particle data, in a SarracenDataFrame.
+    target_x, target_y, target_z: str
+        Column labels of the target vector.
+    x, y: str
+        Column labels of the directional axes. Defaults to the x & y columns detected in `data`.
+    kernel: BaseKernel, optional
+        Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
+    integral_samples: int, optional
+        Number of sample points to take when approximating the 2D column kernel.
+    rotation: array_like or Rotation, optional
+        The rotation to apply to the data before interpolation. If defined as an array, the
+        order of rotations is [z, y, x] in degrees.
+    origin: array_like, optional
+        Point of rotation of the data, in [x, y, z] form. Defaults to the centre
+        point of the bounds of the data.
+    x_pixels, y_pixels: int, optional
+        Number of pixels in the output image in the x & y directions. Default values are chosen to keep
+        a consistent aspect ratio.
+    xlim, ylim: tuple of float, optional
+        The minimum and maximum values to use in interpolation, in particle data space. Defaults
+        to the minimum and maximum values of `x` and `y`.
+    exact: bool
+        Whether to use exact interpolation of the data.
+    backend: ['cpu', 'gpu']
+        The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
+        'cpu' is used. A manually specified backend in `data` will override the default.
+    dens_weight: bool
+        If True, the target will be multiplied by density. Defaults to False.
+    hmin: bool
+        If True, a minimum smoothing length of 0.5 * pixel size will be imposed. This ensures each particle
+        contributes to at least one grid cell / pixel. Defaults to False (this may change in a future verison).
 
-        Returns
-        -------
-        output_x, output_y: ndarray (2-Dimensional)
-            The interpolated output images. Dimensions are structured in reverse order, where (x, y) -> [y, x].
+    Returns
+    -------
+    output_x, output_y: ndarray (2-Dimensional)
+        The interpolated output images. Dimensions are structured in reverse order, where (x, y) -> [y, x].
 
-        Raises
-        -------
-        ValueError
-            If `x_pixels` or `y_pixels` are less than or equal to zero, or
-            if the specified `x` and `y` minimum and maximums result in an invalid region, or
-            if the provided data is not 3-dimensional.
-        KeyError
-            If `target_x`, `target_y`, `x`, `y`, mass, density, or smoothing length columns do not
-            exist in `data`.
+    Raises
+    -------
+    ValueError
+        If `x_pixels` or `y_pixels` are less than or equal to zero, or
+        if the specified `x` and `y` minimum and maximums result in an invalid region, or
+        if the provided data is not 3-dimensional.
+    KeyError
+        If `target_x`, `target_y`, `x`, `y`, mass, density, or smoothing length columns do not
+        exist in `data`.
 
-        Notes
-        -----
-        Since the direction of integration is assumed to be straight across the z-axis, the z-axis column
-        is not required for this type of interpolation.
-        """
+    Notes
+    -----
+    Since the direction of integration is assumed to be straight across the z-axis, the z-axis column
+    is not required for this type of interpolation.
+    """
+
     _check_dimension(data, 3)
     x, y, z = _default_xyz(data, x, y, None)
     _verify_columns(data, x, y)
@@ -795,23 +911,37 @@ def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
 
     wx_data = _get_weight(data, target_x_data, dens_weight)
     wy_data = _get_weight(data, target_y_data, dens_weight)
+    h_data = _get_smoothing_lengths(data, hmin, x_pixels, y_pixels, xlim, ylim)
 
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
 
     weight_function = kernel.get_column_kernel_func(integral_samples)
-    return get_backend(backend). \
-        interpolate_3d_projection_vec(x_data, y_data, wx_data, wy_data, data['h'].to_numpy(), weight_function,
-                                      kernel.get_radius(), x_pixels, y_pixels, xlim[0], xlim[1], ylim[0], ylim[1],
-                                      exact)
+    gridx, gridy = get_backend(backend) \
+                   .interpolate_3d_projection_vec(x_data, y_data, wx_data, wy_data, h_data,
+                                                  weight_function, kernel.get_radius(), x_pixels, y_pixels, xlim[0],
+                                                  xlim[1], ylim[0], ylim[1], exact)
+    if normalize:
+        wx_norm = _get_weight(data, np.array([1] * len(wx_data)), dens_weight)
+        wy_norm = _get_weight(data, np.array([1] * len(wy_data)), dens_weight)
+        norm_gridx, norm_gridy = get_backend(backend) \
+                    .interpolate_3d_projection_vec(x_data, y_data, wx_norm, wy_norm, h_data,
+                                                  weight_function, kernel.get_radius(), x_pixels, y_pixels, xlim[0],
+                                                  xlim[1], ylim[0], ylim[1], exact)
+        gridx = np.nan_to_num(gridx / norm_gridx)
+        gridy = np.nan_to_num(gridy / norm_gridy)
+
+    return (gridx, gridy)
+
 
 
 def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
                          z_slice: float = None, kernel: BaseKernel = None, rotation: np.ndarray = None,
                          origin: np.ndarray = None, x_pixels: int = None, y_pixels: int = None,
                          xlim: Tuple[float, float] = None, ylim: Tuple[float, float] = None, backend: str = None,
-                         dens_weight: bool = None):
-    """ Interpolate 3D particle data to a 2D grid, using a 3D cross-section.
+                         dens_weight: bool = False, normalize: bool = True, hmin: bool = False):
+    """
+    Interpolate 3D particle data to a 2D grid, using a 3D cross-section.
 
     Interpolates particle data in a SarracenDataFrame across three directional axes to a 2D
     grid of pixels. A cross-section is taken of the 3D data at a specific value of z, and
@@ -846,8 +976,10 @@ def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, x: str = None, 
         The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
         'cpu' is used. A manually specified backend in `data` will override the default.
     dens_weight: bool
-        Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density, defaults
-        to false otherwise.
+        If True, the target will be multiplied by density. Defaults to False.
+    hmin: bool
+        If True, a minimum smoothing length of 0.5 * pixel size will be imposed. This ensures each particle
+        contributes to at least one grid cell / pixel. Defaults to False (this may change in a future verison).
 
     Returns
     -------
@@ -886,70 +1018,85 @@ def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, x: str = None, 
     backend = backend if backend is not None else data.backend
 
     x_data, y_data, z_data = _rotate_xyz(data, x, y, z, rotation, origin)
+    h_data = _get_smoothing_lengths(data, hmin, x_pixels, y_pixels, xlim, ylim)
 
-    return get_backend(backend) \
-        .interpolate_3d_cross(x_data, y_data, z_data, z_slice, w_data, data['h'].to_numpy(), kernel.w,
+    grid = get_backend(backend) \
+           .interpolate_3d_cross(x_data, y_data, z_data, z_slice, w_data, h_data, kernel.w,
                               kernel.get_radius(), x_pixels, y_pixels, xlim[0], xlim[1], ylim[0], ylim[1])
+
+    if normalize:
+        w_norm = _get_weight(data, np.array([1] * len(w_data)), dens_weight)
+        norm_grid = get_backend(backend) \
+                    .interpolate_3d_cross(x_data, y_data, z_data, z_slice, w_norm, h_data, kernel.w,
+                                          kernel.get_radius(), x_pixels, y_pixels, xlim[0], xlim[1], ylim[0], ylim[1])
+        grid = np.nan_to_num(grid / norm_grid)
+
+    return grid
 
 
 def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, target_z: str,
                              z_slice: float = None, x: str = None, y: str = None, z: str = None,
                              kernel: BaseKernel = None, rotation: np.ndarray = None, origin: np.ndarray = None,
                              x_pixels: int = None, y_pixels: int = None, xlim: Tuple[float, float] = None,
-                             ylim: Tuple[float, float] = None, backend: str = None, dens_weight: bool = None):
-    """ Interpolate 3D vector particle data to a 2D grid, using a 3D cross-section.
+                             ylim: Tuple[float, float] = None, backend: str = None, dens_weight: bool = False,
+                             normalize: bool = True, hmin: bool = False):
+    """
+    Interpolate 3D vector particle data to a 2D grid, using a 3D cross-section.
 
-        Interpolates vector particle data in a SarracenDataFrame across three directional axes to a 2D
-        grid of pixels. A cross-section is taken of the 3D data at a specific value of z, and
-        the contributions of vectors near the plane are interpolated to a 2D grid.
+    Interpolates vector particle data in a SarracenDataFrame across three directional axes to a 2D
+    grid of pixels. A cross-section is taken of the 3D data at a specific value of z, and
+    the contributions of vectors near the plane are interpolated to a 2D grid.
 
-        Parameters
-        ----------
-        data : SarracenDataFrame
-            The particle data to interpolate over.
-        target_x, target_y, target_z: str
-            The column labels of the target vector.
-        z_slice: float
-            The z-axis value to take the cross-section at. Defaults to the midpoint of the z-directional data.
-        x, y, z: str
-            The column labels of the directional data to interpolate over. Defaults to the x, y, and z columns
-            detected in `data`.
-        kernel: BaseKernel
-            The kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
-        rotation: array_like or Rotation, optional
-            The rotation to apply to the data before interpolation. If defined as an array, the
-            order of rotations is [z, y, x] in degrees.
-        origin: array_like, optional
-            Point of rotation of the data, in [x, y, z] form. Defaults to the centre
-            point of the bounds of the data.
-        x_pixels, y_pixels: int, optional
-            Number of pixels in the output image in the x & y directions. Default values are chosen to keep
-            a consistent aspect ratio.
-        xlim, ylim: float, optional
-            The minimum and maximum values to use in interpolation, in particle data space. Defaults
-            to the minimum and maximum values of `x` and `y`.
-        backend: ['cpu', 'gpu']
-            The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
-            'cpu' is used. A manually specified backend in `data` will override the default.
-        dens_weight: bool
-            Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density,
-            defaults to false otherwise.
+    Parameters
+    ----------
+    data : SarracenDataFrame
+        The particle data to interpolate over.
+    target_x, target_y, target_z: str
+        The column labels of the target vector.
+    z_slice: float
+        The z-axis value to take the cross-section at. Defaults to the midpoint of the z-directional data.
+    x, y, z: str
+        The column labels of the directional data to interpolate over. Defaults to the x, y, and z columns
+        detected in `data`.
+    kernel: BaseKernel
+        The kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
+    rotation: array_like or Rotation, optional
+        The rotation to apply to the data before interpolation. If defined as an array, the
+        order of rotations is [z, y, x] in degrees.
+    origin: array_like, optional
+        Point of rotation of the data, in [x, y, z] form. Defaults to the centre
+        point of the bounds of the data.
+    x_pixels, y_pixels: int, optional
+        Number of pixels in the output image in the x & y directions. Default values are chosen to keep
+        a consistent aspect ratio.
+    xlim, ylim: float, optional
+        The minimum and maximum values to use in interpolation, in particle data space. Defaults
+        to the minimum and maximum values of `x` and `y`.
+    backend: ['cpu', 'gpu']
+        The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
+        'cpu' is used. A manually specified backend in `data` will override the default.
+    dens_weight: bool
+        If True, the target will be multiplied by density. Defaults to False.
+    hmin: bool
+        If True, a minimum smoothing length of 0.5 * pixel size will be imposed. This ensures each particle
+        contributes to at least one grid cell / pixel. Defaults to False (this may change in a future verison).
 
-        Returns
-        -------
-        output_x, output_y: ndarray (2-Dimensional)
-            The interpolated output images. Dimensions are structured in reverse order, where (x, y) -> [y, x].
+    Returns
+    -------
+    output_x, output_y: ndarray (2-Dimensional)
+        The interpolated output images. Dimensions are structured in reverse order, where (x, y) -> [y, x].
 
-        Raises
-        -------
-        ValueError
-            If `pixwidthx`, `pixwidthy`, `pixcountx`, or `pixcounty` are less than or equal to zero, or
-            if the specified `x` and `y` minimum and maximums result in an invalid region, or
-            if the provided data is not 3-dimensional.
-        KeyError
-            If `target_x`, `target_y`, `target_z`, `x`, `y`, `z`, mass, density, or smoothing length columns do not
-            exist in `data`.
-        """
+    Raises
+    -------
+    ValueError
+        If `pixwidthx`, `pixwidthy`, `pixcountx`, or `pixcounty` are less than or equal to zero, or
+        if the specified `x` and `y` minimum and maximums result in an invalid region, or
+        if the provided data is not 3-dimensional.
+    KeyError
+        If `target_x`, `target_y`, `target_z`, `x`, `y`, `z`, mass, density, or smoothing length columns do not
+        exist in `data`.
+    """
+
     _check_dimension(data, 3)
     x, y, z = _default_xyz(data, x, y, z)
     _verify_columns(data, x, y)
@@ -968,21 +1115,37 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y:
 
     wx_data = _get_weight(data, target_x_data, dens_weight)
     wy_data = _get_weight(data, target_y_data, dens_weight)
+    h_data = _get_smoothing_lengths(data, hmin, x_pixels, y_pixels, xlim, ylim)
 
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
 
-    return get_backend(backend) \
-        .interpolate_3d_cross_vec(x_data, y_data, z_data, z_slice, wx_data, wy_data, data['h'].to_numpy(), kernel.w,
-                                  kernel.get_radius(), x_pixels, y_pixels, xlim[0], xlim[1], ylim[0], ylim[1])
+    gridx, gridy = get_backend(backend) \
+                   .interpolate_3d_cross_vec(x_data, y_data, z_data, z_slice, wx_data, wy_data, h_data,
+                                             kernel.w, kernel.get_radius(), x_pixels, y_pixels, xlim[0], xlim[1],
+                                             ylim[0], ylim[1])
+
+    if normalize:
+        wx_norm = _get_weight(data, np.array([1] * len(wx_data)), dens_weight)
+        wy_norm = _get_weight(data, np.array([1] * len(wy_data)), dens_weight)
+        norm_gridx, norm_gridy = get_backend(backend) \
+                                 .interpolate_3d_cross_vec(x_data, y_data, z_data, z_slice, wx_norm, wy_norm,
+                                                           h_data, kernel.w, kernel.get_radius(),
+                                                           x_pixels, y_pixels, xlim[0], xlim[1], ylim[0], ylim[1])
+        gridx = np.nan_to_num(gridx / norm_gridx)
+        gridy = np.nan_to_num(gridy / norm_gridy)
+
+    return (gridx, gridy)
 
 
 def interpolate_3d_grid(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
                         kernel: BaseKernel = None, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
                         x_pixels: int = None, y_pixels: int = None, z_pixels: int = None,
                         xlim: Tuple[float, float] = None, ylim: Tuple[float, float] = None,
-                        zlim: Tuple[float, float] = None, backend: str = None, dens_weight: bool = None):
-    """ Interpolate 3D particle data to a 3D grid of pixels
+                        zlim: Tuple[float, float] = None, backend: str = None, dens_weight: bool = False,
+                        normalize: bool = True, hmin: bool = False):
+    """
+    Interpolate 3D particle data to a 3D grid of pixels
 
     Interpolates particle data in a SarracenDataFrame across three directional axes to a 3D
     grid of pixels. The contributions of all particles near each 3D cell are summed and
@@ -1015,8 +1178,10 @@ def interpolate_3d_grid(data: 'SarracenDataFrame', target: str, x: str = None, y
         The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
         'cpu' is used. A manually specified backend in `data` will override the default.
     dens_weight: bool
-        Whether to use density-weighted interpolation. Defaults to true if `target` is equivalent to density, defaults
-        to false otherwise.
+        If True, the target will be multiplied by density. Defaults to False.
+    hmin: bool
+        If True, a minimum smoothing length of 0.5 * pixel size will be imposed. This ensures each particle
+        contributes to at least one grid cell / pixel. Defaults to False (this may change in a future verison).
 
     Returns
     -------
@@ -1059,14 +1224,26 @@ def interpolate_3d_grid(data: 'SarracenDataFrame', target: str, x: str = None, y
     backend = backend if backend is not None else data.backend
 
     x_data, y_data, z_data = _rotate_xyz(data, x, y, data.zcol, rotation, rot_origin)
+    h_data = _get_smoothing_lengths(data, hmin, x_pixels, y_pixels, xlim, ylim)
 
-    return get_backend(backend) \
-        .interpolate_3d_grid(x_data, y_data, z_data, w_data, data['h'].to_numpy(), kernel.w, kernel.get_radius(),
-                             x_pixels, y_pixels, z_pixels, xlim[0], xlim[1], ylim[0], ylim[1], zlim[0], zlim[1])
+    grid = get_backend(backend) \
+           .interpolate_3d_grid(x_data, y_data, z_data, w_data, h_data, kernel.w, kernel.get_radius(),
+                                x_pixels, y_pixels, z_pixels, xlim[0], xlim[1], ylim[0], ylim[1], zlim[0], zlim[1])
+
+    if normalize:
+        w_norm = _get_weight(data, np.array([1] * len(w_data)), dens_weight)
+        norm_grid = get_backend(backend) \
+                    .interpolate_3d_grid(x_data, y_data, z_data, w_norm, h_data, kernel.w,
+                                         kernel.get_radius(), x_pixels, y_pixels, z_pixels, xlim[0], xlim[1],
+                                         ylim[0], ylim[1], zlim[0], zlim[1])
+        grid = np.nan_to_num(grid / norm_grid)
+
+    return grid
 
 
 def get_backend(code: str) -> BaseBackend:
-    """ Get the interpolation backend associated with a string code.
+    """
+    Get the interpolation backend associated with a string code.
 
     Parameters
     ----------
