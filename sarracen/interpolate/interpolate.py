@@ -385,7 +385,8 @@ def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
     exact: bool
         Whether to use exact interpolation of the data.
     backend: ['cpu', 'gpu']
-        The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+        The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
+        'cpu' is used. A manually specified backend in `data` will override the default.
     dens_weight: bool
         If True, the target will be multiplied by density. Defaults to False.
     hmin: bool
@@ -467,7 +468,8 @@ def interpolate_2d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
     exact: bool
         Whether to use exact interpolation of the data.
     backend: ['cpu', 'gpu']
-        The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+        The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
+        'cpu' is used. A manually specified backend in `data` will override the default.
     dens_weight: bool
         If True, the target will be multiplied by density. Defaults to False.
     hmin: bool
@@ -551,7 +553,8 @@ def interpolate_2d_line(data: 'SarracenDataFrame', target: str, x: str = None, y
         Starting and ending coordinates of the cross-section line (in particle data space). Defaults to
         the minimum and maximum values of `x` and `y`.
     backend: ['cpu', 'gpu']
-        The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+        The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
+        'cpu' is used. A manually specified backend in `data` will override the default.
     dens_weight: bool
         If True, the target will be multiplied by density. Defaults to False.
     hmin: bool
@@ -643,7 +646,8 @@ def interpolate_3d_line(data: 'SarracenDataFrame', target: str, x: str = None, y
         Starting and ending coordinates of the cross-section line (in particle data space). Defaults to
         the minimum and maximum values of `x`, `y`, and `z`.
     backend: ['cpu', 'gpu']
-        The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+        The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
+        'cpu' is used. A manually specified backend in `data` will override the default.
     dens_weight: bool
        If True, the target will be multiplied by density. Defaults to False.
     hmin: bool
@@ -758,7 +762,8 @@ def interpolate_3d_proj(data: 'SarracenDataFrame', target: str, x: str = None, y
     exact: bool
         Whether to use exact interpolation of the data.
     backend: ['cpu', 'gpu']
-        The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+        The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
+        'cpu' is used. A manually specified backend in `data` will override the default.
     dens_weight: bool
         If True, the target will be multiplied by density. Defaults to True for column-integrated views,
         when the target is not density, and False for everything else.
@@ -862,7 +867,8 @@ def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
     exact: bool
         Whether to use exact interpolation of the data.
     backend: ['cpu', 'gpu']
-        The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+        The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
+        'cpu' is used. A manually specified backend in `data` will override the default.
     dens_weight: bool
         If True, the target will be multiplied by density. Defaults to False.
     hmin: bool
@@ -967,7 +973,8 @@ def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, x: str = None, 
         The minimum and maximum values to use in interpolation, in particle data space. Defaults
         to the minimum and maximum values of `x` and `y`.
     backend: ['cpu', 'gpu']
-        The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+        The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
+        'cpu' is used. A manually specified backend in `data` will override the default.
     dens_weight: bool
         If True, the target will be multiplied by density. Defaults to False.
     hmin: bool
@@ -1066,7 +1073,8 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y:
         The minimum and maximum values to use in interpolation, in particle data space. Defaults
         to the minimum and maximum values of `x` and `y`.
     backend: ['cpu', 'gpu']
-        The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+        The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
+        'cpu' is used. A manually specified backend in `data` will override the default.
     dens_weight: bool
         If True, the target will be multiplied by density. Defaults to False.
     hmin: bool
@@ -1088,6 +1096,7 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y:
         If `target_x`, `target_y`, `target_z`, `x`, `y`, `z`, mass, density, or smoothing length columns do not
         exist in `data`.
     """
+
     _check_dimension(data, 3)
     x, y, z = _default_xyz(data, x, y, z)
     _verify_columns(data, x, y)
@@ -1166,7 +1175,8 @@ def interpolate_3d_grid(data: 'SarracenDataFrame', target: str, x: str = None, y
         The minimum and maximum values to use in interpolation, in particle data space. Defaults
         to the minimum and maximum values of `x`, `y` and `z`.
     backend: ['cpu', 'gpu']
-        The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+        The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
+        'cpu' is used. A manually specified backend in `data` will override the default.
     dens_weight: bool
         If True, the target will be multiplied by density. Defaults to False.
     hmin: bool
