@@ -4,23 +4,6 @@
 Quick Start Guide
 =================
 
-Installation
-------------
-
-The latest stable release and associated dependencies can be installed from PyPi:
-
-.. code-block::
-
-    pip install sarracen
-
-This is the recommended way to install Sarracen.
-
-The latest development snapshot is available on the GitHub repository. Either clone the repository and add it to your path so that it can be imported, or install directly through pip:
-
-.. code-block::
-
-    pip install git+https://github.com/ttricco/sarracen.git
-
 
 
 Loading data into a SarracenDataFrame
@@ -32,15 +15,15 @@ Additionally, Sarracen can read the native binary format of `Phantom <https://ph
 
 Loading Phantom data is as straightforward as
 
-.. code-block::
-
-   sdf = sarracen.read_phantom('dumpfile')
+>>> import sarracen
+>>>
+>>> sdf = sarracen.read_phantom('dumpfile')
 
 This call can separate different particle species into their own SarracenDataFrame. By default, sink particles are separated, and a list of SarracenDataFrames is returned in such a case. For example, if you data contains SPH particles plus sink particles, a sensible call would be
 
-.. code-block::
-
-   sdf, sdf_sinks = sarracen.read_phantom('dumpfile')
+>>> import sarracen
+>>>
+>>> sdf, sdf_sinks = sarracen.read_phantom('dumpfile')
 
 If you encounter any bugs with file reading for your particular set up, please contact us or raise an issue.
 
@@ -75,14 +58,10 @@ The pandas DataFrame (and hence SarracenDataFrame) is a swiss army knife of data
 
 The below will compute the magnitude of the velocity and store the result as a new column in the data frame. Note the use of numpy.
 
-.. code-block::
-
-   sdf['vmag'] = np.sqrt(sdf['vx']**2 + sdf['vy']**2 + sdf['vz']**2)
+>>> sdf['vmag'] = np.sqrt(sdf['vx']**2 + sdf['vy']**2 + sdf['vz']**2)
 
 Extracting subsets of data can be done using boolean logic to slice into the data frame. The example below computes the average speed of particles above a certain critical density threshold. The first set of square brackets will return a `copy` of the data frame containing only the particles that have density greater than ``rho_crit``, while the second square brackets accesses the column ``vmag`` of that copy.
 
-.. code-block::
-
-   rho_crit = 1.0e10
-   sdf.calc_density()
-   sdf[sdf['rho'] > rho_crit]['vmag'].mean()
+>>> rho_crit = 1.0e10
+>>> sdf.calc_density()
+>>> sdf[sdf['rho'] > rho_crit]['vmag'].mean()

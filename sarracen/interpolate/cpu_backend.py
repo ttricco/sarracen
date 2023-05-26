@@ -17,8 +17,8 @@ class CPUBackend(BaseBackend):
                               y_min: float, y_max: float, exact: bool) -> ndarray:
         if exact:
             return CPUBackend._exact_2d_render(x, y, weight, h, x_pixels, y_pixels, x_min, x_max, y_min, y_max)
-        return CPUBackend._fast_2d(x, y, np.zeros(x.size), 0, weight, h, weight_function, kernel_radius, x_pixels,
-                                   y_pixels, x_min, x_max, y_min, y_max, 2)
+        return CPUBackend._fast_2d(x, y, np.zeros(x.size), 0, weight, h, weight_function, kernel_radius,
+                                   x_pixels, y_pixels, x_min, x_max, y_min, y_max, 2)
 
     @staticmethod
     def interpolate_2d_render_vec(x: ndarray, y: ndarray, weight_x: ndarray, weight_y: ndarray, h: ndarray,
@@ -189,10 +189,10 @@ class CPUBackend(BaseBackend):
             for i in range(range_start, range_end):
 
                 # determine maximum and minimum pixels that this particle contributes to
-                ipixmin = int(np.rint((x_data[i] - 2 * h_data[i] - x_min) / pixwidthx))
-                jpixmin = int(np.rint((y_data[i] - 2 * h_data[i] - y_min) / pixwidthy))
-                ipixmax = int(np.rint((x_data[i] + 2 * h_data[i] - x_min) / pixwidthx))
-                jpixmax = int(np.rint((y_data[i] + 2 * h_data[i] - y_min) / pixwidthy))
+                ipixmin = int(np.floor((x_data[i] - 2 * h_data[i] - x_min) / pixwidthx))
+                jpixmin = int(np.floor((y_data[i] - 2 * h_data[i] - y_min) / pixwidthy))
+                ipixmax = int(np.ceil((x_data[i] + 2 * h_data[i] - x_min) / pixwidthx))
+                jpixmax = int(np.ceil((y_data[i] + 2 * h_data[i] - y_min) / pixwidthy))
 
                 if ipixmax < 0 or ipixmin >= x_pixels or jpixmax < 0 or jpixmin >= y_pixels:
                     continue
@@ -435,10 +435,10 @@ class CPUBackend(BaseBackend):
             for i in range(range_start, range_end):
 
                 # determine maximum and minimum pixels that this particle contributes to
-                ipixmin = int(np.rint((x_data[i] - 2 * h_data[i] - x_min) / pixwidthx))
-                jpixmin = int(np.rint((y_data[i] - 2 * h_data[i] - y_min) / pixwidthy))
-                ipixmax = int(np.rint((x_data[i] + 2 * h_data[i] - x_min) / pixwidthx))
-                jpixmax = int(np.rint((y_data[i] + 2 * h_data[i] - y_min) / pixwidthy))
+                ipixmin = int(np.floor((x_data[i] - 2 * h_data[i] - x_min) / pixwidthx))
+                jpixmin = int(np.floor((y_data[i] - 2 * h_data[i] - y_min) / pixwidthy))
+                ipixmax = int(np.ceil((x_data[i] + 2 * h_data[i] - x_min) / pixwidthx))
+                jpixmax = int(np.ceil((y_data[i] + 2 * h_data[i] - y_min) / pixwidthy))
 
                 # The width of the z contribution of this particle.
                 # = 2 * kernel_radius * h[i], where kernel_radius is 2 for the cubic spline kernel.
