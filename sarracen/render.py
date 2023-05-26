@@ -167,7 +167,8 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
     exact: bool
         Whether to use exact interpolation of the data. For cross-sections this is ignored. Defaults to False.
     backend: ['cpu', 'gpu']
-        The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
+        The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
+        'cpu' is used. A manually specified backend in `data` will override the default.
     integral_samples: int, optional
         If using column interpolation, the number of sample points to take when approximating the 2D column kernel.
     rotation: array_like or Rotation, optional
@@ -323,8 +324,8 @@ def lineplot(data: 'SarracenDataFrame', target: str, x: str = None, y: str = Non
     ax: Axes
         The main axes in which to draw the final plot.
     backend: ['cpu', 'gpu']
-        The computation backend to use when performing the underlying interpolation. Defaults to the backend
-        specified in `data`.
+        The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
+        'cpu' is used. A manually specified backend in `data` will override the default.
     log_scale: bool
         Whether to use a logarithmic scale for color coding.
     dens_weight: bool
@@ -451,7 +452,8 @@ def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[
     exact: bool
         Whether to use exact interpolation of the data. For cross-sections this is ignored. Defaults to False.
     backend: ['cpu', 'gpu']
-        The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
+        The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
+        'cpu' is used. A manually specified backend in `data` will override the default.
     dens_weight: bool
         If True, will plot the target mutliplied by the density. Defaults to True for column-integrated views
         and False for everything else.
@@ -582,7 +584,8 @@ def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[st
     exact: bool
         Whether to use exact interpolation of the data. For cross-sections this is ignored. Defaults to False.
     backend: ['cpu', 'gpu']
-        The computation backend to use when rendering this data. Defaults to the backend specified in `data`.
+        The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
+        'cpu' is used. A manually specified backend in `data` will override the default.
     dens_weight: bool
         If True, will plot the target mutliplied by the density. Defaults to True for column-integrated views
         and False for everything else.
