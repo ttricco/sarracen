@@ -3,13 +3,13 @@ from typing import Union, Callable, Tuple
 from matplotlib.axes import Axes
 from matplotlib.colors import Colormap
 from pandas import DataFrame, Series
+from numba import cuda
 import numpy as np
 
 from .render import streamlines, arrowplot, render, lineplot
 from .interpolate import interpolate_2d, interpolate_3d_grid
 from .kernels import CubicSplineKernel, BaseKernel
 
-from typing import Tuple
 
 def _copy_doc(copy_func: Callable) -> Callable:
     """Copy documentation from another function to this function."""
@@ -104,7 +104,7 @@ class SarracenDataFrame(DataFrame):
         self._identify_special_columns()
 
         self._kernel = CubicSplineKernel()
-        self._backend = 'cpu'
+        self._backend = 'gpu' if cuda.is_available() else 'cpu'
 
     @property
     def _constructor(self):
@@ -285,7 +285,8 @@ class SarracenDataFrame(DataFrame):
         exact: bool
             Whether to use exact interpolation of the data. Only applies to 2D datasets.
         backend: ['cpu', 'gpu']
-            The computation backend to use when interpolating this data. Defaults to the backend specified in `data`.
+            The computation backend to use when interpolating this data. Defaults to 'gpu' if CUDA is enabled, otherwise
+            'cpu' is used. A manually specified backend in `data` will override the default.
         dens_weight: bool
             If True, the target will be multiplied by density. Defaults to False.
         normalize: bool
