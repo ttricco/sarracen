@@ -46,7 +46,7 @@ SPH data. It is an open-source, command-line visualization tool written in Fortr
 It is comprehensive, highly efficient, and can natively read SPH data from a large 
 number of SPH simulation codes. `Splash` has a large user base for these reasons. The
 significant shortcoming of `Splash` is that it has limited capability for analysis of 
-SPH data. Any complicated analysis requires modification of the Fortran code. 
+SPH data. Any complicated analysis requires modification of the Fortran code.
 
 There are publicly available Python solutions for visualization or analysis of 
 astrophysical SPH data. However, these are often specific to a single code, such as 
@@ -54,9 +54,12 @@ astrophysical SPH data. However, these are often specific to a single code, such
 code. `yt` [@yt] is a general purpose analysis and visualization package for 
 volumetric astrophysical data. Originally designed for data from grid-based codes, 
 recent versions have added support to store SPH particle data directly (instead of 
-storing only a mesh interpolation). `Plonk` [@plonk] is the work most similar to 
-ours, but uses custom data structures for storing particle data and is limited to 
-reading HDF5 data from the `Phantom` [@phantom] SPH code.
+storing only a mesh interpolation). `ParaView` [@paraview] and `VisIt` [@visit] are
+two open-source visualization applications that can be used with SPH data and scale 
+to large data sets. `ParaView` and `VisIt` additionally offer scripting in Python. 
+`Plonk` [@plonk] is the work most similar to ours, but uses custom data structures 
+for storing particle data and is limited to reading HDF5 data from the `Phantom` 
+[@phantom] SPH code.
 
 Our goal with `Sarracen` is to provide a Python package that implements the robust
 interpolation and visualization of SPH data offered by `Splash`, but which can be
