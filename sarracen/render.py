@@ -290,12 +290,13 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
 
     if cbar:
         colorbar = ax.figure.colorbar(graphic, cbar_ax, ax, **cbar_kws)
-        label = target
-        if data.get_dim() == 3 and xsec is None:
-            label = f"column {label}"
-        if log_scale:
-            label = f"log ({label})"
-        colorbar.ax.set_ylabel(label)
+        if 'label' not in cbar_kws :
+            label = target
+            if data.get_dim() == 3 and xsec is None:
+                label = f"column {label}"
+            if log_scale:
+                label = f"log ({label})"
+            colorbar.ax.set_ylabel(label)
 
     return ax
 
