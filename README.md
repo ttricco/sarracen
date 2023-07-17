@@ -46,3 +46,11 @@ If you are stuck or need help, [raising an issue](https://github.com/ttricco/sar
 This helps us keep common issues in public view. Feel free to also [email](mailto:tstricco@mun.ca) with questions.
 
 Please note that we adhere to a [code of conduct](CODE_OF_CONDUCT.md).
+
+Citation
+--------
+
+Please cite the paper if you use Sarracen within your work (DOI: [10.21105/joss.05263](https://doi.org/10.21105/joss.05263)).
+
+*Sarracen: a Python package for analysis and visualization of smoothed particle hydrodynamics data.* Journal of Open Source Software, 8(86), 5263, 2023. 
+
