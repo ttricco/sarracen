@@ -301,22 +301,22 @@ def _rotate_xyz(data, x, y, z, rotation, origin):
 
 
 def _get_mass(data: 'SarracenDataFrame'):
-    if data._mcol == None:
+    if data.mcol == None:
         if 'mass' not in data.params:
             raise KeyError("'mass' column does not exist in this SarracenDataFrame.")
         return data.params['mass']
 
-    return data[data._mcol].to_numpy()
+    return data[data.mcol].to_numpy()
 
 
 def _get_density(data: 'SarracenDataFrame'):
-    if data._rhocol == None:
+    if data.rhocol == None:
         if not {data.hcol}.issubset(data.columns) or 'hfact' not in data.params:
             raise KeyError('Density cannot be derived from the columns in this SarracenDataFrame.')
 
-        return ((data.params['hfact'] / data['h']) ** (data.get_dim()) * _get_mass(data)).to_numpy()
+        return ((data.params['hfact'] / data[data.hcol]) ** (data.get_dim()) * _get_mass(data)).to_numpy()
 
-    return data[data._rhocol].to_numpy()
+    return data[data.rhocol].to_numpy()
 
 
 def _get_weight(data: 'SarracenDataFrame', target: Union[str, np.ndarray], dens_weight: bool):
@@ -348,9 +348,9 @@ def _get_smoothing_lengths(data: 'SarracenDataFrame', hmin: float, x_pixels: int
     if hmin:
         pix_size = (xlim[1] - xlim[0]) / x_pixels
         pix_size = np.maximum(pix_size, (ylim[1] - ylim[0]) / y_pixels)
-        h_data = np.maximum(data[data._hcol].to_numpy(), 0.5 * pix_size)
+        h_data = np.maximum(data[data.hcol].to_numpy(), 0.5 * pix_size)
     else:
-        h_data = data[data._hcol].to_numpy()
+        h_data = data[data.hcol].to_numpy()
 
     return h_data
 
@@ -600,9 +600,9 @@ def interpolate_2d_line(data: 'SarracenDataFrame', target: str, x: str = None, y
 
     if hmin:
         pix_size = np.sqrt((xlim[1] - xlim[0])**2 + (ylim[1] - ylim[0])**2) / pixels
-        h_data = np.maximum(data[data._hcol].to_numpy(), 0.5 * pix_size)
+        h_data = np.maximum(data[data.hcol].to_numpy(), 0.5 * pix_size)
     else:
-        h_data = data[data._hcol].to_numpy()
+        h_data = data[data.hcol].to_numpy()
 
     grid = get_backend(backend).\
            interpolate_2d_cross(data[x].to_numpy(), data[y].to_numpy(), w_data, h_data, kernel.w,
@@ -703,9 +703,9 @@ def interpolate_3d_line(data: 'SarracenDataFrame', target: str, x: str = None, y
 
     if hmin:
         pix_size = np.sqrt((xlim[1] - xlim[0])**2 + (ylim[1] - ylim[0])**2 + (zlim[1] - zlim[0])**2) / pixels
-        h_data = np.maximum(data[data._hcol].to_numpy(), 0.5 * pix_size)
+        h_data = np.maximum(data[data.hcol].to_numpy(), 0.5 * pix_size)
     else:
-        h_data = data[data._hcol].to_numpy()
+        h_data = data[data.hcol].to_numpy()
 
     grid = get_backend(backend) \
            .interpolate_3d_line(data[x].to_numpy(), data[y].to_numpy(), data[z].to_numpy(), w_data, h_data,
