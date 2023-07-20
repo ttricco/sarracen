@@ -248,7 +248,8 @@ def read_phantom(filename: str, separate_types: str = 'sinks', ignore_inactive: 
                 df_list.append(SarracenDataFrame(group.dropna(axis=1),
                                                  params={**header_vars, **{"mass": header_vars[mass_key]}}))
 
-            df_list.append(SarracenDataFrame(df_sinks, params=header_vars))
+            if not df_sinks.empty:
+                df_list.append(SarracenDataFrame(df_sinks, params=header_vars))
 
             return df_list
 
