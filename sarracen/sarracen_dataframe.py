@@ -125,41 +125,41 @@ class SarracenDataFrame(DataFrame):
         """
         # First look for 'x', then 'rx', and then fallback to the first column.
         if 'x' in self.columns:
-            self._xcol = 'x'
+            self.xcol = 'x'
         elif 'rx' in self.columns:
-            self._xcol = 'rx'
-        else:
-            self._xcol = self.columns[0]
+            self.xcol = 'rx'
+        elif len(self.columns) > 0:
+            self.xcol = self.columns[0]
 
         # First look for 'y', then 'ry', and then fallback to the second column.
         if 'y' in self.columns:
-            self._ycol = 'y'
+            self.ycol = 'y'
         elif 'ry' in self.columns:
-            self._ycol = 'ry'
-        else:
-            self._ycol = self.columns[1]
+            self.ycol = 'ry'
+        elif len(self.columns) > 1:
+            self.ycol= self.columns[1]
 
         # First look for 'z', then 'rz', and then assume that data is 2 dimensional.
         if 'z' in self.columns:
-            self._zcol = 'z'
+            self.zcol = 'z'
         elif 'rz' in self.columns:
-            self._zcol = 'rz'
+            self.zcol = 'rz'
 
         # Look for the keyword 'h' in the data.
         if 'h' in self.columns:
-            self._hcol = 'h'
+            self.hcol = 'h'
 
         # Look for the keyword 'm' or 'mass' in the data.
         if 'm' in self.columns:
-            self._mcol = 'm'
+            self.mcol = 'm'
         elif 'mass' in self.columns:
-            self._mcol = 'mass'
+            self.mcol = 'mass'
 
         # Look for the keyword 'rho' or 'density' in the data.
         if 'rho' in self.columns:
-            self._rhocol = 'rho'
+            self.rhocol = 'rho'
         elif 'density' in self.columns:
-            self._rhocol = 'density'
+            self.rhocol = 'density'
 
     def create_mass_column(self):
         """
@@ -176,7 +176,7 @@ class SarracenDataFrame(DataFrame):
             raise KeyError("'mass' value does not exist in this SarracenDataFrame.")
 
         self['m'] = self.params['mass']
-        self._mcol = 'm'
+        self.mcol = 'm'
 
     def calc_density(self):
         """
@@ -205,10 +205,10 @@ class SarracenDataFrame(DataFrame):
         mass = self.params['mass']
         # prioritize using mass per particle, if present
         if {self.mcol}.issubset(self.columns):
-            mass = self[self._mcol]
+            mass = self[self.mcol]
 
-        self['rho'] = (self.params['hfact'] / self['h']) ** (self.get_dim()) * mass
-        self._rhocol = 'rho'
+        self['rho'] = (self.params['hfact'] / self[self.hcol]) ** (self.get_dim()) * mass
+        self.rhocol = 'rho'
 
     @_copy_doc(render)
     def render(self, target: str, x: str = None, y: str = None, z: str = None, xsec: float = None,
@@ -480,4 +480,4 @@ class SarracenDataFrame(DataFrame):
         int
             The number of positional dimensions.
         """
-        return 3 if self._zcol is not None else 2
+        return 3 if self.zcol is not None else 2
