@@ -22,28 +22,6 @@ from .kernels import BaseKernel
 
 from typing import Tuple
 
-def _snap(value: float):
-    """
-    Snap a number to the nearest integer
-
-    Return a number which is rounded to the nearest integer,
-    with a 1e-4 absolute range of tolerance.
-
-    Parameters
-    ----------
-    value: float
-        The number to snap.
-
-    Returns
-    -------
-    float: An integer (in float form) if a close integer is detected, otherwise return `value`.
-    """
-    if np.isclose(value, np.rint(value), atol=1e-4):
-        return np.rint(value)
-    else:
-        return value
-
-
 def _default_axes(data, x, y):
     """
     Utility function to determine the x & y columns to use for rendering.
@@ -93,10 +71,10 @@ def _default_bounds(data, x, y, xlim, ylim) -> Tuple[Tuple[float, float], Tuple[
     x_max = xlim[1] if xlim is not None and xlim[1] is not None else None
     y_max = ylim[1] if ylim is not None and ylim[1] is not None else None
 
-    x_min = _snap(data.loc[:, x].min()) if x_min is None else x_min
-    y_min = _snap(data.loc[:, y].min()) if y_min is None else y_min
-    x_max = _snap(data.loc[:, x].max()) if x_max is None else x_max
-    y_max = _snap(data.loc[:, y].max()) if y_max is None else y_max
+    x_min = data.loc[:, x].min() if x_min is None else x_min
+    y_min = data.loc[:, y].min() if y_min is None else y_min
+    x_max = data.loc[:, x].max() if x_max is None else x_max
+    y_max = data.loc[:, y].max() if y_max is None else y_max
 
     return (x_min, x_max), (y_min, y_max)
 
@@ -379,14 +357,8 @@ def lineplot(data: 'SarracenDataFrame', target: str, x: str = None, y: str = Non
 
         if isinstance(zlim, float) or isinstance(zlim, int):
             zlim = zlim, zlim
-        if zlim is None or zlim[0] is None:
-            z1 = _snap(data.loc[:, z].min())
-        else:
-            z1 = zlim[0]
-        if zlim is None or zlim[1] is None:
-            z2 = _snap(data.loc[:, z].max())
-        else:
-            z2 = zlim[1]
+        z1 = data.loc[:, z].min() if zlim is None or zlim[0] is None else zlim[0]
+        z2 = data.loc[:, z].min() if zlim is None or zlim[1] is None else zlim[1]
         zlim = z2, z1
 
         upper_lim = np.sqrt((xlim[1] - xlim[0]) ** 2 + (ylim[1] - ylim[0]) ** 2 + (zlim[1] - zlim[0]) ** 2)
