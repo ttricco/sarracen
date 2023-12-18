@@ -357,14 +357,8 @@ def lineplot(data: 'SarracenDataFrame', target: str, x: str = None, y: str = Non
 
         if isinstance(zlim, float) or isinstance(zlim, int):
             zlim = zlim, zlim
-        if zlim is None or zlim[0] is None:
-            z1 = data.loc[:, z].min()
-        else:
-            z1 = zlim[0]
-        if zlim is None or zlim[1] is None:
-            z2 = data.loc[:, z].max()
-        else:
-            z2 = zlim[1]
+        z1 = data.loc[:, z].min() if zlim is None or zlim[0] is None else zlim[0]
+        z2 = data.loc[:, z].min() if zlim is None or zlim[1] is None else zlim[1]
         zlim = z2, z1
 
         upper_lim = np.sqrt((xlim[1] - xlim[0]) ** 2 + (ylim[1] - ylim[0]) ** 2 + (zlim[1] - zlim[0]) ** 2)
