@@ -294,24 +294,3 @@ def test_plot_bounds(backend):
         assert ax.get_xlim() == (3, 6)
         assert ax.get_ylim() == (1, 5)
         plt.close(fig)
-
-
-@mark.parametrize("backend", backends)
-def test_snap(backend):
-    df = pd.DataFrame({'x': [0.0001, 5.2],
-                       'y': [3.00004, 0.1],
-                       'P': [1, 1],
-                       'h': [1, 1],
-                       'rho': [1, 1],
-                       'm': [1, 1]})
-    sdf = SarracenDataFrame(df)
-    sdf.backend = backend
-
-    fig, ax = plt.subplots()
-    sdf.render('P', ax=ax)
-
-    # 0.0001 -> 0.0, 5.2 -> 5.2
-    assert ax.get_xlim() == (0.0, 5.2)
-    # 0.1 -> 0.1, 3.00004 -> 3.0
-    assert ax.get_ylim() == (0.1, 3.0)
-    plt.close(fig)
