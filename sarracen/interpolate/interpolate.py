@@ -659,14 +659,8 @@ def interpolate_3d_line(data: 'SarracenDataFrame', target: str, x: str = None, y
     if isinstance(zlim, float) or isinstance(zlim, int):
         zlim = zlim, zlim
 
-    if zlim is None or zlim[0] is None:
-        z1 = data.loc[:, z].min()
-    else:
-        z1 = zlim[0]
-    if zlim is None or zlim[1] is None:
-        z2 = data.loc[:, z].max()
-    else:
-        z2 = zlim[1]
+    z1 = data.loc[:, z].min() if zlim is None or zlim[0] is None else zlim[0]
+    z2 = data.loc[:, z].min() if zlim is None or zlim[1] is None else zlim[1]
     zlim = z1, z2
 
     xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
