@@ -9,28 +9,6 @@ from ..kernels import BaseKernel
 
 from typing import Tuple, Union
 
-def _snap(value: float):
-    """
-    Snap a number to the nearest integer.
-
-    Return a number which is rounded to the nearest integer,
-    with a 1e-4 absolute range of tolerance.
-
-    Parameters
-    ----------
-    value: float
-        The number to snap.
-
-    Returns
-    -------
-    float: An integer (in float form) if a close integer is detected, otherwise return `value`.
-    """
-    if np.isclose(value, np.rint(value), atol=1e-4):
-        return np.rint(value)
-    else:
-        return value
-
-
 def _default_xy(data, x, y):
     """
     Utility function to determine the x & y columns to use during 2D interpolation.
@@ -84,7 +62,7 @@ def _default_xyz(data, x, y, z):
     return x, y, z
 
 
-def _snap_boundaries(data, x, y, xlim, ylim) -> Tuple[Tuple[float, float], Tuple[float, float]]:
+def _default_bounds(data, x, y, xlim, ylim) -> Tuple[Tuple[float, float], Tuple[float, float]]:
     """
     Utility function to determine the 2-dimensional boundaries to use in 2D interpolation.
 
@@ -109,10 +87,10 @@ def _snap_boundaries(data, x, y, xlim, ylim) -> Tuple[Tuple[float, float], Tuple
     x_max = xlim[1] if xlim is not None and xlim[1] is not None else None
     y_max = ylim[1] if ylim is not None and ylim[1] is not None else None
 
-    x_min = _snap(data.loc[:, x].min()) if x_min is None else x_min
-    y_min = _snap(data.loc[:, y].min()) if y_min is None else y_min
-    x_max = _snap(data.loc[:, x].max()) if x_max is None else x_max
-    y_max = _snap(data.loc[:, y].max()) if y_max is None else y_max
+    x_min = data.loc[:, x].min() if x_min is None else x_min
+    y_min = data.loc[:, y].min() if y_min is None else y_min
+    x_max = data.loc[:, x].max() if x_max is None else x_max
+    y_max = data.loc[:, y].max() if y_max is None else y_max
 
     return (x_min, x_max), (y_min, y_max)
 
@@ -413,7 +391,7 @@ def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str
     x, y = _default_xy(data, x, y)
     _verify_columns(data, x, y)
 
-    xlim, ylim = _snap_boundaries(data, x, y, xlim, ylim)
+    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     _check_boundaries(x_pixels, y_pixels, xlim, ylim)
     w_data = _get_weight(data, target, dens_weight)
@@ -496,7 +474,7 @@ def interpolate_2d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
     x, y = _default_xy(data, x, y)
     _verify_columns(data, x, y)
 
-    xlim, ylim = _snap_boundaries(data, x, y, xlim, ylim)
+    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     _check_boundaries(x_pixels, y_pixels, xlim, ylim)
 
@@ -587,7 +565,7 @@ def interpolate_2d_line(data: 'SarracenDataFrame', target: str, x: str = None, y
     if isinstance(ylim, float) or isinstance(ylim, int):
         ylim = ylim, ylim
 
-    xlim, ylim = _snap_boundaries(data, x, y, xlim, ylim)
+    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
     if xlim[0] == xlim[1] and ylim[0] == ylim[1]:
         raise ValueError('Zero length cross section!')
 
@@ -682,16 +660,16 @@ def interpolate_3d_line(data: 'SarracenDataFrame', target: str, x: str = None, y
         zlim = zlim, zlim
 
     if zlim is None or zlim[0] is None:
-        z1 = _snap(data.loc[:, z].min())
+        z1 = data.loc[:, z].min()
     else:
         z1 = zlim[0]
     if zlim is None or zlim[1] is None:
-        z2 = _snap(data.loc[:, z].max())
+        z2 = data.loc[:, z].max()
     else:
         z2 = zlim[1]
     zlim = z1, z2
 
-    xlim, ylim = _snap_boundaries(data, x, y, xlim, ylim)
+    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
     if ylim[1] == ylim[0] and xlim[1] == xlim[0] and zlim[1] == zlim[0]:
         raise ValueError('Zero length cross section!')
 
@@ -801,7 +779,7 @@ def interpolate_3d_proj(data: 'SarracenDataFrame', target: str, x: str = None, y
 
     w_data = _get_weight(data, target, dens_weight)
 
-    xlim, ylim = _snap_boundaries(data, x, y, xlim, ylim)
+    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     _check_boundaries(x_pixels, y_pixels, xlim, ylim)
 
@@ -900,7 +878,7 @@ def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
     x, y, z = _default_xyz(data, x, y, None)
     _verify_columns(data, x, y)
 
-    xlim, ylim = _snap_boundaries(data, x, y, xlim, ylim)
+    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     _check_boundaries(x_pixels, y_pixels, xlim, ylim)
 
@@ -1005,12 +983,12 @@ def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, x: str = None, 
 
     # set default slice to be through the data's average z-value.
     if z_slice is None:
-        z_slice = _snap(data.loc[:, z].mean())
+        z_slice = data.loc[:, z].mean()
 
     w_data = _get_weight(data, target, dens_weight)
 
     # boundaries of the plot default to the maximum & minimum values of the data.
-    xlim, ylim = _snap_boundaries(data, x, y, xlim, ylim)
+    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     _check_boundaries(x_pixels, y_pixels, xlim, ylim)
 
@@ -1103,10 +1081,10 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y:
 
     # set default slice to be through the data's average z-value.
     if z_slice is None:
-        z_slice = _snap(data.loc[:, z].mean())
+        z_slice = data.loc[:, z].mean()
 
     # boundaries of the plot default to the maximum & minimum values of the data.
-    xlim, ylim = _snap_boundaries(data, x, y, xlim, ylim)
+    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     _check_boundaries(x_pixels, y_pixels, xlim, ylim)
 
@@ -1209,8 +1187,8 @@ def interpolate_3d_grid(data: 'SarracenDataFrame', target: str, x: str = None, y
         xlim = (None, None)
     if not ylim:
         ylim = (None, None)
-    xlim, ylim = _snap_boundaries(data, x, y, xlim, ylim)
-    zlim = zlim if zlim else (_snap(data.loc[:, z].min()), _snap(data.loc[:, z].max()))
+    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
+    zlim = zlim if zlim else (data.loc[:, z].min(), data.loc[:, z].max())
 
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     z_pixels = int(np.rint(x_pixels * ((zlim[1] - zlim[0]) / (xlim[1] - xlim[0])))) if z_pixels is None else z_pixels
