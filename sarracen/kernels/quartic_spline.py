@@ -1,5 +1,5 @@
 import numpy as np
-from numba import jit
+from numba import njit
 
 from ..kernels import BaseKernel
 
@@ -12,7 +12,7 @@ class QuarticSplineKernel(BaseKernel):
         return 2.5
 
     @staticmethod
-    @jit(fastmath=True)
+    @njit(fastmath=True)
     def w(q: float, ndim: int):
         norm = 1 / 24 if (ndim == 1) else \
             96 / (1199 * np.pi) if (ndim == 2) else \
