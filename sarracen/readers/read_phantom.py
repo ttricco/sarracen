@@ -19,60 +19,41 @@ def _read_fortran_block(fp, bytesize):
 
 def _read_capture_pattern(fp):
     """ Phantom dump validation plus default real and int sizes."""
-    # 4 byte Fortran tag
-    start_tag = fp.read(4)
 
-    def_int_dtype = np.int32
-    def_real_dtype = np.float32
+    start_tag = fp.read(4)  # 4-byte Fortran tag
 
+    def_types = [(np.int32, np.float64),
+                 (np.int32, np.float32),
+                 (np.int64, np.float64),
+                 (np.int64, np.float32)]
 
-    # integer 1 == 060769
-    i1 = np.frombuffer(fp.read(def_int_dtype().itemsize), count=1, dtype=def_int_dtype)[0]
+    i1 = r1 = i2 = 0
+    def_int_dtype, def_real_dtype = def_types[0]
 
-    # assert i1. Try 8-byte int if fails.
-    if (i1 != 60769):
-        fp.seek(-8, 1) # rewind based on current file position
-
-        def_int_dtype = np.int64
-
-        i1 = np.frombuffer(fp.read(def_int_dtype), count=1, dtype=def_int_dtype)[0]
-
-        # retry assert
-        if (i1 != 60769):
-            raise AssertionError("Capture pattern error. i1 mismatch. Is this a Phantom data file?")
-
-
-
-    # real 1 == integer 2 == 060878
-    r1 = np.frombuffer(fp.read(def_real_dtype().itemsize), count=1, dtype=def_real_dtype)[0]
-    i2 = np.frombuffer(fp.read(def_int_dtype().itemsize), count=1, dtype=def_int_dtype)[0]
-
-    # assert r1 and i2. Try 8-byte real if fails.
-    if (i2 != 60878 or not np.float32(i2) == r1):
-        fp.seek(-8, 1) # rewind
-
-        def_real_dtype = np.float64
-
+    for def_int_dtype, def_real_dtype in def_types:
+        i1 = np.frombuffer(fp.read(def_int_dtype().itemsize), count=1, dtype=def_int_dtype)[0]
         r1 = np.frombuffer(fp.read(def_real_dtype().itemsize), count=1, dtype=def_real_dtype)[0]
         i2 = np.frombuffer(fp.read(def_int_dtype().itemsize), count=1, dtype=def_int_dtype)[0]
 
-        # retry assert
-        if (i2 != 60878 or not np.float64(i2) == r1):
-            raise AssertionError("Capture pattern error. i2 and r1 mismatch. Is this a Phantom data file?")
+        if i1 == def_int_dtype(60769) and i2 == def_int_dtype(60878) and r1 == def_real_dtype(i2):
+            break
+        else:  # rewind and try again
+            fp.seek(-def_int_dtype().itemsize, 1)
+            fp.seek(-def_real_dtype().itemsize, 1)
+            fp.seek(-def_int_dtype().itemsize, 1)
 
+    if i1 != def_int_dtype(60769) or i2 != def_int_dtype(60878) or r1 != def_real_dtype(i2):
+        raise AssertionError("Could not determine default int or float precision (i1, r1, i2 mismatch). Is this a Phantom data file?")
 
     # iversion -- we don't actually check this
     iversion = np.frombuffer(fp.read(def_int_dtype().itemsize), count=1, dtype=def_int_dtype)[0]
 
-
     # integer 3 == 690706
     i3 = np.frombuffer(fp.read(def_int_dtype().itemsize), count=1, dtype=def_int_dtype)[0]
-    if (i3 != 690706):
+    if i3 != def_int_dtype(690706):
         raise AssertionError("Capture pattern error. i3 mismatch. Is this a Phantom data file?")
 
-
-    # 4 byte Fortran tag
-    end_tag = fp.read(4)
+    end_tag = fp.read(4)  # 4-byte Fortran tag
 
     # assert tags equal
     if (start_tag != end_tag):
