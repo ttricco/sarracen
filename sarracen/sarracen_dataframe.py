@@ -202,10 +202,11 @@ class SarracenDataFrame(DataFrame):
         if not {self.mcol}.issubset(self.columns) and 'mass' not in self.params:
             raise KeyError('Missing particle mass data in this SarracenDataFrame.')
 
-        mass = self.params['mass']
         # prioritize using mass per particle, if present
         if {self.mcol}.issubset(self.columns):
             mass = self[self.mcol]
+        else:
+            mass = self.params['mass']
 
         self['rho'] = (self.params['hfact'] / self[self.hcol]) ** (self.get_dim()) * mass
         self.rhocol = 'rho'

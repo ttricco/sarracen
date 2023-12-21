@@ -19,60 +19,41 @@ def _read_fortran_block(fp, bytesize):
 
 def _read_capture_pattern(fp):
     """ Phantom dump validation plus default real and int sizes."""
-    # 4 byte Fortran tag
-    start_tag = fp.read(4)
 
-    def_int_dtype = np.int32
-    def_real_dtype = np.float32
+    start_tag = fp.read(4)  # 4-byte Fortran tag
 
+    def_types = [(np.int32, np.float64),
+                 (np.int32, np.float32),
+                 (np.int64, np.float64),
+                 (np.int64, np.float32)]
 
-    # integer 1 == 060769
-    i1 = np.frombuffer(fp.read(def_int_dtype().itemsize), count=1, dtype=def_int_dtype)[0]
+    i1 = r1 = i2 = 0
+    def_int_dtype, def_real_dtype = def_types[0]
 
-    # assert i1. Try 8-byte int if fails.
-    if (i1 != 60769):
-        fp.seek(-8, 1) # rewind based on current file position
-
-        def_int_dtype = np.int64
-
-        i1 = np.frombuffer(fp.read(def_int_dtype), count=1, dtype=def_int_dtype)[0]
-
-        # retry assert
-        if (i1 != 60769):
-            raise AssertionError("Capture pattern error. i1 mismatch. Is this a Phantom data file?")
-
-
-
-    # real 1 == integer 2 == 060878
-    r1 = np.frombuffer(fp.read(def_real_dtype().itemsize), count=1, dtype=def_real_dtype)[0]
-    i2 = np.frombuffer(fp.read(def_int_dtype().itemsize), count=1, dtype=def_int_dtype)[0]
-
-    # assert r1 and i2. Try 8-byte real if fails.
-    if (i2 != 60878 or not np.float32(i2) == r1):
-        fp.seek(-8, 1) # rewind
-
-        def_real_dtype = np.float64
-
+    for def_int_dtype, def_real_dtype in def_types:
+        i1 = np.frombuffer(fp.read(def_int_dtype().itemsize), count=1, dtype=def_int_dtype)[0]
         r1 = np.frombuffer(fp.read(def_real_dtype().itemsize), count=1, dtype=def_real_dtype)[0]
         i2 = np.frombuffer(fp.read(def_int_dtype().itemsize), count=1, dtype=def_int_dtype)[0]
 
-        # retry assert
-        if (i2 != 60878 or not np.float64(i2) == r1):
-            raise AssertionError("Capture pattern error. i2 and r1 mismatch. Is this a Phantom data file?")
+        if i1 == def_int_dtype(60769) and i2 == def_int_dtype(60878) and r1 == def_real_dtype(i2):
+            break
+        else:  # rewind and try again
+            fp.seek(-def_int_dtype().itemsize, 1)
+            fp.seek(-def_real_dtype().itemsize, 1)
+            fp.seek(-def_int_dtype().itemsize, 1)
 
+    if i1 != def_int_dtype(60769) or i2 != def_int_dtype(60878) or r1 != def_real_dtype(i2):
+        raise AssertionError("Could not determine default int or float precision (i1, r1, i2 mismatch). Is this a Phantom data file?")
 
     # iversion -- we don't actually check this
     iversion = np.frombuffer(fp.read(def_int_dtype().itemsize), count=1, dtype=def_int_dtype)[0]
 
-
     # integer 3 == 690706
     i3 = np.frombuffer(fp.read(def_int_dtype().itemsize), count=1, dtype=def_int_dtype)[0]
-    if (i3 != 690706):
+    if i3 != def_int_dtype(690706):
         raise AssertionError("Capture pattern error. i3 mismatch. Is this a Phantom data file?")
 
-
-    # 4 byte Fortran tag
-    end_tag = fp.read(4)
+    end_tag = fp.read(4)  # 4-byte Fortran tag
 
     # assert tags equal
     if (start_tag != end_tag):
@@ -186,6 +167,17 @@ def _read_array_blocks(fp, def_int_dtype, def_real_dtype):
     return df, df_sinks
 
 
+def _create_mass_column(df, header_vars):
+    """
+    Creates a mass column with the mass of each particle when there are
+    multiple itypes.
+    """
+    df['mass'] = header_vars['massoftype']
+    for itype in df['itype'].unique():
+        if itype > 1:
+            df.loc[df.itype == itype, 'mass'] = header_vars[f'massoftype_{itype}']
+    return df
+
 def read_phantom(filename: str, separate_types: str = 'sinks', ignore_inactive: bool = True):
     """
     Read data from a Phantom dump file.
@@ -240,22 +232,36 @@ def read_phantom(filename: str, separate_types: str = 'sinks', ignore_inactive: 
         if ignore_inactive:
             df = df[df['h'] > 0]
 
-        if separate_types == 'all' and 'itype' in df and df['itype'].nunique() > 1:
-            df_list = []
-            for _, group in df.groupby('itype'):
-                itype = int(group["itype"].iloc[0])
-                mass_key = 'massoftype' if itype == 1 else f'massoftype_{itype}'
-                df_list.append(SarracenDataFrame(group.dropna(axis=1),
-                                                 params={**header_vars, **{"mass": header_vars[mass_key]}}))
+        # create mass column if multiple species in single dataframe
+        if separate_types != 'all' and 'itype' in df and df['itype'].nunique() > 1:
+            df = _create_mass_column(df, header_vars)
+        else:  # create global mass parameter
+            header_vars['mass'] = header_vars['massoftype']
+
+        df_list = []
+        if separate_types == 'all':
+            if 'itype' in df and df['itype'].nunique() > 1:
+                for _, group in df.groupby('itype'):
+                    itype = int(group["itype"].iloc[0])
+                    mass_key = 'massoftype' if itype == 1 else f'massoftype_{itype}'
+                    df_list.append(SarracenDataFrame(group.dropna(axis=1),
+                                                     params={**header_vars, **{"mass": header_vars[mass_key]}}))
+            else:
+                df_list = [SarracenDataFrame(df, params=header_vars)]
 
             if not df_sinks.empty:
-                df_list.append(SarracenDataFrame(df_sinks, params=header_vars))
+                df_list.append(SarracenDataFrame(df_sinks,
+                                                 params={key: value for key, value in header_vars.items() if key != 'mass'}))
 
-            return df_list
+        elif separate_types == 'sinks':
+            df_list = [SarracenDataFrame(df, params=header_vars)]
+            if not df_sinks.empty:
+                df_list.append(SarracenDataFrame(df_sinks,
+                                                 params={key: value for key, value in header_vars.items() if key != 'mass'}))
+        else:
+            df_list = [SarracenDataFrame(pd.concat([df, df_sinks], ignore_index=True),
+                                        params=header_vars)]
 
-        if (separate_types == 'sinks' or separate_types == 'all') and not df_sinks.empty:
-            return [SarracenDataFrame(df, params={**header_vars, **{"mass": header_vars['massoftype']}}),
-                    SarracenDataFrame(df_sinks, params=header_vars)]
+        df_list = df_list[0] if len(df_list) == 1 else df_list
 
-        return SarracenDataFrame(pd.concat([df, df_sinks], ignore_index=True),
-                                 params={**header_vars, **{"mass": header_vars['massoftype']}})
+        return df_list
