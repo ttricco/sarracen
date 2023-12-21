@@ -250,12 +250,14 @@ def read_phantom(filename: str, separate_types: str = 'sinks', ignore_inactive: 
                 df_list = [SarracenDataFrame(df, params=header_vars)]
 
             if not df_sinks.empty:
-                df_list.append(SarracenDataFrame(df_sinks, params=header_vars))
+                df_list.append(SarracenDataFrame(df_sinks,
+                                                 params={key: value for key, value in header_vars.items() if key != 'mass'}))
 
         elif separate_types == 'sinks':
             df_list = [SarracenDataFrame(df, params=header_vars)]
             if not df_sinks.empty:
-                df_list.append(SarracenDataFrame(df_sinks, params=header_vars))
+                df_list.append(SarracenDataFrame(df_sinks,
+                                                 params={key: value for key, value in header_vars.items() if key != 'mass'}))
         else:
             df_list = [SarracenDataFrame(pd.concat([df, df_sinks], ignore_index=True),
                                         params=header_vars)]
