@@ -14,7 +14,7 @@ def _get_mass(data: 'SarracenDataFrame'):
 
 def surface_density(data: 'SarracenDataFrame', r_in: float = None, r_out: float = None,
                     bins: int = 300, geometry: str = 'cylindrical', origin: list = None,
-                    retbins: bool = False) -> np.ndarray:
+                    retbins: bool = False):
     """
     Calculates the 1D azimuthally-averaged surface density profile.
 
@@ -84,7 +84,7 @@ def surface_density(data: 'SarracenDataFrame', r_in: float = None, r_out: float 
     rbins = pd.cut(r, bin_locations)
 
     mass = _get_mass(data)
-    if type(mass) is pd.Series:
+    if isinstance(mass, pd.Series):
         sigma = mass.groupby(rbins).sum()
     else:
         sigma = data.groupby(rbins).count().iloc[:, 0] * mass
