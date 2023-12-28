@@ -80,3 +80,14 @@ The default smoothing kernel is the cubic spline. Additional smoothing kernels a
    kernels.CubicSplineKernel
    kernels.QuarticSplineKernel
    kernels.QuinticSplineKernel
+
+
+Disc
+----
+
+Accretion disc analysis routines are in the disc module.
+
+.. autosummary::
+   :toctree: api/
+
+   disc.surface_density
