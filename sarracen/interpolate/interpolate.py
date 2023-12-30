@@ -206,7 +206,7 @@ def _rotate_data(data, x, y, z, rotation, origin):
         The particle dataset to interpolate over.
     x, y, z: str
         Directional column labels containing each dimension of the vector data.
-    rotation: array_like or Rotation, optional
+    rotation: array_like or SciPy Rotation, optional
         The rotation to apply to the vector data. If defined as an array, the
         order of rotations is [z, y, x] in degrees
     origin: array_like, optional
@@ -253,7 +253,7 @@ def _rotate_xyz(data, x, y, z, rotation, origin):
         The particle dataset to interpolate over.
     x, y, z: str
         Directional column labels containing the positional column labels
-    rotation: array_like or Rotation, optional
+    rotation: array_like or SciPy Rotation, optional
         The rotation to apply to the data. If defined as an array, the
         order of rotations is [z, y, x] in degrees
     origin: array_like, optional
@@ -696,7 +696,7 @@ def interpolate_3d_line(data: 'SarracenDataFrame', target: str, x: str = None, y
 
 
 def interpolate_3d_proj(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
-                   integral_samples: int = 1000, rotation: np.ndarray = None, origin: np.ndarray = None,
+                   integral_samples: int = 1000, rotation: Union[np.ndarray, Rotation] = None, origin: np.ndarray = None,
                    x_pixels: int = None, y_pixels: int = None, xlim: Tuple[float, float] = None,
                    ylim: Tuple[float, float] = None, exact: bool = False, backend: str = None,
                    dens_weight: bool = None, normalize: bool = True, hmin: bool = False):
@@ -719,7 +719,7 @@ def interpolate_3d_proj(data: 'SarracenDataFrame', target: str, x: str = None, y
         Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
     integral_samples: int, optional
         Number of sample points to take when approximating the 2D column kernel.
-    rotation: array_like or Rotation, optional
+    rotation: array_like or SciPy Rotation, optional
         The rotation to apply to the data before interpolation. If defined as an array, the
         order of rotations is [z, y, x] in degrees.
     origin: array_like, optional
@@ -801,7 +801,7 @@ def interpolate_3d_proj(data: 'SarracenDataFrame', target: str, x: str = None, y
 
 def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, target_z: str, x: str = None,
                        y: str = None, kernel: BaseKernel = None, integral_samples: int = 1000,
-                       rotation: np.ndarray = None, origin: np.ndarray = None, x_pixels: int = None,
+                       rotation: Union[np.ndarray, Rotation] = None, origin: np.ndarray = None, x_pixels: int = None,
                        y_pixels: int = None, xlim: Tuple[float, float] = None, ylim: Tuple[float, float] = None,
                        exact: bool = False, backend: str = None, dens_weight: bool = False, normalize: bool = True,
                        hmin: bool = False):
@@ -824,7 +824,7 @@ def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
         Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
     integral_samples: int, optional
         Number of sample points to take when approximating the 2D column kernel.
-    rotation: array_like or Rotation, optional
+    rotation: array_like or SciPy Rotation, optional
         The rotation to apply to the data before interpolation. If defined as an array, the
         order of rotations is [z, y, x] in degrees.
     origin: array_like, optional
@@ -908,7 +908,7 @@ def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
 
 
 def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
-                         z_slice: float = None, kernel: BaseKernel = None, rotation: np.ndarray = None,
+                         z_slice: float = None, kernel: BaseKernel = None, rotation: Union[np.ndarray, Rotation] = None,
                          origin: np.ndarray = None, x_pixels: int = None, y_pixels: int = None,
                          xlim: Tuple[float, float] = None, ylim: Tuple[float, float] = None, backend: str = None,
                          dens_weight: bool = False, normalize: bool = True, hmin: bool = False):
@@ -932,7 +932,7 @@ def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, x: str = None, 
         detected in `data`.
     kernel: BaseKernel
         The kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
-    rotation: array_like or Rotation, optional
+    rotation: array_like or SciPy Rotation, optional
         The rotation to apply to the data before interpolation. If defined as an array, the
         order of rotations is [z, y, x] in degrees.
     origin: array_like, optional
@@ -1008,7 +1008,7 @@ def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, x: str = None, 
 
 def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, target_z: str,
                              z_slice: float = None, x: str = None, y: str = None, z: str = None,
-                             kernel: BaseKernel = None, rotation: np.ndarray = None, origin: np.ndarray = None,
+                             kernel: BaseKernel = None, rotation: Union[np.ndarray, Rotation] = None, origin: np.ndarray = None,
                              x_pixels: int = None, y_pixels: int = None, xlim: Tuple[float, float] = None,
                              ylim: Tuple[float, float] = None, backend: str = None, dens_weight: bool = False,
                              normalize: bool = True, hmin: bool = False):
@@ -1032,7 +1032,7 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y:
         detected in `data`.
     kernel: BaseKernel
         The kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
-    rotation: array_like or Rotation, optional
+    rotation: array_like or SciPy Rotation, optional
         The rotation to apply to the data before interpolation. If defined as an array, the
         order of rotations is [z, y, x] in degrees.
     origin: array_like, optional
@@ -1111,7 +1111,7 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y:
 
 
 def interpolate_3d_grid(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
-                        kernel: BaseKernel = None, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
+                        kernel: BaseKernel = None, rotation: Union[np.ndarray, Rotation] = None, rot_origin: np.ndarray = None,
                         x_pixels: int = None, y_pixels: int = None, z_pixels: int = None,
                         xlim: Tuple[float, float] = None, ylim: Tuple[float, float] = None,
                         zlim: Tuple[float, float] = None, backend: str = None, dens_weight: bool = False,
@@ -1134,7 +1134,7 @@ def interpolate_3d_grid(data: 'SarracenDataFrame', target: str, x: str = None, y
         detected in `data`.
     kernel: BaseKernel
         The kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
-    rotation: array_like or Rotation, optional
+    rotation: array_like or SciPy Rotation, optional
         The rotation to apply to the data before interpolation. If defined as an array, the
         order of rotations is [z, y, x] in degrees.
     rot_origin: array_like, optional
