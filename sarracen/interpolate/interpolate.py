@@ -2,12 +2,14 @@
 Contains several interpolation functions which produce interpolated 2D or 1D arrays of SPH data.
 """
 import numpy as np
+import pandas as pd
 from scipy.spatial.transform import Rotation
 
 from ..interpolate import BaseBackend, CPUBackend, GPUBackend
 from ..kernels import BaseKernel
 
 from typing import Tuple, Union
+import warnings
 
 def _default_xy(data, x, y):
     """
@@ -196,7 +198,7 @@ def _check_dimension(data, dim):
         raise TypeError(f"Dataset is not {dim}-dimensional.")
 
 
-def _rotate_data(data, x, y, z, rotation, origin):
+def _rotate_data(data, x, y, z, rotation, rot_origin):
     """
     Rotate vector data in a particle dataset.
 
@@ -209,8 +211,12 @@ def _rotate_data(data, x, y, z, rotation, origin):
     rotation: array_like or SciPy Rotation, optional
         The rotation to apply to the vector data. If defined as an array, the
         order of rotations is [z, y, x] in degrees
-    origin: array_like, optional
-        Point of rotation of the data, in [x, y, z] form.
+    rot_origin: array_like or ['com', 'midpoint'], optional
+        Point of rotation of the data. Only applies to 3D datasets. If array_like,
+        then the [x, y, z] coordinates specify the point around which the data is
+        rotated. If 'com', then data is rotated around the centre of mass. If
+        'midpoint', then data is rotated around the midpoint, that is, min + max
+        / 2. Defaults to the midpoint.
 
     Returns
     -------
@@ -225,12 +231,25 @@ def _rotate_data(data, x, y, z, rotation, origin):
             rotation = Rotation.from_euler('zyx', rotation, degrees=True)
 
         vectors = data[[x, y, z]].to_numpy()
-        if origin is None:
-            origin = (vectors.min(0) + vectors.max(0)) / 2
 
-        vectors = vectors - origin
+        # warn whenever rotation is applied
+        msg = ("The default rotation point is currently the midpoint of the x/y/z bounds, "
+               "but will change to [x, y, z] = [0, 0, 0] in Sarracen version 1.3.0.")
+        warnings.warn(msg, DeprecationWarning, stacklevel=6)
+
+        if rot_origin is None:
+            #rot_origin = [0, 0, 0]
+            rot_origin = (vectors.min(0) + vectors.max(0)) / 2
+        elif rot_origin == 'com':
+            rot_origin = data.centre_of_mass()
+        elif rot_origin == 'midpoint':
+            rot_origin = (vectors.min(0) + vectors.max(0)) / 2
+        elif not isinstance(rot_origin, (list, pd.Series, np.ndarray)) and len(rot_origin) != 3:
+            raise ValueError("rot_origin should be an [x, y, z] point or 'com' or 'midpoint'")
+
+        vectors = vectors - rot_origin
         vectors = rotation.apply(vectors)
-        vectors = vectors + origin
+        vectors = vectors + rot_origin
 
         x_data = vectors[:, 0]
         y_data = vectors[:, 1]
@@ -239,7 +258,7 @@ def _rotate_data(data, x, y, z, rotation, origin):
     return x_data, y_data, z_data
 
 
-def _rotate_xyz(data, x, y, z, rotation, origin):
+def _rotate_xyz(data, x, y, z, rotation, rot_origin):
     """
     Rotate positional data in a particle dataset.
 
@@ -256,15 +275,19 @@ def _rotate_xyz(data, x, y, z, rotation, origin):
     rotation: array_like or SciPy Rotation, optional
         The rotation to apply to the data. If defined as an array, the
         order of rotations is [z, y, x] in degrees
-    origin: array_like, optional
-        Point of rotation of the data, in [x, y, z] form.
+    rot_origin: array_like or ['com', 'midpoint'], optional
+        Point of rotation of the data. Only applies to 3D datasets. If array_like,
+        then the [x, y, z] coordinates specify the point around which the data is
+        rotated. If 'com', then data is rotated around the centre of mass. If
+        'midpoint', then data is rotated around the midpoint, that is, min + max
+        / 2. Defaults to the midpoint.
 
     Returns
     -------
     x_data, y_data, z_data: ndarray
         The rotated x, y, and z directional data.
     """
-    rotated_x, rotated_y, rotated_z = _rotate_data(data, data.xcol, data.ycol, data.zcol, rotation, origin)
+    rotated_x, rotated_y, rotated_z = _rotate_data(data, data.xcol, data.ycol, data.zcol, rotation, rot_origin)
     x_data = rotated_x if x == data.xcol else \
         rotated_y if x == data.ycol else \
             rotated_z if x == data.zcol else data[x]
@@ -333,10 +356,20 @@ def _get_smoothing_lengths(data: 'SarracenDataFrame', hmin: float, x_pixels: int
     return h_data
 
 
-def interpolate_2d(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
-                   x_pixels: int = None, y_pixels: int = None, xlim: Tuple[float, float] = None,
-                   ylim: Tuple[float, float] = None, exact: bool = False, backend: str = None,
-                   dens_weight: bool = False, normalize: bool = True, hmin: bool = False) -> np.ndarray:
+def interpolate_2d(data: 'SarracenDataFrame',
+                   target: str,
+                   x: str = None,
+                   y: str = None,
+                   kernel: BaseKernel = None,
+                   x_pixels: int = None,
+                   y_pixels: int = None,
+                   xlim: Tuple[float, float] = None,
+                   ylim: Tuple[float, float] = None,
+                   exact: bool = False,
+                   backend: str = None,
+                   dens_weight: bool = False,
+                   normalize: bool = True,
+                   hmin: bool = False) -> np.ndarray:
     """
     Interpolate particle data across two directional axes to a 2D grid of pixels.
 
@@ -504,10 +537,18 @@ def interpolate_2d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
 
     return (gridx, gridy)
 
-def interpolate_2d_line(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
-                        kernel: BaseKernel = None, pixels: int = None, xlim: Tuple[float, float] = None,
-                        ylim: Tuple[float, float] = None, backend: str = None, dens_weight: bool = False,
-                        normalize: bool = True, hmin: bool = False) -> np.ndarray:
+def interpolate_2d_line(data: 'SarracenDataFrame',
+                        target: str,
+                        x: str = None,
+                        y: str = None,
+                        kernel: BaseKernel = None,
+                        pixels: int = None,
+                        xlim: Tuple[float, float] = None,
+                        ylim: Tuple[float, float] = None,
+                        backend: str = None,
+                        dens_weight: bool = False,
+                        normalize: bool = True,
+                        hmin: bool = False) -> np.ndarray:
     """
     Interpolate particle data across two directional axes to a 1D cross-section line.
 
@@ -596,10 +637,20 @@ def interpolate_2d_line(data: 'SarracenDataFrame', target: str, x: str = None, y
     return grid
 
 
-def interpolate_3d_line(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
-                        kernel: BaseKernel = None, pixels: int = None, xlim: Tuple[float, float] = None,
-                        ylim: Tuple[float, float] = None, zlim: Tuple[float, float] = None, backend: str = None,
-                        dens_weight: bool = False, normalize: bool = True, hmin: bool = False):
+def interpolate_3d_line(data: 'SarracenDataFrame',
+                        target: str,
+                        x: str = None,
+                        y: str = None,
+                        z: str = None,
+                        kernel: BaseKernel = None,
+                        pixels: int = None,
+                        xlim: Tuple[float, float] = None,
+                        ylim: Tuple[float, float] = None,
+                        zlim: Tuple[float, float] = None,
+                        backend: str = None,
+                        dens_weight: bool = False,
+                        normalize: bool = True,
+                        hmin: bool = False):
     """
     Interpolate vector particle data across three directional axes to a 1D line.
 
@@ -695,11 +746,23 @@ def interpolate_3d_line(data: 'SarracenDataFrame', target: str, x: str = None, y
     return grid
 
 
-def interpolate_3d_proj(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, kernel: BaseKernel = None,
-                   integral_samples: int = 1000, rotation: Union[np.ndarray, Rotation] = None, origin: np.ndarray = None,
-                   x_pixels: int = None, y_pixels: int = None, xlim: Tuple[float, float] = None,
-                   ylim: Tuple[float, float] = None, exact: bool = False, backend: str = None,
-                   dens_weight: bool = None, normalize: bool = True, hmin: bool = False):
+def interpolate_3d_proj(data: 'SarracenDataFrame',
+                        target: str,
+                        x: str = None,
+                        y: str = None,
+                        kernel: BaseKernel = None,
+                        integral_samples: int = 1000,
+                        rotation: Union[np.ndarray, list, Rotation] = None,
+                        rot_origin: Union[np.ndarray, list, str] = None,
+                        x_pixels: int = None,
+                        y_pixels: int = None,
+                        xlim: Tuple[float, float] = None,
+                        ylim: Tuple[float, float] = None,
+                        exact: bool = False,
+                        backend: str = None,
+                        dens_weight: bool = None,
+                        normalize: bool = True,
+                        hmin: bool = False):
     """
     Interpolate 3D particle data to a 2D grid of pixels.
 
@@ -722,9 +785,12 @@ def interpolate_3d_proj(data: 'SarracenDataFrame', target: str, x: str = None, y
     rotation: array_like or SciPy Rotation, optional
         The rotation to apply to the data before interpolation. If defined as an array, the
         order of rotations is [z, y, x] in degrees.
-    origin: array_like, optional
-        Point of rotation of the data, in [x, y, z] form. Defaults to the centre
-        point of the bounds of the data.
+    rot_origin: array_like or ['com', 'midpoint'], optional
+        Point of rotation of the data. Only applies to 3D datasets. If array_like,
+        then the [x, y, z] coordinates specify the point around which the data is
+        rotated. If 'com', then data is rotated around the centre of mass. If
+        'midpoint', then data is rotated around the midpoint, that is, min + max
+        / 2. Defaults to the midpoint.
     x_pixels, y_pixels: int, optional
         Number of pixels in the output image in the x & y directions. Default values are chosen to keep
         a consistent aspect ratio.
@@ -777,7 +843,7 @@ def interpolate_3d_proj(data: 'SarracenDataFrame', target: str, x: str = None, y
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     _check_boundaries(x_pixels, y_pixels, xlim, ylim)
 
-    x_data, y_data, z_data = _rotate_xyz(data, x, y, z, rotation, origin)
+    x_data, y_data, z_data = _rotate_xyz(data, x, y, z, rotation, rot_origin)
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
 
@@ -799,11 +865,24 @@ def interpolate_3d_proj(data: 'SarracenDataFrame', target: str, x: str = None, y
 
     return grid
 
-def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, target_z: str, x: str = None,
-                       y: str = None, kernel: BaseKernel = None, integral_samples: int = 1000,
-                       rotation: Union[np.ndarray, Rotation] = None, origin: np.ndarray = None, x_pixels: int = None,
-                       y_pixels: int = None, xlim: Tuple[float, float] = None, ylim: Tuple[float, float] = None,
-                       exact: bool = False, backend: str = None, dens_weight: bool = False, normalize: bool = True,
+def interpolate_3d_vec(data: 'SarracenDataFrame',
+                       target_x: str,
+                       target_y: str,
+                       target_z: str,
+                       x: str = None,
+                       y: str = None,
+                       kernel: BaseKernel = None,
+                       integral_samples: int = 1000,
+                       rotation: Union[np.ndarray, list, Rotation] = None,
+                       rot_origin: Union[np.ndarray, list, str] = None,
+                       x_pixels: int = None,
+                       y_pixels: int = None,
+                       xlim: Tuple[float, float] = None,
+                       ylim: Tuple[float, float] = None,
+                       exact: bool = False,
+                       backend: str = None,
+                       dens_weight: bool = False,
+                       normalize: bool = True,
                        hmin: bool = False):
     """
     Interpolate 3D vector particle data to a 2D grid of pixels.
@@ -827,9 +906,12 @@ def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
     rotation: array_like or SciPy Rotation, optional
         The rotation to apply to the data before interpolation. If defined as an array, the
         order of rotations is [z, y, x] in degrees.
-    origin: array_like, optional
-        Point of rotation of the data, in [x, y, z] form. Defaults to the centre
-        point of the bounds of the data.
+    rot_origin: array_like or ['com', 'midpoint'], optional
+        Point of rotation of the data. Only applies to 3D datasets. If array_like,
+        then the [x, y, z] coordinates specify the point around which the data is
+        rotated. If 'com', then data is rotated around the centre of mass. If
+        'midpoint', then data is rotated around the midpoint, that is, min + max
+        / 2. Defaults to the midpoint.
     x_pixels, y_pixels: int, optional
         Number of pixels in the output image in the x & y directions. Default values are chosen to keep
         a consistent aspect ratio.
@@ -876,10 +958,10 @@ def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     _check_boundaries(x_pixels, y_pixels, xlim, ylim)
 
-    x_data, y_data, _ = _rotate_xyz(data, x, y, z, rotation, origin)
+    x_data, y_data, _ = _rotate_xyz(data, x, y, z, rotation, rot_origin)
     if target_z not in data.columns:
         raise KeyError(f"z-directional target column '{target_z}' does not exist in the provided dataset.")
-    target_x_data, target_y_data, _ = _rotate_data(data, target_x, target_y, target_z, rotation, origin)
+    target_x_data, target_y_data, _ = _rotate_data(data, target_x, target_y, target_z, rotation, rot_origin)
 
     wx_data = _get_weight(data, target_x_data, dens_weight)
     wy_data = _get_weight(data, target_y_data, dens_weight)
@@ -907,11 +989,23 @@ def interpolate_3d_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, 
 
 
 
-def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
-                         z_slice: float = None, kernel: BaseKernel = None, rotation: Union[np.ndarray, Rotation] = None,
-                         origin: np.ndarray = None, x_pixels: int = None, y_pixels: int = None,
-                         xlim: Tuple[float, float] = None, ylim: Tuple[float, float] = None, backend: str = None,
-                         dens_weight: bool = False, normalize: bool = True, hmin: bool = False):
+def interpolate_3d_cross(data: 'SarracenDataFrame',
+                         target: str,
+                         x: str = None,
+                         y: str = None,
+                         z: str = None,
+                         z_slice: float = None,
+                         kernel: BaseKernel = None,
+                         rotation: Union[np.ndarray, list, Rotation] = None,
+                         rot_origin: Union[np.ndarray, list, str] = None,
+                         x_pixels: int = None,
+                         y_pixels: int = None,
+                         xlim: Tuple[float, float] = None,
+                         ylim: Tuple[float, float] = None,
+                         backend: str = None,
+                         dens_weight: bool = False,
+                         normalize: bool = True,
+                         hmin: bool = False):
     """
     Interpolate 3D particle data to a 2D grid, using a 3D cross-section.
 
@@ -935,9 +1029,12 @@ def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, x: str = None, 
     rotation: array_like or SciPy Rotation, optional
         The rotation to apply to the data before interpolation. If defined as an array, the
         order of rotations is [z, y, x] in degrees.
-    origin: array_like, optional
-        Point of rotation of the data, in [x, y, z] form. Defaults to the centre
-        point of the bounds of the data.
+    rot_origin: array_like or ['com', 'midpoint'], optional
+        Point of rotation of the data. Only applies to 3D datasets. If array_like,
+        then the [x, y, z] coordinates specify the point around which the data is
+        rotated. If 'com', then data is rotated around the centre of mass. If
+        'midpoint', then data is rotated around the midpoint, that is, min + max
+        / 2. Defaults to the midpoint.
     x_pixels, y_pixels: int, optional
         Number of pixels in the output image in the x & y directions. Default values are chosen to keep
         a consistent aspect ratio.
@@ -989,7 +1086,7 @@ def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, x: str = None, 
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
 
-    x_data, y_data, z_data = _rotate_xyz(data, x, y, z, rotation, origin)
+    x_data, y_data, z_data = _rotate_xyz(data, x, y, z, rotation, rot_origin)
     h_data = _get_smoothing_lengths(data, hmin, x_pixels, y_pixels, xlim, ylim)
 
     grid = get_backend(backend) \
@@ -1006,12 +1103,25 @@ def interpolate_3d_cross(data: 'SarracenDataFrame', target: str, x: str = None, 
     return grid
 
 
-def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y: str, target_z: str,
-                             z_slice: float = None, x: str = None, y: str = None, z: str = None,
-                             kernel: BaseKernel = None, rotation: Union[np.ndarray, Rotation] = None, origin: np.ndarray = None,
-                             x_pixels: int = None, y_pixels: int = None, xlim: Tuple[float, float] = None,
-                             ylim: Tuple[float, float] = None, backend: str = None, dens_weight: bool = False,
-                             normalize: bool = True, hmin: bool = False):
+def interpolate_3d_cross_vec(data: 'SarracenDataFrame',
+                             target_x: str,
+                             target_y: str,
+                             target_z: str,
+                             z_slice: float = None,
+                             x: str = None,
+                             y: str = None,
+                             z: str = None,
+                             kernel: BaseKernel = None,
+                             rotation: Union[np.ndarray, list, Rotation] = None,
+                             rot_origin: Union[np.ndarray, list, str] = None,
+                             x_pixels: int = None,
+                             y_pixels: int = None,
+                             xlim: Tuple[float, float] = None,
+                             ylim: Tuple[float, float] = None,
+                             backend: str = None,
+                             dens_weight: bool = False,
+                             normalize: bool = True,
+                             hmin: bool = False):
     """
     Interpolate 3D vector particle data to a 2D grid, using a 3D cross-section.
 
@@ -1035,9 +1145,12 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y:
     rotation: array_like or SciPy Rotation, optional
         The rotation to apply to the data before interpolation. If defined as an array, the
         order of rotations is [z, y, x] in degrees.
-    origin: array_like, optional
-        Point of rotation of the data, in [x, y, z] form. Defaults to the centre
-        point of the bounds of the data.
+    rot_origin: array_like or ['com', 'midpoint'], optional
+        Point of rotation of the data. Only applies to 3D datasets. If array_like,
+        then the [x, y, z] coordinates specify the point around which the data is
+        rotated. If 'com', then data is rotated around the centre of mass. If
+        'midpoint', then data is rotated around the midpoint, that is, min + max
+        / 2. Defaults to the midpoint.
     x_pixels, y_pixels: int, optional
         Number of pixels in the output image in the x & y directions. Default values are chosen to keep
         a consistent aspect ratio.
@@ -1082,8 +1195,8 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y:
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     _check_boundaries(x_pixels, y_pixels, xlim, ylim)
 
-    x_data, y_data, z_data = _rotate_xyz(data, x, y, z, rotation, origin)
-    target_x_data, target_y_data, _ = _rotate_data(data, target_x, target_y, target_z, rotation, origin)
+    x_data, y_data, z_data = _rotate_xyz(data, x, y, z, rotation, rot_origin)
+    target_x_data, target_y_data, _ = _rotate_data(data, target_x, target_y, target_z, rotation, rot_origin)
 
     wx_data = _get_weight(data, target_x_data, dens_weight)
     wy_data = _get_weight(data, target_y_data, dens_weight)
@@ -1110,12 +1223,24 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame', target_x: str, target_y:
     return (gridx, gridy)
 
 
-def interpolate_3d_grid(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
-                        kernel: BaseKernel = None, rotation: Union[np.ndarray, Rotation] = None, rot_origin: np.ndarray = None,
-                        x_pixels: int = None, y_pixels: int = None, z_pixels: int = None,
-                        xlim: Tuple[float, float] = None, ylim: Tuple[float, float] = None,
-                        zlim: Tuple[float, float] = None, backend: str = None, dens_weight: bool = False,
-                        normalize: bool = True, hmin: bool = False):
+def interpolate_3d_grid(data: 'SarracenDataFrame',
+                        target: str,
+                        x: str = None,
+                        y: str = None,
+                        z: str = None,
+                        kernel: BaseKernel = None,
+                        rotation: Union[np.ndarray, list, Rotation] = None,
+                        rot_origin: Union[np.ndarray, list, str] = None,
+                        x_pixels: int = None,
+                        y_pixels: int = None,
+                        z_pixels: int = None,
+                        xlim: Tuple[float, float] = None,
+                        ylim: Tuple[float, float] = None,
+                        zlim: Tuple[float, float] = None,
+                        backend: str = None,
+                        dens_weight: bool = False,
+                        normalize: bool = True,
+                        hmin: bool = False):
     """
     Interpolate 3D particle data to a 3D grid of pixels
 
@@ -1137,9 +1262,12 @@ def interpolate_3d_grid(data: 'SarracenDataFrame', target: str, x: str = None, y
     rotation: array_like or SciPy Rotation, optional
         The rotation to apply to the data before interpolation. If defined as an array, the
         order of rotations is [z, y, x] in degrees.
-    rot_origin: array_like, optional
-        Point of rotation of the data, in [x, y, z] form. Defaults to the centre
-        point of the bounds of the data.
+    rot_origin: array_like or ['com', 'midpoint'], optional
+        Point of rotation of the data. Only applies to 3D datasets. If array_like,
+        then the [x, y, z] coordinates specify the point around which the data is
+        rotated. If 'com', then data is rotated around the centre of mass. If
+        'midpoint', then data is rotated around the midpoint, that is, min + max
+        / 2. Defaults to the midpoint.
     x_pixels, y_pixels, z_pixels: int, optional
         Number of pixels in the output image in the x, y & z directions. Default values are chosen to keep
         a consistent aspect ratio.

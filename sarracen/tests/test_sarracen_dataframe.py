@@ -1,5 +1,6 @@
 """pytest unit tests for sarracen_dataframe.py functionality."""
 import pandas as pd
+import numpy as np
 from matplotlib import pyplot as plt
 
 from sarracen import SarracenDataFrame, render
@@ -168,3 +169,23 @@ def test_calc_density():
 
     assert sdf['rho'][0] == sdf.params['mass'] * (sdf.params['hfact'] / sdf['h'][0])**3
     assert sdf['rho'][1] == sdf.params['mass'] * (sdf.params['hfact'] / sdf['h'][1])**3
+
+
+def test_centre_of_mass():
+    """ Basic test of centre of mass calculation. """
+
+    # randomly place particles
+    rng = np.random.default_rng(seed=5)
+    x = rng.random(100)
+    y = rng.random(100)
+    z = rng.random(100)
+    # mirror in 8 quadrants
+    x = np.append(x, [x, x, x, -1 * x, -1 * x, -1 * x, -1 * x])
+    y = np.append(y, [y, -1 * y, -1 * y, y, y, -1 * y, -1 * y])
+    z = np.append(z, [-1 * z, z, -1 * z, z, -1 * z, z, -1 * z])
+
+    sdf = SarracenDataFrame(data={'x': x, 'y': y, 'z': z},
+                            params={'mass': 3.2e-4})
+
+    assert sdf.centre_of_mass() == [0.0, 0.0, 0.0]
+
