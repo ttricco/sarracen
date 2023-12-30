@@ -14,6 +14,7 @@ backends = ['cpu']
 if cuda.is_available():
     backends.append('gpu')
 
+
 def rotate(target, rot_z, rot_y, rot_x):
     """ Perform a rotation of a target vector in three dimensions.
 
@@ -320,3 +321,40 @@ def test_axes_rotation_equivalency(backend):
         flip_x, flip_y = not flip_y, flip_x
 
 
+def test_com_rotation():
+    """ Rotation around centre of mass should equal rotation around 0
+    when positions have been reset around com. """
+
+    x = np.array([0.80500292, 0.80794079, 0.51532556, 0.28580138, 0.0539307,
+                  0.38336888, 0.40847321, 0.04527519, 0.04875771, 0.99917612])
+    y = np.array([0.55559612, 0.2714516, 0.87965117, 0.06421444, 0.67918153,
+                  0.8700885, 0.22731853, 0.89544824, 0.87219547, 0.01851722])
+    z = np.array([0.32494264, 0.80621533, 0.31645209, 0.14903858, 0.69851199,
+                  0.4485441, 0.79893949, 0.23551646, 0.31978465, 0.79987953])
+    h = np.array([0.08582579, 0.08449268, 0.03678807, 0.09510229, 0.03994252,
+                  0.09364420, 0.05561597, 0.02401353, 0.07414216, 0.06743897])
+    val = np.array([3.9045891, 7.9793389, 3.8047537, 7.1325786, 6.125178,
+                    9.4100098, 9.9167672, 7.2367625, 8.0884381, 1.5286502])
+    mass = 3.2e-4
+
+    sdf_com = SarracenDataFrame({'x': x, 'y': y, 'z': z, 'h': h, 'val': val},
+                                params={'mass': mass, 'hfact': 1.2})
+
+    com = [(x * mass).sum() / (10 * mass),
+           (y * mass).sum() / (10 * mass),
+           (z * mass).sum() / (10 * mass)]
+    x = x - com[0]
+    y = y - com[1]
+    z = z - com[2]
+    sdf_zero = SarracenDataFrame({'x': x, 'y': y, 'z': z, 'h': h, 'val': val},
+                                 params = {'mass': mass, 'hfact': 1.2})
+
+    for func in [interpolate_3d_proj, interpolate_3d_cross]:
+        image1 = func(sdf_com, 'val',
+                      x_pixels=50, y_pixels=50,
+                      rotation=[35, 60, 75], rot_origin='com')
+        image2 = func(sdf_zero, 'val',
+                      x_pixels=50, y_pixels=50,
+                      rotation=[35, 60, 75], rot_origin=[0, 0, 0])
+
+        assert_allclose(image1, image2)

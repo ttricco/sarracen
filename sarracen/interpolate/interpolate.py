@@ -11,6 +11,7 @@ from ..kernels import BaseKernel
 from typing import Tuple, Union
 import warnings
 
+
 def _default_xy(data, x, y):
     """
     Utility function to determine the x & y columns to use during 2D interpolation.
