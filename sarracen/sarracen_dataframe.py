@@ -112,6 +112,24 @@ class SarracenDataFrame(DataFrame):
     def _constructor(self):
         return SarracenDataFrame
 
+    def drop(self, *args, **kwargs):
+        """ Update special columns if needed. """
+
+        data = super().drop(*args, **kwargs)
+
+        labels = args[0] if args else None or kwargs.get('labels')
+        if labels:
+            special_columns = ['xcol', 'ycol', 'zcol',
+                               'hcol', 'rhocol', 'mcol']
+            if not isinstance(labels, list):
+                labels = [labels]
+            for label in labels:
+                for col in special_columns:
+                    if label == getattr(data, col):
+                        setattr(data, col, None)
+
+        return data
+
     def _identify_special_columns(self):
         """
         Identify special columns commonly used in analysis functions.
@@ -391,7 +409,7 @@ class SarracenDataFrame(DataFrame):
 
     @xcol.setter
     def xcol(self, new_col: str):
-        if new_col in self:
+        if new_col in self or new_col is None:
             self._xcol = new_col
 
     @property
@@ -406,7 +424,7 @@ class SarracenDataFrame(DataFrame):
 
     @ycol.setter
     def ycol(self, new_col: str):
-        if new_col in self:
+        if new_col in self or new_col is None:
             self._ycol = new_col
 
     @property
@@ -421,7 +439,7 @@ class SarracenDataFrame(DataFrame):
 
     @zcol.setter
     def zcol(self, new_col: str):
-        if new_col in self:
+        if new_col in self or new_col is None:
             self._zcol = new_col
 
     @property
@@ -436,7 +454,7 @@ class SarracenDataFrame(DataFrame):
 
     @hcol.setter
     def hcol(self, new_col: str):
-        if new_col in self:
+        if new_col in self or new_col is None:
             self._hcol = new_col
 
     @property
@@ -451,7 +469,7 @@ class SarracenDataFrame(DataFrame):
 
     @mcol.setter
     def mcol(self, new_col: str):
-        if new_col in self:
+        if new_col in self or new_col is None:
             self._mcol = new_col
 
     @property
@@ -466,7 +484,7 @@ class SarracenDataFrame(DataFrame):
 
     @rhocol.setter
     def rhocol(self, new_col: str):
-        if new_col in self:
+        if new_col in self or new_col is None:
             self._rhocol = new_col
 
     @property
