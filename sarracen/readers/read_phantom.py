@@ -229,7 +229,7 @@ def read_phantom(filename: str, separate_types: str = 'sinks', ignore_inactive: 
 
         df, df_sinks = _read_array_blocks(fp, def_int_dtype, def_real_dtype)
 
-        if ignore_inactive:
+        if ignore_inactive and 'h' in df.columns:
             df = df[df['h'] > 0]
 
         # create mass column if multiple species in single dataframe
