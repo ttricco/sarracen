@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 import io
 from pandas import testing as tm
-from sarracen.readers import _read_capture_pattern
 import sarracen
 import pytest
 import tempfile
@@ -28,6 +27,7 @@ def _create_capture_pattern(def_int, def_real):
 
     return capture_pattern
 
+
 def _create_file_identifier():
     """ Construct 100-character file identifier. """
 
@@ -39,22 +39,23 @@ def _create_file_identifier():
     return bytes_file
 
 
-def _create_global_header(massoftype=1e-6, massoftype_7=None):
+def _create_global_header(massoftype=1e-6, massoftype_7=None,
+                          def_int=np.int32, def_real=np.float64):
     """ Construct global variables. Only massoftype in this example. """
 
     read_tag = np.array([13], dtype='int32')
     bytes_file = bytearray()
-    for i in range(8):
+    for i in range(8):  # loop over 8 dtypes
         bytes_file += bytearray(read_tag.tobytes())
         nvars = (i == 5) + (massoftype_7 is not None)
-        if i == 5:
+        if i == 5:  # default real
             nvars = np.array([nvars], dtype='int32')
         else:
             nvars = np.array([0], dtype='int32')
         bytes_file += bytearray(nvars.tobytes())
         bytes_file += bytearray(read_tag.tobytes())
 
-        if i == 5:
+        if i == 5:  # default real
             bytes_file += bytearray(read_tag.tobytes())
             bytes_file += bytearray(map(ord, "massoftype".ljust(16)))
             if massoftype_7 is not None:
@@ -63,13 +64,13 @@ def _create_global_header(massoftype=1e-6, massoftype_7=None):
 
         if i == 5:
             bytes_file += bytearray(read_tag.tobytes())
-            bytes_file += bytearray(np.array([massoftype], dtype=np.float64))
+            bytes_file += bytearray(np.array([massoftype], dtype=def_real))
             if massoftype_7 is not None:
-                bytes_file += bytearray(np.array([massoftype_7], dtype=np.float64))
+                bytes_file += bytearray(np.array([massoftype_7], dtype=def_real))
             bytes_file += bytearray(read_tag.tobytes())
 
-
     return bytes_file
+
 
 def _create_particle_array(tag, data, dtype=np.float64):
     read_tag = np.array([13], dtype='int32')
@@ -85,15 +86,39 @@ def _create_particle_array(tag, data, dtype=np.float64):
 @pytest.mark.parametrize("def_int, def_real",
                          [(np.int32, np.float64), (np.int32, np.float32),
                           (np.int64, np.float64), (np.int64, np.float32)])
-def test_determine_default_precision(def_int, def_real):
+def test_determine_default_precision2(def_int, def_real):
     """ Test if default int / real precision can be determined. """
 
-    capture_pattern = _create_capture_pattern(def_int, def_real)
+    bytes_file = _create_capture_pattern(def_int, def_real)
+    bytes_file += _create_file_identifier()
+    bytes_file += _create_global_header(def_int=def_int, def_real=def_real)
 
-    f = io.BytesIO(capture_pattern)
-    returned_int, returned_real = _read_capture_pattern(f)
-    assert returned_int == def_int
-    assert returned_real == def_real
+    # create 1 block for gas
+    read_tag = np.array([13], dtype='int32')
+    bytes_file += bytearray(read_tag.tobytes())
+    nblocks = np.array([1], dtype='int32')
+    bytes_file += bytearray(nblocks.tobytes())
+    bytes_file += bytearray(read_tag.tobytes())
+
+    # 2 particles storing 1 default int and real arrays
+    bytes_file += bytearray(read_tag.tobytes())
+    n = np.array([2], dtype='int64')
+    nums = np.array([1, 0, 0, 0, 0, 1, 0, 0], dtype='int32')
+    bytes_file += bytearray(n.tobytes())
+    bytes_file += bytearray(nums.tobytes())
+    bytes_file += bytearray(read_tag.tobytes())
+
+    # write particle arrays
+    bytes_file += _create_particle_array("def_int", [1, 2], dtype=def_int)
+    bytes_file += _create_particle_array("def_real", [1.0, 2.0], dtype=def_real)
+
+    with tempfile.NamedTemporaryFile() as fp:
+        fp.write(bytes_file)
+        fp.seek(0)
+
+        sdf = sarracen.read_phantom(fp.name)
+
+        assert list(sdf.dtypes) == [def_int, def_real]
 
 
 def test_gas_particles_only():
@@ -147,6 +172,7 @@ def test_gas_particles_only():
         assert 'mass' not in sdf.columns
         tm.assert_series_equal(sdf['x'], pd.Series([0, 0, 0, 0, 1, 1, 1, 1]),
                                check_index=False, check_names=False, check_dtype=False)
+
 
 def test_gas_dust_particles():
 
@@ -227,6 +253,7 @@ def test_gas_dust_particles():
         tm.assert_series_equal(sdf[sdf.itype == 7]['x'],
                                pd.Series([0.5, 0.5, 0.5, 0.5, 1.5, 1.5, 1.5, 1.5]),
                                check_index=False, check_names=False, check_dtype=False)
+
 
 def test_gas_sink_particles():
 
@@ -311,6 +338,7 @@ def test_gas_sink_particles():
                                check_index=False, check_names=False, check_dtype=False)
         tm.assert_series_equal(sdf['h'], pd.Series([1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.0]),
                                check_index=False, check_names=False, check_dtype=False)
+
 
 def test_gas_dust_sink_particles():
 
