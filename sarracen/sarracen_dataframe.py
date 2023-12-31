@@ -35,7 +35,11 @@ class SarracenDataFrame(DataFrame):
 
     """
 
-    _metadata = ['_params', '_units', '_xcol', '_ycol', '_zcol', '_hcol', '_mcol', '_rhocol', '_kernel']
+    _internal_names = pd.DataFrame._internal_names + ['_xcol', '_ycol', '_zcol',
+                                                      '_mcol', '_rhocol', '_hcol']
+    _internal_names_set = set(_internal_names)
+
+    _metadata = ['_params', '_units', '_kernel']
 
     def __init__(self, data=None, params=None, *args, **kwargs):
         """
@@ -111,38 +115,6 @@ class SarracenDataFrame(DataFrame):
     @property
     def _constructor(self):
         return SarracenDataFrame
-
-    def drop(self, *args, **kwargs):
-        """ Update special columns if needed. """
-
-        data = super().drop(*args, **kwargs)
-
-        labels = args[0] if args else None or kwargs.get('labels')
-        if labels:
-            special_columns = ['xcol', 'ycol', 'zcol',
-                               'hcol', 'rhocol', 'mcol']
-            if not isinstance(labels, list):
-                labels = [labels]
-            for label in labels:
-                for col in special_columns:
-                    if label == getattr(data, col):
-                        setattr(data, col, None)
-
-        return data
-
-    def __getitem__(self, key):
-        """ Override to update special columns. """
-
-        data = super().__getitem__(key)
-
-        if isinstance(data, SarracenDataFrame):
-            special_columns = ['xcol', 'ycol', 'zcol',
-                               'hcol', 'rhocol', 'mcol']
-            for col in special_columns:
-                if getattr(data, col) not in data.columns:
-                    setattr(data, col, None)
-
-        return data
 
     def _identify_special_columns(self):
         """
