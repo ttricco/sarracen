@@ -2,9 +2,11 @@ from typing import Union, Callable, Tuple
 
 from matplotlib.axes import Axes
 from matplotlib.colors import Colormap
+import pandas as pd
 from pandas import DataFrame, Series
 from numba import cuda
 import numpy as np
+from scipy.spatial.transform import Rotation
 
 from .render import streamlines, arrowplot, render, lineplot
 from .interpolate import interpolate_2d, interpolate_3d_grid
@@ -33,7 +35,11 @@ class SarracenDataFrame(DataFrame):
 
     """
 
-    _metadata = ['_params', '_units', '_xcol', '_ycol', '_zcol', '_hcol', '_mcol', '_rhocol', '_kernel']
+    _internal_names = pd.DataFrame._internal_names + ['_xcol', '_ycol', '_zcol',
+                                                      '_mcol', '_rhocol', '_hcol']
+    _internal_names_set = set(_internal_names)
+
+    _metadata = ['_params', '_units', '_kernel']
 
     def __init__(self, data=None, params=None, *args, **kwargs):
         """
@@ -137,7 +143,7 @@ class SarracenDataFrame(DataFrame):
         elif 'ry' in self.columns:
             self.ycol = 'ry'
         elif len(self.columns) > 1:
-            self.ycol= self.columns[1]
+            self.ycol = self.columns[1]
 
         # First look for 'z', then 'rz', and then assume that data is 2 dimensional.
         if 'z' in self.columns:
@@ -211,14 +217,34 @@ class SarracenDataFrame(DataFrame):
         self['rho'] = (self.params['hfact'] / self[self.hcol]) ** (self.get_dim()) * mass
         self.rhocol = 'rho'
 
+    def centre_of_mass(self):
+        """
+        Returns the centre of mass of the data.
+        """
+        if {self.mcol}.issubset(self.columns):
+            mass = self[self.mcol]
+        else:
+            mass = self.params['mass']
+
+        com_x = (self[self.xcol] * mass).sum()
+        com_y = (self[self.ycol] * mass).sum()
+        com_z = (self[self.zcol] * mass).sum()
+
+        if isinstance(mass, pd.Series):
+            mass = 1.0 / mass.sum()
+        else:
+            mass = 1.0 / (len(self) * mass)
+
+        return [com_x * mass, com_y * mass, com_z * mass]
+
     @_copy_doc(render)
     def render(self, target: str, x: str = None, y: str = None, z: str = None, xsec: float = None,
                kernel: BaseKernel = None, x_pixels: int = None, y_pixels: int = None, xlim: Tuple[float, float] = None,
                ylim: Tuple[float, float] = None, cmap: Union[str, Colormap] = 'gist_heat', cbar: bool = True,
                cbar_kws: dict = {}, cbar_ax: Axes = None, ax: Axes = None, exact: bool = None, backend: str = None,
-               integral_samples: int = 1000, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
-               log_scale: bool = None, dens_weight: bool = None, normalize: bool = False, hmin: bool = False,
-               **kwargs) -> Axes:
+               integral_samples: int = 1000, rotation: Union[np.ndarray, list, Rotation] = None,
+               rot_origin: Union[np.ndarray, list, str] = None, log_scale: bool = None, dens_weight: bool = None,
+               normalize: bool = False, hmin: bool = False, **kwargs) -> Axes:
         return render(self, target, x, y, z, xsec, kernel, x_pixels, y_pixels, xlim, ylim, cmap, cbar, cbar_kws,
                       cbar_ax, ax, exact, backend, integral_samples, rotation, rot_origin, log_scale, dens_weight,
                       normalize, hmin, **kwargs)
@@ -235,27 +261,28 @@ class SarracenDataFrame(DataFrame):
     @_copy_doc(streamlines)
     def streamlines(self, target: Union[Tuple[str, str], Tuple[str, str, str]], x: str = None, y: str = None,
                     z: str = None, xsec: int = None, kernel: BaseKernel = None, integral_samples: int = 1000,
-                    rotation: np.ndarray = None, rot_origin: np.ndarray = None, x_pixels: int = None,
-                    y_pixels: int = None, xlim: Tuple[float, float] = None, ylim: Tuple[float, float] = None,
-                    ax: Axes = None, exact: bool = None, backend: str = None, dens_weight: bool = False,
-                    normalize: bool = False, hmin: bool = False, **kwargs) -> Axes:
+                    rotation: Union[np.ndarray, list, Rotation] = None, rot_origin: Union[np.ndarray, list, str] = None,
+                    x_pixels: int = None, y_pixels: int = None, xlim: Tuple[float, float] = None,
+                    ylim: Tuple[float, float] = None, ax: Axes = None, exact: bool = None, backend: str = None,
+                    dens_weight: bool = False, normalize: bool = False, hmin: bool = False, **kwargs) -> Axes:
         return streamlines(self, target, x, y, z, xsec, kernel, integral_samples, rotation, rot_origin, x_pixels,
                            y_pixels, xlim, ylim, ax, exact, backend, dens_weight, normalize, hmin, **kwargs)
 
     @_copy_doc(arrowplot)
     def arrowplot(self, target: Union[Tuple[str, str], Tuple[str, str, str]], x: str = None, y: str = None,
                   z: str = None, xsec: int = None, kernel: BaseKernel = None, integral_samples: int = 1000,
-                  rotation: np.ndarray = None, rot_origin: np.ndarray = None, x_arrows: int = None,
-                  y_arrows: int = None, xlim: Tuple[float, float] = None, ylim: Tuple[float, float] = None,
-                  ax: Axes = None, qkey: bool = True, qkey_kws: dict = None, exact: bool = None, backend: str = None,
-                  dens_weight: bool = None, normalize: bool = False, hmin: bool = False, **kwargs) -> Axes:
+                  rotation: Union[np.ndarray, list, Rotation] = None, rot_origin: Union[np.ndarray, list, str] = None,
+                  x_arrows: int = None, y_arrows: int = None, xlim: Tuple[float, float] = None,
+                  ylim: Tuple[float, float] = None, ax: Axes = None, qkey: bool = True, qkey_kws: dict = None,
+                  exact: bool = None, backend: str = None, dens_weight: bool = None, normalize: bool = False,
+                  hmin: bool = False, **kwargs) -> Axes:
         return arrowplot(self, target, x, y, z, xsec, kernel, integral_samples, rotation, rot_origin, x_arrows,
                          y_arrows, xlim, ylim, ax, qkey, qkey_kws, exact, backend, dens_weight, normalize, hmin,
                          **kwargs)
 
     def sph_interpolate(self, target: str, x: str = None, y: str = None, z: str = None, kernel: BaseKernel = None,
-                        rotation: np.ndarray = None, rot_origin: np.ndarray = None, x_pixels: int = None,
-                        y_pixels: int = None, z_pixels: int = None, xlim: Tuple[float, float] = None,
+                        rotation: Union[np.ndarray, list, Rotation] = None, rot_origin: Union[np.ndarray, list, str] = None,
+                        x_pixels: int = None, y_pixels: int = None, z_pixels: int = None, xlim: Tuple[float, float] = None,
                         ylim: Tuple[float, float] = None, zlim: Tuple[float, float] = None,
                         exact: bool = None, backend: str = 'cpu', dens_weight: bool = False,
                         normalize: bool = False, hmin: bool = False) -> np.ndarray:
@@ -271,12 +298,15 @@ class SarracenDataFrame(DataFrame):
             detected in `data`.
         kernel: BaseKernel
             The kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
-        rotation: array_like or Rotation, optional
+        rotation: array_like or SciPy Rotation, optional
             The rotation to apply to the data before interpolation. If defined as an array, the
-            order of rotations is [z, y, x] in degrees. Only applicable to 3D datasets.
-        rot_origin: array_like, optional
-            Point of rotation of the data, in [x, y, z] form. Defaults to the centre
-            point of the bounds of the data. Only applicable to 3D datasets.
+            order of rotations is [z, y, x] in degrees. Only applies to 3D datasets.
+        rot_origin: array_like or ['com', 'midpoint'], optional
+            Point of rotation of the data. Only applies to 3D datasets. If array_like,
+            then the [x, y, z] coordinates specify the point around which the data is
+            rotated. If 'com', then data is rotated around the centre of mass. If
+            'midpoint', then data is rotated around the midpoint, that is, min + max
+            / 2. Defaults to the midpoint.
         x_pixels, y_pixels, z_pixels: int, optional
             Number of pixels in the output image in the x, y & z directions. Default values are chosen to keep
             a consistent aspect ratio.
@@ -365,7 +395,7 @@ class SarracenDataFrame(DataFrame):
 
     @xcol.setter
     def xcol(self, new_col: str):
-        if new_col in self:
+        if new_col in self or new_col is None:
             self._xcol = new_col
 
     @property
@@ -380,7 +410,7 @@ class SarracenDataFrame(DataFrame):
 
     @ycol.setter
     def ycol(self, new_col: str):
-        if new_col in self:
+        if new_col in self or new_col is None:
             self._ycol = new_col
 
     @property
@@ -395,7 +425,7 @@ class SarracenDataFrame(DataFrame):
 
     @zcol.setter
     def zcol(self, new_col: str):
-        if new_col in self:
+        if new_col in self or new_col is None:
             self._zcol = new_col
 
     @property
@@ -410,7 +440,7 @@ class SarracenDataFrame(DataFrame):
 
     @hcol.setter
     def hcol(self, new_col: str):
-        if new_col in self:
+        if new_col in self or new_col is None:
             self._hcol = new_col
 
     @property
@@ -425,7 +455,7 @@ class SarracenDataFrame(DataFrame):
 
     @mcol.setter
     def mcol(self, new_col: str):
-        if new_col in self:
+        if new_col in self or new_col is None:
             self._mcol = new_col
 
     @property
@@ -440,7 +470,7 @@ class SarracenDataFrame(DataFrame):
 
     @rhocol.setter
     def rhocol(self, new_col: str):
-        if new_col in self:
+        if new_col in self or new_col is None:
             self._rhocol = new_col
 
     @property

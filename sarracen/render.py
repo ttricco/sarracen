@@ -11,6 +11,7 @@ Or, they can be accessed through a `SarracenDataFrame` object, for example:
 from typing import Union, Tuple
 
 import numpy as np
+from scipy.spatial.transform import Rotation
 import seaborn as sns
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
@@ -20,7 +21,6 @@ from .interpolate import interpolate_2d_line, interpolate_2d, interpolate_3d_pro
     interpolate_3d_vec, interpolate_3d_cross_vec, interpolate_2d_vec, interpolate_3d_line
 from .kernels import BaseKernel
 
-from typing import Tuple
 
 def _default_axes(data, x, y):
     """
@@ -104,13 +104,32 @@ def _set_pixels(x_pixels, y_pixels, xlim, ylim, default):
     return x_pixels, y_pixels
 
 
-def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
-           xsec: Union[float, bool] = None, kernel: BaseKernel = None, x_pixels: int = None, y_pixels: int = None,
-           xlim: Tuple[float, float] = None, ylim: Tuple[float, float] = None, cmap: Union[str, Colormap] = 'gist_heat',
-           cbar: bool = True, cbar_kws: dict = {}, cbar_ax: Axes = None, ax: Axes = None, exact: bool = None,
-           backend: str = None, integral_samples: int = 1000, rotation: np.ndarray = None,
-           rot_origin: np.ndarray = None, log_scale: bool = False, dens_weight: bool = None, normalize: bool = True,
-           hmin: bool = False, **kwargs) -> Axes:
+def render(data: 'SarracenDataFrame',
+           target: str,
+           x: str = None,
+           y: str = None,
+           z: str = None,
+           xsec: float = None,
+           kernel: BaseKernel = None,
+           x_pixels: int = None,
+           y_pixels: int = None,
+           xlim: Tuple[float, float] = None,
+           ylim: Tuple[float, float] = None,
+           cmap: Union[str, Colormap] = 'gist_heat',
+           cbar: bool = True,
+           cbar_kws: dict = {},
+           cbar_ax: Axes = None,
+           ax: Axes = None,
+           exact: bool = None,
+           backend: str = None,
+           integral_samples: int = 1000,
+           rotation: Union[np.ndarray, list, Rotation] = None,
+           rot_origin: Union[np.ndarray, list, str] = None,
+           log_scale: bool = False,
+           dens_weight: bool = None,
+           normalize: bool = True,
+           hmin: bool = False,
+           **kwargs) -> Axes:
     """
     Render a scalar SPH target variable to a grid plot.
 
@@ -149,12 +168,15 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
         'cpu' is used. A manually specified backend in `data` will override the default.
     integral_samples: int, optional
         If using column interpolation, the number of sample points to take when approximating the 2D column kernel.
-    rotation: array_like or Rotation, optional
+    rotation: array_like or SciPy Rotation, optional
         The rotation to apply to the data before interpolation. If defined as an array, the
         order of rotations is [z, y, x] in degrees. Only applies to 3D datasets.
-    rot_origin: array_like, optional
-        Point of rotation of the data, in [x, y, z] form. Defaults to the centre
-        point of the bounds of the data. Only applies to 3D datasets.
+    rot_origin: array_like or ['com', 'midpoint'], optional
+        Point of rotation of the data. Only applies to 3D datasets. If array_like,
+        then the [x, y, z] coordinates specify the point around which the data is
+        rotated. If 'com', then data is rotated around the centre of mass. If
+        'midpoint', then data is rotated around the midpoint, that is, min + max
+        / 2. Defaults to the midpoint.
     log_scale: bool
         Whether to use a logarithmic scale for color coding.
     dens_weight: bool
@@ -279,10 +301,22 @@ def render(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None,
     return ax
 
 
-def lineplot(data: 'SarracenDataFrame', target: str, x: str = None, y: str = None, z: str = None,
-             kernel: BaseKernel = None, pixels: int = 512, xlim: Tuple[float, float] = None,
-             ylim: Tuple[float, float] = None, zlim: Tuple[float, float] = None, ax: Axes = None, backend: str = None,
-             log_scale: bool = False, dens_weight: bool = False, normalize: bool = True, hmin: bool = False, **kwargs):
+def lineplot(data: 'SarracenDataFrame',
+             target: str,
+             x: str = None,
+             y: str = None,
+             z: str = None,
+             kernel: BaseKernel = None,
+             pixels: int = 512,
+             xlim: Tuple[float, float] = None,
+             ylim: Tuple[float, float] = None,
+             zlim: Tuple[float, float] = None,
+             ax: Axes = None, backend: str = None,
+             log_scale: bool = False,
+             dens_weight: bool = False,
+             normalize: bool = True,
+             hmin: bool = False,
+             **kwargs) -> Axes:
     """
     Render a scalar SPH target variable to line plot.
 
@@ -380,12 +414,27 @@ def lineplot(data: 'SarracenDataFrame', target: str, x: str = None, y: str = Non
     return ax
 
 
-def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[str, str, str]], x: str = None,
-                y: str = None, z: str = None, xsec: int = None, kernel: BaseKernel = None,
-                integral_samples: int = 1000, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
-                x_pixels: int = None, y_pixels: int = None, xlim: Tuple[float, float] = None,
-                ylim: Tuple[float, float] = None, ax: Axes = None, exact: bool = None, backend: str = None,
-                dens_weight: bool = None, normalize: bool = True, hmin: bool = False, **kwargs) -> Axes:
+def streamlines(data: 'SarracenDataFrame',
+                target: Union[Tuple[str, str], Tuple[str, str, str]],
+                x: str = None,
+                y: str = None,
+                z: str = None,
+                xsec: float = None,
+                kernel: BaseKernel = None,
+                integral_samples: int = 1000,
+                rotation: Union[np.ndarray, list, Rotation] = None,
+                rot_origin: Union[np.ndarray, list, str] = None,
+                x_pixels: int = None,
+                y_pixels: int = None,
+                xlim: Tuple[float, float] = None,
+                ylim: Tuple[float, float] = None,
+                ax: Axes = None,
+                exact: bool = None,
+                backend: str = None,
+                dens_weight: bool = None,
+                normalize: bool = True,
+                hmin: bool = False,
+                **kwargs) -> Axes:
     """
     Create an SPH interpolated streamline plot of a target vector.
 
@@ -400,7 +449,7 @@ def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[
         Particle data, in a SarracenDataFrame.
     target: str tuple of shape (2) or (3).
         Column label of the target vector. Shape must match the # of dimensions in `data`.
-    xsec: float
+    xsec: float, optional
         The z to take a cross-section at. If none, column interpolation is performed.
     x, y, z: str, optional
         Column label of the x, y & z directional axes. Defaults to the columns detected in `data`.
@@ -408,12 +457,15 @@ def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[
         Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
     integral_samples: int, optional
         If using column interpolation, the number of sample points to take when approximating the 2D column kernel.
-    rotation: array_like or Rotation, optional
+    rotation: array_like or SciPy Rotation, optional
         The rotation to apply to the data before interpolation. If defined as an array, the
         order of rotations is [z, y, x] in degrees.
-    rot_origin: array_like, optional
-        Point of rotation of the data, in [x, y, z] form. Defaults to the centre
-        point of the bounds of the data.
+    rot_origin: array_like or ['com', 'midpoint'], optional
+        Point of rotation of the data. Only applies to 3D datasets. If array_like,
+        then the [x, y, z] coordinates specify the point around which the data is
+        rotated. If 'com', then data is rotated around the centre of mass. If
+        'midpoint', then data is rotated around the midpoint, that is, min + max
+        / 2. Defaults to the midpoint.
     x_pixels, y_pixels: int, optional
         Number of interpolation samples to pass to ax.streamlines(). Default values are chosen to keep
         a consistent aspect ratio.
@@ -508,12 +560,28 @@ def streamlines(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[
     return ax
 
 
-def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[str, str, str]], x: str = None,
-              y: str = None, z: str = None, xsec: float = None, kernel: BaseKernel = None,
-              integral_samples: int = 1000, rotation: np.ndarray = None, rot_origin: np.ndarray = None,
-              x_arrows: int = None, y_arrows: int = None, xlim: Tuple[float, float] = None,
-              ylim: Tuple[float, float] = None, ax: Axes = None, qkey: bool = True, qkey_kws=None, exact: bool = None,
-              backend: str = None, dens_weight: bool = None, normalize: bool = True, hmin: bool = False,
+def arrowplot(data: 'SarracenDataFrame',
+              target: Union[Tuple[str, str], Tuple[str, str, str]],
+              x: str = None,
+              y: str = None,
+              z: str = None,
+              xsec: float = None,
+              kernel: BaseKernel = None,
+              integral_samples: int = 1000,
+              rotation: Union[np.ndarray, list, Rotation] = None,
+              rot_origin: Union[np.ndarray, list, str] = None,
+              x_arrows: int = None,
+              y_arrows: int = None,
+              xlim: Tuple[float, float] = None,
+              ylim: Tuple[float, float] = None,
+              ax: Axes = None,
+              qkey: bool = True,
+              qkey_kws=None,
+              exact: bool = None,
+              backend: str = None,
+              dens_weight: bool = None,
+              normalize: bool = True,
+              hmin: bool = False,
               **kwargs) -> Axes:
     """
     Create an SPH interpolated vector field plot of a target vector.
@@ -537,11 +605,15 @@ def arrowplot(data: 'SarracenDataFrame', target: Union[Tuple[str, str], Tuple[st
         Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
     integral_samples: int, optional
         If using column interpolation, the number of sample points to take when approximating the 2D column kernel.
-    rotation: array_like or Rotation, optional
+    rotation: array_like or SciPy Rotation, optional
         The rotation to apply to the data before interpolation. If defined as an array, the order of rotations
         is [z, y, x] in degrees.
-    rot_origin: array_like, optional
-        Point of rotation of the data, in [x, y, z] form. Defaults to the centre point of the bounds of the data.
+    rot_origin: array_like or ['com', 'midpoint'], optional
+        Point of rotation of the data. Only applies to 3D datasets. If array_like,
+        then the [x, y, z] coordinates specify the point around which the data is
+        rotated. If 'com', then data is rotated around the centre of mass. If
+        'midpoint', then data is rotated around the midpoint, that is, min + max
+        / 2. Defaults to the midpoint.
     x_arrows, y_arrows: int, optional
         Number of arrows in the output image in the x & y directions. Default values are chosen to keep
         a consistent aspect ratio.
