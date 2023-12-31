@@ -130,6 +130,20 @@ class SarracenDataFrame(DataFrame):
 
         return data
 
+    def __getitem__(self, key):
+        """ Override to update special columns. """
+
+        data = super().__getitem__(key)
+
+        if isinstance(data, SarracenDataFrame):
+            special_columns = ['xcol', 'ycol', 'zcol',
+                               'hcol', 'rhocol', 'mcol']
+            for col in special_columns:
+                if getattr(data, col) not in data.columns:
+                    setattr(data, col, None)
+
+        return data
+
     def _identify_special_columns(self):
         """
         Identify special columns commonly used in analysis functions.
