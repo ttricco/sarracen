@@ -44,7 +44,7 @@ def _bin_particles_by_radius(data: 'SarracenDataFrame',
         Coordinate system to use to calculate the particle radii. Can be
         either *spherical* or *cylindrical*. Defaults to *cylindrical*.
     origin : array-like, optional
-        The x, y and z position around which to compute radii. Defaults to
+        The x, y and z centre point around which to compute radii. Defaults to
         [0, 0, 0].
 
     Returns
@@ -77,6 +77,14 @@ def _bin_particles_by_radius(data: 'SarracenDataFrame',
     return rbins, bin_edges
 
 
+def _get_bin_midpoints(bin_edges: np.ndarray) -> np.ndarray:
+    """
+    Calculate the midpoint of bins given their edges.
+    """
+
+    return 0.5 * (bin_edges[1:] - bin_edges[:-1]) + bin_edges[:-1]
+
+
 def surface_density(data: 'SarracenDataFrame',
                     r_in: float = None,
                     r_out: float = None,
@@ -106,17 +114,17 @@ def surface_density(data: 'SarracenDataFrame',
         Coordinate system to use to calculate the particle radii. Can be
         either *spherical* or *cylindrical*. Defaults to *cylindrical*.
     origin : array-like, optional
-        The x, y and z position around which to compute radii. Defaults to
+        The x, y and z centre point around which to compute radii. Defaults to
         [0, 0, 0].
     retbins : bool, optional
-        Whether to return the bin edges or not. Defaults to False.
+        Whether to return the midpoints of the bins or not. Defaults to False.
 
     Returns
     -------
     array
         A NumPy array of length bins containing the surface density profile.
     array, optional
-        The location of the bin edges. Only returned if *retbins=True*.
+        The midpoint values of each bin. Only returned if *retbins=True*.
 
     Raises
     ------
@@ -143,7 +151,7 @@ def surface_density(data: 'SarracenDataFrame',
         sigma = data.groupby(rbins).count().iloc[:, 0] * mass
 
     if retbins:
-        return (sigma / areas).to_numpy(), bin_edges
+        return (sigma / areas).to_numpy(), _get_bin_midpoints(bin_edges)
     else:
         return (sigma / areas).to_numpy()
 
@@ -162,7 +170,7 @@ def _calc_angular_momentum(data: 'SarracenDataFrame',
     rbins: Series
         The radial bin to which each particle belongs.
     origin: list
-
+        The x, y and z centre point around which to compute radii.
     unit_vector: bool
         Whether to convert the angular momentum to unit vectors.
         Default is True.
@@ -232,17 +240,17 @@ def angular_momentum(data: 'SarracenDataFrame',
         Coordinate system to use to calculate the particle radii. Can be
         either *spherical* or *cylindrical*. Defaults to *cylindrical*.
     origin : array-like, optional
-        The x, y and z position around which to compute radii. Defaults to
+        The x, y and z centre point around which to compute radii. Defaults to
         [0, 0, 0].
     retbins : bool, optional
-        Whether to return the bin edges or not. Defaults to False.
+        Whether to return the midpoints of the bins or not. Defaults to False.
 
     Returns
     -------
     array
         A NumPy array of length bins containing the angular momentum profile.
     array, optional
-        The location of the bin edges. Only returned if *retbins=True*.
+        The midpoint values of each bin. Only returned if *retbins=True*.
 
     Raises
     ------
@@ -258,7 +266,7 @@ def angular_momentum(data: 'SarracenDataFrame',
     Lx, Ly, Lz = Lx.to_numpy(), Ly.to_numpy(), Lz.to_numpy()
 
     if retbins:
-        return Lx, Ly, Lz, bin_edges
+        return Lx, Ly, Lz, _get_bin_midpoints(bin_edges)
     else:
         return Lx, Ly, Lz
 
@@ -276,7 +284,7 @@ def _calc_scale_height(data: 'SarracenDataFrame',
     rbins: Series
         The radial bin to which each particle belongs.
     origin : array-like, optional
-        The x, y and z position around which to compute radii. Defaults to
+        The x, y and z centre point around which to compute radii. Defaults to
         [0, 0, 0].
 
     Returns
@@ -301,13 +309,14 @@ def scale_height(data: 'SarracenDataFrame',
                  origin: list = None,
                  retbins: bool = False):
     """
-    Calculates the scale height, H, of the disc.
+    Calculates the scale height, H/R, of the disc.
 
-    The scale height, H, is computed by segmenting the particles into radial
+    The scale height, H/R, is computed by segmenting the particles into radial
     bins (rings) and calculating the angular momentum profile of the disc.
     Each particle takes the dot product of its position vector with the
     angular momentum vector of its corresponding bin. The standard deviation
-    of this result per bin yields the scale height profile of the disc.
+    of this result per bin yields the scale height profile of the disc, which
+    is divided by the midpoint radius of each bin.
 
     Parameters
     ----------
@@ -324,17 +333,17 @@ def scale_height(data: 'SarracenDataFrame',
         Coordinate system to use to calculate the particle radii. Can be
         either *spherical* or *cylindrical*. Defaults to *cylindrical*.
     origin : array-like, optional
-        The x, y and z position around which to compute radii. Defaults to
+        The x, y and z centre point around which to compute radii. Defaults to
         [0, 0, 0].
     retbins : bool, optional
-        Whether to return the bin edges or not. Defaults to False.
+        Whether to return the midpoints of the bins or not. Defaults to False.
 
     Returns
     -------
     array
         A NumPy array of length bins scale height, H, profile.
     array, optional
-        The location of the bin edges. Only returned if *retbins=True*.
+        The midpoint values of each bin. Only returned if *retbins=True*.
 
     Raises
     ------
@@ -351,10 +360,11 @@ def scale_height(data: 'SarracenDataFrame',
     rbins, bin_edges = _bin_particles_by_radius(data, r_in, r_out, bins,
                                                 geometry, origin)
 
-    H = _calc_scale_height(data, rbins, origin).to_numpy()
+    midpoints = _get_bin_midpoints(bin_edges)
+    H = _calc_scale_height(data, rbins, origin).to_numpy() / midpoints
 
     if retbins:
-        return H, bin_edges
+        return H, midpoints
     else:
         return H
 
@@ -388,17 +398,17 @@ def honH(data: 'SarracenDataFrame',
         Coordinate system to use to calculate the particle radii. Can be
         either *spherical* or *cylindrical*. Defaults to *cylindrical*.
     origin : array-like, optional
-        The x, y and z position around which to compute radii. Defaults to
+        The x, y and z centre point around which to compute radii. Defaults to
         [0, 0, 0].
     retbins : bool, optional
-        Whether to return the bin edges or not. Defaults to False.
+        Whether to return the midpoints of the bins or not. Defaults to False.
 
     Returns
     -------
     array
         A NumPy array of length bins containing the <h>/H profile.
     array, optional
-        The location of the bin edges. Only returned if *retbins=True*.
+        The midpoint values of each bin. Only returned if *retbins=True*.
 
     Raises
     ------
@@ -419,6 +429,6 @@ def honH(data: 'SarracenDataFrame',
     mean_h = data.groupby(rbins)[data.hcol].mean().to_numpy()
 
     if retbins:
-        return mean_h / H, bin_edges
+        return mean_h / H, _get_bin_midpoints(bin_edges)
     else:
         return mean_h / H
