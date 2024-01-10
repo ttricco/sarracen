@@ -44,7 +44,7 @@ def _bin_particles_by_radius(data: 'SarracenDataFrame',
     -------
     rbins: Series
         The radial bin to which each particle belongs.
-    bin_locations: ndarray
+    bin_edges: ndarray
         Locations of the bin edges.
     """
 
@@ -67,10 +67,10 @@ def _bin_particles_by_radius(data: 'SarracenDataFrame',
     if r_out is None:
         r_out = r.max() + sys.float_info.epsilon
 
-    bin_locations = np.linspace(r_in, r_out, bins+1)
-    rbins = pd.cut(r, bin_locations)
+    bin_edges = np.linspace(r_in, r_out, bins+1)
+    rbins = pd.cut(r, bin_edges)
 
-    return rbins, bin_locations
+    return rbins, bin_edges
 
 
 def surface_density(data: 'SarracenDataFrame',
@@ -126,10 +126,10 @@ def surface_density(data: 'SarracenDataFrame',
     <https://doi.org/10.1111/j.1365-2966.2010.16526.x>`_.
     """
 
-    rbins, bin_locations = _bin_particles_by_radius(data, r_in, r_out, bins,
+    rbins, bin_edges = _bin_particles_by_radius(data, r_in, r_out, bins,
                                                     geometry, origin)
 
-    areas = np.pi * (bin_locations[1:] ** 2 - bin_locations[:-1] ** 2)
+    areas = np.pi * (bin_edges[1:] ** 2 - bin_edges[:-1] ** 2)
 
     mass = _get_mass(data)
     if isinstance(mass, pd.Series):
@@ -138,17 +138,16 @@ def surface_density(data: 'SarracenDataFrame',
         sigma = data.groupby(rbins).count().iloc[:, 0] * mass
 
     if retbins:
-        return (sigma / areas).to_numpy(), bin_locations
+        return (sigma / areas).to_numpy(), bin_edges
     else:
         return (sigma / areas).to_numpy()
 
 
-def _calc_angular_momenta(data: 'SarracenDataFrame',
-                          rbins: pd.Series,
-                          bin_locations: np.ndarray,
-                          unit_vector: bool):
+def _calc_angular_momentum(data: 'SarracenDataFrame',
+                           rbins: pd.Series,
+                           unit_vector: bool):
     """
-    Utility function to calculate angular momenta of the disc.
+    Utility function to calculate angular momentum of the disc.
 
     Parameters
     ----------
@@ -156,10 +155,8 @@ def _calc_angular_momenta(data: 'SarracenDataFrame',
         Particle data, in a SarracenDataFrame.
     rbins: Series
         The radial bin to which each particle belongs.
-    bin_locations: ndarray
-        Locations of the bin edges.
     unit_vector: bool
-        Whether to convert the angular momenta to unit vectors.
+        Whether to convert the angular momentum to unit vectors.
         Default is True.
 
     Returns
@@ -193,25 +190,90 @@ def _calc_angular_momenta(data: 'SarracenDataFrame',
     return Lx, Ly, Lz
 
 
-def angular_momenta(data: 'SarracenDataFrame',
-                    r_in: float = None,
-                    r_out: float = None,
-                    bins: int = 300,
-                    geometry: str = 'cylindrical',
-                    origin: list = None,
-                    retbins: bool = False,
-                    unit_vector: bool = True):
+def angular_momentum(data: 'SarracenDataFrame',
+                     r_in: float = None,
+                     r_out: float = None,
+                     bins: int = 300,
+                     geometry: str = 'cylindrical',
+                     origin: list = None,
+                     retbins: bool = False,
+                     unit_vector: bool = True):
+    """
+    Calculates the angular momentum profile of the disc.
 
-    rbins, bin_locations = _bin_particles_by_radius(data, r_in, r_out, bins,
-                                                    geometry, origin)
+    The profile is computed by segmenting the particles into radial bins
+    (rings) and summing the angular momentum of the particles within each
+    bin.
 
-    Lx, Ly, Lz = _calc_angular_momenta(data, rbins, bin_locations, unit_vector)
+    Parameters
+    ----------
+    data : SarracenDataFrame
+        Particle data, in a SarracenDataFrame.
+    r_in : float, optional
+        Inner radius of the disc. Defaults to the minimum r value.
+    r_out : float, optional
+        Outer radius of the disc. Defaults to the maximum r value.
+    bins : int, optional
+        Defines the number of equal-width bins in the range [r_in, r_out].
+        Default is 300.
+    geometry : str, optional
+        Coordinate system to use to calculate the particle radii. Can be
+        either *spherical* or *cylindrical*. Defaults to *cylindrical*.
+    origin : array-like, optional
+        The x, y and z position around which to compute radii. Defaults to
+        [0, 0, 0].
+    retbins : bool, optional
+        Whether to return the bin edges or not. Defaults to False.
+
+    Returns
+    -------
+    array
+        A NumPy array of length bins containing the angular momentum profile.
+    array, optional
+        The location of the bin edges. Only returned if *retbins=True*.
+
+    Raises
+    ------
+    ValueError
+        If the *geometry* is not *cylindrical* or *spherical*.
+    """
+
+    rbins, bin_edges = _bin_particles_by_radius(data, r_in, r_out, bins,
+                                                geometry, origin)
+
+    Lx, Ly, Lz = _calc_angular_momentum(data, rbins, unit_vector)
     Lx, Ly, Lz = Lx.to_numpy(), Ly.to_numpy(), Lz.to_numpy()
 
     if retbins:
-        return Lx, Ly, Lz, bin_locations
+        return Lx, Ly, Lz, bin_edges
     else:
         return Lx, Ly, Lz
+
+
+def _calc_scale_height(data: 'SarracenDataFrame',
+                       rbins: pd.Series):
+    """
+    Utility function to calculate the scale height of the disc.
+
+    Parameters
+    ----------
+    data: SarracenDataFrame
+        Particle data, in a SarracenDataFrame.
+    rbins: Series
+        The radial bin to which each particle belongs.
+
+    Returns
+    -------
+    H: Series
+        The scale height of the disc.
+    """
+    Lx, Ly, Lz = _calc_angular_momentum(data, rbins, unit_vector=True)
+
+    zdash = rbins.map(Lx).to_numpy() * data[data.xcol] \
+            + rbins.map(Ly).to_numpy() * data[data.ycol] \
+            + rbins.map(Lz).to_numpy() * data[data.zcol]
+
+    return zdash.groupby(rbins).std()
 
 
 def scale_height(data: 'SarracenDataFrame',
@@ -221,14 +283,123 @@ def scale_height(data: 'SarracenDataFrame',
                  geometry: str = 'cylindrical',
                  origin: list = None,
                  retbins: bool = False):
-    rbins, bin_locations = _bin_particles_by_radius(data, r_in, r_out, bins,
+    """
+    Calculates the scale height, H, of the disc.
+
+    The scale height, H, is computed by segmenting the particles into radial
+    bins (rings) and calculating the angular momentum profile of the disc.
+    Each particle takes the dot product of its position vector with the
+    angular momentum vector of its corresponding bin. The standard deviation
+    of this result per bin yields the scale height profile of the disc.
+
+    Parameters
+    ----------
+    data : SarracenDataFrame
+        Particle data, in a SarracenDataFrame.
+    r_in : float, optional
+        Inner radius of the disc. Defaults to the minimum r value.
+    r_out : float, optional
+        Outer radius of the disc. Defaults to the maximum r value.
+    bins : int, optional
+        Defines the number of equal-width bins in the range [r_in, r_out].
+        Default is 300.
+    geometry : str, optional
+        Coordinate system to use to calculate the particle radii. Can be
+        either *spherical* or *cylindrical*. Defaults to *cylindrical*.
+    origin : array-like, optional
+        The x, y and z position around which to compute radii. Defaults to
+        [0, 0, 0].
+    retbins : bool, optional
+        Whether to return the bin edges or not. Defaults to False.
+
+    Returns
+    -------
+    array
+        A NumPy array of length bins scale height, H, profile.
+    array, optional
+        The location of the bin edges. Only returned if *retbins=True*.
+
+    Raises
+    ------
+    ValueError
+        If the *geometry* is not *cylindrical* or *spherical*.
+
+    See Also
+    --------
+    :func:`angular_momentum` : Calculate the angular momentum profile of a
+    disc.
+    """
+
+    rbins, bin_edges = _bin_particles_by_radius(data, r_in, r_out, bins,
+                                                geometry, origin)
+
+    H = _calc_scale_height(data, rbins).to_numpy()
+
+    if retbins:
+        return H, bin_edges
+    else:
+        return H
+
+
+def honH(data: 'SarracenDataFrame',
+                 r_in: float = None,
+                 r_out: float = None,
+                 bins: int = 300,
+                 geometry: str = 'cylindrical',
+                 origin: list = None,
+                 retbins: bool = False):
+    """
+    Calculates <h>/H, the averaged smoothing length divided by the scale height.
+
+    The profile is computed by segmenting the particles into radial bins
+    (rings). The average smoothing length in each bin is divided by the scale
+    height as calculated for that bin.
+
+    Parameters
+    ----------
+    data : SarracenDataFrame
+        Particle data, in a SarracenDataFrame.
+    r_in : float, optional
+        Inner radius of the disc. Defaults to the minimum r value.
+    r_out : float, optional
+        Outer radius of the disc. Defaults to the maximum r value.
+    bins : int, optional
+        Defines the number of equal-width bins in the range [r_in, r_out].
+        Default is 300.
+    geometry : str, optional
+        Coordinate system to use to calculate the particle radii. Can be
+        either *spherical* or *cylindrical*. Defaults to *cylindrical*.
+    origin : array-like, optional
+        The x, y and z position around which to compute radii. Defaults to
+        [0, 0, 0].
+    retbins : bool, optional
+        Whether to return the bin edges or not. Defaults to False.
+
+    Returns
+    -------
+    array
+        A NumPy array of length bins containing the <h>/H profile.
+    array, optional
+        The location of the bin edges. Only returned if *retbins=True*.
+
+    Raises
+    ------
+    ValueError
+        If the *geometry* is not *cylindrical* or *spherical*.
+
+    See Also
+    --------
+    :func:`scale_height` : Calculate the scale height of a disc.
+    """
+
+    rbins, bin_edges = _bin_particles_by_radius(data, r_in, r_out, bins,
                                                     geometry, origin)
 
-    Lx, Ly, Lz = _calc_angular_momenta(data, rbins, bin_locations,
-                                       unit_vector=True)
+    H = _calc_scale_height(data, rbins).to_numpy()
 
-    zdash = rbins.map(Lx).to_numpy() * data[data.xcol] \
-            + rbins.map(Ly).to_numpy() * data[data.ycol] \
-            + rbins.map(Lz).to_numpy() * data[data.zcol]
+    mean_h = data.groupby(rbins)[data.hcol].mean().to_numpy()
 
-    return zdash.groupby(rbins).std().to_numpy()
+    if retbins:
+        return mean_h / H, bin_edges
+    else:
+        return mean_h / H
