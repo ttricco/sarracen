@@ -13,6 +13,13 @@ def _get_mass(data: 'SarracenDataFrame'):
     return data[data.mcol]
 
 
+def _get_origin(origin: list) -> list:
+    if origin is None:
+        return [0.0, 0.0, 0.0]
+    else:
+        return origin
+
+
 def _bin_particles_by_radius(data: 'SarracenDataFrame',
                              r_in: float = None,
                              r_out: float = None,
@@ -47,9 +54,6 @@ def _bin_particles_by_radius(data: 'SarracenDataFrame',
     bin_edges: ndarray
         Locations of the bin edges.
     """
-
-    if origin is None:
-        origin = [0, 0, 0]
 
     if geometry == 'spherical':
         r = np.sqrt((data[data.xcol] - origin[0]) ** 2
@@ -126,8 +130,9 @@ def surface_density(data: 'SarracenDataFrame',
     <https://doi.org/10.1111/j.1365-2966.2010.16526.x>`_.
     """
 
+    origin = _get_origin(origin)
     rbins, bin_edges = _bin_particles_by_radius(data, r_in, r_out, bins,
-                                                    geometry, origin)
+                                                geometry, origin)
 
     areas = np.pi * (bin_edges[1:] ** 2 - bin_edges[:-1] ** 2)
 
@@ -145,6 +150,7 @@ def surface_density(data: 'SarracenDataFrame',
 
 def _calc_angular_momentum(data: 'SarracenDataFrame',
                            rbins: pd.Series,
+                           origin: list,
                            unit_vector: bool):
     """
     Utility function to calculate angular momentum of the disc.
@@ -155,6 +161,8 @@ def _calc_angular_momentum(data: 'SarracenDataFrame',
         Particle data, in a SarracenDataFrame.
     rbins: Series
         The radial bin to which each particle belongs.
+    origin: list
+
     unit_vector: bool
         Whether to convert the angular momentum to unit vectors.
         Default is True.
@@ -167,9 +175,13 @@ def _calc_angular_momentum(data: 'SarracenDataFrame',
 
     mass = _get_mass(data)
 
-    Lx = data[data.ycol] * data[data.vzcol] - data[data.zcol] * data[data.vycol]
-    Ly = data[data.zcol] * data[data.vxcol] - data[data.xcol] * data[data.vzcol]
-    Lz = data[data.xcol] * data[data.vycol] - data[data.ycol] * data[data.vxcol]
+    x_data = data[data.xcol].to_numpy() - origin[0]
+    y_data = data[data.ycol].to_numpy() - origin[1]
+    z_data = data[data.zcol].to_numpy() - origin[2]
+
+    Lx = y_data * data[data.vzcol] - z_data * data[data.vycol]
+    Ly = z_data * data[data.vxcol] - x_data * data[data.vzcol]
+    Lz = x_data * data[data.vycol] - y_data * data[data.vxcol]
 
     if isinstance(mass, float):
         Lx = (mass * Lx).groupby(rbins).sum()
@@ -238,10 +250,11 @@ def angular_momentum(data: 'SarracenDataFrame',
         If the *geometry* is not *cylindrical* or *spherical*.
     """
 
+    origin = _get_origin(origin)
     rbins, bin_edges = _bin_particles_by_radius(data, r_in, r_out, bins,
                                                 geometry, origin)
 
-    Lx, Ly, Lz = _calc_angular_momentum(data, rbins, unit_vector)
+    Lx, Ly, Lz = _calc_angular_momentum(data, rbins, origin, unit_vector)
     Lx, Ly, Lz = Lx.to_numpy(), Ly.to_numpy(), Lz.to_numpy()
 
     if retbins:
@@ -251,7 +264,8 @@ def angular_momentum(data: 'SarracenDataFrame',
 
 
 def _calc_scale_height(data: 'SarracenDataFrame',
-                       rbins: pd.Series):
+                       rbins: pd.Series,
+                       origin: list = None):
     """
     Utility function to calculate the scale height of the disc.
 
@@ -261,13 +275,16 @@ def _calc_scale_height(data: 'SarracenDataFrame',
         Particle data, in a SarracenDataFrame.
     rbins: Series
         The radial bin to which each particle belongs.
+    origin : array-like, optional
+        The x, y and z position around which to compute radii. Defaults to
+        [0, 0, 0].
 
     Returns
     -------
     H: Series
         The scale height of the disc.
     """
-    Lx, Ly, Lz = _calc_angular_momentum(data, rbins, unit_vector=True)
+    Lx, Ly, Lz = _calc_angular_momentum(data, rbins, origin, unit_vector=True)
 
     zdash = rbins.map(Lx).to_numpy() * data[data.xcol] \
             + rbins.map(Ly).to_numpy() * data[data.ycol] \
@@ -330,10 +347,11 @@ def scale_height(data: 'SarracenDataFrame',
     disc.
     """
 
+    origin = _get_origin(origin)
     rbins, bin_edges = _bin_particles_by_radius(data, r_in, r_out, bins,
                                                 geometry, origin)
 
-    H = _calc_scale_height(data, rbins).to_numpy()
+    H = _calc_scale_height(data, rbins, origin).to_numpy()
 
     if retbins:
         return H, bin_edges
@@ -342,12 +360,12 @@ def scale_height(data: 'SarracenDataFrame',
 
 
 def honH(data: 'SarracenDataFrame',
-                 r_in: float = None,
-                 r_out: float = None,
-                 bins: int = 300,
-                 geometry: str = 'cylindrical',
-                 origin: list = None,
-                 retbins: bool = False):
+         r_in: float = None,
+         r_out: float = None,
+         bins: int = 300,
+         geometry: str = 'cylindrical',
+         origin: list = None,
+         retbins: bool = False):
     """
     Calculates <h>/H, the averaged smoothing length divided by the scale height.
 
@@ -392,10 +410,11 @@ def honH(data: 'SarracenDataFrame',
     :func:`scale_height` : Calculate the scale height of a disc.
     """
 
+    origin = _get_origin(origin)
     rbins, bin_edges = _bin_particles_by_radius(data, r_in, r_out, bins,
-                                                    geometry, origin)
+                                                geometry, origin)
 
-    H = _calc_scale_height(data, rbins).to_numpy()
+    H = _calc_scale_height(data, rbins, origin).to_numpy()
 
     mean_h = data.groupby(rbins)[data.hcol].mean().to_numpy()
 
