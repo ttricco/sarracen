@@ -132,6 +132,14 @@ def _read_array_block(fp, df, n, nums, def_int_dtype, def_real_dtype):
         for j in range(nums[i]):
 
             tag = _read_fortran_block(fp, 16).decode('ascii').strip()
+
+            if tag in df.columns:
+                count = 1
+                original_tag = tag
+                while tag in df.columns:
+                    count += 1
+                    tag = original_tag + f"_{count}"
+
             data = np.frombuffer(_read_fortran_block(fp, dtype().itemsize * n), dtype=dtype)
             df[tag] = data
 
