@@ -36,7 +36,8 @@ class SarracenDataFrame(DataFrame):
     """
 
     _internal_names = pd.DataFrame._internal_names + ['_xcol', '_ycol', '_zcol',
-                                                      '_mcol', '_rhocol', '_hcol']
+                                                      '_mcol', '_rhocol', '_hcol',
+                                                      '_vxcol', '_vycol', '_vzcol']
     _internal_names_set = set(_internal_names)
 
     _metadata = ['_params', '_units', '_kernel']
@@ -106,7 +107,10 @@ class SarracenDataFrame(DataFrame):
         self._units = None
         self.units = Series([np.nan for _ in range(len(self.columns))])
 
-        self._xcol, self._ycol, self._zcol, self._hcol, self._mcol, self._rhocol = None, None, None, None, None, None
+        self._xcol, self._ycol, self._zcol = None, None, None
+        self._hcol, self._mcol, self._rhocol = None, None, None
+        self._vxcol, self._vycol, self._vzcol = None, None, None
+
         self._identify_special_columns()
 
         self._kernel = CubicSplineKernel()
@@ -166,6 +170,15 @@ class SarracenDataFrame(DataFrame):
             self.rhocol = 'rho'
         elif 'density' in self.columns:
             self.rhocol = 'density'
+
+        # Look for the keyword 'rho' or 'density' in the data.
+        if 'vx' in self.columns:
+            self.vxcol = 'vx'
+        if 'vy' in self.columns:
+            self.vycol = 'vy'
+        if 'vz' in self.columns:
+            self.vzcol = 'vz'
+
 
     def create_mass_column(self):
         """
@@ -472,6 +485,54 @@ class SarracenDataFrame(DataFrame):
     def rhocol(self, new_col: str):
         if new_col in self or new_col is None:
             self._rhocol = new_col
+
+
+    @property
+    def vxcol(self):
+        """
+        str : Label of the column which contains the x-component of the velocity.
+
+        If this is set to a column which does not exist in the dataset, the column
+        label will remain set to the old value.
+        """
+        return self._vxcol
+
+    @vxcol.setter
+    def vxcol(self, new_col: str):
+        if new_col in self or new_col is None:
+            self._vxcol = new_col
+
+    @property
+    def vycol(self):
+        """
+        str : Label of the column which contains the y-component of the velocity.
+
+        If this is set to a column which does not exist in the dataset, the column
+        label will remain set to the old value.
+        """
+        return self._vycol
+
+    @vycol.setter
+    def vycol(self, new_col: str):
+        if new_col in self or new_col is None:
+            self._vycol = new_col
+
+
+    @property
+    def vzcol(self):
+        """
+        str : Label of the column which contains the z-component of the velocity.
+
+        If this is set to a column which does not exist in the dataset, the column
+        label will remain set to the old value.
+        """
+        return self._vzcol
+
+    @vzcol.setter
+    def vzcol(self, new_col: str):
+        if new_col in self or new_col is None:
+            self._vzcol = new_col
+
 
     @property
     def kernel(self):
