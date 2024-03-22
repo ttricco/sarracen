@@ -24,6 +24,7 @@ def _bin_particles_by_radius(data: 'SarracenDataFrame',
                              r_in: float = None,
                              r_out: float = None,
                              bins: int = 300,
+                             log: bool = False,
                              geometry: str = 'cylindrical',
                              origin: list = None):
     """
@@ -40,6 +41,8 @@ def _bin_particles_by_radius(data: 'SarracenDataFrame',
     bins : int, optional
         Defines the number of equal-width bins in the range [r_in, r_out].
         Default is 300.
+    log : bool, optional
+        Whether to bin in log scale or not. Defaults to False.
     geometry : str, optional
         Coordinate system to use to calculate the particle radii. Can be
         either *spherical* or *cylindrical*. Defaults to *cylindrical*.
@@ -71,24 +74,36 @@ def _bin_particles_by_radius(data: 'SarracenDataFrame',
     if r_out is None:
         r_out = r.max() + sys.float_info.epsilon
 
-    bin_edges = np.linspace(r_in, r_out, bins+1)
+    if log:
+        bin_edges = np.logspace(np.log10(r_in), np.log10(r_out), bins+1)
+    else:
+        bin_edges = np.linspace(r_in, r_out, bins+1)
     rbins = pd.cut(r, bin_edges)
 
     return rbins, bin_edges
 
 
-def _get_bin_midpoints(bin_edges: np.ndarray) -> np.ndarray:
+def _get_bin_midpoints(bin_edges: np.ndarray,
+                           log: bool = False) -> np.ndarray:
     """
     Calculate the midpoint of bins given their edges.
+    bin_edges: ndarray
+        Locations of the bin edges.
+    log : bool, optional
+        Whether to bin in log scale or not. Defaults to False.
     """
 
-    return 0.5 * (bin_edges[1:] - bin_edges[:-1]) + bin_edges[:-1]
+    if log:
+        return np.sqrt(bin_edges[:-1] * bin_edges[1:])
+    else:
+        return 0.5 * (bin_edges[1:] - bin_edges[:-1]) + bin_edges[:-1]
 
 
 def surface_density(data: 'SarracenDataFrame',
                     r_in: float = None,
                     r_out: float = None,
                     bins: int = 300,
+                    log: bool = False,
                     geometry: str = 'cylindrical',
                     origin: list = None,
                     retbins: bool = False):
@@ -110,6 +125,8 @@ def surface_density(data: 'SarracenDataFrame',
     bins : int, optional
         Defines the number of equal-width bins in the range [r_in, r_out].
         Default is 300.
+    log : bool, optional
+        Whether to bin in log scale or not. Defaults to False.
     geometry : str, optional
         Coordinate system to use to calculate the particle radii. Can be
         either *spherical* or *cylindrical*. Defaults to *cylindrical*.
@@ -139,7 +156,7 @@ def surface_density(data: 'SarracenDataFrame',
     """
 
     origin = _get_origin(origin)
-    rbins, bin_edges = _bin_particles_by_radius(data, r_in, r_out, bins,
+    rbins, bin_edges = _bin_particles_by_radius(data, r_in, r_out, bins, log,
                                                 geometry, origin)
 
     areas = np.pi * (bin_edges[1:] ** 2 - bin_edges[:-1] ** 2)
@@ -151,7 +168,7 @@ def surface_density(data: 'SarracenDataFrame',
         sigma = data.groupby(rbins).count().iloc[:, 0] * mass
 
     if retbins:
-        return (sigma / areas).to_numpy(), _get_bin_midpoints(bin_edges)
+        return (sigma / areas).to_numpy(), _get_bin_midpoints(bin_edges, log)
     else:
         return (sigma / areas).to_numpy()
 
@@ -214,6 +231,7 @@ def angular_momentum(data: 'SarracenDataFrame',
                      r_in: float = None,
                      r_out: float = None,
                      bins: int = 300,
+                     log: bool = False,
                      geometry: str = 'cylindrical',
                      origin: list = None,
                      retbins: bool = False,
@@ -236,6 +254,8 @@ def angular_momentum(data: 'SarracenDataFrame',
     bins : int, optional
         Defines the number of equal-width bins in the range [r_in, r_out].
         Default is 300.
+    log : bool, optional
+        Whether to bin in log scale or not. Defaults to False.
     geometry : str, optional
         Coordinate system to use to calculate the particle radii. Can be
         either *spherical* or *cylindrical*. Defaults to *cylindrical*.
@@ -259,14 +279,14 @@ def angular_momentum(data: 'SarracenDataFrame',
     """
 
     origin = _get_origin(origin)
-    rbins, bin_edges = _bin_particles_by_radius(data, r_in, r_out, bins,
+    rbins, bin_edges = _bin_particles_by_radius(data, r_in, r_out, bins, log,
                                                 geometry, origin)
 
     Lx, Ly, Lz = _calc_angular_momentum(data, rbins, origin, unit_vector)
     Lx, Ly, Lz = Lx.to_numpy(), Ly.to_numpy(), Lz.to_numpy()
 
     if retbins:
-        return Lx, Ly, Lz, _get_bin_midpoints(bin_edges)
+        return Lx, Ly, Lz, _get_bin_midpoints(bin_edges, log)
     else:
         return Lx, Ly, Lz
 
@@ -305,6 +325,7 @@ def scale_height(data: 'SarracenDataFrame',
                  r_in: float = None,
                  r_out: float = None,
                  bins: int = 300,
+                 log: bool = False,
                  geometry: str = 'cylindrical',
                  origin: list = None,
                  retbins: bool = False):
@@ -329,6 +350,8 @@ def scale_height(data: 'SarracenDataFrame',
     bins : int, optional
         Defines the number of equal-width bins in the range [r_in, r_out].
         Default is 300.
+    log : bool, optional
+        Whether to bin in log scale or not. Defaults to False.
     geometry : str, optional
         Coordinate system to use to calculate the particle radii. Can be
         either *spherical* or *cylindrical*. Defaults to *cylindrical*.
@@ -357,10 +380,10 @@ def scale_height(data: 'SarracenDataFrame',
     """
 
     origin = _get_origin(origin)
-    rbins, bin_edges = _bin_particles_by_radius(data, r_in, r_out, bins,
+    rbins, bin_edges = _bin_particles_by_radius(data, r_in, r_out, bins, log,
                                                 geometry, origin)
 
-    midpoints = _get_bin_midpoints(bin_edges)
+    midpoints = _get_bin_midpoints(bin_edges, log)
     H = _calc_scale_height(data, rbins, origin).to_numpy() / midpoints
 
     if retbins:
@@ -373,6 +396,7 @@ def honH(data: 'SarracenDataFrame',
          r_in: float = None,
          r_out: float = None,
          bins: int = 300,
+         log: bool = False,
          geometry: str = 'cylindrical',
          origin: list = None,
          retbins: bool = False):
@@ -394,6 +418,8 @@ def honH(data: 'SarracenDataFrame',
     bins : int, optional
         Defines the number of equal-width bins in the range [r_in, r_out].
         Default is 300.
+    log : bool, optional
+        Whether to bin in log scale or not. Defaults to False.
     geometry : str, optional
         Coordinate system to use to calculate the particle radii. Can be
         either *spherical* or *cylindrical*. Defaults to *cylindrical*.
@@ -421,7 +447,7 @@ def honH(data: 'SarracenDataFrame',
     """
 
     origin = _get_origin(origin)
-    rbins, bin_edges = _bin_particles_by_radius(data, r_in, r_out, bins,
+    rbins, bin_edges = _bin_particles_by_radius(data, r_in, r_out, bins, log,
                                                 geometry, origin)
 
     H = _calc_scale_height(data, rbins, origin).to_numpy()
@@ -429,6 +455,6 @@ def honH(data: 'SarracenDataFrame',
     mean_h = data.groupby(rbins)[data.hcol].mean().to_numpy()
 
     if retbins:
-        return mean_h / H, _get_bin_midpoints(bin_edges)
+        return mean_h / H, _get_bin_midpoints(bin_edges, log)
     else:
         return mean_h / H
