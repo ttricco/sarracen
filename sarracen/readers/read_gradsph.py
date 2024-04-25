@@ -45,18 +45,14 @@ def read_gradsph(filename: str, separate_types: str = 'sinks'):
                   't': t,
                   'gamma': gamma}
 
-        sinks = []
-        for i in range(nsink):
-            sinks.append(fp.readline().split())
+        sinks = [fp.readline().split() for _ in range(nsink)]
+        parts = [fp.readline().split() for _ in range(n - ninactive)]
 
         sink_header = ['x', 'y', 'z', 'vx', 'vy', 'vz', 'mass']
-        df_sinks = pd.DataFrame(sinks, columns=sink_header, dtype=float)
-
-        parts = []
-        for i in range(n - ninactive):
-            parts.append(fp.readline().split())
         part_header = ['x', 'y', 'z', 'vx', 'vy', 'vz', 'mass', 'h', 'cs',
                        'rho', 'temp']
+
+        df_sinks = pd.DataFrame(sinks, columns=sink_header, dtype=float)
         df_parts = pd.DataFrame(parts, columns=part_header, dtype=float)
 
         if separate_types == 'sinks' or separate_types == 'all':
