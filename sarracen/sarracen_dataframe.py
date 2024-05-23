@@ -256,11 +256,11 @@ class SarracenDataFrame(DataFrame):
                ylim: Tuple[float, float] = None, cmap: Union[str, Colormap] = 'gist_heat', cbar: bool = True,
                cbar_kws: dict = {}, cbar_ax: Axes = None, ax: Axes = None, exact: bool = None, backend: str = None,
                integral_samples: int = 1000, rotation: Union[np.ndarray, list, Rotation] = None,
-               rot_origin: Union[np.ndarray, list, str] = None, log_scale: bool = None, dens_weight: bool = None,
-               normalize: bool = False, hmin: bool = False, **kwargs) -> Axes:
+               rot_origin: Union[np.ndarray, list, str] = None, log_scale: bool = None, symlog_scale: bool = None,
+               dens_weight: bool = None, normalize: bool = False, hmin: bool = False, **kwargs) -> Axes:
         return render(self, target, x, y, z, xsec, kernel, x_pixels, y_pixels, xlim, ylim, cmap, cbar, cbar_kws,
-                      cbar_ax, ax, exact, backend, integral_samples, rotation, rot_origin, log_scale, dens_weight,
-                      normalize, hmin, **kwargs)
+                      cbar_ax, ax, exact, backend, integral_samples, rotation, rot_origin, log_scale, symlog_scale,
+                      dens_weight, normalize, hmin, **kwargs)
 
     @_copy_doc(lineplot)
     def lineplot(self, target: str, x: str = None, y: str = None, z: str = None,
