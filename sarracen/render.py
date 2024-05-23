@@ -282,8 +282,8 @@ def render(data: 'SarracenDataFrame',
     kwargs.setdefault("extent", [xlim[0], xlim[1], ylim[0], ylim[1]])
     if log_scale:
         if symlog_scale:
-            kwargs.setdefault("norm", SymLogNorm(kwargs.get("linthresh", 1e-9), 
-                                                linscale=kwargs.get("linscale", 1.),
+            kwargs.setdefault("norm", SymLogNorm(kwargs.pop("linthresh", 1e-9), 
+                                                linscale=kwargs.pop("linscale", 1.),
                                                 vmin=kwargs.get('vmin'), 
                                                 vmax=kwargs.get('vmax')))
         else:
