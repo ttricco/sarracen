@@ -143,7 +143,7 @@ def test_kwargs(backend):
     
     for arg in [True, False]:
         fig, ax = plt.subplots()
-        render(sdf_4, 'P', ax=ax, log_scale=arg, symlog_scale=True, origin='upper')
+        render(sdf_4, 'P', ax=ax, log_scale=arg, symlog_scale=True, origin='upper', vmin=-1., vmax=1.)
         assert ax.images[0].origin == 'upper'
         plt.close(fig)
 
