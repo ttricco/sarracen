@@ -288,8 +288,8 @@ def render(data: 'SarracenDataFrame',
                                                 vmax=kwargs.get('vmax')))
         else:
             kwargs.setdefault("norm", LogNorm(clip=True, vmin=kwargs.get('vmin'), vmax=kwargs.get('vmax')))
-            kwargs.pop("vmin", None)
-            kwargs.pop("vmax", None)
+        kwargs.pop("vmin", None)
+        kwargs.pop("vmax", None)
 
     graphic = ax.imshow(img, cmap=cmap, **kwargs)
     if rotation is not None and data.get_dim() == 3:
