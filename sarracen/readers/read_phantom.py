@@ -214,7 +214,7 @@ def read_phantom(filename: str, separate_types: str = 'sinks', ignore_inactive: 
 
     Notes
     -----
-    See the `Phantom documentation <https://phantomsph.readthedocs.io/en/latest/dumpfile.html>`_ for a full description
+    See the `Phantom documentation <https://phantomsph.readthedocs.io/en/latest/user-guide/dumpfile.html>`_ for a full description
     of the Phantom binary file format.
 
     Examples
@@ -223,7 +223,7 @@ def read_phantom(filename: str, separate_types: str = 'sinks', ignore_inactive: 
 
     >>> sdf, sdf_sinks = sarracen.read_phantom('dumpfile_00000')
 
-    A dump file containing multiple particle types, say gas + dust + sinks, can separated into their own data frames
+    A dump file containing multiple particle types, say gas + dust + sinks, can be separated into their own data frames
     by specifying ``separate_types='all'``.
 
     >>> sdf_gas, sdf_dust, sdf_sinks = sarracen.read_phantom('multiple_types_00000', separate_types='all')
