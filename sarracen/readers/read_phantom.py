@@ -186,6 +186,7 @@ def _create_mass_column(df, header_vars):
             df.loc[df.itype == itype, 'mass'] = header_vars[f'massoftype_{itype}']
     return df
 
+
 def read_phantom(filename: str, separate_types: str = 'sinks', ignore_inactive: bool = True):
     """
     Read data from a Phantom dump file.

@@ -229,29 +229,33 @@ def test_write_phantom():
     # test_sdf = sarracen.read_phantom('hydro32_00020')
 
     test_sdf = get_df()
+    phantom_file = sarracen.write_phantom(test_sdf)
+    test_sdf_from_new_file = sarracen.read_phantom(phantom_file.name)
+    pd.testing.assert_frame_equal(test_sdf, test_sdf_from_new_file)
 
-    ph_file = _create_capture_pattern(np.int32, np.float64)  # can create this when can identify def_int_dtype, def_real_dtype
 
-    file_identifier = test_sdf.params['file_identifier'].ljust(100)
-
-    ph_file = write_fortrun_block(ph_file, file_identifier)
-
-    ph_file += _write_global_header(test_sdf.params)
-
-    ph_file += _test_write_arrays(ph_file, test_sdf)
-
-#    ph_file = write_test_particle_array(ph_file)
-
-    with tempfile.NamedTemporaryFile() as fp:
-        fp.write(ph_file)
-        fp.seek(0)
-
-        sdf_written = sarracen.read_phantom(fp.name, separate_types='all')
-
-#   sdf_hash = int(hashlib.sha256(pd.util.hash_pandas_object(test_sdf, index=True).values).hexdigest(), 16)
-#   sdf_written_hash = int(hashlib.sha256(pd.util.hash_pandas_object(sdf_written, index=True).values).hexdigest(), 16)
-
-    pd.testing.assert_frame_equal(test_sdf, sdf_written)
+#     ph_file = _create_capture_pattern(np.int32, np.float64)  # can create this when can identify def_int_dtype, def_real_dtype
+#
+#     file_identifier = test_sdf.params['file_identifier'].ljust(100)
+#
+#     ph_file = write_fortrun_block(ph_file, file_identifier)
+#
+#     ph_file += _write_global_header(test_sdf.params)
+#
+#     ph_file += _test_write_arrays(ph_file, test_sdf)
+#
+# #    ph_file = write_test_particle_array(ph_file)
+#
+#     with tempfile.NamedTemporaryFile() as fp:
+#         fp.write(ph_file)
+#         fp.seek(0)
+#
+#         sdf_written = sarracen.read_phantom(fp.name, separate_types='all')
+#
+# #   sdf_hash = int(hashlib.sha256(pd.util.hash_pandas_object(test_sdf, index=True).values).hexdigest(), 16)
+# #   sdf_written_hash = int(hashlib.sha256(pd.util.hash_pandas_object(sdf_written, index=True).values).hexdigest(), 16)
+#
+#     pd.testing.assert_frame_equal(test_sdf, sdf_written)
 
 
 def _test_write_arrays(file, test_sdf):
