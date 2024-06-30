@@ -1,10 +1,10 @@
 import numpy as np
 
 import sarracen
+from ..readers.read_phantom import _read_capture_pattern
 from ..sarracen_dataframe import SarracenDataFrame
-def _create_capture_pattern(def_int, def_real):
-    """ Construct capture pattern. """
 
+def _create_capture_pattern(def_int, def_real):
     read_tag = np.array([13], dtype='int32')
     i1 = np.array([60769], dtype=def_int)
     r2 = np.array([60878], dtype=def_real)
@@ -22,18 +22,21 @@ def _create_capture_pattern(def_int, def_real):
 
     return capture_pattern
 
-def write_fortrun_block(ph_file, data):
+
+def write_file_identifier(ph_file, data):
     read_tag = np.array([13], dtype='int32')
     ph_file += bytearray(read_tag.tobytes())
     ph_file += bytearray(map(ord, data))
     ph_file += bytearray(read_tag.tobytes())
     return ph_file
 
+
 class GlobalHeaderElement:
     def __init__(self, d_type, tags, values):
         self.d_type = d_type
         self.tags = tags
         self.values = values
+
 
 class DtArrayCount:
     def __init__(self, d_type, count, tags):
@@ -48,11 +51,15 @@ def add_4byte_tag(bytes_file, read_tag):
     bytes_file += bytearray(read_tag.tobytes())
     return bytes_file
 
-def _write_global_header(params_dict):
-    dtypes = [np.int32, np.int8, np.int16, np.int32, np.int64, np.float64, np.float32, np.float64]
+
+def _write_global_header(sdf: SarracenDataFrame, def_int: np.dtype, def_real: np.dtype):
+
+    dtypes = [def_int, np.int8, np.int16, np.int32, np.int64, def_real, np.float32, np.float64]
 
     global_headers = []
     used_keys = []
+
+    params_dict = sdf.params
 
     for dt in dtypes:
         header_element = GlobalHeaderElement(dt, [], [])
@@ -148,12 +155,34 @@ def _test_write_arrays(file, test_sdf):
     return file
 
 
-def write_phantom(sdf: SarracenDataFrame):
+def determine_default_types(sdf: SarracenDataFrame, original_phantom_file: str = ''):
 
-    ph_file = _create_capture_pattern(np.int32, np.float64)
+    dtypes = sdf.dtypes.apply(lambda x: x.type)
+
+    try:
+        if original_phantom_file:
+            with open(original_phantom_file, 'rb') as fp:
+                def_int_dtype, def_real_dtype = _read_capture_pattern(fp)
+            return def_int_dtype, def_real_dtype
+    except IOError as e:
+        print(f"Unable to open file: {e}. Proceeding to determine default types.")
+
+    all_ints = [dtype for dtype in dtypes if np.issubdtype(dtype, np.integer)]
+    all_floats = [dtype for dtype in dtypes if np.issubdtype(dtype, np.floating)]
+
+    def_int = max(all_ints, default=np.int32, key=lambda x: np.dtype(x).itemsize)
+    def_real = max(all_floats, default=np.float64, key=lambda x: np.dtype(x).itemsize)
+
+    return def_int, def_real
+
+
+def write_phantom(sdf: SarracenDataFrame, original_phantom_file: str = ''):
+
+    def_int, def_real = determine_default_types(sdf,  original_phantom_file)
+    ph_file = _create_capture_pattern(def_int, def_real) #No iversion created
     file_identifier = sdf.params['file_identifier'].ljust(100)
-    ph_file = write_fortrun_block(ph_file, file_identifier)
-    ph_file += _write_global_header(sdf.params)
+    ph_file = write_file_identifier(ph_file, file_identifier)
+    ph_file += _write_global_header(sdf, def_int,  def_real)
     ph_file += _test_write_arrays(ph_file, sdf)
 
     with open("ph_file", 'wb') as f:
