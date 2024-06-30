@@ -17,7 +17,7 @@ def _read_fortran_block(fp, bytesize):
     return data
 
 
-def _read_capture_pattern(fp):
+def read_capture_pattern(fp):
     """ Phantom dump validation plus default real and int sizes."""
 
     start_tag = fp.read(4)  # 4-byte Fortran tag
@@ -230,7 +230,7 @@ def read_phantom(filename: str, separate_types: str = 'sinks', ignore_inactive: 
     >>> sdf_gas, sdf_dust, sdf_sinks = sarracen.read_phantom('multiple_types_00000', separate_types='all')
     """
     with open(filename, 'rb') as fp:
-        def_int_dtype, def_real_dtype = _read_capture_pattern(fp)
+        def_int_dtype, def_real_dtype = read_capture_pattern(fp)
         file_identifier = _read_file_identifier(fp)
 
         header_vars = _read_global_header(fp, def_int_dtype, def_real_dtype)

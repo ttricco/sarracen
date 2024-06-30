@@ -116,11 +116,8 @@ def get_df():
 
 
 def test_write_phantom():
-    # test_sdf = sarracen.read_phantom('hydro32_00020')
 
-    test_sdf = get_df()
-    phantom_file = sarracen.write_phantom(test_sdf)
+    test_sdf = sarracen.read_phantom('ot_00003')
+    phantom_file = sarracen.write_phantom(test_sdf, 'ot_00003')
     test_sdf_from_new_file = sarracen.read_phantom(phantom_file.name)
     pd.testing.assert_frame_equal(test_sdf, test_sdf_from_new_file)
-
-
