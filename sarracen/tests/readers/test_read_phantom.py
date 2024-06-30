@@ -197,7 +197,7 @@ def test_gas_dust_particles():
 
     # write 5 gas/dust particle arrays
     bytes_file += _create_particle_array("itype", [1, 1, 1, 1, 1, 1, 1, 1,
-                                              7, 7, 7, 7, 7, 7, 7, 7], np.int8)
+                                         7, 7, 7, 7, 7, 7, 7, 7], np.int8)
     bytes_file += _create_particle_array("x", [0, 0, 0, 0, 1, 1, 1, 1,
                                                0.5, 0.5, 0.5, 0.5, 1.5, 1.5, 1.5, 1.5])
     bytes_file += _create_particle_array("y", [0, 0, 1, 1, 0, 0, 1, 1,
@@ -271,14 +271,14 @@ def test_gas_sink_particles():
     # 8 particles storing 4 real arrays (x, y, z, h)
     bytes_file += bytearray(read_tag.tobytes())
     n = np.array([8], dtype='int64')
-    nums = np.array([0, 0, 0, 0, 0, 4, 0, 0],dtype='int32')
+    nums = np.array([0, 0, 0, 0, 0, 4, 0, 0] , dtype='int32')
     bytes_file += bytearray(n.tobytes())
     bytes_file += bytearray(nums.tobytes())
     bytes_file += bytearray(read_tag.tobytes())
 
     bytes_file += bytearray(read_tag.tobytes())
     n = np.array([1], dtype='int64')
-    nums = np.array([0, 0, 0, 0, 0, 7, 0, 0],dtype='int32')
+    nums = np.array([0, 0, 0, 0, 0, 7, 0, 0] , dtype='int32')
     bytes_file += bytearray(n.tobytes())
     bytes_file += bytearray(nums.tobytes())
     bytes_file += bytearray(read_tag.tobytes())
@@ -356,21 +356,21 @@ def test_gas_dust_sink_particles():
     # 8 particles storing 4 real arrays (x, y, z, h)
     bytes_file += bytearray(read_tag.tobytes())
     n = np.array([16], dtype='int64')
-    nums = np.array([0, 1, 0, 0, 0, 4, 0, 0],dtype='int32')
+    nums = np.array([0, 1, 0, 0, 0, 4, 0, 0] , dtype='int32')
     bytes_file += bytearray(n.tobytes())
     bytes_file += bytearray(nums.tobytes())
     bytes_file += bytearray(read_tag.tobytes())
 
     bytes_file += bytearray(read_tag.tobytes())
     n = np.array([1], dtype='int64')
-    nums = np.array([0, 0, 0, 0, 0, 7, 0, 0],dtype='int32')
+    nums = np.array([0, 0, 0, 0, 0, 7, 0, 0] , dtype='int32')
     bytes_file += bytearray(n.tobytes())
     bytes_file += bytearray(nums.tobytes())
     bytes_file += bytearray(read_tag.tobytes())
 
     # write 5 gas/dust particle arrays
     bytes_file += _create_particle_array("itype", [1, 1, 1, 1, 1, 1, 1, 1,
-                                              7, 7, 7, 7, 7, 7, 7, 7], np.int8)
+                                         7, 7, 7, 7, 7, 7, 7, 7], np.int8)
     bytes_file += _create_particle_array("x", [0, 0, 0, 0, 1, 1, 1, 1,
                                                0.5, 0.5, 0.5, 0.5, 1.5, 1.5, 1.5, 1.5])
     bytes_file += _create_particle_array("y", [0, 0, 1, 1, 0, 0, 1, 1,
