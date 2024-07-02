@@ -115,9 +115,17 @@ def get_df():
     return sdf
 
 
-def test_write_phantom():
+def test_write_phantom_one_block():
 
     test_sdf = sarracen.read_phantom('ot_00003')
     phantom_file = sarracen.write_phantom(test_sdf, 'ot_00003')
     test_sdf_from_new_file = sarracen.read_phantom(phantom_file.name)
     pd.testing.assert_frame_equal(test_sdf, test_sdf_from_new_file)
+
+
+def test_write_phantom_with_sinks(): #FAILS
+    test_sdfs = sarracen.read_phantom('jet_00158')
+    phantom_file = sarracen.write_phantom(test_sdfs[0], 'jet_00158')
+    test_sdf_from_new_file = sarracen.read_phantom(phantom_file.name)
+    pd.testing.assert_frame_equal(test_sdfs[0], test_sdf_from_new_file)
+

@@ -13,4 +13,4 @@ from .render import render, streamlines, arrowplot
 
 import sarracen.disc
 
-__version__ = "1.2.3"
+__version__ = "1.2.4"
