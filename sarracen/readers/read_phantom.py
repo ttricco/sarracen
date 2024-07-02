@@ -17,7 +17,7 @@ def _read_fortran_block(fp, bytesize):
     return data
 
 
-def _read_capture_pattern(fp):
+def read_capture_pattern(fp):
     """ Phantom dump validation plus default real and int sizes."""
 
     start_tag = fp.read(4)  # 4-byte Fortran tag
@@ -186,6 +186,7 @@ def _create_mass_column(df, header_vars):
             df.loc[df.itype == itype, 'mass'] = header_vars[f'massoftype_{itype}']
     return df
 
+
 def read_phantom(filename: str, separate_types: str = 'sinks', ignore_inactive: bool = True):
     """
     Read data from a Phantom dump file.
@@ -214,7 +215,7 @@ def read_phantom(filename: str, separate_types: str = 'sinks', ignore_inactive: 
 
     Notes
     -----
-    See the `Phantom documentation <https://phantomsph.readthedocs.io/en/latest/dumpfile.html>`_ for a full description
+    See the `Phantom documentation <https://phantomsph.readthedocs.io/en/latest/user-guide/dumpfile.html>`_ for a full description
     of the Phantom binary file format.
 
     Examples
@@ -223,13 +224,13 @@ def read_phantom(filename: str, separate_types: str = 'sinks', ignore_inactive: 
 
     >>> sdf, sdf_sinks = sarracen.read_phantom('dumpfile_00000')
 
-    A dump file containing multiple particle types, say gas + dust + sinks, can separated into their own data frames
+    A dump file containing multiple particle types, say gas + dust + sinks, can be separated into their own data frames
     by specifying ``separate_types='all'``.
 
     >>> sdf_gas, sdf_dust, sdf_sinks = sarracen.read_phantom('multiple_types_00000', separate_types='all')
     """
     with open(filename, 'rb') as fp:
-        def_int_dtype, def_real_dtype = _read_capture_pattern(fp)
+        def_int_dtype, def_real_dtype = read_capture_pattern(fp)
         file_identifier = _read_file_identifier(fp)
 
         header_vars = _read_global_header(fp, def_int_dtype, def_real_dtype)
