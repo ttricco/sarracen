@@ -47,6 +47,12 @@ class DtArrayCount:
         self.tags = tags
 
 
+class SdfDtArrayCounts:
+    def __init__(self, dt_array_counts, sdf):
+        self.dtArrayCounts = dt_array_counts
+        self.sdf = sdf
+
+
 def invalid_key(key, used_keys):
     return key == 'file_identifier' or key == 'mass' or key in used_keys
 
@@ -107,46 +113,52 @@ def count_num_dt_arrays(test_sdf, dt):
 def get_array_tags(test_sdf, dt):
     return list(test_sdf.select_dtypes(include=[dt]).columns)
 
+def get_last_index(sdf):
+    return 1 if sdf.index[-1] == 0 else sdf.shape[0]
 
-def _write_value_arrays(file: bytearray, sdf: SarracenDataFrame, def_int: np.dtype, def_real: np.dtype):
+def _write_value_arrays(file: bytearray, sdfs: [SarracenDataFrame], def_int: np.dtype, def_real: np.dtype):
 
     dtypes = [def_int, np.int8, np.int16, np.int32, np.int64, def_real, np.float32, np.float64]
     read_tag = np.array([13], dtype='int32')
-    num_blocks = 1
+    num_blocks = len(sdfs)
 
     file += bytearray(read_tag.tobytes())
     file += bytearray(np.array([num_blocks], dtype='int32').tobytes())
     file += bytearray(read_tag.tobytes())
 
-    nvars = np.array([sdf.shape[0]], dtype='int64')
-    array_count = []
-    dtypes_used = set()
+    array_counts = []
+    for sdf in sdfs:
+        nvars = np.array(get_last_index(sdf), dtype='int64')
+        array_count = []
+        dtypes_used = set()
 
-    for d_type in dtypes:
-        if d_type not in dtypes_used:
-            dt_array_count = DtArrayCount(d_type, count_num_dt_arrays(sdf, d_type), get_array_tags(sdf, d_type))
-            array_count.append(dt_array_count)
-            dtypes_used.add(d_type)
-        else:
-            dt_array_count = DtArrayCount(d_type, 0, [])
-            array_count.append(dt_array_count)
+        for d_type in dtypes:
+            if d_type not in dtypes_used:
+                dt_array_count = DtArrayCount(d_type, count_num_dt_arrays(sdf, d_type), get_array_tags(sdf, d_type))
+                array_count.append(dt_array_count)
+                dtypes_used.add(d_type)
+            else:
+                dt_array_count = DtArrayCount(d_type, 0, [])
+                array_count.append(dt_array_count)
 
-    file = bytearray(read_tag.tobytes())
-    file += bytearray(nvars.tobytes())
-    counts = [ct.count for ct in array_count]
-    file += bytearray(np.array(counts, dtype='int32').tobytes())
-    file += bytearray(read_tag.tobytes())
+        file = bytearray(read_tag.tobytes())
+        file += bytearray(nvars.tobytes())
+        counts = [ct.count for ct in array_count]
+        file += bytearray(np.array(counts, dtype='int32').tobytes())
+        file += bytearray(read_tag.tobytes())
+        array_counts.append(SdfDtArrayCounts(array_count, sdf))
 
-    for ct in array_count:
-        if ct.count > 0:
-            for tag in ct.tags:
-                file += bytearray(read_tag.tobytes())
-                file += bytearray(map(ord, tag.ljust(16)))
-                file += bytearray(read_tag.tobytes())
+    for sdfac in array_counts:
+        for ct in sdfac.dtArrayCounts:
+            if ct.count > 0:
+                for tag in ct.tags:
+                    file += bytearray(read_tag.tobytes())
+                    file += bytearray(map(ord, tag.ljust(16)))
+                    file += bytearray(read_tag.tobytes())
 
-                file += bytearray(read_tag.tobytes())
-                file += bytearray(np.array(list(sdf[tag]), dtype=ct.d_type).tobytes())
-                file += bytearray(read_tag.tobytes())
+                    file += bytearray(read_tag.tobytes())
+                    file += bytearray(np.array(list(sdfac.sdf[tag]), dtype=ct.d_type).tobytes())
+                    file += bytearray(read_tag.tobytes())
     return file
 
 
@@ -171,14 +183,14 @@ def determine_default_types(sdf: SarracenDataFrame, original_ph_file: str = ''):
     return def_int, def_real
 
 
-def write_phantom(sdf: SarracenDataFrame, original_ph_file: str = '', w_ph_file: str = 'w_ph_file'):
+def write_phantom(sdfs: [SarracenDataFrame], original_ph_file: str = '', w_ph_file: str = 'w_ph_file'):
 
-    def_int, def_real = determine_default_types(sdf,  original_ph_file)
+    def_int, def_real = determine_default_types(sdfs[0], original_ph_file)
 
     ph_file = _write_capture_pattern(def_int, def_real) #No iversion created
-    ph_file += _write_file_identifier(sdf)
-    ph_file += _write_global_header(sdf, def_int, def_real)
-    ph_file += _write_value_arrays(ph_file, sdf, def_int, def_real)
+    ph_file += _write_file_identifier(sdfs[0])
+    ph_file += _write_global_header(sdfs[0], def_int, def_real)
+    ph_file += _write_value_arrays(ph_file, sdfs, def_int, def_real)
 
     with open(w_ph_file, 'wb') as phantom_file:
         phantom_file.write(ph_file)
