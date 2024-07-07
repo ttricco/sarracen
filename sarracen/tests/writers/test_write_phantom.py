@@ -115,6 +115,101 @@ def get_df():
     return sdf
 
 
+def get_gas_dust_particles():
+
+    bytes_file = _create_capture_pattern(np.int32, np.float64)
+    bytes_file += _create_file_identifier()
+    bytes_file += _create_global_header(massoftype_7=1e-4)
+
+    # create 1 block for gas
+    read_tag = np.array([13], dtype='int32')
+    bytes_file += bytearray(read_tag.tobytes())
+    nblocks = np.array([1], dtype='int32')
+    bytes_file += bytearray(nblocks.tobytes())
+    bytes_file += bytearray(read_tag.tobytes())
+
+    # 8 particles storing 4 real arrays (x, y, z, h)
+    bytes_file += bytearray(read_tag.tobytes())
+    n = np.array([16], dtype='int64')
+    nums = np.array([0, 1, 0, 0, 0, 4, 0, 0], dtype='int32')
+    bytes_file += bytearray(n.tobytes())
+    bytes_file += bytearray(nums.tobytes())
+    bytes_file += bytearray(read_tag.tobytes())
+
+    # write 5 gas/dust particle arrays
+    bytes_file += _create_particle_array("itype", [1, 1, 1, 1, 1, 1, 1, 1,
+                                         7, 7, 7, 7, 7, 7, 7, 7], np.int8)
+    bytes_file += _create_particle_array("x", [0, 0, 0, 0, 1, 1, 1, 1,
+                                               0.5, 0.5, 0.5, 0.5, 1.5, 1.5, 1.5, 1.5])
+    bytes_file += _create_particle_array("y", [0, 0, 1, 1, 0, 0, 1, 1,
+                                               0.5, 0.5, 1.5, 1.5, 0.5, 0.5, 1.5, 1.5])
+    bytes_file += _create_particle_array("z", [0, 1, 0, 1, 0, 1, 0, 1,
+                                               0.5, 1.5, 0.5, 1.5, 0.5, 1.5, 0.5, 1.5])
+    bytes_file += _create_particle_array("h", [1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1,
+                                               1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1])
+    return bytes_file
+
+def get_gas_sink_particles():
+
+    bytes_file = _create_capture_pattern(np.int32, np.float64)
+    bytes_file += _create_file_identifier()
+    bytes_file += _create_global_header()
+
+    # create 1 block for gas
+    read_tag = np.array([13], dtype='int32')
+    bytes_file += bytearray(read_tag.tobytes())
+    nblocks = np.array([2], dtype='int32')
+    bytes_file += bytearray(nblocks.tobytes())
+    bytes_file += bytearray(read_tag.tobytes())
+
+    # 8 particles storing 4 real arrays (x, y, z, h)
+    bytes_file += bytearray(read_tag.tobytes())
+    n = np.array([8], dtype='int64')
+    nums = np.array([0, 0, 0, 0, 0, 4, 0, 0] , dtype='int32')
+    bytes_file += bytearray(n.tobytes())
+    bytes_file += bytearray(nums.tobytes())
+    bytes_file += bytearray(read_tag.tobytes())
+
+    bytes_file += bytearray(read_tag.tobytes())
+    n = np.array([1], dtype='int64')
+    nums = np.array([0, 0, 0, 0, 0, 7, 0, 0] , dtype='int32')
+    bytes_file += bytearray(n.tobytes())
+    bytes_file += bytearray(nums.tobytes())
+    bytes_file += bytearray(read_tag.tobytes())
+
+    # write 4 gas particle arrays
+    bytes_file += _create_particle_array("x", [0, 0, 0, 0, 1, 1, 1, 1])
+    bytes_file += _create_particle_array("y", [0, 0, 1, 1, 0, 0, 1, 1])
+    bytes_file += _create_particle_array("z", [0, 1, 0, 1, 0, 1, 0, 1])
+    bytes_file += _create_particle_array("h", [1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1])
+
+    # write 7 sink particle arrays
+    bytes_file += _create_particle_array("x", [0.000305])
+    bytes_file += _create_particle_array("y", [-0.035809])
+    bytes_file += _create_particle_array("z", [-0.000035])
+    bytes_file += _create_particle_array("h", [1.0])
+    bytes_file += _create_particle_array("spinx", [-3.911744e-8])
+    bytes_file += _create_particle_array("spiny", [-1.326062e-8])
+    bytes_file += _create_particle_array("spinz", [0.00058])
+
+    return bytes_file
+
+
+def test_sink_particles():
+    with tempfile.NamedTemporaryFile() as fp:
+        fp.write(get_gas_sink_particles())
+        fp.seek(0)
+
+        test_sdfs = sarracen.read_phantom(fp.name)
+        phantom_file = sarracen.write_phantom(test_sdfs, fp.name)
+        test_sdfs_from_new_file = sarracen.read_phantom(phantom_file.name)
+        pd.testing.assert_frame_equal(test_sdfs_from_new_file[0], test_sdfs[0])
+        pd.testing.assert_frame_equal(test_sdfs_from_new_file[1], test_sdfs[0])
+
+
+
+
+
 def test_write_phantom_one_block(): #PASSES
 
     test_sdf = sarracen.read_phantom('ot_00003')

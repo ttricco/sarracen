@@ -116,19 +116,19 @@ def get_array_tags(test_sdf, dt):
 def get_last_index(sdf):
     return 1 if sdf.index[-1] == 0 else sdf.shape[0]
 
-def _write_value_arrays(file: bytearray, sdfs: [SarracenDataFrame], def_int: np.dtype, def_real: np.dtype):
+def _write_value_arrays(ph_file: bytearray, sdfs: [SarracenDataFrame], def_int: np.dtype, def_real: np.dtype):
 
     dtypes = [def_int, np.int8, np.int16, np.int32, np.int64, def_real, np.float32, np.float64]
     read_tag = np.array([13], dtype='int32')
     num_blocks = len(sdfs)
 
-    file += bytearray(read_tag.tobytes())
+    file = bytearray(read_tag.tobytes())
     file += bytearray(np.array([num_blocks], dtype='int32').tobytes())
     file += bytearray(read_tag.tobytes())
 
     array_counts = []
     for sdf in sdfs:
-        nvars = np.array(get_last_index(sdf), dtype='int64')
+        nvars = np.array([get_last_index(sdf)], dtype='int64')
         array_count = []
         dtypes_used = set()
 
@@ -141,10 +141,12 @@ def _write_value_arrays(file: bytearray, sdfs: [SarracenDataFrame], def_int: np.
                 dt_array_count = DtArrayCount(d_type, 0, [])
                 array_count.append(dt_array_count)
 
-        file = bytearray(read_tag.tobytes())
-        file += bytearray(nvars.tobytes())
         counts = [ct.count for ct in array_count]
-        file += bytearray(np.array(counts, dtype='int32').tobytes())
+        nums = np.array(counts, dtype='int32')
+
+        file += bytearray(read_tag.tobytes())
+        file += bytearray(nvars.tobytes())
+        file += bytearray(nums.tobytes())
         file += bytearray(read_tag.tobytes())
         array_counts.append(SdfDtArrayCounts(array_count, sdf))
 
@@ -159,7 +161,8 @@ def _write_value_arrays(file: bytearray, sdfs: [SarracenDataFrame], def_int: np.
                     file += bytearray(read_tag.tobytes())
                     file += bytearray(np.array(list(sdfac.sdf[tag]), dtype=ct.d_type).tobytes())
                     file += bytearray(read_tag.tobytes())
-    return file
+    ph_file += file
+    return ph_file
 
 
 def determine_default_types(sdf: SarracenDataFrame, original_ph_file: str = ''):
