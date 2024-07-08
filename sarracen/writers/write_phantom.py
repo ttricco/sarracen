@@ -116,7 +116,8 @@ def get_array_tags(test_sdf, dt):
 def get_last_index(sdf):
     return 1 if sdf.index[-1] == 0 else sdf.shape[0]
 
-def _write_value_arrays(ph_file: bytearray, sdfs: [SarracenDataFrame], def_int: np.dtype, def_real: np.dtype):
+
+def _write_value_arrays(sdfs: [SarracenDataFrame], def_int: np.dtype, def_real: np.dtype):
 
     dtypes = [def_int, np.int8, np.int16, np.int32, np.int64, def_real, np.float32, np.float64]
     read_tag = np.array([13], dtype='int32')
@@ -161,8 +162,7 @@ def _write_value_arrays(ph_file: bytearray, sdfs: [SarracenDataFrame], def_int: 
                     file += bytearray(read_tag.tobytes())
                     file += bytearray(np.array(list(sdfac.sdf[tag]), dtype=ct.d_type).tobytes())
                     file += bytearray(read_tag.tobytes())
-    ph_file += file
-    return ph_file
+    return file
 
 
 def determine_default_types(sdf: SarracenDataFrame, original_ph_file: str = ''):
@@ -187,13 +187,13 @@ def determine_default_types(sdf: SarracenDataFrame, original_ph_file: str = ''):
 
 
 def write_phantom(sdfs: [SarracenDataFrame], original_ph_file: str = '', w_ph_file: str = 'w_ph_file'):
-
     def_int, def_real = determine_default_types(sdfs[0], original_ph_file)
 
-    ph_file = _write_capture_pattern(def_int, def_real) #No iversion created
+    ph_file = _write_capture_pattern(def_int, def_real)
     ph_file += _write_file_identifier(sdfs[0])
     ph_file += _write_global_header(sdfs[0], def_int, def_real)
-    ph_file += _write_value_arrays(ph_file, sdfs, def_int, def_real)
+    value_arrays = _write_value_arrays(sdfs, def_int, def_real)
+    ph_file += value_arrays
 
     with open(w_ph_file, 'wb') as phantom_file:
         phantom_file.write(ph_file)

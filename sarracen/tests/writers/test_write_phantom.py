@@ -195,7 +195,7 @@ def get_gas_sink_particles():
     return bytes_file
 
 
-def test_sink_particles():
+def test_sink_particles(): #PASSES
     with tempfile.NamedTemporaryFile() as fp:
         fp.write(get_gas_sink_particles())
         fp.seek(0)
@@ -204,10 +204,7 @@ def test_sink_particles():
         phantom_file = sarracen.write_phantom(test_sdfs, fp.name)
         test_sdfs_from_new_file = sarracen.read_phantom(phantom_file.name)
         pd.testing.assert_frame_equal(test_sdfs_from_new_file[0], test_sdfs[0])
-        pd.testing.assert_frame_equal(test_sdfs_from_new_file[1], test_sdfs[0])
-
-
-
+        pd.testing.assert_frame_equal(test_sdfs_from_new_file[1], test_sdfs[1])
 
 
 def test_write_phantom_one_block(): #PASSES
@@ -218,13 +215,13 @@ def test_write_phantom_one_block(): #PASSES
     pd.testing.assert_frame_equal(test_sdf, test_sdf_from_new_file)
 
 
-def test_write_phantom_with_sinks_first_block(): #FAILS -> test_sdfs[0] != test_sdf_from_new_file
+def test_write_phantom_with_sinks_first_block(): #FAILS -> At positional index 3173, first diff: 3174 != 3173
     test_sdfs = sarracen.read_phantom('jet_00158')
     phantom_file = sarracen.write_phantom([test_sdfs[0]], 'jet_00158')
     test_sdf_from_new_file = sarracen.read_phantom(phantom_file.name)
     pd.testing.assert_frame_equal(test_sdfs[0], test_sdf_from_new_file)
 
-def test_write_phantom_sinks(): #FAILS (AssertionError: Fortran tags mismatch in array blocks.
+def test_write_phantom_sinks(): #FAILS At positional index 3173, first diff: 3174 != 3173
 
     test_sdf, sinks_sdf = sarracen.read_phantom('jet_00158')
     phantom_file = sarracen.write_phantom([test_sdf, sinks_sdf], 'jet_00158')
