@@ -129,6 +129,7 @@ def render(data: 'SarracenDataFrame',
            dens_weight: bool = None,
            normalize: bool = True,
            hmin: bool = False,
+           corotation: list = None,
            **kwargs) -> Axes:
     """
     Render a scalar SPH target variable to a grid plot.
@@ -187,6 +188,8 @@ def render(data: 'SarracenDataFrame',
     hmin: bool
         If True, a minimum smoothing length of 0.5 * pixel size will be imposed. This ensures each particle
         contributes to at least one grid cell / pixel. Defaults to False (this may change in a future verison).
+    cototation: list, optional
+        Moves particles to the co-rotating frame of two location. corotation contains two lists which correspond to the two x, y, z coordinates
     kwargs: other keyword arguments
         Keyword arguments to pass to ax.imshow.
 
@@ -243,6 +246,21 @@ def render(data: 'SarracenDataFrame',
 
     which uses the integral of the kernel along the chosen line of sight.
     """
+
+    if corotation is not None:
+        x_centre, y_centre, z_centre = corotation[0]
+
+        data['x'] -= x_centre
+        data['y'] -= y_centre
+        data['z'] -= z_centre
+
+        rot_origin=[0,0,0]
+        angle = -np.arctan2([corotation[1][1]],[corotation[1][0]])
+        if rotation is None:
+            rotation = [(angle * 180 /np.pi), 0, 0]
+        else:
+            rotation = [(angle * 180 /np.pi)-rotation[0], 0+rotation[1], 0-rotation[2]]
+    
     if data.get_dim() == 2:
         interpolation_type = '2d'
         if dens_weight is None:
@@ -282,8 +300,12 @@ def render(data: 'SarracenDataFrame',
 
     graphic = ax.imshow(img, cmap=cmap, **kwargs)
     if rotation is not None and data.get_dim() == 3:
-        ax.set_xticks([])
-        ax.set_yticks([])
+        if corotation is not None:
+            ax.set_xlabel(x)
+            ax.set_ylabel(y)
+        else:
+            ax.set_xticks([])
+            ax.set_yticks([])
     else:
         ax.set_xlabel(x)
         ax.set_ylabel(y)
