@@ -301,6 +301,40 @@ def _rotate_xyz(data, x, y, z, rotation, rot_origin):
 
     return x_data, y_data, z_data
 
+def _corotate(corotation, rotation):
+    """
+    Calculates the rotation matrix for a corotating frame.
+
+    Parameters
+    ----------
+    corotation: array_like
+        The x, y, z coordinates of two locations which determines the corotating frame. Each coordinate is also array_like
+    rotation: array_like, optional
+        An additional rotation to apply to the corotating frame.
+
+    Returns
+    -------
+    rotation: array_like
+        The rotation to apply to the data before interpolation.
+    rot_origin: array_like
+        Point of rotation of the data.
+
+    """
+    corotation[1][0] -= corotation[0][0]
+    corotation[1][1] -= corotation[0][1]
+    corotation[1][2] -= corotation[0][2]
+
+    rot_origin=corotation[0]
+    angle = -np.arctan2(corotation[1][1], corotation[1][0])
+    if rotation is None:
+        rotation = np.array([angle * 180 /np.pi, 0, 0])
+    else:
+        if isinstance(rotation, Rotation):
+            rotation = rotation.as_rotvec(degrees=True)
+        rotation = np.array([angle * 180/np.pi + rotation[0], rotation[1], rotation[2]])
+        rotation = Rotation.from_euler('zyx', rotation, degrees=True)
+
+    return rotation, rot_origin
 
 def _get_mass(data: 'SarracenDataFrame'):
     if data.mcol == None:
@@ -753,6 +787,7 @@ def interpolate_3d_proj(data: 'SarracenDataFrame',
                         y: str = None,
                         kernel: BaseKernel = None,
                         integral_samples: int = 1000,
+                        corotation: Union[np.ndarray, list] = None,
                         rotation: Union[np.ndarray, list, Rotation] = None,
                         rot_origin: Union[np.ndarray, list, str] = None,
                         x_pixels: int = None,
@@ -783,6 +818,8 @@ def interpolate_3d_proj(data: 'SarracenDataFrame',
         Kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
     integral_samples: int, optional
         Number of sample points to take when approximating the 2D column kernel.
+    corotation: array_like
+        The x, y, z coordinates of two locations which determines the corotating frame.
     rotation: array_like or SciPy Rotation, optional
         The rotation to apply to the data before interpolation. If defined as an array, the
         order of rotations is [z, y, x] in degrees.
@@ -844,6 +881,7 @@ def interpolate_3d_proj(data: 'SarracenDataFrame',
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     _check_boundaries(x_pixels, y_pixels, xlim, ylim)
 
+    if corotation is not None: rotation, rot_origin = _corotate(corotation, rotation)
     x_data, y_data, z_data = _rotate_xyz(data, x, y, z, rotation, rot_origin)
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
@@ -997,6 +1035,7 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',
                          z: str = None,
                          z_slice: float = None,
                          kernel: BaseKernel = None,
+                         corotation: Union[np.ndarray, list] = None,
                          rotation: Union[np.ndarray, list, Rotation] = None,
                          rot_origin: Union[np.ndarray, list, str] = None,
                          x_pixels: int = None,
@@ -1027,6 +1066,8 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',
         detected in `data`.
     kernel: BaseKernel
         The kernel to use for smoothing the target data. Defaults to the kernel specified in `data`.
+    corotation: array_like
+        The x, y, z coordinates of two locations which determines the corotating frame.
     rotation: array_like or SciPy Rotation, optional
         The rotation to apply to the data before interpolation. If defined as an array, the
         order of rotations is [z, y, x] in degrees.
@@ -1087,6 +1128,7 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
 
+    if corotation is not None: rotation, rot_origin = _corotate(corotation, rotation)
     x_data, y_data, z_data = _rotate_xyz(data, x, y, z, rotation, rot_origin)
     h_data = _get_smoothing_lengths(data, hmin, x_pixels, y_pixels, xlim, ylim)
 
