@@ -259,7 +259,7 @@ def render(data: 'SarracenDataFrame',
         if rotation is None:
             rotation = [(angle * 180 /np.pi), 0, 0]
         else:
-            rotation = [(angle * 180 /np.pi)-rotation[0], 0+rotation[1], 0-rotation[2]]
+            rotation = [(angle * 180 /np.pi)+rotation[0], 0+rotation[1], 0+rotation[2]]
     
     if data.get_dim() == 2:
         interpolation_type = '2d'
