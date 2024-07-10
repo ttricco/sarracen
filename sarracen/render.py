@@ -129,7 +129,7 @@ def render(data: 'SarracenDataFrame',
            dens_weight: bool = None,
            normalize: bool = True,
            hmin: bool = False,
-           corotation: list = None,
+           corotation: Union[np.ndarray, list] = None,
            **kwargs) -> Axes:
     """
     Render a scalar SPH target variable to a grid plot.
@@ -246,21 +246,6 @@ def render(data: 'SarracenDataFrame',
 
     which uses the integral of the kernel along the chosen line of sight.
     """
-
-    if corotation is not None:
-        x_centre, y_centre, z_centre = corotation[0]
-
-        data['x'] -= x_centre
-        data['y'] -= y_centre
-        data['z'] -= z_centre
-
-        rot_origin=[0,0,0]
-        angle = -np.arctan2([corotation[1][1]],[corotation[1][0]])
-        if rotation is None:
-            rotation = [(angle * 180 /np.pi), 0, 0]
-        else:
-            rotation = [(angle * 180 /np.pi)+rotation[0], 0+rotation[1], 0+rotation[2]]
-    
     if data.get_dim() == 2:
         interpolation_type = '2d'
         if dens_weight is None:
@@ -277,10 +262,10 @@ def render(data: 'SarracenDataFrame',
         img = interpolate_2d(data, target, x, y, kernel, x_pixels, y_pixels, xlim, ylim, exact, backend, dens_weight,
                              normalize, hmin)
     elif interpolation_type == '3d_cross':
-        img = interpolate_3d_cross(data, target, x, y, z, xsec, kernel, rotation,
+        img = interpolate_3d_cross(data, target, x, y, z, xsec, kernel, corotation, rotation,
                                    rot_origin, x_pixels, y_pixels, xlim, ylim, backend, dens_weight, normalize, hmin)
     elif interpolation_type == '3d':
-        img = interpolate_3d_proj(data, target, x, y, kernel, integral_samples, rotation, rot_origin, x_pixels,
+        img = interpolate_3d_proj(data, target, x, y, kernel, integral_samples, corotation, rotation, rot_origin, x_pixels,
                              y_pixels, xlim, ylim, exact, backend, dens_weight, normalize, hmin)
     else:
         raise ValueError('`data` is not a valid number of dimensions.')
