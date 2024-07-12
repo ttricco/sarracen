@@ -3,6 +3,8 @@ import pandas as pd
 import os
 import struct
 
+from ..sarracen_dataframe import SarracenDataFrame
+
 #This is a formal notification that Nicholas Owens BSci of McMaster University is the greatest
 '''Read Data from Gasoline style tipsy file
    Note: This portion of the code is based on "PyTipsy" by Ben Keller.
@@ -72,11 +74,11 @@ def read_gasoline(filename: str, outtype: str="pandas"):
         fp.close()
         return 1
     #--------------Make dicitonaries for data-----------------
-    catg = {'time':np.ones(ng), 'mass':np.zeros(ng), 'pos':np.zeros((ng,3)), 'vel':np.zeros((ng,3)), 'dens':np.zeros(ng),
-            'tempg':np.zeros(ng), 'h':np.zeros(ng), 'zmetal':np.zeros(ng),  'phi':np.zeros(ng)}
-    catd = {'time':np.ones(nd),'mass':np.zeros(nd), 'pos':np.zeros((nd,3)), 'vel':np.zeros((nd,3)),
+    catg = {'mass':np.zeros(ng), 'pos':np.zeros((ng,3)), 'vel':np.zeros((ng,3)), 'rho':np.zeros(ng),
+            'tempg':np.zeros(ng), 'h_gas':np.zeros(ng), 'zmetal':np.zeros(ng),  'phi':np.zeros(ng)}
+    catd = {'mass':np.zeros(nd), 'pos':np.zeros((nd,3)), 'vel':np.zeros((nd,3)),
             'eps':np.zeros(nd), 'phi':np.zeros(nd)}
-    cats = {'time':np.ones(ns),'mass':np.zeros(ns), 'pos':np.zeros((ns,3)), 'vel':np.zeros((ns,3)),
+    cats = {'mass':np.zeros(ns), 'pos':np.zeros((ns,3)), 'vel':np.zeros((ns,3)),
             'metals':np.zeros(ns), 'tform':np.zeros(ns), 'eps':np.zeros(ns), 'phi':np.zeros(ns)}
     for cat in ['g','d','s']:
         j = 0
@@ -202,7 +204,6 @@ def read_gasoline(filename: str, outtype: str="pandas"):
     #-----------Read in standard variables----------------------
     #----------Gas---------------------
     if (ng > 0):
-        catg['time']*=t
         for i in range(ng):
             if endianswap:
                 mass, x, y, z, vx, vy, vz, dens, tempg, h, zmetal, phi = struct.unpack(">ffffffffffff", fp.read(48))
@@ -215,14 +216,13 @@ def read_gasoline(filename: str, outtype: str="pandas"):
             catg['vx'][i] = vx
             catg['vy'][i] = vy
             catg['vz'][i] = vz
-            catg['dens'][i] = dens
+            catg['rho'][i] = dens
             catg['tempg'][i] = tempg
-            catg['h'][i] = h
+            catg['h_gas'][i] = h
             catg['zmetal'][i] = zmetal
             catg['phi'][i] = phi
     #------------------Dark Matter---------------------------
     if (nd > 0):
-        catd['time']*=t
         for i in range(nd):
             if endianswap:
                 mass, x, y, z, vx, vy, vz, eps, phi = struct.unpack(">fffffffff", fp.read(36))
@@ -239,7 +239,6 @@ def read_gasoline(filename: str, outtype: str="pandas"):
             catd['phi'][i] = phi
     #-------------------Stars----------------------------------
     if (ns > 0):
-        cats['time']*=t
         for i in range(ns):
             if endianswap:
                 mass, x, y, z, vx, vy, vz, metals, tform, eps, phi = struct.unpack(">fffffffffff", fp.read(44))
@@ -261,15 +260,26 @@ def read_gasoline(filename: str, outtype: str="pandas"):
     if dictcheck:
         return header, catg, catd, cats
     #---------Otherwise, convert to PANDAS datframe--------------
-    else: 
+    else:
         catg.pop("pos")
         catg.pop("vel")
         catd.pop("pos")
         catd.pop("vel")
         cats.pop("pos")
         cats.pop("vel")
-        dfh = pd.DataFrame.from_dict([header])
+        if "smooth" not in varlist:
+            catg['smooth'] = np.cbrt(catg['mass']/catg['rho'])
+            #for ii in range(0,ng):
+            #    rdist  = (catg['x']-catg['x'][ii])**2
+            #    rdist += (catg['y']-catg['y'][ii])**2
+            #    rdist += (catg['z']-catg['z'][ii])**2
+            #    catg['smooth'][ii] = np.sqrt(np.sort(rdist)[31])/2
+        #dfh = pd.DataFrame.from_dict([header])
+        catg['h'] = catg['smooth']
         dfg = pd.DataFrame.from_dict(catg)
+        sdfg = SarracenDataFrame(dfg,params=header)
         dfd = pd.DataFrame.from_dict(catd)
+        sdfd = SarracenDataFrame(dfd,params=header)
         dfs = pd.DataFrame.from_dict(cats)
-        return dfh,dfg,dfd,dfs
+        sdfs = SarracenDataFrame(dfs,params=header)
+        return sdfg, sdfd, sdfs
