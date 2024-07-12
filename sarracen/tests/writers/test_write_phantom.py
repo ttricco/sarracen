@@ -81,7 +81,7 @@ def _create_particle_array(tag, data, dtype=np.float64):
     return bytes_file
 
 
-def get_df():
+def get_one_block_phantom_file():
     bytes_file = _create_capture_pattern(np.int32, np.float64)
     bytes_file += _create_file_identifier()
     bytes_file += _create_global_header()
@@ -107,15 +107,10 @@ def get_df():
     bytes_file += _create_particle_array("z", [0, 1, 0, 1, 0, 1, 0, 1])
     bytes_file += _create_particle_array("h", [1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1])
 
-    with tempfile.NamedTemporaryFile() as fp:
-        fp.write(bytes_file)
-        fp.seek(0)
-
-        sdf = sarracen.read_phantom(fp.name, separate_types='all')
-    return sdf
+    return bytes_file
 
 
-def get_gas_dust_particles():
+def get_gas_dust_sink_particles():
 
     bytes_file = _create_capture_pattern(np.int32, np.float64)
     bytes_file += _create_file_identifier()
@@ -124,14 +119,21 @@ def get_gas_dust_particles():
     # create 1 block for gas
     read_tag = np.array([13], dtype='int32')
     bytes_file += bytearray(read_tag.tobytes())
-    nblocks = np.array([1], dtype='int32')
+    nblocks = np.array([2], dtype='int32')
     bytes_file += bytearray(nblocks.tobytes())
     bytes_file += bytearray(read_tag.tobytes())
 
     # 8 particles storing 4 real arrays (x, y, z, h)
     bytes_file += bytearray(read_tag.tobytes())
     n = np.array([16], dtype='int64')
-    nums = np.array([0, 1, 0, 0, 0, 4, 0, 0], dtype='int32')
+    nums = np.array([0, 1, 0, 0, 0, 4, 0, 0] , dtype='int32')
+    bytes_file += bytearray(n.tobytes())
+    bytes_file += bytearray(nums.tobytes())
+    bytes_file += bytearray(read_tag.tobytes())
+
+    bytes_file += bytearray(read_tag.tobytes())
+    n = np.array([1], dtype='int64')
+    nums = np.array([0, 0, 0, 0, 0, 7, 0, 0] , dtype='int32')
     bytes_file += bytearray(n.tobytes())
     bytes_file += bytearray(nums.tobytes())
     bytes_file += bytearray(read_tag.tobytes())
@@ -147,6 +149,15 @@ def get_gas_dust_particles():
                                                0.5, 1.5, 0.5, 1.5, 0.5, 1.5, 0.5, 1.5])
     bytes_file += _create_particle_array("h", [1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1,
                                                1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1])
+
+    # write 7 sink particle arrays
+    bytes_file += _create_particle_array("x", [0.000305])
+    bytes_file += _create_particle_array("y", [-0.035809])
+    bytes_file += _create_particle_array("z", [-0.000035])
+    bytes_file += _create_particle_array("h", [1.0])
+    bytes_file += _create_particle_array("spinx", [-3.911744e-8])
+    bytes_file += _create_particle_array("spiny", [-1.326062e-8])
+    bytes_file += _create_particle_array("spinz", [0.00058])
     return bytes_file
 
 def get_gas_sink_particles():
@@ -195,6 +206,28 @@ def get_gas_sink_particles():
     return bytes_file
 
 
+def get_file_content(file_path):
+    with open(file_path, 'rb') as file:
+        return file.read()
+
+
+def test_sink_particles_gas_and_dust(): #PASSES
+    with tempfile.NamedTemporaryFile() as fp:
+        fp.write(get_gas_dust_sink_particles())
+        fp.seek(0)
+
+        test_sdfs = sarracen.read_phantom(fp.name)
+        phantom_file = sarracen.write_phantom(test_sdfs, fp.name)
+        test_sdfs_from_new_file = sarracen.read_phantom(phantom_file.name)
+        pd.testing.assert_frame_equal(test_sdfs_from_new_file[0], test_sdfs[0])
+        pd.testing.assert_frame_equal(test_sdfs_from_new_file[1], test_sdfs[1])
+
+        original_content = get_file_content(fp.name)
+        new_content = get_file_content(phantom_file.name)
+
+        assert original_content == new_content
+
+
 def test_sink_particles(): #PASSES
     with tempfile.NamedTemporaryFile() as fp:
         fp.write(get_gas_sink_particles())
@@ -208,25 +241,11 @@ def test_sink_particles(): #PASSES
 
 
 def test_write_phantom_one_block(): #PASSES
+    with tempfile.NamedTemporaryFile() as fp:
+        fp.write(get_one_block_phantom_file())
+        fp.seek(0)
 
-    test_sdf = sarracen.read_phantom('ot_00003')
-    phantom_file = sarracen.write_phantom([test_sdf], 'ot_00003')
-    test_sdf_from_new_file = sarracen.read_phantom(phantom_file.name)
-    pd.testing.assert_frame_equal(test_sdf, test_sdf_from_new_file)
-
-
-def test_write_phantom_with_sinks_first_block(): #FAILS -> At positional index 3173, first diff: 3174 != 3173
-    test_sdfs = sarracen.read_phantom('jet_00158')
-    phantom_file = sarracen.write_phantom([test_sdfs[0]], 'jet_00158')
-    test_sdf_from_new_file = sarracen.read_phantom(phantom_file.name)
-    pd.testing.assert_frame_equal(test_sdfs[0], test_sdf_from_new_file)
-
-def test_write_phantom_sinks(): #FAILS At positional index 3173, first diff: 3174 != 3173
-
-    test_sdf, sinks_sdf = sarracen.read_phantom('jet_00158')
-    phantom_file = sarracen.write_phantom([test_sdf, sinks_sdf], 'jet_00158')
-    test_sdf_from_new_file,  test_sdf_from_new_file_sinks = sarracen.read_phantom(phantom_file.name)
-    pd.testing.assert_frame_equal(test_sdf, test_sdf_from_new_file)
-    pd.testing.assert_frame_equal(sinks_sdf, test_sdf_from_new_file_sinks)
-
-
+        test_sdf = sarracen.read_phantom(fp.name)
+        phantom_file = sarracen.write_phantom([test_sdf], fp.name)
+        test_sdf_from_new_file = sarracen.read_phantom(phantom_file.name)
+        pd.testing.assert_frame_equal(test_sdf, test_sdf_from_new_file)
