@@ -14,7 +14,7 @@ jobs:
       contents: read
       packages: read
       # To report GitHub Actions status checks
-      statuses: read
+      statuses: write
 
     steps:
       - name: Checkout code
@@ -29,10 +29,5 @@ jobs:
         env:
           # To report GitHub Actions status checks
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PYTHON_FLAKE8_CONFIG_FILE: '.github/linter-configs/.flake8'
-          VALIDATE_PYTHON: false
-          VALIDATE_PYTHON_BLACK: false
-          VALIDATE_PYTHON_ISORT: false
-          VALIDATE_PYTHON_MYPY: false
-          VALIDATE_PYTHON_PYLINT: false
-          VALIDATE_PYTHON_RUFF: false
+          VALIDATE_ALL_CODEBASE: false
+          VALIDATE_PYTHON_FLAKE8: true
