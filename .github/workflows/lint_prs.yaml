@@ -1,4 +1,3 @@
----
 name: Lint
 
 on:  # yamllint disable-line rule:truthy
@@ -30,7 +29,6 @@ jobs:
         env:
           # To report GitHub Actions status checks
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VALIDATE_PYTHON_FLAKE8: true
           PYTHON_FLAKE8_CONFIG_FILE: '.github/linter-configs/.flake8'
           VALIDATE_PYTHON: false
           VALIDATE_PYTHON_BLACK: false
