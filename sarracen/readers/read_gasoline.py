@@ -14,16 +14,51 @@ from ..sarracen_dataframe import SarracenDataFrame
    https://github.com/bwkeller/pytipsy
 '''
 
-def read_gasoline(filename: str, outtype: str="pandas"):
-    if outtype in ["pandas","PANDAS","Pandas","DF","df","dataframe"
-                  ,"Dataframe","DATAFRAME","DataFrame"]:
-        dictcheck = 0
-    elif outtype in ["dic","Dic","DIC","dict","Dict","DICT",
-                     "dictionary","Dictionary","DICTIONARY"]:
+def read_gasoline(filename: str,
+                  outtype: str = "sarracen"):
+    """
+    Read data from a Gasoline tipsy file.
+
+    Particles are separated into three data structures -- one for SPH gas
+    particles, one for dark matter particles, and one for star particles.
+
+    Global values stored in the dump file are stored within the
+    SarracenDataFrames in the dictionary ``params``. If the output type is
+    Python dictionaries, then an additional dictionary is returned with the
+    global variables.
+
+    Parameters
+    ----------
+    filename : str
+        Name of the file to be loaded.
+    outtype : {'sarracen', 'dict'}, default='sarracen'
+        Whether to return data in SarracenDataFrames or Python dictionaries.
+
+    Returns
+    -------
+    list of SarracenDataFrames or Python dictionaries
+
+    Notes
+    --------
+    Adapted from `PyTipsy <https://github.com/bwkeller/pytipsy>`_.
+
+    Examples
+    --------
+    Particles are separated into gas, dark matter, and star particles.
+
+    >>> sdf_g, sdf_dm, sdf_star = sarracen.read_gasoline('dumpfile')
+
+    The `outtype` parameter can be used to change the return type to Python
+    dictionaries. This will return global variables in a separate dictionary.
+
+    >>> header, catg, catd, cats = sarracen.read_gasoline('dumpfile', outtype='dict')
+    """
+
+    if outtype.lower() in ["dic","dict","dictionary"]:
         dictcheck = 1
     else:
-        print("Unknonw argument for output data type. Assuming Pandas dataframe")
         dictcheck = 0
+
     #----------Get all relevant files-------------------------
     filin = filename.split("/")[-1]
     dirin = filename[0:len(filename)-len(filin)]

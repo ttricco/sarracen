@@ -26,6 +26,8 @@ def azimuthal_average(data: 'SarracenDataFrame',
     ----------
     data : SarracenDataFrame
         Particle data, in a SarracenDataFrame.
+    target : str
+        Column label of the target smoothing data.
     r_in : float, optional
         Inner radius of the disc. Defaults to the minimum r value.
     r_out : float, optional
@@ -118,8 +120,8 @@ def surface_density(data: 'SarracenDataFrame',
     ValueError
         If the *geometry* is not *cylindrical* or *spherical*.
 
-    See Also
-    --------
+    Notes
+    -----
     The surface density averaging procedure for SPH is described in section
     3.2.6 of Lodato & Price, MNRAS (2010), `doi:10.1111/j.1365-2966.2010.16526.x
     <https://doi.org/10.1111/j.1365-2966.2010.16526.x>`_.
@@ -345,8 +347,7 @@ def scale_height(data: 'SarracenDataFrame',
 
     See Also
     --------
-    :func:`angular_momentum` : Calculate the angular momentum profile of a
-    disc.
+    :func:`angular_momentum` : Calculate the disc angular momentum profile.
     """
 
     origin = _get_origin(origin)

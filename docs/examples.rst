@@ -10,3 +10,4 @@ Examples
 
    examples/ot
    examples/dustydisc
+   examples/k3d
