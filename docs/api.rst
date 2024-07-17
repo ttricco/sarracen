@@ -24,6 +24,7 @@ make a pull request!).
    read_marisa
    read_gradsph
    read_gasoline
+   read_shamrock
 
 
 SarracenDataFrame
