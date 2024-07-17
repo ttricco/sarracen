@@ -129,6 +129,7 @@ def render(data: 'SarracenDataFrame',
            dens_weight: bool = None,
            normalize: bool = True,
            hmin: bool = False,
+           corotation: Union[np.ndarray, list] = None,
            **kwargs) -> Axes:
     """
     Render a scalar SPH target variable to a grid plot.
@@ -187,6 +188,8 @@ def render(data: 'SarracenDataFrame',
     hmin: bool
         If True, a minimum smoothing length of 0.5 * pixel size will be imposed. This ensures each particle
         contributes to at least one grid cell / pixel. Defaults to False (this may change in a future verison).
+    cototation: list, optional
+        Moves particles to the co-rotating frame of two location. corotation contains two lists which correspond to the two x, y, z coordinates
     kwargs: other keyword arguments
         Keyword arguments to pass to ax.imshow.
 
@@ -259,10 +262,10 @@ def render(data: 'SarracenDataFrame',
         img = interpolate_2d(data, target, x, y, kernel, x_pixels, y_pixels, xlim, ylim, exact, backend, dens_weight,
                              normalize, hmin)
     elif interpolation_type == '3d_cross':
-        img = interpolate_3d_cross(data, target, x, y, z, xsec, kernel, rotation,
+        img = interpolate_3d_cross(data, target, x, y, z, xsec, kernel, corotation, rotation,
                                    rot_origin, x_pixels, y_pixels, xlim, ylim, backend, dens_weight, normalize, hmin)
     elif interpolation_type == '3d':
-        img = interpolate_3d_proj(data, target, x, y, kernel, integral_samples, rotation, rot_origin, x_pixels,
+        img = interpolate_3d_proj(data, target, x, y, kernel, integral_samples, corotation, rotation, rot_origin, x_pixels,
                              y_pixels, xlim, ylim, exact, backend, dens_weight, normalize, hmin)
     else:
         raise ValueError('`data` is not a valid number of dimensions.')
@@ -282,8 +285,12 @@ def render(data: 'SarracenDataFrame',
 
     graphic = ax.imshow(img, cmap=cmap, **kwargs)
     if rotation is not None and data.get_dim() == 3:
-        ax.set_xticks([])
-        ax.set_yticks([])
+        if corotation is not None:
+            ax.set_xlabel(x)
+            ax.set_ylabel(y)
+        else:
+            ax.set_xticks([])
+            ax.set_yticks([])
     else:
         ax.set_xlabel(x)
         ax.set_ylabel(y)
