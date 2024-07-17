@@ -70,13 +70,13 @@ def _invalid_key(key, used_keys):
 
 
 def _write_global_header_tags_and_values(tags, values, dtype):
-    write_tag = np.array([len(tags) * 4], dtype=np.int32)
+    write_tag = np.array([len(tags) * 16], dtype=np.int32)
     bytes_file = bytearray(write_tag.tobytes())
     for tag in tags:
         bytes_file += bytearray(map(ord, tag.ljust(16)))
     bytes_file += bytearray(write_tag.tobytes())
 
-    write_tag = np.array(len(values) * dtype().itemsize, dtype=dtype)
+    write_tag = np.array(len(values) * dtype().itemsize, dtype=np.int32)
     bytes_file += bytearray(write_tag.tobytes())
     bytes_file += bytearray(np.array(values, dtype=dtype).tobytes())
     bytes_file += bytearray(write_tag.tobytes())
@@ -105,9 +105,8 @@ def _write_global_header(sdf: SarracenDataFrame,
 
     for header in global_headers:
         nvars = np.array([len(header.tags)], dtype='int32')
-        write_tag = np.array([len(nvars)], dtype='int32')
+        write_tag = np.array([len(nvars) * nvars.dtype.itemsize], dtype='int32')
         bytes_file += bytearray(write_tag.tobytes())
-        nvars = np.array([len(header.tags)], dtype='int32')
         bytes_file += bytearray(nvars.tobytes())
         bytes_file += bytearray(write_tag.tobytes())
 
@@ -140,7 +139,6 @@ def _write_value_arrays(sdf: SarracenDataFrame,
                         def_real: np.dtype):
 
     dtypes = [def_int, np.int8, np.int16, np.int32, np.int64, def_real, np.float32, np.float64]
-    num_blocks = len(sdfs)
 
     # number of blocks -- 1 for now while testing (block 2 is sink particles)
     file = _write_fortran_block([1], np.int32)
