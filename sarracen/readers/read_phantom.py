@@ -235,6 +235,8 @@ def read_phantom(filename: str, separate_types: str = 'sinks', ignore_inactive: 
 
         header_vars = _read_global_header(fp, def_int_dtype, def_real_dtype)
         header_vars['file_identifier'] = file_identifier
+        header_vars['def_int_dtype'] = def_int_dtype
+        header_vars['def_real_dtype'] = def_real_dtype
 
         df, df_sinks = _read_array_blocks(fp, def_int_dtype, def_real_dtype)
 
