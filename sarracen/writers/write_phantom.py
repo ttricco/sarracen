@@ -1,6 +1,5 @@
 import numpy as np
 
-from ..readers.read_phantom import read_capture_pattern
 from ..sarracen_dataframe import SarracenDataFrame
 
 
@@ -26,21 +25,20 @@ class SdfDataTypeTags:
 def _write_fortran_block(value: [],
                          dtype: type):
     write_tag = np.array([len(value) * dtype().itemsize], dtype=np.int32)
-    bytes_file = bytearray(write_tag.tobytes())
-    bytes_file += bytearray(np.array(value, dtype=dtype).tobytes())
-    bytes_file += bytearray(write_tag.tobytes())
-    return bytes_file
+    file = bytearray(write_tag.tobytes())
+    file += bytearray(np.array(value, dtype=dtype).tobytes())
+    file += bytearray(write_tag.tobytes())
+    return file
 
 
 def _write_file_identifier(sdf: SarracenDataFrame):
 
-    file_identifier = sdf.params['file_identifier'].ljust(100)
+    file_id = sdf.params['file_identifier'].ljust(100)
+    file_id = list(map(ord, file_id))
 
-    write_tag = np.array([len(file_identifier)], dtype='int32')
-    ph_file = bytearray(write_tag.tobytes())
-    ph_file += bytearray(map(ord, file_identifier))
-    ph_file += bytearray(write_tag.tobytes())
-    return ph_file
+    file = _write_fortran_block(file_id, dtype=np.uint8)
+
+    return file
 
 
 def _write_capture_pattern(def_int, def_real):
@@ -70,17 +68,14 @@ def _invalid_key(key, used_keys):
 
 
 def _write_global_header_tags_and_values(tags, values, dtype):
-    write_tag = np.array([len(tags) * 16], dtype=np.int32)
-    bytes_file = bytearray(write_tag.tobytes())
-    for tag in tags:
-        bytes_file += bytearray(map(ord, tag.ljust(16)))
-    bytes_file += bytearray(write_tag.tobytes())
 
-    write_tag = np.array(len(values) * dtype().itemsize, dtype=np.int32)
-    bytes_file += bytearray(write_tag.tobytes())
-    bytes_file += bytearray(np.array(values, dtype=dtype).tobytes())
-    bytes_file += bytearray(write_tag.tobytes())
-    return bytes_file
+    tags = [list(map(ord, tag.ljust(16))) for tag in tags]
+    tags = [c for tag in tags for c in tag]
+
+    file = _write_fortran_block(tags, np.uint8)
+    file += _write_fortran_block(values, dtype)
+
+    return file
 
 
 def _write_global_header(sdf: SarracenDataFrame,
@@ -101,21 +96,18 @@ def _write_global_header(sdf: SarracenDataFrame,
                 used_keys.add(key)
                 ghe.values.append(params_dict[key])
 
-    bytes_file = bytearray()
+    file = bytearray()
 
     for header in global_headers:
-        nvars = np.array([len(header.tags)], dtype='int32')
-        write_tag = np.array([len(nvars) * nvars.dtype.itemsize], dtype='int32')
-        bytes_file += bytearray(write_tag.tobytes())
-        bytes_file += bytearray(nvars.tobytes())
-        bytes_file += bytearray(write_tag.tobytes())
+        nvars = len(header.tags)
+        file += _write_fortran_block([nvars], dtype=np.int32)
 
         if nvars == 0:
             continue
 
-        bytes_file += _write_global_header_tags_and_values(header.tags, header.values, header.d_type)
+        file += _write_global_header_tags_and_values(header.tags, header.values, header.d_type)
 
-    return bytes_file
+    return file
 
 
 def _count_num_dt_arrays(test_sdf, dt):
@@ -148,7 +140,6 @@ def _write_value_arrays(sdf: SarracenDataFrame,
     data_type_tags = []
     data_types_used = set()
 
-
     for d_type in dtypes:
         tags = _get_array_tags(sdf, d_type) if d_type not in data_types_used else []
         data_type_tags.append(DataTypeTags(d_type, tags))
@@ -156,18 +147,20 @@ def _write_value_arrays(sdf: SarracenDataFrame,
 
     counts = np.array([len(dt_tags.tags) for dt_tags in data_type_tags], dtype='int32')
 
-    write_tag = np.array([len(nvars) * nvars.dtype.itemsize + len(counts) * counts.dtype.itemsize], dtype=np.int32)
-    file += write_tag.tobytes() + nvars.tobytes() + counts.tobytes() + write_tag.tobytes()
+    write_tag = np.array([len(nvars) * nvars.dtype.itemsize
+                          + len(counts) * counts.dtype.itemsize], dtype=np.int32)
+    file += write_tag.tobytes() \
+            + nvars.tobytes() \
+            + counts.tobytes() \
+            + write_tag.tobytes()
+
     sdf_data_type_tags.append(SdfDataTypeTags(data_type_tags, sdf))
 
     for sdf_dt_tags in sdf_data_type_tags:
         for dt_tags in sdf_dt_tags.data_type_tags:
             if len(dt_tags.tags) > 0:
                 for tag in dt_tags.tags:
-                    file += bytearray(write_tag.tobytes())
-                    file += bytearray(map(ord, tag.ljust(16)))
-                    file += bytearray(write_tag.tobytes())
-
+                    file += _write_fortran_block(list(map(ord, tag.ljust(16))), dtype=np.uint8)
                     file += _write_fortran_block(list(sdf_dt_tags.sdf[tag]), dt_tags.d_type)
     return file
 
@@ -178,14 +171,13 @@ def write_phantom(sdf: SarracenDataFrame,
     def_int = sdf.params['def_int_dtype']
     def_real = sdf.params['def_real_dtype']
 
-    ph_file = _write_capture_pattern(def_int, def_real)
-    ph_file += _write_file_identifier(sdf)
-    ph_file += _write_global_header(sdf, def_int, def_real)
-    value_arrays = _write_value_arrays(sdf, def_int, def_real)
-    ph_file += value_arrays
+    file = _write_capture_pattern(def_int, def_real)
+    file += _write_file_identifier(sdf)
+    file += _write_global_header(sdf, def_int, def_real)
+    file += _write_value_arrays(sdf, def_int, def_real)
 
     with open(filename, 'wb') as phantom_file:
-        phantom_file.write(ph_file)
+        phantom_file.write(file)
         phantom_file.close()
 
     return phantom_file
