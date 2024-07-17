@@ -3,7 +3,7 @@ from .readers.read_marisa import read_marisa
 from .readers.read_csv import read_csv
 from .readers.read_phantom import read_phantom
 from .readers.read_gradsph import read_gradsph
-from .readers.read_vtk import read_vtk
+from .readers.read_shamrock import read_shamrock
 
 from .sarracen_dataframe import SarracenDataFrame
 

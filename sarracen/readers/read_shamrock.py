@@ -8,7 +8,7 @@ from vtk.util.numpy_support import vtk_to_numpy
 
 from ..sarracen_dataframe import SarracenDataFrame
 
-def read_vtk(filename, pmass):
+def read_shamrock(filename, pmass):
     """
     Read data from a SHAMROCK vtk file ('big' simulation current format).
 
@@ -52,9 +52,12 @@ def read_vtk(filename, pmass):
             df[array_name + 'z'] = numpy_array[:, 2]
 
     # add B
-    df['Bx'] = df['B/rhox'] * df['rho']
-    df['By'] = df['B/rhoy'] * df['rho']
-    df['Bz'] = df['B/rhoz'] * df['rho']
+    if 'B/rhox' in df.columns:
+        df['Bx'] = df['B/rhox'] * df['rho']
+    if 'B/rhoy' in df.columns:
+        df['By'] = df['B/rhoy'] * df['rho']
+    if 'B/rhoz' in df.columns:
+        df['Bz'] = df['B/rhoz'] * df['rho']
     
     # now add position columns
     points = vtk_data.GetPoints()
@@ -66,6 +69,4 @@ def read_vtk(filename, pmass):
 
     # finish by adding mass
     df['mass'] = pmass * np.ones_like(numpy_points[:, 0])
-    sarracen_df = sarracen.SarracenDataFrame(df)
-
-    return sarracen_df
+    return sarracen.SarracenDataFrame(df)
