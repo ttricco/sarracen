@@ -111,7 +111,7 @@ def _read_global_header(fp, def_int_dtype, def_real_dtype):
         new_keys, new_data = _read_global_header_block(fp, dtype)
 
         keys += new_keys
-        data = np.append(data, new_data)
+        data = data + list(new_data)
 
     keys = _rename_duplicates(keys)
 
