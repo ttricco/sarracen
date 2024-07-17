@@ -67,8 +67,16 @@ def _invalid_key(key, used_keys):
     return key in exclude or key in used_keys
 
 
+def _rename_duplicate(tag):
+    if len(tag) > 1 and tag[-2] == '_' and tag[-1].isdigit():
+        tag = tag[:-2]
+
+    return tag
+
+
 def _write_global_header_tags_and_values(tags, values, dtype):
 
+    tags = [_rename_duplicate(tag) for tag in tags]
     tags = [list(map(ord, tag.ljust(16))) for tag in tags]
     tags = [c for tag in tags for c in tag]
 
