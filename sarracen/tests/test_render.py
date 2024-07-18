@@ -131,10 +131,19 @@ def test_kwargs(backend):
     df_3 = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'z': [2, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
     sdf_3 = SarracenDataFrame(df_3)
     sdf_3.backend = backend
+    df_4 = pd.DataFrame({'x': [-3, 6], 'y': [5, -1], 'z': [2, 1], 'P': [-1, 1], 'h': [1, 1], 'rho': [-1, -1], 'm': [1, 1]})
+    sdf_4 = SarracenDataFrame(df_4)
+    sdf_4.backend = backend
 
     for args in [{'data': sdf_2, 'xsec': None}, {'data': sdf_3, 'xsec': None}, {'data': sdf_3, 'xsec': 1.5}]:
         fig, ax = plt.subplots()
         render(args['data'], 'P', xsec=args['xsec'], ax=ax, origin='upper')
+        assert ax.images[0].origin == 'upper'
+        plt.close(fig)
+    
+    for arg in [True, False]:
+        fig, ax = plt.subplots()
+        render(sdf_4, 'P', ax=ax, log_scale=arg, symlog_scale=True, origin='upper', vmin=-1., vmax=1.)
         assert ax.images[0].origin == 'upper'
         plt.close(fig)
 
