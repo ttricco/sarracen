@@ -1,5 +1,3 @@
-from typing import Union
-
 import numpy as np
 import pandas as pd
 
@@ -7,6 +5,7 @@ import vtk
 from vtk.util.numpy_support import vtk_to_numpy
 
 from ..sarracen_dataframe import SarracenDataFrame
+
 
 def read_shamrock(filename, pmass):
     """
@@ -17,8 +16,8 @@ def read_shamrock(filename, pmass):
     filename : str
         Name of the file to be loaded.
     pmass : float
-        Mass of particles in the simulation (for now, it is assumed all particles)
-        have the same mass).
+        Mass of particles in the simulation (for now, it is assumed all
+        particles have the same mass).
 
     Returns
     -------
@@ -42,10 +41,8 @@ def read_shamrock(filename, pmass):
         numpy_array = vtk_to_numpy(vtk_array)
         ndim = numpy_array.ndim
 
-        if ndim==1:
-            print(array_name)
+        if ndim == 1:
             df[array_name] = numpy_array
-
         else:
             df[array_name + 'x'] = numpy_array[:, 0]
             df[array_name + 'y'] = numpy_array[:, 1]
@@ -58,7 +55,7 @@ def read_shamrock(filename, pmass):
         df['By'] = df['B/rhoy'] * df['rho']
     if 'B/rhoz' in df.columns:
         df['Bz'] = df['B/rhoz'] * df['rho']
-    
+
     # now add position columns
     points = vtk_data.GetPoints()
     numpy_points = vtk_to_numpy(points.GetData())
@@ -69,4 +66,4 @@ def read_shamrock(filename, pmass):
 
     # finish by adding mass
     df['mass'] = pmass * np.ones_like(numpy_points[:, 0])
-    return sarracen.SarracenDataFrame(df)
+    return SarracenDataFrame(df)
