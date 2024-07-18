@@ -15,7 +15,7 @@ from scipy.spatial.transform import Rotation
 import seaborn as sns
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
-from matplotlib.colors import Colormap, LogNorm
+from matplotlib.colors import Colormap, LogNorm, SymLogNorm
 
 from .interpolate import interpolate_2d_line, interpolate_2d, interpolate_3d_proj, interpolate_3d_cross, \
     interpolate_3d_vec, interpolate_3d_cross_vec, interpolate_2d_vec, interpolate_3d_line
@@ -126,6 +126,7 @@ def render(data: 'SarracenDataFrame',
            rotation: Union[np.ndarray, list, Rotation] = None,
            rot_origin: Union[np.ndarray, list, str] = None,
            log_scale: bool = False,
+           symlog_scale: bool = False,
            dens_weight: bool = None,
            normalize: bool = True,
            hmin: bool = False,
@@ -180,6 +181,10 @@ def render(data: 'SarracenDataFrame',
         / 2. Defaults to the midpoint.
     log_scale: bool
         Whether to use a logarithmic scale for color coding.
+    symlog_scale: bool
+        Whether to use a symmetrical logarithmic scale for color coding (i.e., allows positive and negative values).
+        Optionally add "linthresh" and "linscale" to kwargs to set the linear region and the scaling of linear values,
+        respectively (defaults to 1e-9 and 1, respectevely). Only works if log_scale == True.
     dens_weight: bool
         If True, will plot the target mutliplied by the density. Defaults to True for column-integrated views,
         when the target is not density, and False for everything else.
@@ -279,7 +284,13 @@ def render(data: 'SarracenDataFrame',
     kwargs.setdefault("origin", 'lower')
     kwargs.setdefault("extent", [xlim[0], xlim[1], ylim[0], ylim[1]])
     if log_scale:
-        kwargs.setdefault("norm", LogNorm(clip=True, vmin=kwargs.get('vmin'), vmax=kwargs.get('vmax')))
+        if symlog_scale:
+            kwargs.setdefault("norm", SymLogNorm(kwargs.pop("linthresh", 1e-9), 
+                                                linscale=kwargs.pop("linscale", 1.),
+                                                vmin=kwargs.get('vmin'), 
+                                                vmax=kwargs.get('vmax')))
+        else:
+            kwargs.setdefault("norm", LogNorm(clip=True, vmin=kwargs.get('vmin'), vmax=kwargs.get('vmax')))
         kwargs.pop("vmin", None)
         kwargs.pop("vmax", None)
 
