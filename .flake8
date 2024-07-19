@@ -1,3 +1,5 @@
 [flake8]
 per-file-ignores =
     sarracen/__init__.py:F401
+    sarracen/render.py:F821
+    sarracen/kernels/__init__.py:F401
