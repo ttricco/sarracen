@@ -8,7 +8,8 @@ from .readers.read_gasoline import read_gasoline
 
 from .sarracen_dataframe import SarracenDataFrame
 
-from .interpolate import interpolate_2d, interpolate_2d_line, interpolate_3d_proj, interpolate_3d_cross
+from .interpolate import interpolate_2d, interpolate_2d_line, \
+    interpolate_3d_proj, interpolate_3d_cross
 from .render import render, streamlines, arrowplot
 
 import sarracen.disc
