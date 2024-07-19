@@ -205,14 +205,14 @@ def render(data: 'SarracenDataFrame',
         midpoint, that is, min + max / 2. Defaults to the midpoint.
     log_scale: bool
         Whether to use a logarithmic scale for color coding.
-    dens_weight: bool
+    dens_weight: bool, optional
         If True, will plot the target mutliplied by the density. Defaults to
         True for column-integrated views, when the target is not density, and
         False for everything else.
-    normalize: bool
+    normalize: bool, optional
         If True, will normalize the interpolation. Defaults to False (this may
         change in future versions).
-    hmin: bool
+    hmin: bool, optional
         If True, a minimum smoothing length of 0.5 * pixel size will be
         imposed. This ensures each particle contributes to at least one grid
         cell / pixel. Defaults to False (this may change in a future verison).
@@ -390,13 +390,13 @@ def lineplot(data: 'SarracenDataFrame',
         specified backend in `data` will override the default.
     log_scale: bool
         Whether to use a logarithmic scale for color coding.
-    dens_weight: bool
+    dens_weight: bool, optional
         If True, will plot the target mutliplied by the density. Defaults to
         False.
-    normalize: bool
+    normalize: bool, optional
         If True, will normalize the interpolation. Defaults to False (this may
         change in future versions).
-    hmin: bool
+    hmin: bool, optional
         If True, a minimum smoothing length of 0.5 * pixel size will be
         imposed. This ensures each particle contributes to at least one grid
         cell / pixel. Defaults to False (this may change in a future verison).
@@ -540,20 +540,20 @@ def streamlines(data: 'SarracenDataFrame',
         data space. Defaults to the minimum and maximum values of `x` and `y`.
     ax: Axes
         The main axes in which to draw the rendered image.
-    exact: bool
+    exact: bool, optional
         Whether to use exact interpolation of the data. For cross-sections
         this is ignored. Defaults to False.
     backend: ['cpu', 'gpu']
         The computation backend to use when interpolating this data. Defaults
         to 'gpu' if CUDA is enabled, otherwise 'cpu' is used. A manually
         specified backend in `data` will override the default.
-    dens_weight: bool
+    dens_weight: bool, optional
         If True, will plot the target mutliplied by the density. Defaults to
         True for column-integrated views and False for everything else.
-    normalize: bool
+    normalize: bool, optional
         If True, will normalize the interpolation. Defaults to False (this may
         change in future versions).
-    hmin: bool
+    hmin: bool, optional
         If True, a minimum smoothing length of 0.5 * pixel size will be
         imposed. This ensures each particle contributes to at least one grid
         cell / pixel. Defaults to False (this may change in a future verison).
@@ -715,13 +715,13 @@ def arrowplot(data: 'SarracenDataFrame',
         The computation backend to use when interpolating this data. Defaults
         to 'gpu' if CUDA is enabled, otherwise 'cpu' is used. A manually
         specified backend in `data` will override the default.
-    dens_weight: bool
+    dens_weight: bool, optional
         If True, will plot the target mutliplied by the density. Defaults to
         True for column-integrated views and False for everything else.
-    normalize: bool
+    normalize: bool, optional
         If True, will normalize the interpolation. Defaults to False (this may
         change in future versions).
-    hmin: bool
+    hmin: bool, optional
         If True, a minimum smoothing length of 0.5 * pixel size will be
         imposed. This ensures each particle contributes to at least one grid
         cell / pixel. Defaults to False (this may change in a future verison).
