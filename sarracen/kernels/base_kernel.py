@@ -36,7 +36,7 @@ class BaseKernel:
         return 1
 
     def get_column_kernel(self, samples: int = 1000) -> np.ndarray:
-        """ Generate a 2D column kernel approximation, by integrating a given 3D kernel over the z-axis.
+        """ Integrate a given 3D kernel over the z-axis.
 
         Parameters
         ----------
@@ -50,7 +50,9 @@ class BaseKernel:
         Examples
         --------
         Use np.linspace and np.interp to use this column kernel approximation:
-            np.interp(q, np.linspace(0, kernel.get_radius(), samples), column_kernel)
+            np.interp(q,
+                      np.linspace(0, kernel.get_radius(), samples),
+                      column_kernel)
         """
         if samples == 1000 and self._column_cache is not None:
             return self._column_cache
@@ -65,8 +67,8 @@ class BaseKernel:
     def get_column_kernel_func(self, samples):
         """ Generate a numba-accelerated column kernel function.
 
-        Creates a numba-accelerated function for column kernel weights. This function
-        can be utilized similarly to kernel.w.
+        Creates a numba-accelerated function for column kernel weights. This
+        function can be utilized similarly to kernel.w().
 
         Parameters
         ----------
@@ -84,8 +86,8 @@ class BaseKernel:
 
         @njit(fastmath=True)
         def func(q, dim):
-            # using np.linspace() would break compatibility with the GPU backend,
-            # so the calculation here is performed manually.
+            # using np.linspace() would break compatibility with the GPU
+            # backend, so the calculation here is performed manually.
             wab_index = q * (samples - 1) / radius
             index = min(max(0, int(math.floor(wab_index))), samples - 1)
             index1 = min(max(0, int(math.ceil(wab_index))), samples - 1)

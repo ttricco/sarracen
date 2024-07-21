@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import sys
 from ..sarracen_dataframe import SarracenDataFrame
 from .utils import _get_mass, _get_origin
 from .utils import _bin_particles_by_radius, _get_bin_midpoints
@@ -123,7 +122,8 @@ def surface_density(data: 'SarracenDataFrame',
     Notes
     -----
     The surface density averaging procedure for SPH is described in section
-    3.2.6 of Lodato & Price, MNRAS (2010), `doi:10.1111/j.1365-2966.2010.16526.x
+    3.2.6 of Lodato & Price, MNRAS (2010),
+    `doi:10.1111/j.1365-2966.2010.16526.x
     <https://doi.org/10.1111/j.1365-2966.2010.16526.x>`_.
     """
 
@@ -287,8 +287,8 @@ def _calc_scale_height(data: 'SarracenDataFrame',
     Lx, Ly, Lz = _calc_angular_momentum(data, rbins, origin, unit_vector=True)
 
     zdash = rbins.map(Lx).to_numpy() * data[data.xcol] \
-            + rbins.map(Ly).to_numpy() * data[data.ycol] \
-            + rbins.map(Lz).to_numpy() * data[data.zcol]
+        + rbins.map(Ly).to_numpy() * data[data.ycol] \
+        + rbins.map(Lz).to_numpy() * data[data.zcol]
 
     return zdash.groupby(rbins).std()
 
@@ -372,7 +372,8 @@ def honH(data: 'SarracenDataFrame',
          origin: list = None,
          retbins: bool = False):
     """
-    Calculates <h>/H, the averaged smoothing length divided by the scale height.
+    Calculates <h>/H, the averaged smoothing length divided by the scale
+    height.
 
     The profile is computed by segmenting the particles into radial bins
     (rings). The average smoothing length in each bin is divided by the scale
