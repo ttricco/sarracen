@@ -207,10 +207,10 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
     log_scale: bool
         Whether to use a logarithmic scale for color coding.
     symlog_scale: bool
-        Whether to use a symmetrical logarithmic scale for color coding (i.e., 
-        allows positive and negative values). Optionally add "linthresh" and 
-        "linscale" to kwargs to set the linear region and the scaling of linear 
-        values, respectively (defaults to 1e-9 and 1, respectevely). Only works 
+        Whether to use a symmetrical logarithmic scale for color coding (i.e.,
+        allows positive and negative values). Optionally add "linthresh" and
+        "linscale" to kwargs to set the linear region and the scaling of linear
+        values, respectively (defaults to 1e-9 and 1, respectevely). Only works
         if log_scale == True.
     cototation: list, optional
         Moves particles to the co-rotating frame of two location. corotation
@@ -314,14 +314,14 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
     kwargs.setdefault("extent", [xlim[0], xlim[1], ylim[0], ylim[1]])
     if log_scale:
         if symlog_scale:
-            kwargs.setdefault("norm", 
-                              SymLogNorm(kwargs.pop("linthresh", 1e-9), 
+            kwargs.setdefault("norm",
+                              SymLogNorm(kwargs.pop("linthresh", 1e-9),
                                          linscale=kwargs.pop("linscale", 1.),
-                                         vmin=kwargs.get('vmin'), 
+                                         vmin=kwargs.get('vmin'),
                                          vmax=kwargs.get('vmax')))
         else:
-            kwargs.setdefault("norm", LogNorm(clip=True, 
-                                              vmin=kwargs.get('vmin'), 
+            kwargs.setdefault("norm", LogNorm(clip=True,
+                                              vmin=kwargs.get('vmin'),
                                               vmax=kwargs.get('vmax')))
         kwargs.pop("vmin", None)
         kwargs.pop("vmax", None)
