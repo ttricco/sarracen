@@ -222,8 +222,10 @@ def _create_aprmass_column(df, header_vars):
 
     return df
 
-  
-def read_phantom(filename: str, separate_types: str = 'sinks', ignore_inactive: bool = True):
+
+def read_phantom(filename: str,
+                 separate_types: str = 'sinks',
+                 ignore_inactive: bool = True):
     """
     Read data from a Phantom dump file.
 
