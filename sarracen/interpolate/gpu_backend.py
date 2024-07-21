@@ -278,14 +278,13 @@ class GPUBackend(BaseBackend):
                         # determine difference in the x-direction
                         xpix = x_min + ((ipix + ipixmin) + 0.5) * pixwidthx
                         dx = xpix - x_data[i]
-                        dx2 = dx * dx * (1 / (h_data[i] ** 2))
+                        dx2 = dx**2 / h_data[i]**2
 
                         # determine difference in the y-direction
                         ypix = y_min + ((jpix + jpixmin) + 0.5) * pixwidthy
                         dy = ypix - y_data[i]
-                        dy2 = dy * dy * (1 / (h_data[i] ** 2))
-
-                        dz2 = ((dz ** 2) * (1 / h_data[i] ** 2))
+                        dy2 = dy**2 / h_data[i]**2
+                        dz2 = dz**2 / h_data[i]**2
 
                         # calculate contributions at pixels i, j due to
                         # particle at x, y
@@ -293,13 +292,14 @@ class GPUBackend(BaseBackend):
 
                         # add contribution to image
                         if q < kernel_radius:
-                            # atomic add protects the summation against race
-                            # conditions.
+                            # atomic protects against race conditions.
                             wab = weight_function(q, n_dims)
-                            cuda.atomic.add(image, (jpix + jpixmin, ipix + ipixmin), term * wab)
+                            jp = jpix + jpixmin
+                            ip = ipix + ipixmin
+                            cuda.atomic.add(image, (jp, ip), term * wab)
 
         threadsperblock = 32
-        blockspergrid = (x_data.size + (threadsperblock - 1)) // threadsperblock
+        blockspergrid = (x_data.size + (threadsperblock-1)) // threadsperblock
 
         # transfer relevant data to the GPU
         d_x = cuda.to_device(x_data)
@@ -312,13 +312,15 @@ class GPUBackend(BaseBackend):
         d_image = cuda.to_device(np.zeros((y_pixels, x_pixels)))
 
         # execute the newly compiled CUDA kernel.
-        _2d_func[blockspergrid, threadsperblock](z_slice, d_x, d_y, d_z, d_w, d_h, kernel_radius, x_pixels, y_pixels,
-                                                 x_min, x_max, y_min, y_max, n_dims, d_image)
+        _2d_func[blockspergrid, threadsperblock](z_slice, d_x, d_y, d_z, d_w,
+                                                 d_h, kernel_radius, x_pixels,
+                                                 y_pixels, x_min, x_max, y_min,
+                                                 y_max, n_dims, d_image)
 
         return d_image.copy_to_host()
 
-    # Underlying CPU numba-compiled code for exact interpolation of 2D data t
-    # o a 2D grid.
+    # Underlying CPU numba-compiled code for exact interpolation of 2D data
+    # to a 2D grid.
     @staticmethod
     def _exact_2d_render(x_data, y_data, w_data, h_data, x_pixels, y_pixels,
                          x_min, x_max, y_min, y_max):
@@ -414,7 +416,7 @@ class GPUBackend(BaseBackend):
                         # this pixel.
                         cuda.atomic.add(image, (jpix, ipix), term * wab)
                         if jpix < jpixmax - 1:
-                            cuda.atomic.sub(image, (jpix + 1, ipix), term * wab)
+                            cuda.atomic.sub(image, (jpix+1, ipix), term * wab)
 
                         # Right Boundaries
                         r0 = 0.5 * pixwidthx + dx
@@ -429,10 +431,10 @@ class GPUBackend(BaseBackend):
                         # the value of the left boundary of the pixel to the
                         # right of this pixel.
                         if ipix < ipixmax - 1:
-                            cuda.atomic.sub(image, (jpix, ipix + 1), term * wab)
+                            cuda.atomic.sub(image, (jpix, ipix+1), term * wab)
 
         threadsperblock = 32
-        blockspergrid = (x_data.size + (threadsperblock - 1)) // threadsperblock
+        blockspergrid = (x_data.size + (threadsperblock-1)) // threadsperblock
 
         # transfer relevant data to the GPU
         d_x = cuda.to_device(x_data)
@@ -480,12 +482,11 @@ class GPUBackend(BaseBackend):
                 # negative, the particle does not contribute to the
                 # cross-section, and can be removed.
                 bb = 2 * gradient * (yint - y_data[i]) - 2 * x_data[i]
-                cc = x_data[i] ** 2 + y_data[i] ** 2 - 2 * yint * y_data[i] + yint ** 2 - (
-                            kernel_radius * h_data[i]) ** 2
+                cc = x_data[i]**2 + y_data[i]**2 - 2 * yint * y_data[i] \
+                    + yint**2 - (kernel_radius * h_data[i])**2
                 det = bb ** 2 - 4 * aa * cc
 
-                # create a filter for particles that do not contribute to the
-                # cross-section.
+                # create a filter for particles that do not contribute
                 if det < 0:
                     return
 
@@ -496,10 +497,12 @@ class GPUBackend(BaseBackend):
                 xstart = min(max(x1, (-bb - det) / (2 * aa)), x2)
                 xend = min(max(x1, (-bb + det) / (2 * aa)), x2)
 
-                # the start and end distances which lie within a particle's
+                # start and end distances that are within a particle's
                 # smoothing circle.
-                rstart = math.sqrt((xstart - x1) ** 2 + ((gradient * xstart + yint) - y1) ** 2)
-                rend = math.sqrt((xend - x1) ** 2 + (((gradient * xend + yint) - y1) ** 2))
+                rstart = math.sqrt((xstart - x1)**2 + ((gradient * xstart
+                                                        + yint) - y1)**2)
+                rend = math.sqrt((xend - x1)**2 + (((gradient * xend
+                                                     + yint) - y1)**2))
 
                 # the max and min pixels that each particle contributes to.
                 ipixmin = min(max(0, round(rstart / pixwidth)), pixels)
@@ -507,21 +510,20 @@ class GPUBackend(BaseBackend):
 
                 # iterate through all affected pixels
                 for ipix in range(ipixmin, ipixmax):
-                    # determine contributions to all affected pixels for this
-                    # particle
+                    # determine contributions to all pixels for this particle
                     xpix = x1 + (ipix + 0.5) * xpixwidth
                     ypix = gradient * xpix + yint
                     dy = ypix - y_data[i]
                     dx = xpix - x_data[i]
 
-                    q2 = (dx * dx + dy * dy) * (1 / (h_data[i] * h_data[i]))
+                    q2 = (dx**2 + dy**2) / h_data[i]**2
                     wab = weight_function(math.sqrt(q2), 2)
 
                     # add contributions to output total.
                     cuda.atomic.add(image, ipix, wab * term)
 
         threadsperblock = 32
-        blockspergrid = (x_data.size + (threadsperblock - 1)) // threadsperblock
+        blockspergrid = (x_data.size + (threadsperblock-1)) // threadsperblock
 
         # transfer relevant data to the GPU
         d_x = cuda.to_device(x_data)
@@ -534,7 +536,9 @@ class GPUBackend(BaseBackend):
         d_image = cuda.to_device(np.zeros(pixels))
 
         # execute the newly compiled GPU kernel
-        _2d_func[blockspergrid, threadsperblock](d_x, d_y, d_w, d_h, kernel_radius, pixels, x1, x2, y1, y2, d_image)
+        _2d_func[blockspergrid, threadsperblock](d_x, d_y, d_w, d_h,
+                                                 kernel_radius, pixels, x1, x2,
+                                                 y1, y2, d_image)
 
         return d_image.copy_to_host()
 
@@ -549,7 +553,8 @@ class GPUBackend(BaseBackend):
         ux, uy, uz = dx / length, dy / length, dz / length
 
         @cuda.jit(fastmath=True)
-        def _2d_func(x_data, y_data, z_data, w_data, h_data, kernel_radius, pixels, x1, x2, y1, y2, z1, z2, image):
+        def _2d_func(x_data, y_data, z_data, w_data, h_data, kernel_radius,
+                     pixels, x1, x2, y1, y2, z1, z2, image):
             i = cuda.grid(1)
 
             if i < x_data.size:
@@ -557,7 +562,8 @@ class GPUBackend(BaseBackend):
                 dy = y1 - y_data[i]
                 dz = z1 - z_data[i]
                 delta = (ux * dx + uy * dy + uz * dz)**2 \
-                    - (dx**2 + dy**2 + dz**2) + (kernel_radius * h_data[i])**2
+                    - (dx**2 + dy**2 + dz**2) \
+                    + (kernel_radius * h_data[i])**2
                 if delta < 0:
                     return
 
@@ -584,7 +590,7 @@ class GPUBackend(BaseBackend):
                     cuda.atomic.add(image, ipix, wab * term)
 
         threadsperblock = 32
-        blockspergrid = (x_data.size + (threadsperblock - 1)) // threadsperblock
+        blockspergrid = (x_data.size + (threadsperblock-1)) // threadsperblock
 
         # transfer relevant data to the GPU
         d_x = cuda.to_device(x_data)
@@ -598,8 +604,9 @@ class GPUBackend(BaseBackend):
         d_image = cuda.to_device(np.zeros(pixels))
 
         # execute the newly compiled GPU kernel
-        _2d_func[blockspergrid, threadsperblock](d_x, d_y, d_z, d_w, d_h, kernel_radius, pixels, x1, x2, y1, y2, z1, z2,
-                                                 d_image)
+        _2d_func[blockspergrid, threadsperblock](d_x, d_y, d_z, d_w, d_h,
+                                                 kernel_radius, pixels, x1, x2,
+                                                 y1, y2, z1, z2, d_image)
 
         return d_image.copy_to_host()
 
@@ -654,33 +661,48 @@ class GPUBackend(BaseBackend):
 
                         q2 = (dx ** 2 + dy ** 2) / h_data[i] ** 2
 
-                        if q2 < 4 + 3 * pixwidthx * pixwidthy / h_data[i] ** 2:
+                        if q2 < 4 + 3 * pixwidthx * pixwidthy / h_data[i]**2:
                             # Calculate the volume integral of this pixel by
                             # summing the comprising surface integrals of each
                             # surface of the cube.
 
                             # x-y surfaces
-                            pixint = 2 * surface_int(0.5 * pixwidthz, x_data[i], y_data[i], xpix, ypix, pixwidthx,
-                                                     pixwidthy, h_data[i])
+                            pixint = 2 * surface_int(0.5 * pixwidthz,
+                                                     x_data[i], y_data[i],
+                                                     xpix, ypix,
+                                                     pixwidthx, pixwidthy,
+                                                     h_data[i])
 
                             # x-z surfaces
-                            pixint += surface_int(ypix - y_data[i] + 0.5 * pixwidthy, x_data[i], 0, xpix, 0, pixwidthx,
-                                                  pixwidthz, h_data[i])
-                            pixint += surface_int(y_data[i] - ypix + 0.5 * pixwidthy, x_data[i], 0, xpix, 0, pixwidthx,
-                                                  pixwidthz, h_data[i])
+                            pixint += surface_int(ypix - y_data[i]
+                                                  + 0.5 * pixwidthy,
+                                                  x_data[i], 0, xpix,
+                                                  0, pixwidthx, pixwidthz,
+                                                  h_data[i])
+                            pixint += surface_int(y_data[i] - ypix
+                                                  + 0.5 * pixwidthy,
+                                                  x_data[i], 0, xpix,
+                                                  0, pixwidthx, pixwidthz,
+                                                  h_data[i])
 
                             # y-z surfaces
-                            pixint += surface_int(xpix - x_data[i] + 0.5 * pixwidthx, 0, y_data[i], 0, ypix, pixwidthz,
-                                                  pixwidthy, h_data[i])
-                            pixint += surface_int(x_data[i] - xpix + 0.5 * pixwidthx, 0, y_data[i], 0, ypix, pixwidthz,
-                                                  pixwidthy, h_data[i])
+                            pixint += surface_int(xpix - x_data[i]
+                                                  + 0.5 * pixwidthx, 0,
+                                                  y_data[i], 0, ypix,
+                                                  pixwidthz, pixwidthy,
+                                                  h_data[i])
+                            pixint += surface_int(x_data[i] - xpix
+                                                  + 0.5 * pixwidthx, 0,
+                                                  y_data[i], 0, ypix,
+                                                  pixwidthz, pixwidthy,
+                                                  h_data[i])
 
                             wab = pixint * dfac
 
                             cuda.atomic.add(image, (jpix, ipix), term * wab)
 
         threadsperblock = 32
-        blockspergrid = (x_data.size + (threadsperblock - 1)) // threadsperblock
+        blockspergrid = (x_data.size + (threadsperblock-1)) // threadsperblock
 
         # transfer relevant data to the GPU
         d_x = cuda.to_device(x_data)
