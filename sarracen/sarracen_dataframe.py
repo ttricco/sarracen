@@ -294,6 +294,7 @@ class SarracenDataFrame(DataFrame):
                rotation: Union[np.ndarray, list, Rotation] = None,
                rot_origin: Union[np.ndarray, list, str] = None,
                log_scale: bool = None,
+               symlog_scale: bool = None,
                dens_weight: bool = None,
                normalize: bool = False,
                hmin: bool = False,
@@ -301,7 +302,9 @@ class SarracenDataFrame(DataFrame):
         return render(self, target, x, y, z, xsec, kernel, x_pixels, y_pixels,
                       xlim, ylim, cmap, cbar, cbar_kws, cbar_ax, ax, exact,
                       backend, integral_samples, rotation, rot_origin,
-                      log_scale, dens_weight, normalize, hmin, **kwargs)
+                      log_scale, symlog_scale, dens_weight, normalize, hmin, 
+                      **kwargs)
+
 
     @_copy_doc(lineplot)
     def lineplot(self,

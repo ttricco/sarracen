@@ -16,7 +16,7 @@ from scipy.spatial.transform import Rotation
 import seaborn as sns
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
-from matplotlib.colors import Colormap, LogNorm
+from matplotlib.colors import Colormap, LogNorm, SymLogNorm
 
 from .interpolate import interpolate_2d_line, interpolate_2d, \
     interpolate_3d_proj, interpolate_3d_cross, interpolate_3d_vec, \
@@ -143,6 +143,7 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
            rotation: Union[np.ndarray, list, Rotation] = None,
            rot_origin: Union[np.ndarray, list, str] = None,
            log_scale: bool = False,
+           symlog_scale: bool = False,
            dens_weight: bool = None,
            normalize: bool = True,
            hmin: bool = False,
@@ -205,17 +206,12 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
         midpoint, that is, min + max / 2. Defaults to the midpoint.
     log_scale: bool
         Whether to use a logarithmic scale for color coding.
-    dens_weight: bool, optional
-        If True, will plot the target mutliplied by the density. Defaults to
-        True for column-integrated views, when the target is not density, and
-        False for everything else.
-    normalize: bool, optional
-        If True, will normalize the interpolation. Defaults to False (this may
-        change in future versions).
-    hmin: bool, optional
-        If True, a minimum smoothing length of 0.5 * pixel size will be
-        imposed. This ensures each particle contributes to at least one grid
-        cell / pixel. Defaults to False (this may change in a future verison).
+    symlog_scale: bool
+        Whether to use a symmetrical logarithmic scale for color coding (i.e., 
+        allows positive and negative values). Optionally add "linthresh" and 
+        "linscale" to kwargs to set the linear region and the scaling of linear 
+        values, respectively (defaults to 1e-9 and 1, respectevely). Only works 
+        if log_scale == True.
     cototation: list, optional
         Moves particles to the co-rotating frame of two location. corotation
         contains two lists which correspond to the two x, y, z coordinates
@@ -317,8 +313,16 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
     kwargs.setdefault("origin", 'lower')
     kwargs.setdefault("extent", [xlim[0], xlim[1], ylim[0], ylim[1]])
     if log_scale:
-        kwargs.setdefault("norm", LogNorm(clip=True, vmin=kwargs.get('vmin'),
-                                          vmax=kwargs.get('vmax')))
+        if symlog_scale:
+            kwargs.setdefault("norm", 
+                              SymLogNorm(kwargs.pop("linthresh", 1e-9), 
+                                         linscale=kwargs.pop("linscale", 1.),
+                                         vmin=kwargs.get('vmin'), 
+                                         vmax=kwargs.get('vmax')))
+        else:
+            kwargs.setdefault("norm", LogNorm(clip=True, 
+                                              vmin=kwargs.get('vmin'), 
+                                              vmax=kwargs.get('vmax')))
         kwargs.pop("vmin", None)
         kwargs.pop("vmax", None)
 
