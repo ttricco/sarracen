@@ -121,7 +121,7 @@ def _set_pixels(x_pixels, y_pixels, xlim, ylim, default):
     return x_pixels, y_pixels
 
 
-def render(data: 'SarracenDataFrame',
+def render(data: 'SarracenDataFrame',  # noqa: F821
            target: str,
            x: str = None,
            y: str = None,
@@ -347,7 +347,7 @@ def render(data: 'SarracenDataFrame',
     return ax
 
 
-def lineplot(data: 'SarracenDataFrame',
+def lineplot(data: 'SarracenDataFrame',  # noqa: F821
              target: str,
              x: str = None,
              y: str = None,
@@ -474,7 +474,7 @@ def lineplot(data: 'SarracenDataFrame',
     return ax
 
 
-def streamlines(data: 'SarracenDataFrame',
+def streamlines(data: 'SarracenDataFrame',  # noqa: F821
                 target: Union[Tuple[str, str], Tuple[str, str, str]],
                 x: str = None,
                 y: str = None,
@@ -636,7 +636,7 @@ def streamlines(data: 'SarracenDataFrame',
     return ax
 
 
-def arrowplot(data: 'SarracenDataFrame',
+def arrowplot(data: 'SarracenDataFrame',  # noqa: F821
               target: Union[Tuple[str, str], Tuple[str, str, str]],
               x: str = None,
               y: str = None,

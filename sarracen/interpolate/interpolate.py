@@ -387,7 +387,7 @@ def _corotate(corotation, rotation):
     return rotation, rot_origin
 
 
-def _get_mass(data: 'SarracenDataFrame'):
+def _get_mass(data: 'SarracenDataFrame'):  # noqa: F821
     if data.mcol is None:
         if 'mass' not in data.params:
             raise KeyError("'mass' column does not exist in this "
@@ -397,7 +397,7 @@ def _get_mass(data: 'SarracenDataFrame'):
     return data[data.mcol].to_numpy()
 
 
-def _get_density(data: 'SarracenDataFrame'):
+def _get_density(data: 'SarracenDataFrame'):  # noqa: F821
     if data.rhocol is None:
         if data.hcol not in data.columns or 'hfact' not in data.params:
             raise KeyError('Density cannot be derived from the columns in '
@@ -410,7 +410,7 @@ def _get_density(data: 'SarracenDataFrame'):
     return data[data.rhocol].to_numpy()
 
 
-def _get_weight(data: 'SarracenDataFrame',
+def _get_weight(data: 'SarracenDataFrame',  # noqa: F821
                 target: Union[str, np.ndarray],
                 dens_weight: bool):
 
@@ -437,7 +437,7 @@ def _get_weight(data: 'SarracenDataFrame',
         return target_data * mass_data / rho_data
 
 
-def _get_smoothing_lengths(data: 'SarracenDataFrame',
+def _get_smoothing_lengths(data: 'SarracenDataFrame',  # noqa: F821
                            hmin: float,
                            x_pixels: int,
                            y_pixels: int,
@@ -455,7 +455,7 @@ def _get_smoothing_lengths(data: 'SarracenDataFrame',
     return h_data
 
 
-def interpolate_2d(data: 'SarracenDataFrame',
+def interpolate_2d(data: 'SarracenDataFrame',  # noqa: F821
                    target: str,
                    x: str = None,
                    y: str = None,
@@ -559,7 +559,7 @@ def interpolate_2d(data: 'SarracenDataFrame',
     return grid
 
 
-def interpolate_2d_vec(data: 'SarracenDataFrame',
+def interpolate_2d_vec(data: 'SarracenDataFrame',  # noqa: F821
                        target_x: str,
                        target_y: str,
                        x: str = None,
@@ -669,7 +669,7 @@ def interpolate_2d_vec(data: 'SarracenDataFrame',
     return (gridx, gridy)
 
 
-def interpolate_2d_line(data: 'SarracenDataFrame',
+def interpolate_2d_line(data: 'SarracenDataFrame',  # noqa: F821
                         target: str,
                         x: str = None,
                         y: str = None,
@@ -782,7 +782,7 @@ def interpolate_2d_line(data: 'SarracenDataFrame',
     return grid
 
 
-def interpolate_3d_line(data: 'SarracenDataFrame',
+def interpolate_3d_line(data: 'SarracenDataFrame',  # noqa: F821
                         target: str,
                         x: str = None,
                         y: str = None,
@@ -905,7 +905,7 @@ def interpolate_3d_line(data: 'SarracenDataFrame',
     return grid
 
 
-def interpolate_3d_proj(data: 'SarracenDataFrame',
+def interpolate_3d_proj(data: 'SarracenDataFrame',  # noqa: F821
                         target: str,
                         x: str = None,
                         y: str = None,
@@ -1044,7 +1044,7 @@ def interpolate_3d_proj(data: 'SarracenDataFrame',
     return grid
 
 
-def interpolate_3d_vec(data: 'SarracenDataFrame',
+def interpolate_3d_vec(data: 'SarracenDataFrame',  # noqa: F821
                        target_x: str,
                        target_y: str,
                        target_z: str,
@@ -1183,7 +1183,7 @@ def interpolate_3d_vec(data: 'SarracenDataFrame',
     return (gridx, gridy)
 
 
-def interpolate_3d_cross(data: 'SarracenDataFrame',
+def interpolate_3d_cross(data: 'SarracenDataFrame',  # noqa: F821
                          target: str,
                          x: str = None,
                          y: str = None,
@@ -1317,7 +1317,7 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',
     return grid
 
 
-def interpolate_3d_cross_vec(data: 'SarracenDataFrame',
+def interpolate_3d_cross_vec(data: 'SarracenDataFrame',  # noqa: F821
                              target_x: str,
                              target_y: str,
                              target_z: str,
@@ -1451,7 +1451,7 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame',
     return (gridx, gridy)
 
 
-def interpolate_3d_grid(data: 'SarracenDataFrame',
+def interpolate_3d_grid(data: 'SarracenDataFrame',  # noqa: F821
                         target: str,
                         x: str = None,
                         y: str = None,
