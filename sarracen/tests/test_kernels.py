@@ -3,7 +3,9 @@ from pytest import approx, mark
 from scipy.integrate import quad, dblquad, tplquad
 import numpy as np
 
-from sarracen.kernels import CubicSplineKernel, QuarticSplineKernel, QuinticSplineKernel
+from sarracen.kernels import CubicSplineKernel
+from sarracen.kernels import QuarticSplineKernel
+from sarracen.kernels import QuinticSplineKernel
 
 
 def single_kernel(x, kernel):
@@ -90,82 +92,95 @@ def test_quinticspline():
 
 
 @mark.parametrize("kernel",
-                  [CubicSplineKernel(), QuarticSplineKernel(), QuinticSplineKernel()])
+                  [CubicSplineKernel(),
+                   QuarticSplineKernel(),
+                   QuinticSplineKernel()])
 def test_normalization(kernel):
 
-    # Since the three integrals below are only performed in positive space, the
-    # resulting normalized values will not be equal to 1, rather 1/(2^dim). This
-    # value represents the proportion of space in 1,2, and 3 dimensions that
-    # has all positive coordinates.
+    # Since the three integrals below are only performed in positive space,
+    # the resulting normalized values will not be equal to 1, rather 1/(2^dim).
+    # This value represents the proportion of space in 1,2, and 3 dimensions
+    # that has all positive coordinates.
 
-    norm = quad(single_kernel, -kernel.get_radius(), kernel.get_radius(), kernel)[0]
+    norm = quad(single_kernel, -kernel.get_radius(),
+                kernel.get_radius(), kernel)[0]
     assert approx(norm) == 1
 
-    norm = dblquad(double_kernel, -kernel.get_radius(), kernel.get_radius(), -kernel.get_radius(),
+    norm = dblquad(double_kernel, -kernel.get_radius(),
+                   kernel.get_radius(), -kernel.get_radius(),
                    kernel.get_radius(), [kernel])[0]
     assert approx(norm) == 1
 
-    norm = tplquad(triple_kernel, -kernel.get_radius(), kernel.get_radius(), -kernel.get_radius(),
-                   kernel.get_radius(), -kernel.get_radius(), kernel.get_radius(), [kernel])[0]
+    norm = tplquad(triple_kernel, -kernel.get_radius(),
+                   kernel.get_radius(), -kernel.get_radius(),
+                   kernel.get_radius(), -kernel.get_radius(),
+                   kernel.get_radius(), [kernel])[0]
     assert approx(norm) == 1
 
 
 def test_cubic_column():
     kernel = CubicSplineKernel()
     column_kernel = kernel.get_column_kernel(10000)
-
+    pts = np.linspace(0, kernel.get_radius(), 10000)
     # at q = 0, this integral is solvable analytically
-    assert np.interp(0, np.linspace(0, kernel.get_radius(), 10000), column_kernel) == approx(3 / (2 * np.pi))
+    assert np.interp(0, pts, column_kernel) == approx(3 / (2 * np.pi))
     # numerically calculated values
-    assert np.interp(0.5, np.linspace(0, kernel.get_radius(), 10000), column_kernel) == approx(0.33875339978)
-    assert np.interp(1, np.linspace(0, kernel.get_radius(), 10000), column_kernel) == approx(0.111036060968)
-    assert np.interp(1.5, np.linspace(0, kernel.get_radius(), 10000), column_kernel) == approx(0.0114423169642)
-    assert np.interp(2, np.linspace(0, kernel.get_radius(), 10000), column_kernel) == 0
-    assert np.interp(5, np.linspace(0, kernel.get_radius(), 10000), column_kernel) == 0
+    assert np.interp(0.5, pts, column_kernel) == approx(0.33875339978)
+    assert np.interp(1, pts, column_kernel) == approx(0.111036060968)
+    assert np.interp(1.5, pts, column_kernel) == approx(0.0114423169642)
+    assert np.interp(2, pts, column_kernel) == 0
+    assert np.interp(5, pts, column_kernel) == 0
 
 
 def test_quartic_column():
     kernel = QuarticSplineKernel()
     column_kernel = kernel.get_column_kernel(10000)
+    pts = np.linspace(0, kernel.get_radius(), 10000)
 
     # at q = 0, this integral is solvable analytically
-    assert np.interp(0, np.linspace(0, kernel.get_radius(), 10000), column_kernel) == approx(6 / (5 * np.pi))
+    assert np.interp(0, pts, column_kernel) == approx(6 / (5 * np.pi))
     # numerically calculated values
-    assert np.interp(0.5, np.linspace(0, kernel.get_radius(), 10000), column_kernel) == approx(0.288815941868)
-    assert np.interp(1, np.linspace(0, kernel.get_radius(), 10000), column_kernel) == approx(0.120120735858)
-    assert np.interp(1.5, np.linspace(0, kernel.get_radius(), 10000), column_kernel) == approx(0.0233911861393)
-    assert np.interp(2, np.linspace(0, kernel.get_radius(), 10000), column_kernel) == approx(0.00116251851966)
-    assert np.interp(2.5, np.linspace(0, kernel.get_radius(), 10000), column_kernel) == 0
-    assert np.interp(5, np.linspace(0, kernel.get_radius(), 10000), column_kernel) == 0
+    assert np.interp(0.5, pts, column_kernel) == approx(0.288815941868)
+    assert np.interp(1, pts, column_kernel) == approx(0.120120735858)
+    assert np.interp(1.5, pts, column_kernel) == approx(0.0233911861393)
+    assert np.interp(2, pts, column_kernel) == approx(0.00116251851966)
+    assert np.interp(2.5, pts, column_kernel) == 0
+    assert np.interp(5, pts, column_kernel) == 0
 
 
 def test_quintic_column():
     kernel = QuinticSplineKernel()
     column_kernel = kernel.get_column_kernel(10000)
+    pts = np.linspace(0, kernel.get_radius(), 10000)
 
     # at q = 0, this integral is solvable analytically
-    assert np.interp(0, np.linspace(0, kernel.get_radius(), 10000), column_kernel) == approx(1 / np.pi)
+    assert np.interp(0, pts, column_kernel) == approx(1 / np.pi)
     # numerically calculated values
-    assert np.interp(0.5, np.linspace(0, kernel.get_radius(), 10000), column_kernel) == approx(0.251567608959)
-    assert np.interp(1, np.linspace(0, kernel.get_radius(), 10000), column_kernel) == approx(0.121333261458)
-    assert np.interp(1.5, np.linspace(0, kernel.get_radius(), 10000), column_kernel) == approx(0.0328632154395)
-    assert np.interp(2, np.linspace(0, kernel.get_radius(), 10000), column_kernel) == approx(0.00403036583315)
-    assert np.interp(2.5, np.linspace(0, kernel.get_radius(), 10000), column_kernel) == approx(0.0000979416858548,
-                                                                                               rel=1e-4)
-    assert np.interp(3, np.linspace(0, kernel.get_radius(), 10000), column_kernel) == 0
-    assert np.interp(5, np.linspace(0, kernel.get_radius(), 10000), column_kernel) == 0
+    assert np.interp(0.5, pts, column_kernel) == approx(0.251567608959)
+    assert np.interp(1, pts, column_kernel) == approx(0.121333261458)
+    assert np.interp(1.5, pts, column_kernel) == approx(0.0328632154395)
+    assert np.interp(2, pts, column_kernel) == approx(0.00403036583315)
+    assert np.interp(2.5, pts, column_kernel) == approx(0.0000979416858548,
+                                                        rel=1e-4)
+    assert np.interp(3, pts, column_kernel) == 0
+    assert np.interp(5, pts, column_kernel) == 0
 
 
 @mark.parametrize("kernel",
-                  [CubicSplineKernel(), QuarticSplineKernel(), QuinticSplineKernel()])
+                  [CubicSplineKernel(),
+                   QuarticSplineKernel(),
+                   QuinticSplineKernel()])
 def test_normalized_column(kernel):
-    norm = dblquad(double_column, -kernel.get_radius(), kernel.get_radius(), -kernel.get_radius(),
-                   kernel.get_radius(), [kernel.get_column_kernel_func(10000)])[0]
+    norm = dblquad(double_column, -kernel.get_radius(), kernel.get_radius(),
+                   -kernel.get_radius(), kernel.get_radius(),
+                   [kernel.get_column_kernel_func(10000)])[0]
     assert approx(norm) == 1
 
 
 @mark.parametrize("kernel",
-                  [CubicSplineKernel(), QuarticSplineKernel(), QuinticSplineKernel()])
+                  [CubicSplineKernel(),
+                   QuarticSplineKernel(),
+                   QuinticSplineKernel()])
 def test_oob(kernel):
     for dimensions in range(1, 3):
         assert kernel.w(-1, dimensions) == 0

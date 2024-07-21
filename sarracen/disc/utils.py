@@ -5,9 +5,10 @@ from ..sarracen_dataframe import SarracenDataFrame
 
 
 def _get_mass(data: 'SarracenDataFrame'):
-    if data.mcol == None:
+    if data.mcol is None:
         if 'mass' not in data.params:
-            raise KeyError("'mass' column does not exist in this SarracenDataFrame.")
+            raise KeyError("'mass' column does not exist in this "
+                           "SarracenDataFrame.")
         return data.params['mass']
 
     return data[data.mcol]
@@ -66,7 +67,8 @@ def _bin_particles_by_radius(data: 'SarracenDataFrame',
         r = np.sqrt((data[data.xcol] - origin[0]) ** 2
                     + (data[data.ycol] - origin[1]) ** 2)
     else:
-        raise ValueError("geometry should be either 'cylindrical' or 'spherical'")
+        raise ValueError("geometry should be either 'cylindrical' or "
+                         "'spherical'")
 
     # should we add epsilon here?
     if r_in is None:
@@ -84,9 +86,12 @@ def _bin_particles_by_radius(data: 'SarracenDataFrame',
 
 
 def _get_bin_midpoints(bin_edges: np.ndarray,
-                           log: bool = False) -> np.ndarray:
+                       log: bool = False) -> np.ndarray:
     """
     Calculate the midpoint of bins given their edges.
+
+    Parameters
+    ----------
     bin_edges: ndarray
         Locations of the bin edges.
     log : bool, optional

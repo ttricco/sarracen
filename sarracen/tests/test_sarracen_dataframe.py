@@ -1,5 +1,4 @@
 """pytest unit tests for sarracen_dataframe.py functionality."""
-import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -9,8 +8,9 @@ from sarracen import SarracenDataFrame, render
 def test_special_columns():
     # The 'x', 'y', 'rho', 'm', and 'h' keywords should be detected.
     # A 'z' column should not be detected.
-    df = pd.DataFrame({'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'x': [5, 6], 'y': [5, 4], 'm': [1, 1]})
-    sdf = SarracenDataFrame(df)
+    data = {'P': [1, 1], 'h': [1, 1], 'rho': [1, 1],
+            'x': [5, 6], 'y': [5, 4], 'm': [1, 1]}
+    sdf = SarracenDataFrame(data)
 
     assert sdf.xcol == 'x'
     assert sdf.ycol == 'y'
@@ -21,8 +21,9 @@ def test_special_columns():
 
     # The 'rx', 'ry', 'rz', 'density', and 'mass' keywords should be detected.
     # An 'h' column should not be detected.
-    df = pd.DataFrame({'ry': [-1, 1], 'density': [1, 1], 'rx': [3, 4], 'P': [1, 1], 'rz': [4, 3], 'mass': [1, 1]})
-    sdf = SarracenDataFrame(df)
+    data = {'ry': [-1, 1], 'density': [1, 1], 'rx': [3, 4],
+            'P': [1, 1], 'rz': [4, 3], 'mass': [1, 1]}
+    sdf = SarracenDataFrame(data)
 
     assert sdf.xcol == 'rx'
     assert sdf.ycol == 'ry'
@@ -33,9 +34,10 @@ def test_special_columns():
 
     # No keywords, so fall back to the first two columns for x and y.
     # Even though 'k' exists, this will be assumed to be 2D data.
-    # The 'h' column will be detected, but no density or mass column will be detected.
-    df = pd.DataFrame({'i': [3.4, 2.1], 'j': [4.9, 1.6], 'k': [2.3, 2.0], 'h': [1, 1], 'P': [1, 1]})
-    sdf = SarracenDataFrame(df)
+    # The 'h' column will be detected, but not density or mass columns.
+    data = {'i': [3.4, 2.1], 'j': [4.9, 1.6], 'k': [2.3, 2.0],
+            'h': [1, 1], 'P': [1, 1]}
+    sdf = SarracenDataFrame(data)
 
     assert sdf.xcol == 'i'
     assert sdf.ycol == 'j'
@@ -47,28 +49,30 @@ def test_special_columns():
 
 def test_dimensions():
     # This should be detected as 3-dimensional data.
-    df = pd.DataFrame({'P': [1, 1], 'z': [4, 3], 'h': [1, 1], 'rho': [1, 1], 'x': [5, 6], 'y': [5, 4], 'm': [1, 1]})
-    sdf = SarracenDataFrame(df)
+    data = {'P': [1, 1], 'z': [4, 3], 'h': [1, 1], 'rho': [1, 1],
+            'x': [5, 6], 'y': [5, 4], 'm': [1, 1]}
+    sdf = SarracenDataFrame(data)
 
     assert sdf.get_dim() == 3
 
     # This should be detected as 2-dimensional data.
-    df = pd.DataFrame({'P': [1, 1], 'h': [1, 1], 'y': [5, 4], 'rho': [1, 1], 'm': [1, 1], 'x': [5, 6]})
-    sdf = SarracenDataFrame(df)
+    data = {'P': [1, 1], 'h': [1, 1], 'y': [5, 4], 'rho': [1, 1],
+            'm': [1, 1], 'x': [5, 6]}
+    sdf = SarracenDataFrame(data)
 
     assert sdf.get_dim() == 2
 
     # This should assumed to be 2-dimensional data.
-    df = pd.DataFrame({'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
-    sdf = SarracenDataFrame(df)
+    data = {'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]}
+    sdf = SarracenDataFrame(data)
 
     assert sdf.get_dim() == 2
 
 
 def test_column_changing():
-    df = pd.DataFrame({'P': [1], 'z': [2], 'h': [3], 'rho': [4], 'x': [5], 'y': [6], 'm': [7], 'd': [8], 'smooth': [9],
-                       'ma': [10]})
-    sdf = SarracenDataFrame(df)
+    data = {'P': [1], 'z': [2], 'h': [3], 'rho': [4], 'x': [5],
+            'y': [6], 'm': [7], 'd': [8], 'smooth': [9], 'ma': [10]}
+    sdf = SarracenDataFrame(data)
 
     assert sdf.xcol == 'x'
     assert sdf.ycol == 'y'
@@ -110,8 +114,9 @@ def test_render_passthrough():
     # Basic tests that both sdf.render() and render(sdf) return the same plots
 
     # 2D dataset
-    df = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'P': [1, 1], 'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]})
-    sdf = SarracenDataFrame(df)
+    data = {'x': [3, 6], 'y': [5, 1], 'P': [1, 1],
+            'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]}
+    sdf = SarracenDataFrame(data)
 
     fig1, ax1 = plt.subplots()
     fig2, ax2 = plt.subplots()
@@ -128,9 +133,10 @@ def test_render_passthrough():
     assert repr(ax1) == repr(ax2)
 
     # 3D dataset
-    df = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'z': [2, 1], 'P': [1, 1], 'h': [1, 1], 'Ax': [5, 3], 'Ay': [2, 3],
-                       'Az': [1, -1], 'rho': [1, 1], 'm': [1, 1]})
-    sdf = SarracenDataFrame(df)
+    data = {'x': [3, 6], 'y': [5, 1], 'z': [2, 1], 'P': [1, 1],
+            'h': [1, 1], 'Ax': [5, 3], 'Ay': [2, 3],
+            'Az': [1, -1], 'rho': [1, 1], 'm': [1, 1]}
+    sdf = SarracenDataFrame(data)
 
     fig1, ax1 = plt.subplots()
     fig2, ax2 = plt.subplots()
@@ -151,24 +157,30 @@ def test_calc_density():
     # Tests that the density calculation is working as intended.
 
     # 2D Data
-    df = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'h': [0.00683, 4.2166]})
+    data = {'x': [3, 6], 'y': [5, 1], 'h': [0.00683, 4.2166]}
     params = {'mass': 89.3452, 'hfact': 1.2}
-    sdf = SarracenDataFrame(df, params)
+    sdf = SarracenDataFrame(data, params)
 
     sdf.calc_density()
 
-    assert sdf['rho'][0] == sdf.params['mass'] * (sdf.params['hfact'] / sdf['h'][0])**2
-    assert sdf['rho'][1] == sdf.params['mass'] * (sdf.params['hfact'] / sdf['h'][1])**2
+    rho_0 = sdf.params['mass'] * (sdf.params['hfact'] / sdf['h'][0])**2
+    rho_1 = sdf.params['mass'] * (sdf.params['hfact'] / sdf['h'][1])**2
+
+    assert sdf['rho'][0] == rho_0
+    assert sdf['rho'][1] == rho_1
 
     # 3D Data
-    df = pd.DataFrame({'x': [3, 6], 'y': [5, 1], 'z': [2, 1], 'h': [0.0234, 7.3452]})
+    data = {'x': [3, 6], 'y': [5, 1], 'z': [2, 1], 'h': [0.0234, 7.3452]}
     params = {'mass': 63.2353, 'hfact': 1.2}
-    sdf = SarracenDataFrame(df, params)
+    sdf = SarracenDataFrame(data, params)
 
     sdf.calc_density()
 
-    assert sdf['rho'][0] == sdf.params['mass'] * (sdf.params['hfact'] / sdf['h'][0])**3
-    assert sdf['rho'][1] == sdf.params['mass'] * (sdf.params['hfact'] / sdf['h'][1])**3
+    rho_0 = sdf.params['mass'] * (sdf.params['hfact'] / sdf['h'][0])**3
+    rho_1 = sdf.params['mass'] * (sdf.params['hfact'] / sdf['h'][1])**3
+
+    assert sdf['rho'][0] == rho_0
+    assert sdf['rho'][1] == rho_1
 
 
 def test_centre_of_mass():
@@ -188,4 +200,3 @@ def test_centre_of_mass():
                             params={'mass': 3.2e-4})
 
     assert sdf.centre_of_mass() == [0.0, 0.0, 0.0]
-

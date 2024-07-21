@@ -23,11 +23,9 @@ def read_csv(*args, **kwargs) -> SarracenDataFrame:
     return df
 
 
-
-
 def _get_units(columns: pd.Series) -> pd.Series:
-     return columns.str.extract(r'((?<=\[).+(?=\]))')[0]
+    return columns.str.extract(r'((?<=\[).+(?=\]))')[0]
 
 
 def _get_labels(columns: pd.Series) -> pd.Series:
-     return columns.str.extract(r'(^[^\[]*[^\s\[])')[0]
+    return columns.str.extract(r'(^[^\[]*[^\s\[])')[0]
