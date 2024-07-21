@@ -241,8 +241,8 @@ class CPUBackend(BaseBackend):
 
         output_local = np.zeros((get_num_threads(), y_pixels, x_pixels))
 
-        # thread safety: each thread has its own grid, which are combined
-        # after interpolation
+        # thread safety:
+        # each thread has its own grid, which are combined after interpolation
         for thread in prange(get_num_threads()):
             block_size = x_data.size / get_num_threads()
             range_start = int(thread * block_size)
@@ -276,15 +276,15 @@ class CPUBackend(BaseBackend):
                     jpixmax = y_pixels
 
                 # precalculate differences in the x-direction (optimization)
-                dx2i = (x_min + (np.arange(ipixmin, ipixmax) + 0.5) * pixwidthx
-                        - x_data[i])**2 * (1 / (h_data[i]**2)) + ((dz[i]**2) * (1 / h_data[i]**2))
+                dx2i = ((x_min + (np.arange(ipixmin, ipixmax) + 0.5)
+                         * pixwidthx - x_data[i])**2 + dz[i]**2) / h_data[i]**2
 
                 # determine differences in the y-direction
                 ypix = y_min + (np.arange(jpixmin, jpixmax) + 0.5) * pixwidthy
                 dy = ypix - y_data[i]
                 dy2 = dy * dy * (1 / (h_data[i] ** 2))
 
-                # calculate contributions at pixels i, j due to particle at x, y
+                # calculate contributions at pixels i, j from particle at x, y
                 q2 = dx2i + dy2.reshape(len(dy2), 1)
 
                 for jpix in range(jpixmax - jpixmin):
@@ -292,7 +292,9 @@ class CPUBackend(BaseBackend):
                         if np.sqrt(q2[jpix][ipix]) > kernel_radius:
                             continue
                         wab = weight_function(np.sqrt(q2[jpix][ipix]), n_dims)
-                        output_local[thread][jpix + jpixmin, ipix + ipixmin] += term[i] * wab
+                        jp = jpix + jpixmin
+                        ip = ipix + ipixmin
+                        output_local[thread][jp, ip] += term[i] * wab
 
         for i in range(get_num_threads()):
             output += output_local[i]
@@ -401,7 +403,7 @@ class CPUBackend(BaseBackend):
                         # the value of the top boundary of the pixel below this
                         # pixel.
                         if jpix < jpixmax - 1:
-                            output_local[thread, jpix + 1, ipix] -= term[i] * wab
+                            output_local[thread, jpix+1, ipix] -= term[i] * wab
 
                         # Right Boundaries
                         r0 = 0.5 * pixwidthx + dx
@@ -416,7 +418,7 @@ class CPUBackend(BaseBackend):
                         # the value of the left boundary of the pixel to the
                         # right of this pixel.
                         if ipix < ipixmax - 1:
-                            output_local[thread, jpix, ipix + 1] -= term[i] * wab
+                            output_local[thread, jpix, ipix+1] -= term[i] * wab
 
         output = np.zeros((y_pixels, x_pixels))
 
@@ -449,12 +451,12 @@ class CPUBackend(BaseBackend):
         # does not contribute to the cross-section, and can be removed.
         aa = 1 + gradient ** 2
         bb = 2 * gradient * (yint - y_data) - 2 * x_data
-        cc = x_data**2 + y_data**2 - 2 * yint * y_data + yint**2 - (kernel_radius * h_data)**2
+        cc = x_data**2 + y_data**2 - 2 * yint * y_data \
+            + yint**2 - (kernel_radius * h_data)**2
         det = bb ** 2 - 4 * aa * cc
 
-        # create a filter for particles that do not contribute to the
-        # cross-section
-        filter_det = det >= 0
+        # create a filter for particles that do not contribute
+        filter = det >= 0
         det = np.sqrt(det)
         cc = None
 
@@ -462,13 +464,15 @@ class CPUBackend(BaseBackend):
 
         # the starting and ending x coordinates of the lines intersections with
         # a particle's smoothing circle
-        xstart = ((-bb[filter_det] - det[filter_det]) / (2 * aa)).clip(a_min=x1, a_max=x2)
-        xend = ((-bb[filter_det] + det[filter_det]) / (2 * aa)).clip(a_min=x1, a_max=x2)
+        xstart = ((-bb[filter] - det[filter])
+                  / (2 * aa)).clip(a_min=x1, a_max=x2)
+        xend = ((-bb[filter] + det[filter])
+                / (2 * aa)).clip(a_min=x1, a_max=x2)
         bb, det = None, None
 
-        # the start and end distances which lie within a particle's smoothing
-        # circle.
-        rstart = np.sqrt((xstart - x1)**2 + ((gradient * xstart + yint) - y1)**2)
+        # start and end distances that are within a particle's smoothing circle
+        rstart = np.sqrt((xstart - x1)**2
+                         + ((gradient * xstart + yint) - y1)**2)
         rend = np.sqrt((xend - x1)**2 + (((gradient * xend + yint) - y1)**2))
         xstart, xend = None, None
 
@@ -479,29 +483,30 @@ class CPUBackend(BaseBackend):
 
         output_local = np.zeros((get_num_threads(), pixels))
 
-        # thread safety: each thread has its own grid, which are combined after
-        # interpolation
+        # thread safety:
+        # each thread has its own grid, which are combined after interpolation
         for thread in prange(get_num_threads()):
 
-            block_size = len(x_data[filter_det]) / get_num_threads()
+            block_size = len(x_data[filter]) / get_num_threads()
             range_start = thread * block_size
             range_end = (thread + 1) * block_size
 
             # iterate through the indices of all non-filtered particles
             for i in range(range_start, range_end):
-                # determine contributions to all affected pixels for this
-                # particle
-                xpix = x1 + (np.arange(int(ipixmin[i]), int(ipixmax[i])) + 0.5) * xpixwidth
+                # determine contributions to all pixels for this particle
+                xpix = x1 + (np.arange(int(ipixmin[i]), int(ipixmax[i]))
+                             + 0.5) * xpixwidth
                 ypix = gradient * xpix + yint
-                dy = ypix - y_data[filter_det][i]
-                dx = xpix - x_data[filter_det][i]
+                dy = ypix - y_data[filter][i]
+                dx = xpix - x_data[filter][i]
 
-                q2 = (dx * dx + dy * dy) * (1 / (h_data[filter_det][i] * h_data[filter_det][i]))
+                q2 = (dx**2 + dy**2) / h_data[filter][i]**2
                 wab = weight_function(np.sqrt(q2), 2)
 
                 # add contributions to output total
                 for ipix in range(int(ipixmax[i]) - int(ipixmin[i])):
-                    output_local[thread][ipix + int(ipixmin[i])] += term[filter_det][i] * wab[ipix]
+                    ip = ipix + int(ipixmin[i])
+                    output_local[thread][ip] += term[filter][i] * wab[ipix]
 
         for i in range(get_num_threads()):
             output += output_local[i]
@@ -543,15 +548,18 @@ class CPUBackend(BaseBackend):
                 pixmin = min(max(0, round((d1 / length) * pixels)), pixels)
                 pixmax = min(max(0, round((d2 / length) * pixels)), pixels)
 
-                xpix = x1 + (np.arange(pixmin, pixmax) + 0.5) * (x2 - x1) / pixels
-                ypix = y1 + (np.arange(pixmin, pixmax) + 0.5) * (y2 - y1) / pixels
-                zpix = z1 + (np.arange(pixmin, pixmax) + 0.5) * (z2 - z1) / pixels
+                xpix = x1 + (np.arange(pixmin, pixmax)
+                             + 0.5) * (x2 - x1) / pixels
+                ypix = y1 + (np.arange(pixmin, pixmax)
+                             + 0.5) * (y2 - y1) / pixels
+                zpix = z1 + (np.arange(pixmin, pixmax)
+                             + 0.5) * (z2 - z1) / pixels
 
                 xdiff = xpix - x_data[i]
                 ydiff = ypix - y_data[i]
                 zdiff = zpix - z_data[i]
 
-                q2 = (xdiff ** 2 + ydiff ** 2 + zdiff ** 2) * (1 / (h_data[i] ** 2))
+                q2 = (xdiff**2 + ydiff**2 + zdiff**2) / h_data[i]**2
                 wab = weight_function(np.sqrt(q2), 3)
 
                 for ipix in range(pixmax - pixmin):
@@ -633,15 +641,27 @@ class CPUBackend(BaseBackend):
                                                      h_data[i])
 
                             # x-z surfaces
-                            pixint += surface_int(ypix - y_data[i] + 0.5 * pixwidthy, x_data[i], 0, xpix, 0, pixwidthx,
+                            pixint += surface_int(ypix - y_data[i]
+                                                  + 0.5 * pixwidthy,
+                                                  x_data[i], 0,
+                                                  xpix, 0, pixwidthx,
                                                   pixwidthz, h_data[i])
-                            pixint += surface_int(y_data[i] - ypix + 0.5 * pixwidthy, x_data[i], 0, xpix, 0, pixwidthx,
+                            pixint += surface_int(y_data[i] - ypix
+                                                  + 0.5 * pixwidthy,
+                                                  x_data[i], 0,
+                                                  xpix, 0, pixwidthx,
                                                   pixwidthz, h_data[i])
 
                             # y-z surfaces
-                            pixint += surface_int(xpix - x_data[i] + 0.5 * pixwidthx, 0, y_data[i], 0, ypix, pixwidthz,
+                            pixint += surface_int(xpix - x_data[i]
+                                                  + 0.5 * pixwidthx,
+                                                  0, y_data[i], 0,
+                                                  ypix, pixwidthz,
                                                   pixwidthy, h_data[i])
-                            pixint += surface_int(x_data[i] - xpix + 0.5 * pixwidthx, 0, y_data[i], 0, ypix, pixwidthz,
+                            pixint += surface_int(x_data[i] - xpix
+                                                  + 0.5 * pixwidthx,
+                                                  0, y_data[i], 0,
+                                                  ypix, pixwidthz,
                                                   pixwidthy, h_data[i])
 
                             wab = pixint * dfac[i]
