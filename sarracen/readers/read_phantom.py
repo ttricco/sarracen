@@ -186,6 +186,16 @@ def _create_mass_column(df, header_vars):
             df.loc[df.itype == itype, 'mass'] = header_vars[f'massoftype_{itype}']
     return df
 
+def _create_aprmass_column(df, header_vars):
+    """
+    Creates a mass column with the mass of each particle when there are
+    multiple refinement levels.
+    """
+    df['mass'] = header_vars['massoftype']
+    df['mass'] = df['mass']/(2**(df['apr_level'] - 1))
+
+    return df
+
 def read_phantom(filename: str, separate_types: str = 'sinks', ignore_inactive: bool = True):
     """
     Read data from a Phantom dump file.
@@ -243,6 +253,9 @@ def read_phantom(filename: str, separate_types: str = 'sinks', ignore_inactive: 
         # create mass column if multiple species in single dataframe
         if separate_types != 'all' and 'itype' in df and df['itype'].nunique() > 1:
             df = _create_mass_column(df, header_vars)
+        # create a column if APR is used and automatically scale masses
+        elif 'apr_level' in df:
+            df = _create_aprmass_column(df, header_vars)
         else:  # create global mass parameter
             header_vars['mass'] = header_vars['massoftype']
 
