@@ -217,7 +217,7 @@ def test_sink_particles_gas_and_dust(): #PASSES
         fp.seek(0)
 
         test_sdfs = sarracen.read_phantom(fp.name)
-        phantom_file = sarracen.write_phantom(test_sdfs, fp.name)
+        phantom_file = sarracen.write_phantom("wp", test_sdfs[0], test_sdfs[1])
         test_sdfs_from_new_file = sarracen.read_phantom(phantom_file.name)
         pd.testing.assert_frame_equal(test_sdfs_from_new_file[0], test_sdfs[0])
         pd.testing.assert_frame_equal(test_sdfs_from_new_file[1], test_sdfs[1])
@@ -227,14 +227,13 @@ def test_sink_particles_gas_and_dust(): #PASSES
         #
         # assert original_content == new_content
 
-
 def test_sink_particles(): #PASSES
     with tempfile.NamedTemporaryFile() as fp:
         fp.write(get_gas_sink_particles())
         fp.seek(0)
 
         test_sdfs = sarracen.read_phantom(fp.name)
-        phantom_file = sarracen.write_phantom(test_sdfs, fp.name)
+        phantom_file = sarracen.write_phantom("wp", test_sdfs[0], test_sdfs[1])
         test_sdfs_from_new_file = sarracen.read_phantom(phantom_file.name)
         pd.testing.assert_frame_equal(test_sdfs_from_new_file[0], test_sdfs[0])
         pd.testing.assert_frame_equal(test_sdfs_from_new_file[1], test_sdfs[1])
@@ -246,6 +245,6 @@ def test_write_phantom_one_block(): #PASSES
         fp.seek(0)
 
         test_sdf = sarracen.read_phantom(fp.name)
-        phantom_file = sarracen.write_phantom([test_sdf], fp.name)
+        phantom_file = sarracen.write_phantom("wp", test_sdf)
         test_sdf_from_new_file = sarracen.read_phantom(phantom_file.name)
         pd.testing.assert_frame_equal(test_sdf, test_sdf_from_new_file)
