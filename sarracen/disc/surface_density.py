@@ -1,39 +1,32 @@
 import numpy as np
 import pandas as pd
-import sys
 from ..sarracen_dataframe import SarracenDataFrame
+from .utils import _get_mass, _get_origin
+from .utils import _bin_particles_by_radius, _get_bin_midpoints
 
 
-def _get_mass(data: 'SarracenDataFrame'):
-    if data.mcol == None:
-        if 'mass' not in data.params:
-            raise KeyError("'mass' column does not exist in this SarracenDataFrame.")
-        return data.params['mass']
-
-    return data[data.mcol]
-
-
-def _get_origin(origin: list) -> list:
-    if origin is None:
-        return [0.0, 0.0, 0.0]
-    else:
-        return origin
-
-
-def _bin_particles_by_radius(data: 'SarracenDataFrame',
-                             r_in: float = None,
-                             r_out: float = None,
-                             bins: int = 300,
-                             log: bool = False,
-                             geometry: str = 'cylindrical',
-                             origin: list = None):
+def azimuthal_average(data: 'SarracenDataFrame',
+                      target: str,
+                      r_in: float = None,
+                      r_out: float = None,
+                      bins: int = 300,
+                      log: bool = False,
+                      geometry: str = 'cylindrical',
+                      origin: list = None,
+                      retbins: bool = False):
     """
-    Utility function to bin particles in discrete intervals by radius.
+    Calculates the 1D azimuthally-averaged profile for a target quantity.
+
+    The profile is computed by segmenting the particles into radial bins
+    (rings) and summing the target quantity from the particles within each
+    bin.
 
     Parameters
     ----------
-    data: SarracenDataFrame
-        The particle dataset.
+    data : SarracenDataFrame
+        Particle data, in a SarracenDataFrame.
+    target : str
+        Column label of the target smoothing data.
     r_in : float, optional
         Inner radius of the disc. Defaults to the minimum r value.
     r_out : float, optional
@@ -49,54 +42,32 @@ def _bin_particles_by_radius(data: 'SarracenDataFrame',
     origin : array-like, optional
         The x, y and z centre point around which to compute radii. Defaults to
         [0, 0, 0].
+    retbins : bool, optional
+        Whether to return the midpoints of the bins or not. Defaults to False.
 
     Returns
     -------
-    rbins: Series
-        The radial bin to which each particle belongs.
-    bin_edges: ndarray
-        Locations of the bin edges.
+    array
+        A NumPy array of length bins containing the averaged profile.
+    array, optional
+        The midpoint values of each bin. Only returned if *retbins=True*.
+
+    Raises
+    ------
+    ValueError
+        If the *geometry* is not *cylindrical* or *spherical*.
     """
 
-    if geometry == 'spherical':
-        r = np.sqrt((data[data.xcol] - origin[0]) ** 2
-                    + (data[data.ycol] - origin[1]) ** 2
-                    + (data[data.zcol] - origin[2]) ** 2)
-    elif geometry == 'cylindrical':
-        r = np.sqrt((data[data.xcol] - origin[0]) ** 2
-                    + (data[data.ycol] - origin[1]) ** 2)
+    origin = _get_origin(origin)
+    rbins, bin_edges = _bin_particles_by_radius(data, r_in, r_out, bins, log,
+                                                geometry, origin)
+
+    result = data[target].groupby(rbins).sum().to_numpy()
+
+    if retbins:
+        return result, _get_bin_midpoints(bin_edges, log)
     else:
-        raise ValueError("geometry should be either 'cylindrical' or 'spherical'")
-
-    # should we add epsilon here?
-    if r_in is None:
-        r_in = r.min() - sys.float_info.epsilon
-    if r_out is None:
-        r_out = r.max() + sys.float_info.epsilon
-
-    if log:
-        bin_edges = np.logspace(np.log10(r_in), np.log10(r_out), bins+1)
-    else:
-        bin_edges = np.linspace(r_in, r_out, bins+1)
-    rbins = pd.cut(r, bin_edges)
-
-    return rbins, bin_edges
-
-
-def _get_bin_midpoints(bin_edges: np.ndarray,
-                           log: bool = False) -> np.ndarray:
-    """
-    Calculate the midpoint of bins given their edges.
-    bin_edges: ndarray
-        Locations of the bin edges.
-    log : bool, optional
-        Whether to bin in log scale or not. Defaults to False.
-    """
-
-    if log:
-        return np.sqrt(bin_edges[:-1] * bin_edges[1:])
-    else:
-        return 0.5 * (bin_edges[1:] - bin_edges[:-1]) + bin_edges[:-1]
+        return result
 
 
 def surface_density(data: 'SarracenDataFrame',
@@ -148,10 +119,11 @@ def surface_density(data: 'SarracenDataFrame',
     ValueError
         If the *geometry* is not *cylindrical* or *spherical*.
 
-    See Also
-    --------
+    Notes
+    -----
     The surface density averaging procedure for SPH is described in section
-    3.2.6 of Lodato & Price, MNRAS (2010), `doi:10.1111/j.1365-2966.2010.16526.x
+    3.2.6 of Lodato & Price, MNRAS (2010),
+    `doi:10.1111/j.1365-2966.2010.16526.x
     <https://doi.org/10.1111/j.1365-2966.2010.16526.x>`_.
     """
 
@@ -315,8 +287,8 @@ def _calc_scale_height(data: 'SarracenDataFrame',
     Lx, Ly, Lz = _calc_angular_momentum(data, rbins, origin, unit_vector=True)
 
     zdash = rbins.map(Lx).to_numpy() * data[data.xcol] \
-            + rbins.map(Ly).to_numpy() * data[data.ycol] \
-            + rbins.map(Lz).to_numpy() * data[data.zcol]
+        + rbins.map(Ly).to_numpy() * data[data.ycol] \
+        + rbins.map(Lz).to_numpy() * data[data.zcol]
 
     return zdash.groupby(rbins).std()
 
@@ -375,8 +347,7 @@ def scale_height(data: 'SarracenDataFrame',
 
     See Also
     --------
-    :func:`angular_momentum` : Calculate the angular momentum profile of a
-    disc.
+    :func:`angular_momentum` : Calculate the disc angular momentum profile.
     """
 
     origin = _get_origin(origin)
@@ -401,7 +372,8 @@ def honH(data: 'SarracenDataFrame',
          origin: list = None,
          retbins: bool = False):
     """
-    Calculates <h>/H, the averaged smoothing length divided by the scale height.
+    Calculates <h>/H, the averaged smoothing length divided by the scale
+    height.
 
     The profile is computed by segmenting the particles into radial bins
     (rings). The average smoothing length in each bin is divided by the scale

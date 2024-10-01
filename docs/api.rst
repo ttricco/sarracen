@@ -22,6 +22,9 @@ make a pull request!).
    read_csv
    read_phantom
    read_marisa
+   read_gradsph
+   read_gasoline
+   read_shamrock
 
 
 SarracenDataFrame
@@ -48,6 +51,7 @@ Extra Quantities
    :nosignatures:
 
    SarracenDataFrame.calc_density
+   SarracenDataFrame.centre_of_mass
 
 Rendering
 """""""""
@@ -91,3 +95,7 @@ Accretion disc analysis routines are in the disc module.
    :toctree: api/
 
    disc.surface_density
+   disc.azimuthal_average
+   disc.angular_momentum
+   disc.scale_height
+   disc.honH

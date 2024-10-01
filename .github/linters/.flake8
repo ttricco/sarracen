@@ -1,0 +1,6 @@
+[flake8]
+per-file-ignores =
+    sarracen/__init__.py:F401
+    sarracen/kernels/__init__.py:F401
+    sarracen/interpolate/__init__.py:F401
+    sarracen/disc/__init__.py:F401

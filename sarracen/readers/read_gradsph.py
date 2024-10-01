@@ -61,7 +61,7 @@ def read_gradsph(filename: str, separate_types: str = 'sinks'):
         else:
             df_list = [SarracenDataFrame(pd.concat([df_parts, df_sinks],
                                                    ignore_index=True),
-                                        params=params)]
+                                         params=params)]
 
         df_list = df_list[0] if len(df_list) == 1 else df_list
 

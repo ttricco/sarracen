@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-import io
 from pandas import testing as tm
 import sarracen
 import pytest
@@ -33,10 +32,10 @@ def _create_file_identifier():
 
     read_tag = np.array([13], dtype='int32')
     file_identifier = "Test of read_phantom".ljust(100)
-    bytes_file = bytearray(read_tag.tobytes())
-    bytes_file += bytearray(map(ord, file_identifier))
-    bytes_file += bytearray(read_tag.tobytes())
-    return bytes_file
+    file = bytearray(read_tag.tobytes())
+    file += bytearray(map(ord, file_identifier))
+    file += bytearray(read_tag.tobytes())
+    return file
 
 
 def _create_global_header(massoftype=1e-6, massoftype_7=None,
@@ -44,43 +43,43 @@ def _create_global_header(massoftype=1e-6, massoftype_7=None,
     """ Construct global variables. Only massoftype in this example. """
 
     read_tag = np.array([13], dtype='int32')
-    bytes_file = bytearray()
+    file = bytearray()
     for i in range(8):  # loop over 8 dtypes
-        bytes_file += bytearray(read_tag.tobytes())
+        file += bytearray(read_tag.tobytes())
         nvars = (i == 5) + (massoftype_7 is not None)
         if i == 5:  # default real
             nvars = np.array([nvars], dtype='int32')
         else:
             nvars = np.array([0], dtype='int32')
-        bytes_file += bytearray(nvars.tobytes())
-        bytes_file += bytearray(read_tag.tobytes())
+        file += bytearray(nvars.tobytes())
+        file += bytearray(read_tag.tobytes())
 
         if i == 5:  # default real
-            bytes_file += bytearray(read_tag.tobytes())
-            bytes_file += bytearray(map(ord, "massoftype".ljust(16)))
+            file += bytearray(read_tag.tobytes())
+            file += bytearray(map(ord, "massoftype".ljust(16)))
             if massoftype_7 is not None:
-                bytes_file += bytearray(map(ord, "massoftype_7".ljust(16)))
-            bytes_file += bytearray(read_tag.tobytes())
+                file += bytearray(map(ord, "massoftype_7".ljust(16)))
+            file += bytearray(read_tag.tobytes())
 
         if i == 5:
-            bytes_file += bytearray(read_tag.tobytes())
-            bytes_file += bytearray(np.array([massoftype], dtype=def_real))
+            file += bytearray(read_tag.tobytes())
+            file += bytearray(np.array([massoftype], dtype=def_real))
             if massoftype_7 is not None:
-                bytes_file += bytearray(np.array([massoftype_7], dtype=def_real))
-            bytes_file += bytearray(read_tag.tobytes())
+                file += bytearray(np.array([massoftype_7], dtype=def_real))
+            file += bytearray(read_tag.tobytes())
 
-    return bytes_file
+    return file
 
 
 def _create_particle_array(tag, data, dtype=np.float64):
     read_tag = np.array([13], dtype='int32')
-    bytes_file = bytearray(read_tag.tobytes())
-    bytes_file += bytearray(map(ord,tag.ljust(16)))
-    bytes_file += bytearray(read_tag.tobytes())
-    bytes_file += bytearray(read_tag.tobytes())
-    bytes_file += bytearray(np.array(data, dtype=dtype).tobytes())
-    bytes_file += bytearray(read_tag.tobytes())
-    return bytes_file
+    file = bytearray(read_tag.tobytes())
+    file += bytearray(map(ord, tag.ljust(16)))
+    file += bytearray(read_tag.tobytes())
+    file += bytearray(read_tag.tobytes())
+    file += bytearray(np.array(data, dtype=dtype).tobytes())
+    file += bytearray(read_tag.tobytes())
+    return file
 
 
 @pytest.mark.parametrize("def_int, def_real",
@@ -89,31 +88,31 @@ def _create_particle_array(tag, data, dtype=np.float64):
 def test_determine_default_precision2(def_int, def_real):
     """ Test if default int / real precision can be determined. """
 
-    bytes_file = _create_capture_pattern(def_int, def_real)
-    bytes_file += _create_file_identifier()
-    bytes_file += _create_global_header(def_int=def_int, def_real=def_real)
+    file = _create_capture_pattern(def_int, def_real)
+    file += _create_file_identifier()
+    file += _create_global_header(def_int=def_int, def_real=def_real)
 
     # create 1 block for gas
     read_tag = np.array([13], dtype='int32')
-    bytes_file += bytearray(read_tag.tobytes())
+    file += bytearray(read_tag.tobytes())
     nblocks = np.array([1], dtype='int32')
-    bytes_file += bytearray(nblocks.tobytes())
-    bytes_file += bytearray(read_tag.tobytes())
+    file += bytearray(nblocks.tobytes())
+    file += bytearray(read_tag.tobytes())
 
     # 2 particles storing 1 default int and real arrays
-    bytes_file += bytearray(read_tag.tobytes())
+    file += bytearray(read_tag.tobytes())
     n = np.array([2], dtype='int64')
     nums = np.array([1, 0, 0, 0, 0, 1, 0, 0], dtype='int32')
-    bytes_file += bytearray(n.tobytes())
-    bytes_file += bytearray(nums.tobytes())
-    bytes_file += bytearray(read_tag.tobytes())
+    file += bytearray(n.tobytes())
+    file += bytearray(nums.tobytes())
+    file += bytearray(read_tag.tobytes())
 
     # write particle arrays
-    bytes_file += _create_particle_array("def_int", [1, 2], dtype=def_int)
-    bytes_file += _create_particle_array("def_real", [1.0, 2.0], dtype=def_real)
+    file += _create_particle_array("def_int", [1, 2], dtype=def_int)
+    file += _create_particle_array("def_real", [1.0, 2.0], dtype=def_real)
 
     with tempfile.NamedTemporaryFile() as fp:
-        fp.write(bytes_file)
+        fp.write(file)
         fp.seek(0)
 
         sdf = sarracen.read_phantom(fp.name)
@@ -123,33 +122,34 @@ def test_determine_default_precision2(def_int, def_real):
 
 def test_gas_particles_only():
 
-    bytes_file = _create_capture_pattern(np.int32, np.float64)
-    bytes_file += _create_file_identifier()
-    bytes_file += _create_global_header()
+    file = _create_capture_pattern(np.int32, np.float64)
+    file += _create_file_identifier()
+    file += _create_global_header()
 
     # create 1 block for gas
     read_tag = np.array([13], dtype='int32')
-    bytes_file += bytearray(read_tag.tobytes())
+    file += bytearray(read_tag.tobytes())
     nblocks = np.array([1], dtype='int32')
-    bytes_file += bytearray(nblocks.tobytes())
-    bytes_file += bytearray(read_tag.tobytes())
+    file += bytearray(nblocks.tobytes())
+    file += bytearray(read_tag.tobytes())
 
     # 8 particles storing 4 real arrays (x, y, z, h)
-    bytes_file += bytearray(read_tag.tobytes())
+    file += bytearray(read_tag.tobytes())
     n = np.array([8], dtype='int64')
     nums = np.array([0, 0, 0, 0, 0, 4, 0, 0], dtype='int32')
-    bytes_file += bytearray(n.tobytes())
-    bytes_file += bytearray(nums.tobytes())
-    bytes_file += bytearray(read_tag.tobytes())
+    file += bytearray(n.tobytes())
+    file += bytearray(nums.tobytes())
+    file += bytearray(read_tag.tobytes())
 
     # write 4 particle arrays
-    bytes_file += _create_particle_array("x", [0, 0, 0, 0, 1, 1, 1, 1])
-    bytes_file += _create_particle_array("y", [0, 0, 1, 1, 0, 0, 1, 1])
-    bytes_file += _create_particle_array("z", [0, 1, 0, 1, 0, 1, 0, 1])
-    bytes_file += _create_particle_array("h", [1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1])
+    file += _create_particle_array("x", [0, 0, 0, 0, 1, 1, 1, 1])
+    file += _create_particle_array("y", [0, 0, 1, 1, 0, 0, 1, 1])
+    file += _create_particle_array("z", [0, 1, 0, 1, 0, 1, 0, 1])
+    file += _create_particle_array("h", [1.1, 1.1, 1.1, 1.1,
+                                         1.1, 1.1, 1.1, 1.1])
 
     with tempfile.NamedTemporaryFile() as fp:
-        fp.write(bytes_file)
+        fp.write(file)
         fp.seek(0)
 
         sdf = sarracen.read_phantom(fp.name, separate_types='all')
@@ -157,57 +157,68 @@ def test_gas_particles_only():
         assert sdf.params['mass'] == 1e-6
         assert 'mass' not in sdf.columns
         tm.assert_series_equal(sdf['x'], pd.Series([0, 0, 0, 0, 1, 1, 1, 1]),
-                               check_index=False, check_names=False, check_dtype=False)
+                               check_index=False, check_names=False,
+                               check_dtype=False)
 
         sdf = sarracen.read_phantom(fp.name, separate_types='sinks')
         assert sdf.params['massoftype'] == 1e-6
         assert sdf.params['mass'] == 1e-6
         assert 'mass' not in sdf.columns
         tm.assert_series_equal(sdf['x'], pd.Series([0, 0, 0, 0, 1, 1, 1, 1]),
-                               check_index=False, check_names=False, check_dtype=False)
+                               check_index=False, check_names=False,
+                               check_dtype=False)
 
         sdf = sarracen.read_phantom(fp.name, separate_types=None)
         assert sdf.params['massoftype'] == 1e-6
         assert sdf.params['mass'] == 1e-6
         assert 'mass' not in sdf.columns
         tm.assert_series_equal(sdf['x'], pd.Series([0, 0, 0, 0, 1, 1, 1, 1]),
-                               check_index=False, check_names=False, check_dtype=False)
+                               check_index=False, check_names=False,
+                               check_dtype=False)
 
 
 def test_gas_dust_particles():
 
-    bytes_file = _create_capture_pattern(np.int32, np.float64)
-    bytes_file += _create_file_identifier()
-    bytes_file += _create_global_header(massoftype_7=1e-4)
+    file = _create_capture_pattern(np.int32, np.float64)
+    file += _create_file_identifier()
+    file += _create_global_header(massoftype_7=1e-4)
 
     # create 1 block for gas
     read_tag = np.array([13], dtype='int32')
-    bytes_file += bytearray(read_tag.tobytes())
+    file += bytearray(read_tag.tobytes())
     nblocks = np.array([1], dtype='int32')
-    bytes_file += bytearray(nblocks.tobytes())
-    bytes_file += bytearray(read_tag.tobytes())
+    file += bytearray(nblocks.tobytes())
+    file += bytearray(read_tag.tobytes())
 
     # 8 particles storing 4 real arrays (x, y, z, h)
-    bytes_file += bytearray(read_tag.tobytes())
+    file += bytearray(read_tag.tobytes())
     n = np.array([16], dtype='int64')
     nums = np.array([0, 1, 0, 0, 0, 4, 0, 0], dtype='int32')
-    bytes_file += bytearray(n.tobytes())
-    bytes_file += bytearray(nums.tobytes())
-    bytes_file += bytearray(read_tag.tobytes())
+    file += bytearray(n.tobytes())
+    file += bytearray(nums.tobytes())
+    file += bytearray(read_tag.tobytes())
 
     # write 5 gas/dust particle arrays
-    bytes_file += _create_particle_array("itype", [1, 1, 1, 1, 1, 1, 1, 1,
-                                         7, 7, 7, 7, 7, 7, 7, 7], np.int8)
-    bytes_file += _create_particle_array("x", [0, 0, 0, 0, 1, 1, 1, 1,
-                                               0.5, 0.5, 0.5, 0.5, 1.5, 1.5, 1.5, 1.5])
-    bytes_file += _create_particle_array("y", [0, 0, 1, 1, 0, 0, 1, 1,
-                                               0.5, 0.5, 1.5, 1.5, 0.5, 0.5, 1.5, 1.5])
-    bytes_file += _create_particle_array("z", [0, 1, 0, 1, 0, 1, 0, 1,
-                                               0.5, 1.5, 0.5, 1.5, 0.5, 1.5, 0.5, 1.5])
-    bytes_file += _create_particle_array("h", [1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1,
-                                               1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1])
+    file += _create_particle_array("itype", [1, 1, 1, 1, 1, 1, 1, 1,
+                                             7, 7, 7, 7, 7, 7, 7, 7], np.int8)
+    file += _create_particle_array("x", [0, 0, 0, 0,
+                                         1, 1, 1, 1,
+                                         0.5, 0.5, 0.5, 0.5,
+                                         1.5, 1.5, 1.5, 1.5])
+    file += _create_particle_array("y", [0, 0, 1, 1,
+                                         0, 0, 1, 1,
+                                         0.5, 0.5, 1.5, 1.5,
+                                         0.5, 0.5, 1.5, 1.5])
+    file += _create_particle_array("z", [0, 1, 0, 1,
+                                         0, 1, 0, 1,
+                                         0.5, 1.5, 0.5, 1.5,
+                                         0.5, 1.5, 0.5, 1.5])
+    file += _create_particle_array("h", [1.1, 1.1, 1.1, 1.1,
+                                         1.1, 1.1, 1.1, 1.1,
+                                         1.1, 1.1, 1.1, 1.1,
+                                         1.1, 1.1, 1.1, 1.1])
     with tempfile.NamedTemporaryFile() as fp:
-        fp.write(bytes_file)
+        fp.write(file)
         fp.seek(0)
 
         sdf_g, sdf_d = sarracen.read_phantom(fp.name, separate_types='all')
@@ -221,10 +232,13 @@ def test_gas_dust_particles():
         assert 'mass' not in sdf_d.columns
         tm.assert_series_equal(sdf_g['x'],
                                pd.Series([0, 0, 0, 0, 1, 1, 1, 1]),
-                               check_index=False, check_names=False, check_dtype=False)
+                               check_index=False, check_names=False,
+                               check_dtype=False)
         tm.assert_series_equal(sdf_d['x'],
-                               pd.Series([0.5, 0.5, 0.5, 0.5, 1.5, 1.5, 1.5, 1.5]),
-                               check_index=False, check_names=False, check_dtype=False)
+                               pd.Series([0.5, 0.5, 0.5, 0.5,
+                                          1.5, 1.5, 1.5, 1.5]),
+                               check_index=False, check_names=False,
+                               check_dtype=False)
 
         sdf = sarracen.read_phantom(fp.name, separate_types='sinks')
         assert sdf.params['massoftype'] == 1e-6
@@ -235,10 +249,13 @@ def test_gas_dust_particles():
         assert sdf[sdf.itype == 7]['mass'].unique() == [1e-4]
         tm.assert_series_equal(sdf[sdf.itype == 1]['x'],
                                pd.Series([0, 0, 0, 0, 1, 1, 1, 1]),
-                               check_index=False, check_names=False, check_dtype=False)
+                               check_index=False, check_names=False,
+                               check_dtype=False)
         tm.assert_series_equal(sdf[sdf.itype == 7]['x'],
-                               pd.Series([0.5, 0.5, 0.5, 0.5, 1.5, 1.5, 1.5, 1.5]),
-                               check_index=False, check_names=False, check_dtype=False)
+                               pd.Series([0.5, 0.5, 0.5, 0.5,
+                                          1.5, 1.5, 1.5, 1.5]),
+                               check_index=False, check_names=False,
+                               check_dtype=False)
 
         sdf = sarracen.read_phantom(fp.name, separate_types=None)
         assert sdf.params['massoftype'] == 1e-6
@@ -249,57 +266,61 @@ def test_gas_dust_particles():
         assert sdf[sdf.itype == 7]['mass'].unique() == [1e-4]
         tm.assert_series_equal(sdf[sdf.itype == 1]['x'],
                                pd.Series([0, 0, 0, 0, 1, 1, 1, 1]),
-                               check_index=False, check_names=False, check_dtype=False)
+                               check_index=False, check_names=False,
+                               check_dtype=False)
         tm.assert_series_equal(sdf[sdf.itype == 7]['x'],
-                               pd.Series([0.5, 0.5, 0.5, 0.5, 1.5, 1.5, 1.5, 1.5]),
-                               check_index=False, check_names=False, check_dtype=False)
+                               pd.Series([0.5, 0.5, 0.5, 0.5, 1.5,
+                                          1.5, 1.5, 1.5]),
+                               check_index=False, check_names=False,
+                               check_dtype=False)
 
 
 def test_gas_sink_particles():
 
-    bytes_file = _create_capture_pattern(np.int32, np.float64)
-    bytes_file += _create_file_identifier()
-    bytes_file += _create_global_header()
+    file = _create_capture_pattern(np.int32, np.float64)
+    file += _create_file_identifier()
+    file += _create_global_header()
 
     # create 1 block for gas
     read_tag = np.array([13], dtype='int32')
-    bytes_file += bytearray(read_tag.tobytes())
+    file += bytearray(read_tag.tobytes())
     nblocks = np.array([2], dtype='int32')
-    bytes_file += bytearray(nblocks.tobytes())
-    bytes_file += bytearray(read_tag.tobytes())
+    file += bytearray(nblocks.tobytes())
+    file += bytearray(read_tag.tobytes())
 
     # 8 particles storing 4 real arrays (x, y, z, h)
-    bytes_file += bytearray(read_tag.tobytes())
+    file += bytearray(read_tag.tobytes())
     n = np.array([8], dtype='int64')
-    nums = np.array([0, 0, 0, 0, 0, 4, 0, 0] , dtype='int32')
-    bytes_file += bytearray(n.tobytes())
-    bytes_file += bytearray(nums.tobytes())
-    bytes_file += bytearray(read_tag.tobytes())
+    nums = np.array([0, 0, 0, 0, 0, 4, 0, 0], dtype='int32')
+    file += bytearray(n.tobytes())
+    file += bytearray(nums.tobytes())
+    file += bytearray(read_tag.tobytes())
 
-    bytes_file += bytearray(read_tag.tobytes())
+    file += bytearray(read_tag.tobytes())
     n = np.array([1], dtype='int64')
-    nums = np.array([0, 0, 0, 0, 0, 7, 0, 0] , dtype='int32')
-    bytes_file += bytearray(n.tobytes())
-    bytes_file += bytearray(nums.tobytes())
-    bytes_file += bytearray(read_tag.tobytes())
+    nums = np.array([0, 0, 0, 0, 0, 7, 0, 0], dtype='int32')
+    file += bytearray(n.tobytes())
+    file += bytearray(nums.tobytes())
+    file += bytearray(read_tag.tobytes())
 
     # write 4 gas particle arrays
-    bytes_file += _create_particle_array("x", [0, 0, 0, 0, 1, 1, 1, 1])
-    bytes_file += _create_particle_array("y", [0, 0, 1, 1, 0, 0, 1, 1])
-    bytes_file += _create_particle_array("z", [0, 1, 0, 1, 0, 1, 0, 1])
-    bytes_file += _create_particle_array("h", [1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1])
+    file += _create_particle_array("x", [0, 0, 0, 0, 1, 1, 1, 1])
+    file += _create_particle_array("y", [0, 0, 1, 1, 0, 0, 1, 1])
+    file += _create_particle_array("z", [0, 1, 0, 1, 0, 1, 0, 1])
+    file += _create_particle_array("h", [1.1, 1.1, 1.1, 1.1,
+                                         1.1, 1.1, 1.1, 1.1])
 
     # write 7 sink particle arrays
-    bytes_file += _create_particle_array("x", [0.000305])
-    bytes_file += _create_particle_array("y", [-0.035809])
-    bytes_file += _create_particle_array("z", [-0.000035])
-    bytes_file += _create_particle_array("h", [1.0])
-    bytes_file += _create_particle_array("spinx", [-3.911744e-8])
-    bytes_file += _create_particle_array("spiny", [-1.326062e-8])
-    bytes_file += _create_particle_array("spinz", [0.00058])
+    file += _create_particle_array("x", [0.000305])
+    file += _create_particle_array("y", [-0.035809])
+    file += _create_particle_array("z", [-0.000035])
+    file += _create_particle_array("h", [1.0])
+    file += _create_particle_array("spinx", [-3.911744e-8])
+    file += _create_particle_array("spiny", [-1.326062e-8])
+    file += _create_particle_array("spinz", [0.00058])
 
     with tempfile.NamedTemporaryFile() as fp:
-        fp.write(bytes_file)
+        fp.write(file)
         fp.seek(0)
 
         sdf, sdf_sinks = sarracen.read_phantom(fp.name, separate_types='all')
@@ -310,11 +331,14 @@ def test_gas_sink_particles():
         assert 'mass' not in sdf.columns
         assert 'mass' not in sdf_sinks.columns
         tm.assert_series_equal(sdf['x'], pd.Series([0, 0, 0, 0, 1, 1, 1, 1]),
-                               check_index=False, check_names=False, check_dtype=False)
+                               check_index=False, check_names=False,
+                               check_dtype=False)
         tm.assert_series_equal(sdf_sinks['x'], pd.Series([0.000305]),
-                               check_index=False, check_names=False, check_dtype=False)
+                               check_index=False, check_names=False,
+                               check_dtype=False)
         tm.assert_series_equal(sdf_sinks['spinx'], pd.Series([-3.911744e-8]),
-                               check_index=False, check_names=False, check_dtype=False)
+                               check_index=False, check_names=False,
+                               check_dtype=False)
 
         sdf, sdf_sinks = sarracen.read_phantom(fp.name, separate_types='sinks')
         assert sdf.params['massoftype'] == 1e-6
@@ -324,76 +348,94 @@ def test_gas_sink_particles():
         assert 'mass' not in sdf.columns
         assert 'mass' not in sdf_sinks.columns
         tm.assert_series_equal(sdf['x'], pd.Series([0, 0, 0, 0, 1, 1, 1, 1]),
-                               check_index=False, check_names=False, check_dtype=False)
+                               check_index=False, check_names=False,
+                               check_dtype=False)
         tm.assert_series_equal(sdf_sinks['x'], pd.Series([0.000305]),
-                               check_index=False, check_names=False, check_dtype=False)
+                               check_index=False, check_names=False,
+                               check_dtype=False)
         tm.assert_series_equal(sdf_sinks['spinx'], pd.Series([-3.911744e-8]),
-                               check_index=False, check_names=False, check_dtype=False)
+                               check_index=False, check_names=False,
+                               check_dtype=False)
 
         sdf = sarracen.read_phantom(fp.name, separate_types=None)
         assert sdf.params['massoftype'] == 1e-6
         assert sdf.params['mass'] == 1e-6
         assert 'mass' not in sdf.columns
-        tm.assert_series_equal(sdf['x'], pd.Series([0, 0, 0, 0, 1, 1, 1, 1, 0.000305]),
-                               check_index=False, check_names=False, check_dtype=False)
-        tm.assert_series_equal(sdf['h'], pd.Series([1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.0]),
-                               check_index=False, check_names=False, check_dtype=False)
+        tm.assert_series_equal(sdf['x'], pd.Series([0, 0, 0, 0,
+                                                    1, 1, 1, 1,
+                                                    0.000305]),
+                               check_index=False, check_names=False,
+                               check_dtype=False)
+        tm.assert_series_equal(sdf['h'], pd.Series([1.1, 1.1, 1.1, 1.1,
+                                                    1.1, 1.1, 1.1, 1.1,
+                                                    1.0]),
+                               check_index=False, check_names=False,
+                               check_dtype=False)
 
 
 def test_gas_dust_sink_particles():
 
-    bytes_file = _create_capture_pattern(np.int32, np.float64)
-    bytes_file += _create_file_identifier()
-    bytes_file += _create_global_header(massoftype_7=1e-4)
+    file = _create_capture_pattern(np.int32, np.float64)
+    file += _create_file_identifier()
+    file += _create_global_header(massoftype_7=1e-4)
 
     # create 1 block for gas
     read_tag = np.array([13], dtype='int32')
-    bytes_file += bytearray(read_tag.tobytes())
+    file += bytearray(read_tag.tobytes())
     nblocks = np.array([2], dtype='int32')
-    bytes_file += bytearray(nblocks.tobytes())
-    bytes_file += bytearray(read_tag.tobytes())
+    file += bytearray(nblocks.tobytes())
+    file += bytearray(read_tag.tobytes())
 
     # 8 particles storing 4 real arrays (x, y, z, h)
-    bytes_file += bytearray(read_tag.tobytes())
+    file += bytearray(read_tag.tobytes())
     n = np.array([16], dtype='int64')
-    nums = np.array([0, 1, 0, 0, 0, 4, 0, 0] , dtype='int32')
-    bytes_file += bytearray(n.tobytes())
-    bytes_file += bytearray(nums.tobytes())
-    bytes_file += bytearray(read_tag.tobytes())
+    nums = np.array([0, 1, 0, 0, 0, 4, 0, 0], dtype='int32')
+    file += bytearray(n.tobytes())
+    file += bytearray(nums.tobytes())
+    file += bytearray(read_tag.tobytes())
 
-    bytes_file += bytearray(read_tag.tobytes())
+    file += bytearray(read_tag.tobytes())
     n = np.array([1], dtype='int64')
-    nums = np.array([0, 0, 0, 0, 0, 7, 0, 0] , dtype='int32')
-    bytes_file += bytearray(n.tobytes())
-    bytes_file += bytearray(nums.tobytes())
-    bytes_file += bytearray(read_tag.tobytes())
+    nums = np.array([0, 0, 0, 0, 0, 7, 0, 0], dtype='int32')
+    file += bytearray(n.tobytes())
+    file += bytearray(nums.tobytes())
+    file += bytearray(read_tag.tobytes())
 
     # write 5 gas/dust particle arrays
-    bytes_file += _create_particle_array("itype", [1, 1, 1, 1, 1, 1, 1, 1,
-                                         7, 7, 7, 7, 7, 7, 7, 7], np.int8)
-    bytes_file += _create_particle_array("x", [0, 0, 0, 0, 1, 1, 1, 1,
-                                               0.5, 0.5, 0.5, 0.5, 1.5, 1.5, 1.5, 1.5])
-    bytes_file += _create_particle_array("y", [0, 0, 1, 1, 0, 0, 1, 1,
-                                               0.5, 0.5, 1.5, 1.5, 0.5, 0.5, 1.5, 1.5])
-    bytes_file += _create_particle_array("z", [0, 1, 0, 1, 0, 1, 0, 1,
-                                               0.5, 1.5, 0.5, 1.5, 0.5, 1.5, 0.5, 1.5])
-    bytes_file += _create_particle_array("h", [1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1,
-                                               1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1])
+    file += _create_particle_array("itype", [1, 1, 1, 1, 1, 1, 1, 1,
+                                             7, 7, 7, 7, 7, 7, 7, 7], np.int8)
+    file += _create_particle_array("x", [0, 0, 0, 0,
+                                         1, 1, 1, 1,
+                                         0.5, 0.5, 0.5, 0.5,
+                                         1.5, 1.5, 1.5, 1.5])
+    file += _create_particle_array("y", [0, 0, 1, 1,
+                                         0, 0, 1, 1,
+                                         0.5, 0.5, 1.5, 1.5,
+                                         0.5, 0.5, 1.5, 1.5])
+    file += _create_particle_array("z", [0, 1, 0, 1,
+                                         0, 1, 0, 1,
+                                         0.5, 1.5, 0.5, 1.5,
+                                         0.5, 1.5, 0.5, 1.5])
+    file += _create_particle_array("h", [1.1, 1.1, 1.1, 1.1,
+                                         1.1, 1.1, 1.1, 1.1,
+                                         1.1, 1.1, 1.1, 1.1,
+                                         1.1, 1.1, 1.1, 1.1])
 
     # write 7 sink particle arrays
-    bytes_file += _create_particle_array("x", [0.000305])
-    bytes_file += _create_particle_array("y", [-0.035809])
-    bytes_file += _create_particle_array("z", [-0.000035])
-    bytes_file += _create_particle_array("h", [1.0])
-    bytes_file += _create_particle_array("spinx", [-3.911744e-8])
-    bytes_file += _create_particle_array("spiny", [-1.326062e-8])
-    bytes_file += _create_particle_array("spinz", [0.00058])
+    file += _create_particle_array("x", [0.000305])
+    file += _create_particle_array("y", [-0.035809])
+    file += _create_particle_array("z", [-0.000035])
+    file += _create_particle_array("h", [1.0])
+    file += _create_particle_array("spinx", [-3.911744e-8])
+    file += _create_particle_array("spiny", [-1.326062e-8])
+    file += _create_particle_array("spinz", [0.00058])
 
     with tempfile.NamedTemporaryFile() as fp:
-        fp.write(bytes_file)
+        fp.write(file)
         fp.seek(0)
 
-        sdf_g, sdf_d, sdf_sinks = sarracen.read_phantom(fp.name, separate_types='all')
+        sdf_g, sdf_d, sdf_sinks = sarracen.read_phantom(fp.name,
+                                                        separate_types='all')
         assert sdf_g.params['massoftype'] == 1e-6
         assert sdf_g.params['massoftype_7'] == 1e-4
         assert sdf_g.params['mass'] == 1e-6
@@ -408,16 +450,22 @@ def test_gas_dust_sink_particles():
         assert 'mass' not in sdf_sinks.columns
         tm.assert_series_equal(sdf_g['x'],
                                pd.Series([0, 0, 0, 0, 1, 1, 1, 1]),
-                               check_index=False, check_names=False, check_dtype=False)
+                               check_index=False, check_names=False,
+                               check_dtype=False)
         tm.assert_series_equal(sdf_d['x'],
-                               pd.Series([0.5, 0.5, 0.5, 0.5, 1.5, 1.5, 1.5, 1.5]),
-                               check_index=False, check_names=False, check_dtype=False)
+                               pd.Series([0.5, 0.5, 0.5, 0.5,
+                                          1.5, 1.5, 1.5, 1.5]),
+                               check_index=False, check_names=False,
+                               check_dtype=False)
         tm.assert_series_equal(sdf_sinks['x'], pd.Series([0.000305]),
-                               check_index=False, check_names=False, check_dtype=False)
+                               check_index=False, check_names=False,
+                               check_dtype=False)
         tm.assert_series_equal(sdf_sinks['spinx'], pd.Series([-3.911744e-8]),
-                               check_index=False, check_names=False, check_dtype=False)
+                               check_index=False, check_names=False,
+                               check_dtype=False)
 
-        sdf, sdf_sinks = sarracen.read_phantom(fp.name, separate_types='sinks')
+        sdf, sdf_sinks = sarracen.read_phantom(fp.name,
+                                               separate_types='sinks')
         assert sdf.params['massoftype'] == 1e-6
         assert sdf.params['massoftype_7'] == 1e-4
         assert 'mass' not in sdf.params
@@ -426,18 +474,23 @@ def test_gas_dust_sink_particles():
         assert sdf[sdf.itype == 7]['mass'].unique() == [1e-4]
         tm.assert_series_equal(sdf[sdf.itype == 1]['x'],
                                pd.Series([0, 0, 0, 0, 1, 1, 1, 1]),
-                               check_index=False, check_names=False, check_dtype=False)
+                               check_index=False, check_names=False,
+                               check_dtype=False)
         tm.assert_series_equal(sdf[sdf.itype == 7]['x'],
-                               pd.Series([0.5, 0.5, 0.5, 0.5, 1.5, 1.5, 1.5, 1.5]),
-                               check_index=False, check_names=False, check_dtype=False)
+                               pd.Series([0.5, 0.5, 0.5, 0.5,
+                                          1.5, 1.5, 1.5, 1.5]),
+                               check_index=False, check_names=False,
+                               check_dtype=False)
         assert sdf_sinks.params['massoftype'] == 1e-6
         assert sdf_sinks.params['massoftype_7'] == 1e-4
         assert 'mass' not in sdf_sinks.params
         assert 'mass' not in sdf_sinks.columns
         tm.assert_series_equal(sdf_sinks['x'], pd.Series([0.000305]),
-                               check_index=False, check_names=False, check_dtype=False)
+                               check_index=False, check_names=False,
+                               check_dtype=False)
         tm.assert_series_equal(sdf_sinks['spinx'], pd.Series([-3.911744e-8]),
-                               check_index=False, check_names=False, check_dtype=False)
+                               check_index=False, check_names=False,
+                               check_dtype=False)
 
         sdf = sarracen.read_phantom(fp.name, separate_types=None)
         assert sdf.params['massoftype'] == 1e-6
@@ -446,11 +499,18 @@ def test_gas_dust_sink_particles():
         assert 'mass' in sdf.columns
         assert sdf[sdf.itype == 1]['mass'].unique() == [1e-6]
         assert sdf[sdf.itype == 7]['mass'].unique() == [1e-4]
-        tm.assert_series_equal(sdf['x'], pd.Series([0, 0, 0, 0, 1, 1, 1, 1,
-                                                    0.5, 0.5, 0.5, 0.5, 1.5, 1.5, 1.5, 1.5,
+        tm.assert_series_equal(sdf['x'], pd.Series([0, 0, 0, 0,
+                                                    1, 1, 1, 1,
+                                                    0.5, 0.5, 0.5, 0.5,
+                                                    1.5, 1.5, 1.5, 1.5,
                                                     0.000305]),
-                               check_index=False, check_names=False, check_dtype=False)
+                               check_index=False, check_names=False,
+                               check_dtype=False)
         tm.assert_series_equal(sdf['h'], pd.Series([1.1] * 16 + [1.0]),
-                               check_index=False, check_names=False, check_dtype=False)
-        tm.assert_series_equal(sdf['mass'], pd.Series([1e-6] * 8 + [1e-4] * 8 + [np.nan]),
-                               check_index=False, check_names=False, check_dtype=False)
+                               check_index=False, check_names=False,
+                               check_dtype=False)
+        tm.assert_series_equal(sdf['mass'], pd.Series([1e-6] * 8
+                                                      + [1e-4] * 8
+                                                      + [np.nan]),
+                               check_index=False, check_names=False,
+                               check_dtype=False)
