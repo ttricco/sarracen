@@ -18,8 +18,8 @@ def azimuthal_average(data: 'SarracenDataFrame',
     Calculates the 1D azimuthally-averaged profile for a target quantity.
 
     The profile is computed by segmenting the particles into radial bins
-    (rings) and taking the mean of the target quantity from the particles within each
-    bin.
+    (rings) and taking the mean of the target quantity from the particles
+    within each bin.
 
     Parameters
     ----------
