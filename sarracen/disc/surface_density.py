@@ -18,8 +18,8 @@ def azimuthal_average(data: 'SarracenDataFrame',
     Calculates the 1D azimuthally-averaged profile for a target quantity.
 
     The profile is computed by segmenting the particles into radial bins
-    (rings) and summing the target quantity from the particles within each
-    bin.
+    (rings) and taking the mean of the target quantity from the particles
+    within each bin.
 
     Parameters
     ----------
@@ -62,7 +62,7 @@ def azimuthal_average(data: 'SarracenDataFrame',
     rbins, bin_edges = _bin_particles_by_radius(data, r_in, r_out, bins, log,
                                                 geometry, origin)
 
-    result = data[target].groupby(rbins).sum().to_numpy()
+    result = data[target].groupby(rbins).mean().to_numpy()
 
     if retbins:
         return result, _get_bin_midpoints(bin_edges, log)
