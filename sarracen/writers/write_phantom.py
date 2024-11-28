@@ -93,6 +93,7 @@ def _write_global_header(sdf: SarracenDataFrame,
     params_dict = remove_sdf_specific_keys(sdf)
 
     dtypes = [def_int, np.int8, np.int16, np.int32, np.int64, def_real, np.float32, np.float64]
+    special_keys = ['nparttot', 'ntypes', 'npartoftype']
     global_headers = [GlobalHeaderElement(dt, [], []) for dt in dtypes]
     used_keys = set()
 
@@ -104,6 +105,18 @@ def _write_global_header(sdf: SarracenDataFrame,
                 ghe.tags.append(key)
                 used_keys.add(key)
                 ghe.values.append(params_dict[key])
+
+    for key in special_keys:
+        if key in params_dict:
+            for ghe in global_headers:
+                if ghe.d_type in [np.int64]:
+                    if key not in ghe.tags:
+                        ghe.tags.append(key)
+                        ghe.values.append(params_dict[key])
+                if ghe.d_type in [np.int32] and key == 'npartoftype':
+                    if key not in ghe.tags:
+                        ghe.tags.append(key)
+                        ghe.values.append(params_dict[key])
 
     file = bytearray()
 
