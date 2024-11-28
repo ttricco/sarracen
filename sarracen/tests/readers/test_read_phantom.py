@@ -47,6 +47,7 @@ def _create_global_header(massoftype=1e-6, massoftype_7=None,
     for i in range(8):  # loop over 8 dtypes
         file += bytearray(read_tag.tobytes())
         nvars = (i == 5) + (massoftype_7 is not None)
+        nvars = nvars + 3 # ['nparttot', 'ntypes', 'npartoftype']
         if i == 5:  # default real
             nvars = np.array([nvars], dtype='int32')
         else:
@@ -57,6 +58,9 @@ def _create_global_header(massoftype=1e-6, massoftype_7=None,
         if i == 5:  # default real
             file += bytearray(read_tag.tobytes())
             file += bytearray(map(ord, "massoftype".ljust(16)))
+            file += bytearray(map(ord, "nparttot".ljust(16)))
+            file += bytearray(map(ord, "ntypes".ljust(16)))
+            file += bytearray(map(ord, "npartoftype".ljust(16)))
             if massoftype_7 is not None:
                 file += bytearray(map(ord, "massoftype_7".ljust(16)))
             file += bytearray(read_tag.tobytes())
@@ -64,6 +68,9 @@ def _create_global_header(massoftype=1e-6, massoftype_7=None,
         if i == 5:
             file += bytearray(read_tag.tobytes())
             file += bytearray(np.array([massoftype], dtype=def_real))
+            file += bytearray(np.array([100], dtype=def_real))
+            file += bytearray(np.array([5], dtype=def_real))
+            file += bytearray(np.array([20], dtype=def_real))
             if massoftype_7 is not None:
                 file += bytearray(np.array([massoftype_7], dtype=def_real))
             file += bytearray(read_tag.tobytes())
@@ -171,6 +178,12 @@ def test_gas_particles_only():
         sdf = sarracen.read_phantom(fp.name, separate_types=None)
         assert sdf.params['massoftype'] == 1e-6
         assert sdf.params['mass'] == 1e-6
+        assert sdf.params['nparttot'].dtype == np.int64
+        assert sdf.params['ntypes'].dtype == np.int64
+        assert sdf.params['npartoftype'].dtype == np.int64
+        assert sdf.params['nparttot'] == 100
+        assert sdf.params['ntypes'] == 5
+        assert sdf.params['npartoftype'] == 20
         assert 'mass' not in sdf.columns
         tm.assert_series_equal(sdf['x'], pd.Series([0, 0, 0, 0, 1, 1, 1, 1]),
                                check_index=False, check_names=False,
