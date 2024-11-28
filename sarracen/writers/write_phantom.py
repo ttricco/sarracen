@@ -90,14 +90,15 @@ def _write_global_header(sdf: SarracenDataFrame,
                          def_int: np.dtype,
                          def_real: np.dtype):
 
-    params_dict = sdf.params
+    params_dict = remove_sdf_specific_keys(sdf)
+
     dtypes = [def_int, np.int8, np.int16, np.int32, np.int64, def_real, np.float32, np.float64]
     global_headers = [GlobalHeaderElement(dt, [], []) for dt in dtypes]
     used_keys = set()
 
     for ghe in global_headers:
         for key in params_dict:
-            if _invalid_key(key, used_keys):
+            if key in used_keys:
                 continue
             if isinstance(params_dict[key], ghe.d_type):
                 ghe.tags.append(key)
@@ -116,6 +117,12 @@ def _write_global_header(sdf: SarracenDataFrame,
         file += _write_global_header_tags_and_values(header.tags, header.values, header.d_type)
 
     return file
+
+
+def remove_sdf_specific_keys(sdf):
+    exclude = ['file_identifier', 'mass', 'def_int_dtype', 'def_real_dtype']
+    params_dict = {k: v for k, v in sdf.params.items() if k not in exclude}
+    return params_dict
 
 
 def _count_num_dt_arrays(test_sdf, dt):

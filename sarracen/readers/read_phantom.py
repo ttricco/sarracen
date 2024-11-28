@@ -223,6 +223,13 @@ def _create_aprmass_column(df, header_vars):
     return df
 
 
+def update_int64_header_vars(header_vars):
+    for key, value in header_vars.items():
+        if key in ['nparttot', 'ntypes', 'npartoftype']:
+            header_vars[key] = np.int64(value)
+    return header_vars
+
+
 def read_phantom(filename: str,
                  separate_types: str = 'sinks',
                  ignore_inactive: bool = True):
@@ -278,6 +285,7 @@ def read_phantom(filename: str,
         file_identifier = _read_file_identifier(fp)
 
         header_vars = _read_global_header(fp, def_int_dtype, def_real_dtype)
+        header_vars = update_int64_header_vars(header_vars)
         header_vars['file_identifier'] = file_identifier
         header_vars['iversion'] = iversion
         header_vars['def_int_dtype'] = def_int_dtype
