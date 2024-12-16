@@ -22,8 +22,7 @@ class SdfDataTypeTags:
         self.sdf = sdf
 
 
-def _write_fortran_block(value: [],
-                         dtype: type):
+def _write_fortran_block(value: [], dtype: type):
     write_tag = np.array([len(value) * dtype().itemsize], dtype=np.int32)
     file = bytearray(write_tag.tobytes())
     file += bytearray(np.array(value, dtype=dtype).tobytes())
@@ -32,23 +31,19 @@ def _write_fortran_block(value: [],
 
 
 def _write_file_identifier(sdf: SarracenDataFrame):
-
     file_id = sdf.params['file_identifier'].ljust(100)
     file_id = list(map(ord, file_id))
-
     file = _write_fortran_block(file_id, dtype=np.uint8)
-
     return file
 
 
-def _write_capture_pattern(def_int, def_real):
-
+def _write_capture_pattern(def_int: np.dtype, def_real: np.dtype, iversion: int = 1):
     write_tag = 16 + def_real().itemsize
     write_tag = np.array([write_tag], dtype='int32')
-    i1 = np.array([60769], dtype=np.int32)
+    i1 = np.array([60769], dtype=def_int)
     r2 = np.array([60878], dtype=def_real)
     i2 = np.array([60878], dtype=np.int32)
-    iversion = np.array([1], dtype=np.int32)
+    iversion = np.array([iversion], dtype=np.int32)
     i3 = np.array([690706], dtype=np.int32)
 
     capture_pattern = bytearray(write_tag.tobytes())
@@ -62,11 +57,6 @@ def _write_capture_pattern(def_int, def_real):
     return capture_pattern
 
 
-def _invalid_key(key, used_keys):
-    exclude = ['file_identifier', 'mass', 'def_int_dtype', 'def_real_dtype']
-    return key in exclude or key in used_keys
-
-
 def _rename_duplicate(tag):
     if len(tag) > 1 and tag[-2] == '_' and tag[-1].isdigit():
         tag = tag[:-2]
@@ -75,8 +65,7 @@ def _rename_duplicate(tag):
 
 
 def _write_global_header_tags_and_values(tags, values, dtype):
-
-    #tags = [_rename_duplicate(tag) for tag in tags]
+    tags = [_rename_duplicate(tag) for tag in tags]
     tags = [list(map(ord, tag.ljust(16))) for tag in tags]
     tags = [c for tag in tags for c in tag]
 
@@ -89,34 +78,19 @@ def _write_global_header_tags_and_values(tags, values, dtype):
 def _write_global_header(sdf: SarracenDataFrame,
                          def_int: np.dtype,
                          def_real: np.dtype):
-
-    params_dict = remove_sdf_specific_keys(sdf)
-
+    params_dict = _remove_invalid_keys(sdf)
     dtypes = [def_int, np.int8, np.int16, np.int32, np.int64, def_real, np.float32, np.float64]
-    special_keys = ['nparttot', 'ntypes', 'npartoftype']
     global_headers = [GlobalHeaderElement(dt, [], []) for dt in dtypes]
     used_keys = set()
 
-    for ghe in global_headers:
+    for gh_element in global_headers:
         for key in params_dict:
             if key in used_keys:
                 continue
-            if isinstance(params_dict[key], ghe.d_type):
-                ghe.tags.append(key)
+            if isinstance(params_dict[key], gh_element.d_type):
+                gh_element.tags.append(key)
+                gh_element.values.append(params_dict[key])
                 used_keys.add(key)
-                ghe.values.append(params_dict[key])
-
-    for key in special_keys:
-        if key in params_dict:
-            for ghe in global_headers:
-                if ghe.d_type in [np.int64]:
-                    if key not in ghe.tags:
-                        ghe.tags.append(key)
-                        ghe.values.append(params_dict[key])
-                if ghe.d_type in [np.int32] and key == 'npartoftype':
-                    if key not in ghe.tags:
-                        ghe.tags.append(key)
-                        ghe.values.append(params_dict[key])
 
     file = bytearray()
 
@@ -132,18 +106,10 @@ def _write_global_header(sdf: SarracenDataFrame,
     return file
 
 
-def remove_sdf_specific_keys(sdf):
-    exclude = ['file_identifier', 'mass', 'def_int_dtype', 'def_real_dtype']
+def _remove_invalid_keys(sdf):
+    exclude = ['file_identifier', 'mass', 'def_int_dtype', 'def_real_dtype', 'iversion']
     params_dict = {k: v for k, v in sdf.params.items() if k not in exclude}
     return params_dict
-
-
-def _count_num_dt_arrays(test_sdf, dt):
-    count_dt = 0
-    for element in test_sdf.dtypes.values:
-        if element == dt:
-            count_dt += 1
-    return count_dt
 
 
 def _get_array_tags(test_sdf, dt):
@@ -155,14 +121,13 @@ def _get_last_index(sdf):
 
 
 def _write_value_arrays(data: SarracenDataFrame,
-                        sinks: SarracenDataFrame,
                         def_int: np.dtype,
-                        def_real: np.dtype):
+                        def_real: np.dtype,
+                        sinks: SarracenDataFrame = None):
 
     dtypes = [def_int, np.int8, np.int16, np.int32, np.int64, def_real, np.float32, np.float64]
 
     nblocks = 2 if sinks is not None else 1
-    # number of blocks -- 1 for now while testing (block 2 is sink particles)
     file = _write_fortran_block([nblocks], np.int32)
 
     sdf_and_sinks = [data, sinks] if sinks is not None else [data]
@@ -182,10 +147,7 @@ def _write_value_arrays(data: SarracenDataFrame,
 
         write_tag = np.array([len(nvars) * nvars.dtype.itemsize
                               + len(counts) * counts.dtype.itemsize], dtype=np.int32)
-        file += write_tag.tobytes() \
-                + nvars.tobytes() \
-                + counts.tobytes() \
-                + write_tag.tobytes()
+        file += write_tag.tobytes() + nvars.tobytes() + counts.tobytes() + write_tag.tobytes()
 
         sdf_data_type_tags.append(SdfDataTypeTags(data_type_tags, sdf))
 
@@ -198,8 +160,7 @@ def _write_value_arrays(data: SarracenDataFrame,
     return file
 
 
-def write_phantom(filename: str, data: SarracenDataFrame, sinks: SarracenDataFrame = None):
-
+def write_phantom(data: SarracenDataFrame, new_file_name: str, sinks: SarracenDataFrame = None):
     if data.isnull().values.any():
         raise ValueError("The data DataFrame contains NaNs or missing values.")
 
@@ -212,9 +173,9 @@ def write_phantom(filename: str, data: SarracenDataFrame, sinks: SarracenDataFra
     file = _write_capture_pattern(def_int, def_real)
     file += _write_file_identifier(data)
     file += _write_global_header(data, def_int, def_real)
-    file += _write_value_arrays(data, sinks, def_int, def_real)
+    file += _write_value_arrays(data, def_int, def_real, sinks)
 
-    with open(filename, 'wb') as phantom_file:
+    with open(new_file_name, 'wb') as phantom_file:
         phantom_file.write(file)
         phantom_file.close()
 
