@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 import vtk
-from vtk.util.numpy_support import vtk_to_numpy
+from vtkmodules.util.numpy_support import vtk_to_numpy
 
 from ..sarracen_dataframe import SarracenDataFrame
 

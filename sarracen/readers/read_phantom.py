@@ -22,7 +22,7 @@ def _read_fortran_block(fp, bytesize):
     return data
 
 
-def _read_capture_pattern(fp):
+def read_capture_pattern(fp):
     """ Phantom dump validation plus default real and int sizes."""
 
     start_tag = fp.read(4)  # 4-byte Fortran tag
@@ -131,7 +131,7 @@ def _read_global_header(fp, def_int_dtype, def_real_dtype):
         new_keys, new_data = _read_global_header_block(fp, dtype)
 
         keys += new_keys
-        data = np.append(data, new_data)
+        data = data + list(new_data)
 
     keys = _rename_duplicates(keys)
 
@@ -223,6 +223,13 @@ def _create_aprmass_column(df, header_vars):
     return df
 
 
+# def update_int64_header_vars(header_vars):
+#     for key, value in header_vars.items():
+#         if key in ['nparttot', 'ntypes', 'npartoftype']:
+#             header_vars[key] = np.int64(value)
+#     return header_vars
+
+
 def read_phantom(filename: str,
                  separate_types: str = 'sinks',
                  ignore_inactive: bool = True):
@@ -274,12 +281,15 @@ def read_phantom(filename: str,
     >>> sdf_gas, sdf_dust, sdf_sinks = sarracen.read_phantom('dumpfile_00000', separate_types='all')
     """
     with open(filename, 'rb') as fp:
-        def_int_dtype, def_real_dtype, iversion = _read_capture_pattern(fp)
+        def_int_dtype, def_real_dtype, iversion = read_capture_pattern(fp)
         file_identifier = _read_file_identifier(fp)
 
         header_vars = _read_global_header(fp, def_int_dtype, def_real_dtype)
+        # header_vars = update_int64_header_vars(header_vars)
         header_vars['file_identifier'] = file_identifier
         header_vars['iversion'] = iversion
+        header_vars['def_int_dtype'] = def_int_dtype
+        header_vars['def_real_dtype'] = def_real_dtype
 
         df, df_sinks = _read_array_blocks(fp, def_int_dtype, def_real_dtype)
 
