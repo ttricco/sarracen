@@ -271,6 +271,21 @@ class SarracenDataFrame(DataFrame):
 
         return [com_x * mass, com_y * mass, com_z * mass]
 
+    def recentre_on_sink(self, sdf_sinks=None, sink_index=0, retsinks=False):
+        if sdf_sinks is None: # sink particle data contained within self
+            sdf_sinks = self[self["itype"].isna()]
+        self[self.xcol] -= sdf_sinks[sdf_sinks.xcol].loc[sink_index]
+        self[self.ycol] -= sdf_sinks[sdf_sinks.ycol].loc[sink_index]
+        if {self.zcol}.issubset(self.columns):
+            self[self.zcol] -= sdf_sinks[sdf_sinks.zcol].loc[sink_index]
+        if retsinks: #return rescaled sink particle data
+            rescaled_sinks = sdf_sinks.copy()
+            rescaled_sinks[rescaled_sinks.xcol] -= sdf_sinks[sdf_sinks.xcol].loc[sink_index]
+            rescaled_sinks[rescaled_sinks.ycol] -= sdf_sinks[sdf_sinks.ycol].loc[sink_index]
+            if {rescaled_sinks.zcol}.issubset(rescaled_sinks.columns):
+                rescaled_sinks[rescaled_sinks.zcol] -= sdf_sinks[sdf_sinks.zcol].loc[sink_index]
+            return rescaled_sinks
+
     @_copy_doc(render)
     def render(self,
                target: str,
