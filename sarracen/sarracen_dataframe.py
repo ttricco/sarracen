@@ -272,19 +272,43 @@ class SarracenDataFrame(DataFrame):
         return [com_x * mass, com_y * mass, com_z * mass]
 
     def recentre_on_sink(self, sdf_sinks=None, sink_index=0, retsinks=False):
-        if sdf_sinks is None: # sink particle data contained within self
+        """Moves coordinate origin of data to sink particle specified.
+
+        Parameters
+        ----------
+        sdf_sinks : SarracenDataFrame, optional
+            Sink particle data in a SarracenDataFrame. If None, sink particle
+            data is taken from the dataset itself.
+        sink_index : int, optional
+            Index of sink particle to act as origin, by default 0
+        retsinks : bool, optional
+            Determines whether or not to return recentred sink
+            particle data in a separate DataFrame. The default is False.
+
+        Returns
+        -------
+        SarracenDataFrame, optional
+            Recentred sink particle data. Only returned if *retsinks=True*.
+        """
+        if sdf_sinks is None: #sink particle data contained within self
             sdf_sinks = self[self["itype"].isna()]
-        self[self.xcol] -= sdf_sinks[sdf_sinks.xcol].loc[sink_index]
-        self[self.ycol] -= sdf_sinks[sdf_sinks.ycol].loc[sink_index]
+        #get position of sink particle
+        sink_x = sdf_sinks[sdf_sinks.xcol].loc[sink_index]
+        sink_y = sdf_sinks[sdf_sinks.ycol].loc[sink_index]
         if {self.zcol}.issubset(self.columns):
-            self[self.zcol] -= sdf_sinks[sdf_sinks.zcol].loc[sink_index]
-        if retsinks: #return rescaled sink particle data
-            rescaled_sinks = sdf_sinks.copy()
-            rescaled_sinks[rescaled_sinks.xcol] -= sdf_sinks[sdf_sinks.xcol].loc[sink_index]
-            rescaled_sinks[rescaled_sinks.ycol] -= sdf_sinks[sdf_sinks.ycol].loc[sink_index]
-            if {rescaled_sinks.zcol}.issubset(rescaled_sinks.columns):
-                rescaled_sinks[rescaled_sinks.zcol] -= sdf_sinks[sdf_sinks.zcol].loc[sink_index]
-            return rescaled_sinks
+            sink_z = sdf_sinks[sdf_sinks.zcol].loc[sink_index]
+        #recentre data
+        self[self.xcol] -= sink_x
+        self[self.ycol] -= sink_y
+        if {self.zcol}.issubset(self.columns):
+            self[self.zcol] -= sink_z
+        if retsinks: #return recentred sink particle data
+            recentred_sinks = sdf_sinks.copy()
+            recentred_sinks[recentred_sinks.xcol] -= sink_x
+            recentred_sinks[recentred_sinks.ycol] -= sink_y
+            if {self.zcol}.issubset(self.columns):
+                recentred_sinks[recentred_sinks.zcol] -= sink_z
+            return recentred_sinks
 
     @_copy_doc(render)
     def render(self,
