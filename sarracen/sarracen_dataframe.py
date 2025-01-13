@@ -271,8 +271,8 @@ class SarracenDataFrame(DataFrame):
 
         return [com_x * mass, com_y * mass, com_z * mass]
 
-    def recentre_on_sink(self, sdf_sinks=None, sink_index=0, 
-                        retsinks=True, inplace=True):
+    def recentre_on_sink(self, sdf_sinks=None, sink_index=0,
+                         retsinks=True, inplace=True):
         """Moves coordinate origin of data to sink particle specified.
 
         Parameters
@@ -296,14 +296,14 @@ class SarracenDataFrame(DataFrame):
         SarracenDataFrame, optional
             Recentred sink particle data. Only returned if *retsinks=True*.
         """
-        if sdf_sinks is None: #sink particle data contained within self
+        if sdf_sinks is None:   # sink particle data contained within self
             sdf_sinks = self[self["itype"].isna()]
-        #get position of sink particle
+        # get position of sink particle
         sink_x = sdf_sinks[sdf_sinks.xcol].loc[sink_index]
         sink_y = sdf_sinks[sdf_sinks.ycol].loc[sink_index]
         if {self.zcol}.issubset(self.columns):
             sink_z = sdf_sinks[sdf_sinks.zcol].loc[sink_index]
-        #recentre data
+        # recentre data
         if inplace:
             self[self.xcol] -= sink_x
             self[self.ycol] -= sink_y
@@ -315,7 +315,7 @@ class SarracenDataFrame(DataFrame):
             recentred_data[self.ycol] -= sink_y
             if {self.zcol}.issubset(self.columns):
                 recentred_data[self.zcol] -= sink_z
-        if retsinks: #find recentred sink particle data
+        if retsinks:  # find recentred sink particle data
             recentred_sinks = sdf_sinks.copy()
             recentred_sinks[recentred_sinks.xcol] -= sink_x
             recentred_sinks[recentred_sinks.ycol] -= sink_y
