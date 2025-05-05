@@ -1,69 +1,189 @@
+import struct
+import json
 import numpy as np
 import pandas as pd
-
-import vtk
-from vtk.util.numpy_support import vtk_to_numpy
+import os
+import sys
 
 from ..sarracen_dataframe import SarracenDataFrame
+class FileReader:
+    def __init__(self, file):
+        self.file = file
+        self.last_position = file.tell()  # Keeps track of the last read position
+
+    def read_int64_and_string(self):
+        # Read the 64-bit integer (8 bytes)
+        int_bytes = self.file.read(8)
+        if len(int_bytes) != 8:
+            raise ValueError("Failed to read 64-bit integer")
+
+        # Unpack the 64-bit integer from the bytes
+        length = struct.unpack('q', int_bytes)[0]  # 'q' is for signed 64-bit integer
+
+        # Read the string of 'length' bytes
+        string_bytes = self.file.read(length)
+        if len(string_bytes) != length:
+            raise ValueError("Failed to read the full string")
+
+        # Update the last position to the current file pointer after the string read
+        self.last_position = self.file.tell()
+
+        # Decode the string from bytes to UTF-8 and return
+        return string_bytes.decode('utf-8')
+
+    def read_from_position(self, offset, num_bytes):
+        # Calculate the absolute position to read from
+        position_to_seek = self.last_position + offset
+        
+        # Move to the specified position in the file
+        self.file.seek(position_to_seek)
+
+        # Now read the specified number of bytes
+        data = self.file.read(num_bytes)
+        if len(data) != num_bytes:
+            raise ValueError("Failed to read the expected number of bytes")
+
+        return data
 
 
-def read_shamrock(filename, pmass):
-    """
-    Read data from a SHAMROCK vtk file ('big' simulation current format).
+def decode_bytes_to_doubles(byte_data):
+    # Ensure that the byte_data length is a multiple of 8 (since each double is 8 bytes)
+    if len(byte_data) % 8 != 0:
+        raise ValueError("The length of the byte data must be a multiple of 8")
+    
+    num_doubles = len(byte_data) // 8  # Number of doubles in the byte array
 
-    Parameters
-    ----------
-    filename : str
-        Name of the file to be loaded.
-    pmass : float
-        Mass of particles in the simulation (for now, it is assumed all
-        particles have the same mass).
+    # Unpack the byte data into a tuple of doubles ('d' format for double-precision floats)
+    doubles = struct.unpack(f'{num_doubles}d', byte_data)
+    
+    # Return the list of double-precision floats
+    return list(doubles)
 
-    Returns
-    -------
-    SarracenDataFrame
 
-    """
+def get_head_inc(off):
+    if(off %8 > 0):
+        off += 8 - (off%8)
+    return off
 
-    # read the vtk file
-    reader = vtk.vtkDataSetReader()
-    reader.SetFileName(filename)
-    reader.Update()
-    vtk_data = reader.GetOutput()
-    num_arrays = vtk_data.GetPointData().GetNumberOfArrays()
 
-    # initialize the dataframe
-    df = pd.DataFrame()
+def decode_patchdata(pdat, pdat_layout):
+    print(f"  Decoding patchdata with layout = {pdat_layout}")
+    
+    dic_out = {}
+    
+    pdl = pdat_layout
 
-    for i in range(num_arrays):
-        vtk_array = vtk_data.GetPointData().GetArray(i)
-        array_name = vtk_array.GetName()
-        numpy_array = vtk_to_numpy(vtk_array)
-        ndim = numpy_array.ndim
+    lay_data = pdat[8:8+len(pdat_layout)*8]
+    
+    # the format start with the prehead lenght, so we skip it
+    head = 0
+    for i in range(len(pdat_layout)):
+        field = pdat_layout[i]
+        print(f"  Decoding {field} current head {head}")
+        
+        # because of direct GPU with use alignment 64
+        nobj = struct.unpack('q', lay_data[head:head+8])[0]
+        print(f"    -> nobj = {nobj}")
+        head += 8
 
-        if ndim == 1:
-            df[array_name] = numpy_array
+        pdl[i]["nobj"] = nobj
+
+    sz = 0
+    for field in pdl:
+        print(f"  Computing_size {field} current head {head}")
+        nobj = field["nobj"]
+
+        if field["type"] == "f64_3":
+            sz += get_head_inc(8*nobj*3)
+        elif field["type"] == "f64":
+            sz += get_head_inc(8*nobj)
         else:
-            df[array_name + 'x'] = numpy_array[:, 0]
-            df[array_name + 'y'] = numpy_array[:, 1]
-            df[array_name + 'z'] = numpy_array[:, 2]
+            raise "No decoder for this type"
 
-    # add B
-    if 'B/rhox' in df.columns:
-        df['Bx'] = df['B/rhox'] * df['rho']
-    if 'B/rhoy' in df.columns:
-        df['By'] = df['B/rhoy'] * df['rho']
-    if 'B/rhoz' in df.columns:
-        df['Bz'] = df['B/rhoz'] * df['rho']
+    head = 0
+    pdat_dat = pdat[8+len(pdat_layout)*8:]
 
-    # now add position columns
-    points = vtk_data.GetPoints()
-    numpy_points = vtk_to_numpy(points.GetData())
+    print(sz, len(pdat_dat))
 
-    df['x'] = numpy_points[:, 0]
-    df['y'] = numpy_points[:, 1]
-    df['z'] = numpy_points[:, 2]
+    for field in pdl:
+        print(f"  Decoding {field} current head {head}")
+        
+        nobj = field["nobj"]
+        
+        if field["type"] == "f64_3":
+            tmp = pdat_dat[head:head+8*nobj*3]
+            print(len(tmp), len(tmp) % 8, len(tmp) % 3 , len(tmp) % (3 * 8), len(pdat_dat),head+8*nobj*3)
+            data = decode_bytes_to_doubles(pdat_dat[head:head+8*nobj*3])
+            array_size = len(data)
+            if array_size % 3*nobj != 0:
+                raise ValueError(f"Array size {array_size} is not equal to {3*nobj}")
+            else:
+                #print(np.array(data).reshape((3,nobj)))
+                dic_out[field["field_name"]] = np.array(data).reshape((nobj,3))
 
-    # finish by adding mass
-    df['mass'] = pmass * np.ones_like(numpy_points[:, 0])
+            head += get_head_inc(8*nobj*3)
+        elif field["type"] == "f64":
+            data = decode_bytes_to_doubles(pdat_dat[head:head+8*nobj])
+
+            array_size = len(data)
+            if array_size % nobj != 0:
+                raise ValueError(f"Array size {array_size} is not equal to {nobj}")
+            
+            dic_out[field["field_name"]] = np.array(data)
+            
+            head += get_head_inc(8*nobj)
+        else:
+            raise "No decoder for this type"
+
+    return dic_out
+
+
+class ShamrockDumpReader:
+
+    def __init__(self, file):
+        self.reader = FileReader(file)
+
+        user_header = self.reader.read_int64_and_string()
+        scheduler_header = self.reader.read_int64_and_string()
+        filecontent_header = self.reader.read_int64_and_string()
+
+        self.user_meta = json.loads(user_header)
+        self.sched_meta = json.loads(scheduler_header)
+        file_header = json.loads(filecontent_header)
+
+        self.file_map = {}
+
+        for bcount, off, pid in zip(file_header["bytecounts"], file_header["offsets"],
+                                    file_header["pids"]):
+            self.file_map[pid] = {"bytecount" : bcount, "offset" : off}
+
+    def read_patch(self, pid):
+        bcount = self.file_map[pid]["bytecount"]
+        off = self.file_map[pid]["offset"]
+        
+        print(f"Reading patch pid={pid} (offset={off}, bytecount={bcount})")
+        patchdata = self.reader.read_from_position(off, bcount)
+
+        print(f"Decoding patchdata pid={pid} (offset={off}, bytecount={bcount}), len={len(patchdata)}")
+        
+        return decode_patchdata(patchdata, self.sched_meta["patchdata_layout"])
+
+
+def read_shamrock(filename):
+    # read the Shamrock file
+    with open(filename, 'rb') as f:
+        reader = ShamrockDumpReader(f)
+        #print("User metadata : \n",reader.user_meta,"\n")
+        data = reader.read_patch(0)
+
+    df = pd.DataFrame()
+    for col in (data.keys()):
+        if data[col].ndim == 1:
+            df[col] = data[col]
+        else:
+            df[col + 'x'] = data[col][:,0]
+            df[col + 'y'] = data[col][:,1]
+            df[col + 'z'] = data[col][:,2]
+
     return SarracenDataFrame(df)
+
