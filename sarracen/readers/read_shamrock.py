@@ -173,9 +173,21 @@ def read_shamrock(filename):
     # read the Shamrock file
     with open(filename, 'rb') as f:
         reader = ShamrockDumpReader(f)
-        #print("User metadata : \n",reader.user_meta,"\n")
         data = reader.read_patch(0)
         metadata = reader.user_meta
+        mass = metadata['solver_config']['gpart_mass']
+        metadata['mass'] = mass
+        
+        kernel = metadata['solver_config']['kernel_id']
+        if kernel[:2] == 'M4':
+            hfact = 1.2
+        elif kernel[:2] == 'M5':
+            hfact = 1.2
+        elif kernel[:2] == 'M6':
+            hfact = 1.0
+        else:
+            raise KeyError("Unrecognised kernel.")
+        metadata['hfact'] = hfact
 
     df = pd.DataFrame()
     for col in (data.keys()):
@@ -201,3 +213,5 @@ def read_shamrock(filename):
 
     return SarracenDataFrame(df, metadata)
 
+
+ 
