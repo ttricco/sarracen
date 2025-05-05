@@ -175,15 +175,29 @@ def read_shamrock(filename):
         reader = ShamrockDumpReader(f)
         #print("User metadata : \n",reader.user_meta,"\n")
         data = reader.read_patch(0)
+        metadata = reader.user_meta
 
     df = pd.DataFrame()
     for col in (data.keys()):
         if data[col].ndim == 1:
+            if col == 'hpart':
+                df['h'] = data[col]
+
             df[col] = data[col]
         else:
-            df[col + 'x'] = data[col][:,0]
-            df[col + 'y'] = data[col][:,1]
-            df[col + 'z'] = data[col][:,2]
+            if col == 'xyz':
+                df['x'] = data[col][:,0]
+                df['y'] = data[col][:,1]
+                df['z'] = data[col][:,2]
+            elif col == 'vxyz':
+                df['vx'] = data[col][:,0]
+                df['vy'] = data[col][:,1]
+                df['vz'] = data[col][:,2]
+            else:
+                df[col + 'x'] = data[col][:,0]
+                df[col + 'y'] = data[col][:,1]
+                df[col + 'z'] = data[col][:,2]
 
-    return SarracenDataFrame(df)
+
+    return SarracenDataFrame(df, metadata)
 
