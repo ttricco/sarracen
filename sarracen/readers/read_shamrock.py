@@ -8,12 +8,35 @@ from ..sarracen_dataframe import SarracenDataFrame
 
 class FileReader:
     def __init__(self, file):
+        """
+        Initialize the FileReader with a file object.
+
+        Parameters
+        ----------
+        file : file object
+            The file object to read from.
+
+        Notes
+        -----
+        The file object is stored and the last read position is set to the
+        current file position with `file.tell()`.
+        """
         self.file = file
         self.last_position = file.tell()  # Keeps track of
         # the last read position
 
     def read_int64_and_string(self):
         # Read the 64-bit integer (8 bytes)
+        """
+        Reads a 64-bit integer and the following string from the file.
+        The last position is updated to the current file position after
+        the string read.
+
+        Returns
+        -------
+        str
+            The read string.
+        """
         int_bytes = self.file.read(8)
         if len(int_bytes) != 8:
             raise ValueError("Failed to read 64-bit integer")
@@ -35,7 +58,28 @@ class FileReader:
         return string_bytes.decode("utf-8")
 
     def read_from_position(self, offset, num_bytes):
-        # Calculate the absolute position to read from
+        """
+        Read data from a specific position for a specified number of bytes.
+
+        Parameters
+        ----------
+        offset : int
+            The offset from the last read position to start reading.
+        num_bytes : int
+            The number of bytes to read from the file.
+
+        Returns
+        -------
+        data
+            The data read from the file.
+
+        Raises
+        ------
+        ValueError
+            If length of the data read does not correspond to
+            the expected number of bytes.
+        """
+        # Calculate the absolute position to read from.
         position_to_seek = self.last_position + offset
 
         # Move to the specified position in the file
@@ -50,6 +94,25 @@ class FileReader:
 
 
 def decode_bytes_to_doubles(byte_data):
+    """
+    Decodes a byte array into a list of double precision floats.
+
+    Parameters
+    ----------
+    byte_data : bytes
+        The byte array to decode.
+
+    Returns
+    -------
+    List[float]
+        A list of double-precision floating-point numbers decoded from
+        the byte array.
+
+    Raises
+    ------
+    ValueError
+        If the length of byte_data is not a multiple of 8.
+    """
     # Ensure that the byte_data length is a multiple of 8 (since each
     # double is 8 bytes)
     if len(byte_data) % 8 != 0:
@@ -72,6 +135,14 @@ def get_head_inc(off):
 
 
 def decode_patchdata(pdat, pdat_layout):
+    """
+    Decode a patchdata bytearray into a dictionary of numpy arrays.
+
+    Returns
+    -------
+    dic_out
+        A dictionary with the decoded patchdata.
+    """
     print(f"  Decoding patchdata with layout = {pdat_layout}")
 
     dic_out = {}
@@ -193,7 +264,24 @@ class ShamrockDumpReader:
 
 
 def read_shamrock(filename):
+    """
+    Read a Shamrock native binary format dump file.
 
+    Parameters
+    ----------
+    filename : str
+        Name of the file to be loaded.
+
+    Returns
+    -------
+    SarracenDataFrame
+
+    Notes
+    -----
+    For now in the SPH solver there is just gas (no dust). Sinks information
+    is not included in the dumps (see the Shamrock documentation
+    https://shamrock-code.github.io/Shamrock/mkdocs/features/sph/sinks/)
+    """
     full_df = []  # initialize the dataframe
 
     with open(filename, "rb") as f:
@@ -249,11 +337,11 @@ def read_shamrock(filename):
                 print(f"Error reading patch {pid}: {e}")
                 continue
 
-        if not full_df:
-            raise ValueError("No patch in this file!")
+    if not full_df:
+        raise ValueError("No patch in this file!")
 
-        final_df = pd.concat(
-            full_df, ignore_index=True
-        )  # combine in one df with coherent indexing
+    final_df = pd.concat(
+        full_df, ignore_index=True
+    )  # combine in one df with coherent indexing
 
-        return SarracenDataFrame(final_df, metadata)
+    return SarracenDataFrame(final_df, metadata)
