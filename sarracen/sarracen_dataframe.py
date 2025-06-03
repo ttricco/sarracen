@@ -7,6 +7,7 @@ from pandas import DataFrame, Series
 from numba import cuda
 import numpy as np
 from scipy.spatial.transform import Rotation
+from scipy.interpolate import griddata
 
 from .render import streamlines, arrowplot, render, lineplot
 from .interpolate import interpolate_2d, interpolate_3d_grid
@@ -270,6 +271,35 @@ class SarracenDataFrame(DataFrame):
             mass = 1.0 / (len(self) * mass)
 
         return [com_x * mass, com_y * mass, com_z * mass]
+
+    #method to interpolate gas density for dust particles
+    def interpolate_gas_density(self):
+        """Linearly interpolates gas density onto dust particles using a grid method.
+        """
+        if "rho_gas" not in self: # speed up by only performing interpolation if not already done
+
+            self.calc_density()
+            self["rho_gas"] = self["rho"]
+
+            gas_df = self[self["itype"]==1]
+            gas_pos = (gas_df["x"],gas_df["y"],gas_df["z"])
+            gasvals = gas_df["rho"]
+
+            dust_df = self[self["itype"]==7]
+            dust_pos = (dust_df["x"],dust_df["y"],dust_df["z"])
+            dustvals = griddata(gas_pos,gasvals,dust_pos,method="nearest")
+
+            self.loc[self["itype"]==7,"rho_gas"] = dustvals
+
+    def calc_stokes(self,c_s,G=1):
+        """"Calculates Stokes number of two-fluid dust particles."""
+        if "St" not in self:
+            self.interpolate_gas_density()
+            self["r"] = (self[self.xcol]**2 + self[self.ycol]**2)**0.5
+            omega_kep = (self.sinks["m"][0]*G/self["r"]**3)**0.5
+            t_s = self.params["graindens"] * self.params["grainsize"]/(self["rho_gas"]+self["rho"])/c_s
+            self["St"] = t_s * omega_kep
+            self.loc[self["itype"]==1,"St"] = 0
 
     @_copy_doc(render)
     def render(self,
