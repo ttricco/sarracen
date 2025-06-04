@@ -313,15 +313,18 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
     kwargs.setdefault("origin", 'lower')
     kwargs.setdefault("extent", [xlim[0], xlim[1], ylim[0], ylim[1]])
     if log_scale:
+        # By default, a log scale plot will only cover 4 levels of magnitude.
+        vmin = kwargs.get('vmin', max(10 ** (np.log10(kwargs.get("vmax", img.max())) - 4), img.min()))
+
         if symlog_scale:
             kwargs.setdefault("norm",
                               SymLogNorm(kwargs.pop("linthresh", 1e-9),
                                          linscale=kwargs.pop("linscale", 1.),
-                                         vmin=kwargs.get('vmin'),
+                                         vmin=vmin,
                                          vmax=kwargs.get('vmax')))
         else:
             kwargs.setdefault("norm", LogNorm(clip=True,
-                                              vmin=kwargs.get('vmin'),
+                                              vmin=vmin,
                                               vmax=kwargs.get('vmax')))
         kwargs.pop("vmin", None)
         kwargs.pop("vmax", None)

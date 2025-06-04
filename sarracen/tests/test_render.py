@@ -4,6 +4,8 @@ from numba import cuda
 from numpy.testing import assert_array_equal
 from pytest import mark
 
+import numpy as np
+
 from sarracen import SarracenDataFrame
 from sarracen import interpolate_2d, interpolate_2d_line
 from sarracen import interpolate_3d_proj, interpolate_3d_cross
@@ -342,3 +344,44 @@ def test_plot_bounds(backend):
         assert ax.get_xlim() == (3, 6)
         assert ax.get_ylim() == (1, 5)
         plt.close(fig)
+
+
+@mark.parametrize("backend", backends)
+def test_log_vmin(backend):
+    """
+    Verify that the vmin value of log scales are set properly.
+    """
+    data = {'x': [6, 3, 2], 'y': [5, 1, 2], 'z': [3, 4, 2], 'P': [1, 1, 1],
+              'h': [1, 1, 1], 'rho': [1e10, 1e7, 1e4], 'm': [1, 1, 1]}
+    sdf = SarracenDataFrame(data)
+    sdf.backend = backend
+
+    # With no bounds defined, the log scale should only cover 4 orders of magnitude.
+    interpolate = interpolate_3d_proj(sdf, 'rho')
+    fig, ax = plt.subplots()
+    render(sdf, "rho", ax=ax, log_scale=True, x_pixels=20)
+
+    imgs = ax.get_images()
+    vmin, vmax = imgs[0].get_clim()
+
+    assert vmin == 10 ** (np.log10(interpolate.max()) - 4)
+    assert vmax == interpolate.max()
+
+    # With only vmax defined, the vmin value is scaled accordingly.
+    fig, ax = plt.subplots()
+    render(sdf, "rho", vmax=10, log_scale=True, x_pixels=20)
+    imgs = ax.get_images()
+    vmin, vmax = imgs[0].get_clim()
+
+    assert vmin == 1e-3
+    assert vmax == 10
+
+    # With both bounds defined, no adjustment is made.
+    fig, ax = plt.subplots()
+    render(sdf, "rho", vmin = 5, vmax=10, log_scale=True, x_pixels=20)
+    imgs = ax.get_images()
+    vmin, vmax = imgs[0].get_clim()
+
+    assert vmin == 5
+    assert vmax == 10
+
