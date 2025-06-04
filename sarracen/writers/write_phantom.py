@@ -3,7 +3,8 @@ import numpy as np
 from ..sarracen_dataframe import SarracenDataFrame
 
 
-def _write_fortran_block(value: [], dtype: type):
+def _write_fortran_block(value: [],
+                         dtype: type):
     write_tag = np.array([len(value) * dtype().itemsize], dtype=np.int32)
     file = bytearray(write_tag.tobytes())
     file += bytearray(np.array(value, dtype=dtype).tobytes())
@@ -18,7 +19,9 @@ def _write_file_identifier(sdf: SarracenDataFrame):
     return file
 
 
-def _write_capture_pattern(def_int: np.dtype, def_real: np.dtype, iversion: int = 1):
+def _write_capture_pattern(def_int: np.dtype,
+                           def_real: np.dtype,
+                           iversion: int = 1):
     write_tag = 16 + def_real().itemsize
     write_tag = np.array([write_tag], dtype='int32')
     i1 = np.array([60769], dtype=def_int)
@@ -45,7 +48,9 @@ def _rename_duplicate(tag):
     return tag
 
 
-def _write_global_header_tags_and_values(tags, values, dtype):
+def _write_global_header_tags_and_values(tags,
+                                         values,
+                                         dtype):
     tags = [_rename_duplicate(tag) for tag in tags]
     tags = [list(map(ord, tag.ljust(16))) for tag in tags]
     tags = [c for tag in tags for c in tag]
@@ -60,7 +65,8 @@ def _write_global_header(sdf: SarracenDataFrame,
                          def_int: np.dtype,
                          def_real: np.dtype):
     params_dict = _remove_invalid_keys(sdf)
-    dtypes = [def_int, np.int8, np.int16, np.int32, np.int64, def_real, np.float32, np.float64]
+    dtypes = [def_int, np.int8, np.int16, np.int32, np.int64,
+              def_real, np.float32, np.float64]
     header_data = [(dtype, [], []) for dtype in dtypes]
     used_keys = set()
 
@@ -86,7 +92,8 @@ def _write_global_header(sdf: SarracenDataFrame,
 
 
 def _remove_invalid_keys(sdf):
-    exclude = ['file_identifier', 'mass', 'def_int_dtype', 'def_real_dtype', 'iversion']
+    exclude = ['file_identifier', 'mass', 'def_int_dtype',
+               'def_real_dtype', 'iversion']
     return {k: v for k, v in sdf.params.items() if k not in exclude}
 
 
@@ -103,7 +110,8 @@ def _write_value_arrays(data: SarracenDataFrame,
                         def_real: np.dtype,
                         sinks: SarracenDataFrame = None):
 
-    dtypes = [def_int, np.int8, np.int16, np.int32, np.int64, def_real, np.float32, np.float64]
+    dtypes = [def_int, np.int8, np.int16, np.int32, np.int64,
+              def_real, np.float32, np.float64]
 
     nblocks = 2 if sinks is not None else 1
     file = _write_fortran_block([nblocks], np.int32)
@@ -114,18 +122,20 @@ def _write_value_arrays(data: SarracenDataFrame,
     for sdf in sdf_list:
         nvars = np.array([_get_last_index(sdf)], dtype='int64')
         dtype_tags = []
-        dtypes_used = set()
+        used = set()
 
         for dtype in dtypes:
-            tags = _get_array_tags(sdf, dtype) if dtype not in dtypes_used else []
+            tags = _get_array_tags(sdf, dtype) if dtype not in used else []
             dtype_tags.append((dtype, tags))
-            dtypes_used.add(dtype)
+            used.add(dtype)
 
         counts = np.array([len(tags) for _, tags in dtype_tags], dtype='int32')
         write_tag = np.array([len(nvars) * nvars.dtype.itemsize
-                              + len(counts) * counts.dtype.itemsize], dtype=np.int32)
+                              + len(counts) * counts.dtype.itemsize],
+                             dtype=np.int32)
 
-        file += write_tag.tobytes() + nvars.tobytes() + counts.tobytes() + write_tag.tobytes()
+        file += (write_tag.tobytes() + nvars.tobytes() + counts.tobytes()
+                 + write_tag.tobytes())
 
         sdf_dtype_info.append((sdf, dtype_tags))
 
@@ -133,7 +143,8 @@ def _write_value_arrays(data: SarracenDataFrame,
         for dtype, tags in dtype_tags:
             if tags:
                 for tag in tags:
-                    file += _write_fortran_block(list(map(ord, tag.ljust(16))), dtype=np.uint8)
+                    file += _write_fortran_block(list(map(ord, tag.ljust(16))),
+                                                 dtype=np.uint8)
                     file += _write_fortran_block(list(sdf[tag]), dtype)
     return file
 
@@ -142,10 +153,10 @@ def write_phantom(filename: str,
                   data: SarracenDataFrame,
                   sinks: SarracenDataFrame = None):
     if data.isnull().values.any():
-        raise ValueError("The data DataFrame contains NaNs or missing values.")
+        raise ValueError("particle DataFrame contains NaNs or missing values.")
 
     if sinks is not None and sinks.isnull().values.any():
-        raise ValueError("The sinks DataFrame contains NaNs or missing values.")
+        raise ValueError("sinks DataFrame contains NaNs or missing values.")
 
     def_int = data.params['def_int_dtype']
     def_real = data.params['def_real_dtype']

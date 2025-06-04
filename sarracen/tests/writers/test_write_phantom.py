@@ -63,7 +63,8 @@ def _create_global_header(massoftype=1e-6, massoftype_7=None,
             bytes_file += bytearray(read_tag.tobytes())
             bytes_file += bytearray(np.array([massoftype], dtype=def_real))
             if massoftype_7 is not None:
-                bytes_file += bytearray(np.array([massoftype_7], dtype=def_real))
+                bytes_file += bytearray(np.array([massoftype_7],
+                                                 dtype=def_real))
             bytes_file += bytearray(read_tag.tobytes())
 
     return bytes_file
@@ -105,7 +106,8 @@ def _get_one_block_phantom_file():
     bytes_file += _create_particle_array("x", [0, 0, 0, 0, 1, 1, 1, 1])
     bytes_file += _create_particle_array("y", [0, 0, 1, 1, 0, 0, 1, 1])
     bytes_file += _create_particle_array("z", [0, 1, 0, 1, 0, 1, 0, 1])
-    bytes_file += _create_particle_array("h", [1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1])
+    bytes_file += _create_particle_array("h", [1.1, 1.1, 1.1, 1.1,
+                                               1.1, 1.1, 1.1, 1.1])
 
     return bytes_file
 
@@ -126,29 +128,39 @@ def _get_gas_dust_sink_particles():
     # 8 particles storing 4 real arrays (x, y, z, h)
     bytes_file += bytearray(read_tag.tobytes())
     n = np.array([16], dtype='int64')
-    nums = np.array([0, 1, 0, 0, 0, 4, 0, 0] , dtype='int32')
+    nums = np.array([0, 1, 0, 0, 0, 4, 0, 0], dtype='int32')
     bytes_file += bytearray(n.tobytes())
     bytes_file += bytearray(nums.tobytes())
     bytes_file += bytearray(read_tag.tobytes())
 
     bytes_file += bytearray(read_tag.tobytes())
     n = np.array([1], dtype='int64')
-    nums = np.array([0, 0, 0, 0, 0, 7, 0, 0] , dtype='int32')
+    nums = np.array([0, 0, 0, 0, 0, 7, 0, 0], dtype='int32')
     bytes_file += bytearray(n.tobytes())
     bytes_file += bytearray(nums.tobytes())
     bytes_file += bytearray(read_tag.tobytes())
 
     # write 5 gas/dust particle arrays
-    bytes_file += _create_particle_array("itype", [1, 1, 1, 1, 1, 1, 1, 1,
-                                         7, 7, 7, 7, 7, 7, 7, 7], np.int8)
-    bytes_file += _create_particle_array("x", [0, 0, 0, 0, 1, 1, 1, 1,
-                                               0.5, 0.5, 0.5, 0.5, 1.5, 1.5, 1.5, 1.5])
-    bytes_file += _create_particle_array("y", [0, 0, 1, 1, 0, 0, 1, 1,
-                                               0.5, 0.5, 1.5, 1.5, 0.5, 0.5, 1.5, 1.5])
-    bytes_file += _create_particle_array("z", [0, 1, 0, 1, 0, 1, 0, 1,
-                                               0.5, 1.5, 0.5, 1.5, 0.5, 1.5, 0.5, 1.5])
-    bytes_file += _create_particle_array("h", [1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1,
-                                               1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1])
+    bytes_file += _create_particle_array("itype", [1, 1, 1, 1,
+                                                   1, 1, 1, 1,
+                                                   7, 7, 7, 7,
+                                                   7, 7, 7, 7], np.int8)
+    bytes_file += _create_particle_array("x", [0, 0, 0, 0,
+                                               1, 1, 1, 1,
+                                               0.5, 0.5, 0.5, 0.5,
+                                               1.5, 1.5, 1.5, 1.5])
+    bytes_file += _create_particle_array("y", [0, 0, 1, 1,
+                                               0, 0, 1, 1,
+                                               0.5, 0.5, 1.5, 1.5,
+                                               0.5, 0.5, 1.5, 1.5])
+    bytes_file += _create_particle_array("z", [0, 1, 0, 1,
+                                               0, 1, 0, 1,
+                                               0.5, 1.5, 0.5, 1.5,
+                                               0.5, 1.5, 0.5, 1.5])
+    bytes_file += _create_particle_array("h", [1.1, 1.1, 1.1, 1.1,
+                                               1.1, 1.1, 1.1, 1.1,
+                                               1.1, 1.1, 1.1, 1.1,
+                                               1.1, 1.1, 1.1, 1.1])
 
     # write 7 sink particle arrays
     bytes_file += _create_particle_array("x", [0.000305])
@@ -177,14 +189,14 @@ def _get_gas_sink_particles():
     # 8 particles storing 4 real arrays (x, y, z, h)
     bytes_file += bytearray(read_tag.tobytes())
     n = np.array([8], dtype='int64')
-    nums = np.array([0, 0, 0, 0, 0, 4, 0, 0] , dtype='int32')
+    nums = np.array([0, 0, 0, 0, 0, 4, 0, 0], dtype='int32')
     bytes_file += bytearray(n.tobytes())
     bytes_file += bytearray(nums.tobytes())
     bytes_file += bytearray(read_tag.tobytes())
 
     bytes_file += bytearray(read_tag.tobytes())
     n = np.array([1], dtype='int64')
-    nums = np.array([0, 0, 0, 0, 0, 7, 0, 0] , dtype='int32')
+    nums = np.array([0, 0, 0, 0, 0, 7, 0, 0], dtype='int32')
     bytes_file += bytearray(n.tobytes())
     bytes_file += bytearray(nums.tobytes())
     bytes_file += bytearray(read_tag.tobytes())
@@ -193,7 +205,8 @@ def _get_gas_sink_particles():
     bytes_file += _create_particle_array("x", [0, 0, 0, 0, 1, 1, 1, 1])
     bytes_file += _create_particle_array("y", [0, 0, 1, 1, 0, 0, 1, 1])
     bytes_file += _create_particle_array("z", [0, 1, 0, 1, 0, 1, 0, 1])
-    bytes_file += _create_particle_array("h", [1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1])
+    bytes_file += _create_particle_array("h", [1.1, 1.1, 1.1, 1.1,
+                                               1.1, 1.1, 1.1, 1.1])
 
     # write 7 sink particle arrays
     bytes_file += _create_particle_array("x", [0.000305])
