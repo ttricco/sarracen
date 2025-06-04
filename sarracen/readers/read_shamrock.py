@@ -255,9 +255,9 @@ class ShamrockDumpReader:
         patchdata = self.reader.read_from_position(off, bcount)
 
         print(
-            f"Decoding patchdata pid={
-                pid} (offset={off}, bytecount={bcount}), len={
-                len(patchdata)}"
+            f"Decoding patchdata pid={pid} (offset={off}, "
+            f"bytecount={bcount}), "
+            f"len={len(patchdata)}"
         )
 
         return decode_patchdata(patchdata, self.sched_meta["patchdata_layout"])
