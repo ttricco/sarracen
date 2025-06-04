@@ -352,11 +352,11 @@ def test_log_vmin(backend):
     Verify that the vmin value of log scales are set properly.
     """
     data = {'x': [6, 3, 2], 'y': [5, 1, 2], 'z': [3, 4, 2], 'P': [1, 1, 1],
-              'h': [1, 1, 1], 'rho': [1e10, 1e7, 1e4], 'm': [1, 1, 1]}
+            'h': [1, 1, 1], 'rho': [1e10, 1e7, 1e4], 'm': [1, 1, 1]}
     sdf = SarracenDataFrame(data)
     sdf.backend = backend
 
-    # With no bounds defined, the log scale should only cover 4 orders of magnitude.
+    # With no bounds defined, the log scale should cover 4 orders of magnitude.
     interpolate = interpolate_3d_proj(sdf, 'rho')
     fig, ax = plt.subplots()
     render(sdf, "rho", ax=ax, log_scale=True, x_pixels=20)
@@ -378,10 +378,9 @@ def test_log_vmin(backend):
 
     # With both bounds defined, no adjustment is made.
     fig, ax = plt.subplots()
-    render(sdf, "rho", vmin = 5, vmax=10, log_scale=True, x_pixels=20)
+    render(sdf, "rho", vmin=5, vmax=10, log_scale=True, x_pixels=20)
     imgs = ax.get_images()
     vmin, vmax = imgs[0].get_clim()
 
     assert vmin == 5
     assert vmax == 10
-
