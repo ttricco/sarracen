@@ -11,6 +11,7 @@ from scipy.spatial.transform import Rotation
 from .render import streamlines, arrowplot, render, lineplot
 from .interpolate import interpolate_2d, interpolate_3d_grid
 from .kernels import CubicSplineKernel, BaseKernel
+from .sarracen_series import SarracenSeries
 
 
 def _copy_doc(copy_func: Callable) -> Callable:
@@ -127,6 +128,10 @@ class SarracenDataFrame(DataFrame):
     @property
     def _constructor(self):
         return SarracenDataFrame
+    
+    @property
+    def _constructor_sliced(self):
+        return SarracenSeries
 
     def _identify_special_columns(self):
         """
