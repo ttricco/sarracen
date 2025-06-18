@@ -272,6 +272,12 @@ class SarracenDataFrame(DataFrame):
         return [com_x * mass, com_y * mass, com_z * mass]
 
     def classify_sink(self, sdf_sinks):
+        """
+        Creates column calculating the energy of particles
+        relative to each sink.
+        Creates a new column 'sink' that classifies particles by the sink they
+        are bound to, or -1 if they are not bound to any sink.
+        """
         # calculate the energy of particles relative to each sink
         v = np.array([self[self.vxcol], self[self.vycol], self[self.vzcol]]).T
         for index, sink in sdf_sinks.iterrows():
@@ -284,18 +290,20 @@ class SarracenDataFrame(DataFrame):
             E_k = 0.5 * self[self.mcol] * v_rel**2
 
             # potential energy
-            rel_pos = self[[self.xcol, self.ycol, self.zcol]] - sdf_sinks[[sdf_sinks.xcol, sdf_sinks.ycol, sdf_sinks.zcol]].loc[index]
+            rel_pos = self[[self.xcol, self.ycol, self.zcol]] - sdf_sinks[
+                [sdf_sinks.xcol, sdf_sinks.ycol, sdf_sinks.zcol]].loc[index]
             r = np.linalg.norm(rel_pos, axis=1)
             E_pot = -sink[sdf_sinks.mcol]*self[self.mcol] / r
 
             self[f"E_{index}"] = E_k + E_pot
-        
+
         # classify particles by sink they are bound to
-        energies = np.array([[sdf[f"E_{index}"]] for index in sdf_sinks.index])
-        self["sink"] = np.argmin(energies,axis=0)[0,:]
+        energies = np.array([[self[f"E_{index}"]]
+                            for index in sdf_sinks.index])
+        self["sink"] = np.argmin(energies, axis=0)[0, :]
 
         # identify particles not bound to any sink
-        unbound = pd.Series((energies.min(axis=0)>0)[0,:],index=sdf.index)
+        unbound = pd.Series((energies.min(axis=0) > 0)[0, :], index=self.index)
         self.loc[unbound[unbound].index, "sink"] = -1
 
 
