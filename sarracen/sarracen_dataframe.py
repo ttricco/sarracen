@@ -197,8 +197,6 @@ class SarracenDataFrame(DataFrame):
             if column.startswith('dustfrac'):
                 self.dustfracscol.append(column)
 
-
-
     def create_mass_column(self):
         """
         Create a new column 'm', copied from the 'massoftype' parameter.
@@ -281,8 +279,8 @@ class SarracenDataFrame(DataFrame):
             self.calc_density()
 
         if (int(self.params['ndustsmall']) == 0 or
-            int(self.params['ndustlarge']) != 0):
-                raise ValueError('Not a one-fluid-only dump.')
+                int(self.params['ndustlarge']) != 0):
+            raise ValueError('Not a one-fluid-only dump.')
         else:
             if int(self.params['ndustsmall']) == 1:
                 self['rho_g'] = self['rho'] * self['dustfrac']
@@ -293,11 +291,11 @@ class SarracenDataFrame(DataFrame):
                 self['rho_g'] = self['rho'] * (1 - self['dustfrac_total'])
                 self['rho_d_total'] = self['rho'] * self['dustfrac_total']
                 self['rho_d'] = self['rho'] * self[self.dustfracscol[0]]
-                for i in range (1,int(self.params['ndustsmall'])):
+                for i in range(1, int(self.params['ndustsmall'])):
                     self[f'rho_d_{i+1}'] = self['rho'] * \
-                                        self[self.dustfracscol[i]]    
+                                                    self[self.dustfracscol[i]]
                 self['dtg'] = self['dustfrac_total'] / (1 -
-                                        self['dustfrac_total'])
+                                                        self['dustfrac_total'])
 
     def centre_of_mass(self):
         """
@@ -704,7 +702,7 @@ class SarracenDataFrame(DataFrame):
     @property
     def dustfracscol(self):
         return self._dustfracscol
-    
+
     @dustfracscol.setter
     def dustfracscol(self, new_col: str):
         if new_col in self or new_col is None:
