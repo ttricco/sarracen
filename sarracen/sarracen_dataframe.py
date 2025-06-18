@@ -287,13 +287,17 @@ class SarracenDataFrame(DataFrame):
                                sink[sdf_sinks.vycol],
                                sink[sdf_sinks.vzcol]])
             v_rel = np.linalg.norm(v-v_sink, axis=1)
-            E_k = 0.5 * self[self.mcol] * v_rel**2
+            if {self.mcol}.issubset(self.columns):
+                mass = self[self.mcol]
+            else:
+                mass = self.params['mass']
+            E_k = 0.5 * mass * v_rel**2
 
             # potential energy
             rel_pos = self[[self.xcol, self.ycol, self.zcol]] - sdf_sinks[
                 [sdf_sinks.xcol, sdf_sinks.ycol, sdf_sinks.zcol]].loc[index]
             r = np.linalg.norm(rel_pos, axis=1)
-            E_pot = -sink[sdf_sinks.mcol]*self[self.mcol] / r
+            E_pot = -sink[sdf_sinks.mcol] * mass / r
 
             self[f"E_{index}"] = E_k + E_pot
 
@@ -305,7 +309,6 @@ class SarracenDataFrame(DataFrame):
         # identify particles not bound to any sink
         unbound = pd.Series((energies.min(axis=0) > 0)[0, :], index=self.index)
         self.loc[unbound[unbound].index, "sink"] = -1
-
 
     @_copy_doc(render)
     def render(self,
