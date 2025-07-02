@@ -43,17 +43,17 @@ class BaseBackend:
         return zeros((y_pixels, x_pixels)), zeros((y_pixels, x_pixels))
 
     @staticmethod
-    def interpolate_2d_line(x: ndarray,
-                            y: ndarray,
-                            weight: ndarray,
-                            h: ndarray,
-                            weight_function: CPUDispatcher,
-                            kernel_radius: float,
-                            pixels: int,
-                            x1: float,
-                            x2: float,
-                            y1: float,
-                            y2: float) -> ndarray:
+    def interpolate_2d_cross(x: ndarray,
+                             y: ndarray,
+                             weight: ndarray,
+                             h: ndarray,
+                             weight_function: CPUDispatcher,
+                             kernel_radius: float,
+                             pixels: int,
+                             x1: float,
+                             x2: float,
+                             y1: float,
+                             y2: float) -> ndarray:
         """ Interpolate 2D data to a 1D cross-sectional line. """
         return zeros(pixels)
 

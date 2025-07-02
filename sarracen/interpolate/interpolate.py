@@ -788,7 +788,7 @@ def interpolate_3d_line(data: 'SarracenDataFrame',  # noqa: F821
                         y: Union[str, None] = None,
                         z: Union[str, None] = None,
                         kernel: Union[BaseKernel, None] = None,
-                        pixels: int = None,
+                        pixels: Union[int, None] = None,
                         xlim: Union[Tuple[float, float], None] = None,
                         ylim: Union[Tuple[float, float], None] = None,
                         zlim: Union[Tuple[float, float], None] = None,
@@ -875,6 +875,7 @@ def interpolate_3d_line(data: 'SarracenDataFrame',  # noqa: F821
 
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
+    pixels = pixels if pixels is not None else 512
 
     if pixels <= 0:
         raise ValueError('pixcount must be greater than zero!')

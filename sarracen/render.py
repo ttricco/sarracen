@@ -137,7 +137,7 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
            cbar_kws: dict = {},
            cbar_ax: Axes = None,
            ax: Axes = None,
-           exact: Union[bool, None] = None,
+           exact: bool = False,
            backend: Union[str, None] = None,
            integral_samples: int = 1000,
            rotation: Union[np.ndarray, list, Rotation, None] = None,
@@ -212,7 +212,7 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
         "linscale" to kwargs to set the linear region and the scaling of linear
         values, respectively (defaults to 1e-9 and 1, respectevely). Only works
         if log_scale == True.
-    cototation: list, optional
+    corotation: list, optional
         Moves particles to the co-rotating frame of two location. corotation
         contains two lists which correspond to the two x, y, z coordinates
     kwargs: other keyword arguments
@@ -498,7 +498,7 @@ def streamlines(data: 'SarracenDataFrame',  # noqa: F821
                 xlim: Union[Tuple[float, float], None] = None,
                 ylim: Union[Tuple[float, float], None] = None,
                 ax: Axes = None,
-                exact: Union[bool, None] = None,
+                exact: bool = False,
                 backend: Union[str, None] = None,
                 dens_weight: Union[bool, None] = None,
                 normalize: bool = True,
@@ -662,7 +662,7 @@ def arrowplot(data: 'SarracenDataFrame',  # noqa: F821
               ax: Axes = None,
               qkey: bool = True,
               qkey_kws: Union[dict, None] = None,
-              exact: Union[bool, None] = None,
+              exact: bool = False,
               backend: Union[str, None] = None,
               dens_weight: Union[bool, None] = None,
               normalize: bool = True,
