@@ -9,7 +9,7 @@ from scipy.spatial.transform import Rotation
 from ..interpolate import BaseBackend, CPUBackend, GPUBackend
 from ..kernels import BaseKernel
 
-from typing import Tuple, Union
+from typing import Tuple, Union, Optional
 import warnings
 
 
@@ -143,12 +143,12 @@ def _set_pixels(x_pixels: Union[int, None],
     dx = xlim[1] - xlim[0]
     dy = ylim[1] - ylim[0]
 
-    if x_pixels is None and y_pixels is None:
-        x_pixels = 512
-    if x_pixels is None:
-        x_pixels = int(np.rint(y_pixels * (dx / dy)))
     if y_pixels is None:
+        if x_pixels is None:
+            x_pixels = 512
         y_pixels = int(np.rint(x_pixels * (dy / dx)))
+    elif x_pixels is None:
+        x_pixels = int(np.rint(y_pixels * (dx / dy)))
 
     return x_pixels, y_pixels
 
@@ -462,8 +462,10 @@ def interpolate_2d(data: 'SarracenDataFrame',  # noqa: F821
                    kernel: Union[BaseKernel, None] = None,
                    x_pixels: Union[int, None] = None,
                    y_pixels: Union[int, None] = None,
-                   xlim: Union[Tuple[float, float], None] = None,
-                   ylim: Union[Tuple[float, float], None] = None,
+                   xlim: Optional[Tuple[Optional[float],
+                                        Optional[float]]] = None,
+                   ylim: Optional[Tuple[Optional[float],
+                                        Optional[float]]] = None,
                    exact: bool = False,
                    backend: Union[str, None] = None,
                    dens_weight: bool = False,
@@ -567,8 +569,10 @@ def interpolate_2d_vec(data: 'SarracenDataFrame',  # noqa: F821
                        kernel: Union[BaseKernel, None] = None,
                        x_pixels: Union[int, None] = None,
                        y_pixels: Union[int, None] = None,
-                       xlim: Union[Tuple[float, float], None] = None,
-                       ylim: Union[Tuple[float, float], None] = None,
+                       xlim: Optional[Tuple[Optional[float],
+                                            Optional[float]]] = None,
+                       ylim: Optional[Tuple[Optional[float],
+                                            Optional[float]]] = None,
                        exact: bool = False,
                        backend: Union[str, None] = None,
                        dens_weight: bool = False,
@@ -913,7 +917,8 @@ def interpolate_3d_proj(data: 'SarracenDataFrame',  # noqa: F821
                         kernel: Union[BaseKernel, None] = None,
                         integral_samples: int = 1000,
                         corotation: Union[np.ndarray, list, None] = None,
-                        rotation: Union[np.ndarray, list, Rotation, None] = None,
+                        rotation: Union[np.ndarray, list,
+                                        Rotation, None] = None,
                         rot_origin: Union[np.ndarray, list, str, None] = None,
                         x_pixels: Union[int, None] = None,
                         y_pixels: Union[int, None] = None,
@@ -1053,12 +1058,15 @@ def interpolate_3d_vec(data: 'SarracenDataFrame',  # noqa: F821
                        y: Union[str, None] = None,
                        kernel: Union[BaseKernel, None] = None,
                        integral_samples: int = 1000,
-                       rotation: Union[np.ndarray, list, Rotation, None] = None,
+                       rotation: Union[np.ndarray, list, 
+                                       Rotation, None] = None,
                        rot_origin: Union[np.ndarray, list, str, None] = None,
                        x_pixels: Union[int, None] = None,
                        y_pixels: Union[int, None] = None,
-                       xlim: Union[Tuple[float, float], None] = None,
-                       ylim: Union[Tuple[float, float], None] = None,
+                       xlim: Optional[Tuple[Optional[float],
+                                            Optional[float]]] = None,
+                       ylim: Optional[Tuple[Optional[float],
+                                            Optional[float]]] = None,
                        exact: bool = False,
                        backend: Union[str, None] = None,
                        dens_weight: bool = False,
@@ -1192,7 +1200,8 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',  # noqa: F821
                          z_slice: Union[float, None] = None,
                          kernel: Union[BaseKernel, None] = None,
                          corotation: Union[np.ndarray, list, None] = None,
-                         rotation: Union[np.ndarray, list, Rotation, None] = None,
+                         rotation: Union[np.ndarray, list,
+                                         Rotation, None] = None,
                          rot_origin: Union[np.ndarray, list, str, None] = None,
                          x_pixels: Union[int, None] = None,
                          y_pixels: Union[int, None] = None,
@@ -1327,12 +1336,16 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame',  # noqa: F821
                              y: Union[str, None] = None,
                              z: Union[str, None] = None,
                              kernel: Union[BaseKernel, None] = None,
-                             rotation: Union[np.ndarray, list, Rotation, None] = None,  # noqa: E501
-                             rot_origin: Union[np.ndarray, list, str, None] = None,
+                             rotation: Union[np.ndarray, list, Rotation,
+                                             None] = None,
+                             rot_origin: Union[np.ndarray, list,
+                                               str, None] = None,
                              x_pixels: Union[int, None] = None,
                              y_pixels: Union[int, None] = None,
-                             xlim: Union[Tuple[float, float], None] = None,
-                             ylim: Union[Tuple[float, float], None] = None,
+                             xlim: Optional[Tuple[Optional[float],
+                                                  Optional[float]]] = None,
+                             ylim: Optional[Tuple[Optional[float],
+                                                  Optional[float]]] = None,
                              backend: Union[str, None] = None,
                              dens_weight: bool = False,
                              normalize: bool = True,
@@ -1458,13 +1471,16 @@ def interpolate_3d_grid(data: 'SarracenDataFrame',  # noqa: F821
                         y: Union[str, None] = None,
                         z: Union[str, None] = None,
                         kernel: Union[BaseKernel, None] = None,
-                        rotation: Union[np.ndarray, list, Rotation, None] = None,
+                        rotation: Union[np.ndarray, list,
+                                        Rotation, None] = None,
                         rot_origin: Union[np.ndarray, list, str, None] = None,
                         x_pixels: Union[int, None] = None,
                         y_pixels: Union[int, None] = None,
                         z_pixels: Union[int, None] = None,
-                        xlim: Union[Tuple[Union[float, None], Union[float, None]], None] = None,
-                        ylim: Union[Tuple[Union[float, None], Union[float, None]], None] = None,
+                        xlim: Optional[Tuple[Optional[float],
+                                             Optional[float]]] = None,
+                        ylim: Optional[Tuple[Optional[float],
+                                             Optional[float]]] = None,
                         zlim: Union[Tuple[float, float], None] = None,
                         backend: Union[str, None] = None,
                         dens_weight: bool = False,

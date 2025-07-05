@@ -135,8 +135,8 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
            cmap: Union[str, Colormap] = 'gist_heat',
            cbar: bool = True,
            cbar_kws: dict = {},
-           cbar_ax: Axes = None,
-           ax: Axes = None,
+           cbar_ax: Union[Axes, None] = None,
+           ax: Union[Axes, None] = None,
            exact: bool = False,
            backend: Union[str, None] = None,
            integral_samples: int = 1000,
@@ -365,7 +365,7 @@ def lineplot(data: 'SarracenDataFrame',  # noqa: F821
              xlim: Union[Tuple[float, float], None] = None,
              ylim: Union[Tuple[float, float], None] = None,
              zlim: Union[Tuple[float, float], None] = None,
-             ax: Axes = None, 
+             ax: Union[Axes, None] = None,
              backend: Union[str, None] = None,
              log_scale: bool = False,
              dens_weight: bool = False,
@@ -497,7 +497,7 @@ def streamlines(data: 'SarracenDataFrame',  # noqa: F821
                 y_pixels: Union[int, None] = None,
                 xlim: Union[Tuple[float, float], None] = None,
                 ylim: Union[Tuple[float, float], None] = None,
-                ax: Axes = None,
+                ax: Union[Axes, None] = None,
                 exact: bool = False,
                 backend: Union[str, None] = None,
                 dens_weight: Union[bool, None] = None,
@@ -587,35 +587,27 @@ def streamlines(data: 'SarracenDataFrame',  # noqa: F821
     """
     # Choose between the various interpolation functions available, based on
     # initial data passed to this function.
-    interpolation_type = None
-
     if data.get_dim() == 2:
         if not len(target) == 2:
             raise ValueError('Target vector is not 2-dimensional.')
-        interpolation_type = '2d'
+        img = interpolate_2d_vec(data, target[0], target[1], x, y, kernel,
+                                 x_pixels, y_pixels, xlim, ylim, exact,
+                                 backend, dens_weight, normalize, hmin)
     elif data.get_dim() == 3:
         if not len(target) == 3:
             raise ValueError('Target vector is not 3-dimensional.')
         if xsec is not None:
-            interpolation_type = '3d_cross'
+            img = interpolate_3d_cross_vec(data, target[0], target[1],
+                                           target[2], xsec, x, y, z, kernel,
+                                           rotation, rot_origin, x_pixels,
+                                           y_pixels, xlim, ylim, backend,
+                                           dens_weight, normalize, hmin)
         else:
-            interpolation_type = '3d'
-
-    if interpolation_type == '2d':
-        img = interpolate_2d_vec(data, target[0], target[1], x, y, kernel,
-                                 x_pixels, y_pixels, xlim, ylim, exact,
-                                 backend, dens_weight, normalize, hmin)
-    elif interpolation_type == '3d_cross':
-        img = interpolate_3d_cross_vec(data, target[0], target[1], target[2],
-                                       xsec, x, y, z, kernel, rotation,
-                                       rot_origin, x_pixels, y_pixels, xlim,
-                                       ylim, backend, dens_weight, normalize,
-                                       hmin)
-    elif interpolation_type == '3d':
-        img = interpolate_3d_vec(data, target[0], target[1], target[2], x, y,
-                                 kernel, integral_samples, rotation,
-                                 rot_origin, x_pixels, y_pixels, xlim, ylim,
-                                 exact, backend, dens_weight, normalize, hmin)
+            img = interpolate_3d_vec(data, target[0], target[1], target[2], x,
+                                     y, kernel, integral_samples, rotation,
+                                     rot_origin, x_pixels, y_pixels, xlim,
+                                     ylim, exact, backend, dens_weight,
+                                     normalize, hmin)
     else:
         raise ValueError('`data` is not a valid number of dimensions.')
 
@@ -659,7 +651,7 @@ def arrowplot(data: 'SarracenDataFrame',  # noqa: F821
               y_arrows: Union[int, None] = None,
               xlim: Union[Tuple[float, float], None] = None,
               ylim: Union[Tuple[float, float], None] = None,
-              ax: Axes = None,
+              ax: Union[Axes, None] = None,
               qkey: bool = True,
               qkey_kws: Union[dict, None] = None,
               exact: bool = False,
@@ -757,36 +749,27 @@ def arrowplot(data: 'SarracenDataFrame',  # noqa: F821
     xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
     x_arrows, y_arrows = _set_pixels(x_arrows, y_arrows, xlim, ylim, 20)
 
-    interpolation_type = None
-
     if data.get_dim() == 2:
         if not len(target) == 2:
             raise ValueError('Target vector is not 2-dimensional.')
-        interpolation_type = '2d'
+        img = interpolate_2d_vec(data, target[0], target[1], x, y, kernel,
+                                 x_arrows, y_arrows, xlim, ylim, exact,
+                                 backend, dens_weight, normalize, hmin)
     elif data.get_dim() == 3:
         if not len(target) == 3:
             raise ValueError('Target vector is not 3-dimensional.')
         if xsec is not None:
-            interpolation_type = '3d_cross'
+            img = interpolate_3d_cross_vec(data, target[0], target[1],
+                                           target[2], xsec, x, y, z, kernel,
+                                           rotation, rot_origin, x_arrows,
+                                           y_arrows, xlim, ylim, backend,
+                                           dens_weight, normalize, hmin)
         else:
-            interpolation_type = '3d'
-
-    if interpolation_type == '2d':
-        img = interpolate_2d_vec(data, target[0], target[1], x, y, kernel,
-                                 x_arrows, y_arrows, xlim, ylim, exact,
-                                 backend, dens_weight, normalize, hmin)
-    elif interpolation_type == '3d_cross':
-        img = interpolate_3d_cross_vec(data, target[0], target[1], target[2],
-                                       xsec, x, y, z, kernel, rotation,
-                                       rot_origin, x_arrows, y_arrows, xlim,
-                                       ylim, backend, dens_weight, normalize,
-                                       hmin)
-    elif interpolation_type == '3d':
-        img = interpolate_3d_vec(data, target[0], target[1], target[2], x, y,
-                                 kernel, integral_samples, rotation,
-                                 rot_origin, x_arrows, y_arrows, xlim, ylim,
-                                 exact, backend, dens_weight, normalize,
-                                 hmin)
+            img = interpolate_3d_vec(data, target[0], target[1], target[2], x,
+                                     y, kernel, integral_samples, rotation,
+                                     rot_origin, x_arrows, y_arrows, xlim,
+                                     ylim, exact, backend, dens_weight,
+                                     normalize, hmin)
     else:
         raise ValueError('`data` is not a valid number of dimensions.')
 
