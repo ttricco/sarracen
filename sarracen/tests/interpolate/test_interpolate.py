@@ -270,10 +270,12 @@ def test_dimension_check(backend):
     sdf = SarracenDataFrame(data, params=dict())
     sdf.backend = backend
 
-    for func in [interpolate_3d_proj,
+    for func in [interpolate_3d_line,
+                 interpolate_3d_proj,
                  interpolate_3d_cross]:
         with raises(TypeError):
             func(sdf, 'P', normalize=False, hmin=False)
+
     for func in [interpolate_3d_vec,
                  interpolate_3d_cross_vec,
                  interpolate_3d_grid]:
@@ -288,8 +290,7 @@ def test_dimension_check(backend):
     sdf.backend = backend
 
     for func in [interpolate_2d,
-                 interpolate_2d_line,
-                 interpolate_3d_line]:
+                 interpolate_2d_line]:
         with raises(TypeError):
             func(sdf, 'P', normalize=False, hmin=False)
     with raises(TypeError):
