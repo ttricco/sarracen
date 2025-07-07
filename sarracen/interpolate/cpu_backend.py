@@ -63,20 +63,20 @@ class CPUBackend(BaseBackend):
                                     y_pixels, x_min, x_max, y_min, y_max, 2))
 
     @staticmethod
-    def interpolate_2d_cross(x: ndarray,
-                             y: ndarray,
-                             weight: ndarray,
-                             h: ndarray,
-                             weight_function: CPUDispatcher,
-                             kernel_radius: float,
-                             pixels: int,
-                             x1: float,
-                             x2: float,
-                             y1: float,
-                             y2: float) -> ndarray:
-        return CPUBackend._fast_2d_cross_cpu(x, y, weight, h, weight_function,
-                                             kernel_radius, pixels, x1, x2,
-                                             y1, y2)
+    def interpolate_2d_line(x: ndarray,
+                            y: ndarray,
+                            weight: ndarray,
+                            h: ndarray,
+                            weight_function: CPUDispatcher,
+                            kernel_radius: float,
+                            pixels: int,
+                            x1: float,
+                            x2: float,
+                            y1: float,
+                            y2: float) -> ndarray:
+        return CPUBackend._fast_2d_line_cpu(x, y, weight, h, weight_function,
+                                            kernel_radius, pixels, x1, x2,
+                                            y1, y2)
 
     @staticmethod
     def interpolate_3d_line(x: ndarray,
@@ -430,8 +430,8 @@ class CPUBackend(BaseBackend):
     # Underlying CPU numba-compiled code for 2D->1D cross-sections.
     @staticmethod
     @njit(parallel=True, fastmath=True)
-    def _fast_2d_cross_cpu(x_data, y_data, w_data, h_data, weight_function,
-                           kernel_radius, pixels, x1, x2, y1, y2):
+    def _fast_2d_line_cpu(x_data, y_data, w_data, h_data, weight_function,
+                          kernel_radius, pixels, x1, x2, y1, y2):
         # determine the slope of the cross-section line
         gradient = 0
         if not x2 - x1 == 0:
