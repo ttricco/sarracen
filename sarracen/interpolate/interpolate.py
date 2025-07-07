@@ -9,7 +9,7 @@ from scipy.spatial.transform import Rotation
 from ..interpolate import BaseBackend, CPUBackend, GPUBackend
 from ..kernels import BaseKernel
 
-from typing import Tuple, Union
+from typing import Tuple, Union, Optional
 import warnings
 
 
@@ -114,8 +114,8 @@ def _default_bounds(data,
     return (x_min, x_max), (y_min, y_max)
 
 
-def _set_pixels(x_pixels: int,
-                y_pixels: int,
+def _set_pixels(x_pixels: Union[int, None],
+                y_pixels: Union[int, None],
                 xlim: Tuple[float, float],
                 ylim: Tuple[float, float]) -> Tuple[int, int]:
     """
@@ -143,12 +143,12 @@ def _set_pixels(x_pixels: int,
     dx = xlim[1] - xlim[0]
     dy = ylim[1] - ylim[0]
 
-    if x_pixels is None and y_pixels is None:
-        x_pixels = 512
-    if x_pixels is None:
-        x_pixels = int(np.rint(y_pixels * (dx / dy)))
     if y_pixels is None:
+        if x_pixels is None:
+            x_pixels = 512
         y_pixels = int(np.rint(x_pixels * (dy / dx)))
+    elif x_pixels is None:
+        x_pixels = int(np.rint(y_pixels * (dx / dy)))
 
     return x_pixels, y_pixels
 
@@ -457,15 +457,17 @@ def _get_smoothing_lengths(data: 'SarracenDataFrame',  # noqa: F821
 
 def interpolate_2d(data: 'SarracenDataFrame',  # noqa: F821
                    target: str,
-                   x: str = None,
-                   y: str = None,
-                   kernel: BaseKernel = None,
-                   x_pixels: int = None,
-                   y_pixels: int = None,
-                   xlim: Tuple[float, float] = None,
-                   ylim: Tuple[float, float] = None,
+                   x: Union[str, None] = None,
+                   y: Union[str, None] = None,
+                   kernel: Union[BaseKernel, None] = None,
+                   x_pixels: Union[int, None] = None,
+                   y_pixels: Union[int, None] = None,
+                   xlim: Optional[Tuple[Optional[float],
+                                        Optional[float]]] = None,
+                   ylim: Optional[Tuple[Optional[float],
+                                        Optional[float]]] = None,
                    exact: bool = False,
-                   backend: str = None,
+                   backend: Union[str, None] = None,
                    dens_weight: bool = False,
                    normalize: bool = True,
                    hmin: bool = False) -> np.ndarray:
@@ -483,7 +485,7 @@ def interpolate_2d(data: 'SarracenDataFrame',  # noqa: F821
         Particle data, in a SarracenDataFrame.
     target: str
         Column label of the target smoothing data.
-    x, y: str
+    x, y: str, optional
         Column labels of the directional axes. Defaults to the x & y columns
         detected in `data`.
     kernel: BaseKernel, optional
@@ -562,15 +564,17 @@ def interpolate_2d(data: 'SarracenDataFrame',  # noqa: F821
 def interpolate_2d_vec(data: 'SarracenDataFrame',  # noqa: F821
                        target_x: str,
                        target_y: str,
-                       x: str = None,
-                       y: str = None,
-                       kernel: BaseKernel = None,
-                       x_pixels: int = None,
-                       y_pixels: int = None,
-                       xlim: Tuple[float, float] = None,
-                       ylim: Tuple[float, float] = None,
+                       x: Union[str, None] = None,
+                       y: Union[str, None] = None,
+                       kernel: Union[BaseKernel, None] = None,
+                       x_pixels: Union[int, None] = None,
+                       y_pixels: Union[int, None] = None,
+                       xlim: Optional[Tuple[Optional[float],
+                                            Optional[float]]] = None,
+                       ylim: Optional[Tuple[Optional[float],
+                                            Optional[float]]] = None,
                        exact: bool = False,
-                       backend: str = None,
+                       backend: Union[str, None] = None,
                        dens_weight: bool = False,
                        normalize: bool = True,
                        hmin: bool = False):
@@ -588,7 +592,7 @@ def interpolate_2d_vec(data: 'SarracenDataFrame',  # noqa: F821
         Particle data, in a SarracenDataFrame.
     target_x, target_y: str
         Column labels of the target vector.
-    x, y: str
+    x, y: str, optional
         Column labels of the directional axes. Defaults to the x & y columns
         detected in `data`.
     kernel: BaseKernel, optional
@@ -671,13 +675,13 @@ def interpolate_2d_vec(data: 'SarracenDataFrame',  # noqa: F821
 
 def interpolate_2d_line(data: 'SarracenDataFrame',  # noqa: F821
                         target: str,
-                        x: str = None,
-                        y: str = None,
-                        kernel: BaseKernel = None,
-                        pixels: int = None,
-                        xlim: Tuple[float, float] = None,
-                        ylim: Tuple[float, float] = None,
-                        backend: str = None,
+                        x: Union[str, None] = None,
+                        y: Union[str, None] = None,
+                        kernel: Union[BaseKernel, None] = None,
+                        pixels: Union[int, None] = None,
+                        xlim: Union[Tuple[float, float], None] = None,
+                        ylim: Union[Tuple[float, float], None] = None,
+                        backend: Union[str, None] = None,
                         dens_weight: bool = False,
                         normalize: bool = True,
                         hmin: bool = False) -> np.ndarray:
@@ -696,7 +700,7 @@ def interpolate_2d_line(data: 'SarracenDataFrame',  # noqa: F821
         Particle data, in a SarracenDataFrame.
     target: str
          Column label of the target smoothing data.
-    x, y: str
+    x, y: str, optional
         Column labels of the directional axes. Defaults to the x & y columns
         detected in `data`.
     kernel: BaseKernel, optional
@@ -784,15 +788,15 @@ def interpolate_2d_line(data: 'SarracenDataFrame',  # noqa: F821
 
 def interpolate_3d_line(data: 'SarracenDataFrame',  # noqa: F821
                         target: str,
-                        x: str = None,
-                        y: str = None,
-                        z: str = None,
-                        kernel: BaseKernel = None,
-                        pixels: int = None,
-                        xlim: Tuple[float, float] = None,
-                        ylim: Tuple[float, float] = None,
-                        zlim: Tuple[float, float] = None,
-                        backend: str = None,
+                        x: Union[str, None] = None,
+                        y: Union[str, None] = None,
+                        z: Union[str, None] = None,
+                        kernel: Union[BaseKernel, None] = None,
+                        pixels: Union[int, None] = None,
+                        xlim: Union[Tuple[float, float], None] = None,
+                        ylim: Union[Tuple[float, float], None] = None,
+                        zlim: Union[Tuple[float, float], None] = None,
+                        backend: Union[str, None] = None,
                         dens_weight: bool = False,
                         normalize: bool = True,
                         hmin: bool = False):
@@ -810,7 +814,7 @@ def interpolate_3d_line(data: 'SarracenDataFrame',  # noqa: F821
             Particle data, in a SarracenDataFrame.
     target: str
         Column label of the target variable.
-    x, y, z: str
+    x, y, z: str, optional
         Column labels of the directional axes. Defaults to the x, y & z columns
         detected in `data`.
     kernel: BaseKernel, optional
@@ -875,6 +879,7 @@ def interpolate_3d_line(data: 'SarracenDataFrame',  # noqa: F821
 
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
+    pixels = pixels if pixels is not None else 512
 
     if pixels <= 0:
         raise ValueError('pixcount must be greater than zero!')
@@ -907,20 +912,21 @@ def interpolate_3d_line(data: 'SarracenDataFrame',  # noqa: F821
 
 def interpolate_3d_proj(data: 'SarracenDataFrame',  # noqa: F821
                         target: str,
-                        x: str = None,
-                        y: str = None,
-                        kernel: BaseKernel = None,
+                        x: Union[str, None] = None,
+                        y: Union[str, None] = None,
+                        kernel: Union[BaseKernel, None] = None,
                         integral_samples: int = 1000,
-                        corotation: Union[np.ndarray, list] = None,
-                        rotation: Union[np.ndarray, list, Rotation] = None,
-                        rot_origin: Union[np.ndarray, list, str] = None,
-                        x_pixels: int = None,
-                        y_pixels: int = None,
-                        xlim: Tuple[float, float] = None,
-                        ylim: Tuple[float, float] = None,
+                        corotation: Union[np.ndarray, list, None] = None,
+                        rotation: Union[np.ndarray, list,
+                                        Rotation, None] = None,
+                        rot_origin: Union[np.ndarray, list, str, None] = None,
+                        x_pixels: Union[int, None] = None,
+                        y_pixels: Union[int, None] = None,
+                        xlim: Union[Tuple[float, float], None] = None,
+                        ylim: Union[Tuple[float, float], None] = None,
                         exact: bool = False,
-                        backend: str = None,
-                        dens_weight: bool = None,
+                        backend: Union[str, None] = None,
+                        dens_weight: Union[bool, None] = None,
                         normalize: bool = True,
                         hmin: bool = False):
     """
@@ -936,7 +942,7 @@ def interpolate_3d_proj(data: 'SarracenDataFrame',  # noqa: F821
         Particle data, in a SarracenDataFrame.
     target: str
         Column label of the target smoothing data.
-    x, y: str
+    x, y: str, optional
         Column labels of the directional axes. Defaults to the x & y columns
         detected in `data`.
     kernel: BaseKernel, optional
@@ -1048,18 +1054,21 @@ def interpolate_3d_vec(data: 'SarracenDataFrame',  # noqa: F821
                        target_x: str,
                        target_y: str,
                        target_z: str,
-                       x: str = None,
-                       y: str = None,
-                       kernel: BaseKernel = None,
+                       x: Union[str, None] = None,
+                       y: Union[str, None] = None,
+                       kernel: Union[BaseKernel, None] = None,
                        integral_samples: int = 1000,
-                       rotation: Union[np.ndarray, list, Rotation] = None,
-                       rot_origin: Union[np.ndarray, list, str] = None,
-                       x_pixels: int = None,
-                       y_pixels: int = None,
-                       xlim: Tuple[float, float] = None,
-                       ylim: Tuple[float, float] = None,
+                       rotation: Union[np.ndarray, list,
+                                       Rotation, None] = None,
+                       rot_origin: Union[np.ndarray, list, str, None] = None,
+                       x_pixels: Union[int, None] = None,
+                       y_pixels: Union[int, None] = None,
+                       xlim: Optional[Tuple[Optional[float],
+                                            Optional[float]]] = None,
+                       ylim: Optional[Tuple[Optional[float],
+                                            Optional[float]]] = None,
                        exact: bool = False,
-                       backend: str = None,
+                       backend: Union[str, None] = None,
                        dens_weight: bool = False,
                        normalize: bool = True,
                        hmin: bool = False):
@@ -1076,7 +1085,7 @@ def interpolate_3d_vec(data: 'SarracenDataFrame',  # noqa: F821
         Particle data, in a SarracenDataFrame.
     target_x, target_y, target_z: str
         Column labels of the target vector.
-    x, y: str
+    x, y: str, optional
         Column labels of the directional axes. Defaults to the x & y columns
         detected in `data`.
     kernel: BaseKernel, optional
@@ -1185,19 +1194,20 @@ def interpolate_3d_vec(data: 'SarracenDataFrame',  # noqa: F821
 
 def interpolate_3d_cross(data: 'SarracenDataFrame',  # noqa: F821
                          target: str,
-                         x: str = None,
-                         y: str = None,
-                         z: str = None,
-                         z_slice: float = None,
-                         kernel: BaseKernel = None,
-                         corotation: Union[np.ndarray, list] = None,
-                         rotation: Union[np.ndarray, list, Rotation] = None,
-                         rot_origin: Union[np.ndarray, list, str] = None,
-                         x_pixels: int = None,
-                         y_pixels: int = None,
-                         xlim: Tuple[float, float] = None,
-                         ylim: Tuple[float, float] = None,
-                         backend: str = None,
+                         x: Union[str, None] = None,
+                         y: Union[str, None] = None,
+                         z: Union[str, None] = None,
+                         z_slice: Union[float, None] = None,
+                         kernel: Union[BaseKernel, None] = None,
+                         corotation: Union[np.ndarray, list, None] = None,
+                         rotation: Union[np.ndarray, list,
+                                         Rotation, None] = None,
+                         rot_origin: Union[np.ndarray, list, str, None] = None,
+                         x_pixels: Union[int, None] = None,
+                         y_pixels: Union[int, None] = None,
+                         xlim: Union[Tuple[float, float], None] = None,
+                         ylim: Union[Tuple[float, float], None] = None,
+                         backend: Union[str, None] = None,
                          dens_weight: bool = False,
                          normalize: bool = True,
                          hmin: bool = False):
@@ -1218,7 +1228,7 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',  # noqa: F821
     z_slice: float
         The z-axis value to take the cross-section at. Defaults to the midpoint
         of the z-directional data.
-    x, y, z: str
+    x, y, z: str, optional
         The column labels of the directional data to interpolate over. Defaults
         to the x, y, and z columns
         detected in `data`.
@@ -1321,18 +1331,22 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame',  # noqa: F821
                              target_x: str,
                              target_y: str,
                              target_z: str,
-                             z_slice: float = None,
-                             x: str = None,
-                             y: str = None,
-                             z: str = None,
-                             kernel: BaseKernel = None,
-                             rotation: Union[np.ndarray, list, Rotation] = None,  # noqa: E501
-                             rot_origin: Union[np.ndarray, list, str] = None,
-                             x_pixels: int = None,
-                             y_pixels: int = None,
-                             xlim: Tuple[float, float] = None,
-                             ylim: Tuple[float, float] = None,
-                             backend: str = None,
+                             z_slice: Union[float, None] = None,
+                             x: Union[str, None] = None,
+                             y: Union[str, None] = None,
+                             z: Union[str, None] = None,
+                             kernel: Union[BaseKernel, None] = None,
+                             rotation: Union[np.ndarray, list, Rotation,
+                                             None] = None,
+                             rot_origin: Union[np.ndarray, list,
+                                               str, None] = None,
+                             x_pixels: Union[int, None] = None,
+                             y_pixels: Union[int, None] = None,
+                             xlim: Optional[Tuple[Optional[float],
+                                                  Optional[float]]] = None,
+                             ylim: Optional[Tuple[Optional[float],
+                                                  Optional[float]]] = None,
+                             backend: Union[str, None] = None,
                              dens_weight: bool = False,
                              normalize: bool = True,
                              hmin: bool = False):
@@ -1353,7 +1367,7 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame',  # noqa: F821
     z_slice: float
         The z-axis value to take the cross-section at. Defaults to the midpoint
         of the z-directional data.
-    x, y, z: str
+    x, y, z: str, optional
         The column labels of the directional data to interpolate over. Defaults
         to the x, y, and z columns detected in `data`.
     kernel: BaseKernel
@@ -1453,19 +1467,22 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame',  # noqa: F821
 
 def interpolate_3d_grid(data: 'SarracenDataFrame',  # noqa: F821
                         target: str,
-                        x: str = None,
-                        y: str = None,
-                        z: str = None,
-                        kernel: BaseKernel = None,
-                        rotation: Union[np.ndarray, list, Rotation] = None,
-                        rot_origin: Union[np.ndarray, list, str] = None,
-                        x_pixels: int = None,
-                        y_pixels: int = None,
-                        z_pixels: int = None,
-                        xlim: Tuple[float, float] = None,
-                        ylim: Tuple[float, float] = None,
-                        zlim: Tuple[float, float] = None,
-                        backend: str = None,
+                        x: Union[str, None] = None,
+                        y: Union[str, None] = None,
+                        z: Union[str, None] = None,
+                        kernel: Union[BaseKernel, None] = None,
+                        rotation: Union[np.ndarray, list,
+                                        Rotation, None] = None,
+                        rot_origin: Union[np.ndarray, list, str, None] = None,
+                        x_pixels: Union[int, None] = None,
+                        y_pixels: Union[int, None] = None,
+                        z_pixels: Union[int, None] = None,
+                        xlim: Optional[Tuple[Optional[float],
+                                             Optional[float]]] = None,
+                        ylim: Optional[Tuple[Optional[float],
+                                             Optional[float]]] = None,
+                        zlim: Union[Tuple[float, float], None] = None,
+                        backend: Union[str, None] = None,
                         dens_weight: bool = False,
                         normalize: bool = True,
                         hmin: bool = False):
@@ -1482,7 +1499,7 @@ def interpolate_3d_grid(data: 'SarracenDataFrame',  # noqa: F821
         The particle data to interpolate over.
     target: str
         The column label of the target data.
-    x, y, z: str
+    x, y, z: str, optional
         The column labels of the directional data to interpolate over. Defaults
         to the x, y, and z columns detected in `data`.
     kernel: BaseKernel
