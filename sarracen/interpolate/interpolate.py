@@ -1058,7 +1058,7 @@ def interpolate_3d_vec(data: 'SarracenDataFrame',  # noqa: F821
                        y: Union[str, None] = None,
                        kernel: Union[BaseKernel, None] = None,
                        integral_samples: int = 1000,
-                       rotation: Union[np.ndarray, list, 
+                       rotation: Union[np.ndarray, list,
                                        Rotation, None] = None,
                        rot_origin: Union[np.ndarray, list, str, None] = None,
                        x_pixels: Union[int, None] = None,
