@@ -3,7 +3,7 @@ import numpy as np
 from ..sarracen_dataframe import SarracenDataFrame
 
 
-def _write_fortran_block(value: [],
+def _write_fortran_block(value: list,
                          dtype: type):
     write_tag = np.array([len(value) * dtype().itemsize], dtype=np.int32)
     file = bytearray(write_tag.tobytes())
