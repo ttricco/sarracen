@@ -770,17 +770,17 @@ def interpolate_2d_line(data: 'SarracenDataFrame',  # noqa: F821
         h_data = data[data.hcol].to_numpy()
 
     grid = get_backend(backend) \
-        .interpolate_2d_cross(data[x].to_numpy(), data[y].to_numpy(),
-                              w_data, h_data, kernel.w, kernel.get_radius(),
-                              pixels, xlim[0], xlim[1], ylim[0], ylim[1])
+        .interpolate_2d_line(data[x].to_numpy(), data[y].to_numpy(),
+                             w_data, h_data, kernel.w, kernel.get_radius(),
+                             pixels, xlim[0], xlim[1], ylim[0], ylim[1])
 
     if normalize:
         w_norm = _get_weight(data, np.array([1] * len(w_data)), dens_weight)
         norm_grid = get_backend(backend) \
-            .interpolate_2d_cross(data[x].to_numpy(), data[y].to_numpy(),
-                                  w_norm, h_data, kernel.w,
-                                  kernel.get_radius(), pixels, xlim[0],
-                                  xlim[1], ylim[0], ylim[1])
+            .interpolate_2d_line(data[x].to_numpy(), data[y].to_numpy(),
+                                 w_norm, h_data, kernel.w,
+                                 kernel.get_radius(), pixels, xlim[0],
+                                 xlim[1], ylim[0], ylim[1])
         grid = np.nan_to_num(grid / norm_grid)
 
     return grid
