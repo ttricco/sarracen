@@ -1603,7 +1603,7 @@ def interpolate_3d_grid(data: 'SarracenDataFrame',  # noqa: F821
     return grid
 
 
-def get_backend(code: str) -> BaseBackend:
+def get_backend(code: str) -> type[BaseBackend]:
     """
     Get the interpolation backend associated with a string code.
 

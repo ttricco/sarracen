@@ -145,7 +145,7 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
            log_scale: bool = False,
            symlog_scale: bool = False,
            dens_weight: Union[bool, None] = None,
-           normalize: bool = True,
+           normalize: bool = False,
            hmin: bool = False,
            corotation: Union[np.ndarray, list, None] = None,
            **kwargs) -> Axes:
