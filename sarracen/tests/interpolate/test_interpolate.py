@@ -19,6 +19,17 @@ backends = ['cpu']
 if cuda.is_available():
     backends.append('gpu')
 
+funcs2d = [interpolate_2d, interpolate_2d_line]
+funcs2dvec = [interpolate_2d_vec]
+funcs3d = [interpolate_3d_line, interpolate_3d_proj, interpolate_3d_cross,
+           interpolate_3d_grid]
+funcs3dvec = [interpolate_3d_vec, interpolate_3d_cross_vec]
+
+funcscolumn = [interpolate_3d_proj, interpolate_3d_vec]
+funcsline = [interpolate_2d_line, interpolate_3d_line]
+
+funcs = funcs2d + funcs2dvec + funcs3d + funcs3dvec
+
 
 @mark.parametrize("backend", backends)
 def test_single_particle(backend):
@@ -258,43 +269,39 @@ def test_single_repeated_particle(backend):
 
 
 @mark.parametrize("backend", backends)
-def test_dimension_check(backend):
+@mark.parametrize("func", funcs)
+def test_dimension_check(backend, func):
     """
     Passing a dataframe with invalid dimensions should raise a TypeError for
     all interpolation functions.
     """
-    # First, test a basic 2D dataframe passed to 3D interpolation functions.
+
     data = {'x': [0, 1], 'y': [0, 1], 'P': [1, 1],
             'Ax': [1, 1], 'Ay': [1, 1], 'h': [1, 1],
             'rho': [1, 1], 'm': [1, 1]}
     sdf = SarracenDataFrame(data, params=dict())
     sdf.backend = backend
 
-    for func in [interpolate_3d_line,
-                 interpolate_3d_proj,
-                 interpolate_3d_cross]:
+    # 2D dataframe passed to 3D interpolation functions
+    if func in funcs3d:
         with raises(TypeError):
             func(sdf, 'P', normalize=False, hmin=False)
-
-    for func in [interpolate_3d_vec,
-                 interpolate_3d_cross_vec,
-                 interpolate_3d_grid]:
+    elif func in funcs3dvec:
         with raises(TypeError):
             func(sdf, 'Ax', 'Ay', 'Az', normalize=False, hmin=False)
 
-    # Next, test a basic 3D dataframe passed to 2D interpolation functions.
-    data = {'x': [0, 1], 'y': [0, 1], 'z': [0, 1], 'P': [1, 1],
-            'Ax': [1, 1], 'Ay': [1, 1], 'Az': [1, 1],
-            'h': [1, 1], 'rho': [1, 1], 'm': [1, 1]}
-    sdf = SarracenDataFrame(data, params=dict())
-    sdf.backend = backend
+    # 3D dataframe passed to 2D interpolation functions
+    elif func in (funcs2d + funcs2dvec):
+        sdf['z'] = [0, 1]
+        sdf['Az'] = [1, 1]
+        sdf.zcol = 'z'
 
-    for func in [interpolate_2d,
-                 interpolate_2d_line]:
-        with raises(TypeError):
-            func(sdf, 'P', normalize=False, hmin=False)
-    with raises(TypeError):
-        interpolate_2d_vec(sdf, 'Ax', 'Ay', normalize=False, hmin=False)
+        if func in funcs2d:
+            with raises(TypeError):
+                func(sdf, 'P', normalize=False, hmin=False)
+        elif func in funcs2dvec:
+            with raises(TypeError):
+                func(sdf, 'Ax', 'Ay', normalize=False, hmin=False)
 
 
 @mark.parametrize("backend", backends)
@@ -598,7 +605,8 @@ def test_image_transpose(backend):
 
 
 @mark.parametrize("backend", backends)
-def test_default_kernel(backend):
+@mark.parametrize("use_default_kernel", [True, False])
+def test_default_kernel(backend, use_default_kernel):
     """
     Interpolation should use the kernel supplied to the function. If no kernel
     is supplied, the kernel attached to the dataframe should be used.
@@ -611,133 +619,66 @@ def test_default_kernel(backend):
               'h': [1], 'rho': [1], 'm': [1]}
     sdf_3 = SarracenDataFrame(data_3, params=dict())
 
-    kernel = QuarticSplineKernel()
-    sdf_2.kernel = kernel
-    sdf_3.kernel = kernel
     sdf_2.backend = backend
     sdf_3.backend = backend
 
+    kwargs = {'normalize': False}
+
+    if use_default_kernel:
+        kernel = QuarticSplineKernel()
+        sdf_2.kernel = kernel
+        sdf_3.kernel = kernel
+    else:
+        kernel = QuinticSplineKernel()
+        kwargs['kernel'] = kernel
+
     # First, test that the dataframe kernel is used when no kernel is supplied.
-
-    # Each interpolation is performed over one pixel, offering an easy way to
-    # check the kernel used by the function.
-    img = interpolate_2d(sdf_2, 'A',
-                         x_pixels=1, y_pixels=1,
-                         xlim=(-1, 1), ylim=(-1, 1),
-                         normalize=False, hmin=False)
-    assert img == kernel.w(0, 2)
-    img = interpolate_2d_vec(sdf_2, 'A', 'B',
-                             x_pixels=1, y_pixels=1,
-                             xlim=(-1, 1), ylim=(-1, 1),
-                             normalize=False, hmin=False)
-    assert img[0] == kernel.w(0, 2)
-    assert img[1] == kernel.w(0, 2)
-
-    img = interpolate_2d_line(sdf_2, 'A',
-                              pixels=1,
-                              xlim=(-1, 1), ylim=(-1, 1),
-                              normalize=False, hmin=False)
-    assert img == kernel.w(0, 2)
-
-    img = interpolate_3d_proj(sdf_3, 'A',
-                              x_pixels=1, y_pixels=1,
-                              xlim=(-1, 1), ylim=(-1, 1),
-                              normalize=False, hmin=False)
-    assert img == kernel.get_column_kernel()[0]
-    img = interpolate_3d_vec(sdf_3, 'A', 'B', 'C',
-                             x_pixels=1, y_pixels=1,
-                             xlim=(-1, 1), ylim=(-1, 1),
-                             normalize=False, hmin=False)
-    assert img[0] == kernel.get_column_kernel()[0]
-    assert img[1] == kernel.get_column_kernel()[0]
-
-    img = interpolate_3d_cross(sdf_3, 'A',
-                               x_pixels=1, y_pixels=1,
-                               xlim=(-1, 1), ylim=(-1, 1),
-                               normalize=False, hmin=False)
-    assert img == kernel.w(0, 3)
-    img = interpolate_3d_cross_vec(sdf_3, 'A', 'B', 'C',
-                                   x_pixels=1, y_pixels=1,
-                                   xlim=(-1, 1), ylim=(-1, 1),
-                                   normalize=False, hmin=False)
-    assert img[0] == kernel.w(0, 3)
-    assert img[1] == kernel.w(0, 3)
-
-    img = interpolate_3d_grid(sdf_3, 'A',
-                              x_pixels=1, y_pixels=1, z_pixels=1,
-                              xlim=(-1, 1), ylim=(-1, 1), zlim=(-1, 1),
-                              normalize=False, hmin=False)
-    assert img == kernel.w(0, 3)
-
-    img = interpolate_3d_line(sdf_3, 'A',
-                              pixels=1,
-                              xlim=(-1, 1), ylim=(-1, 1),
-                              normalize=False, hmin=False)
-    assert img == kernel.w(0, 3)
-
     # Next, test that the kernel supplied to the function is actually used.
-    kernel = QuinticSplineKernel()
+
     img = interpolate_2d(sdf_2, 'A',
                          x_pixels=1, y_pixels=1,
-                         xlim=(-1, 1), ylim=(-1, 1),
-                         kernel=kernel,
-                         normalize=False, hmin=False)
+                         xlim=(-1, 1), ylim=(-1, 1), **kwargs)
     assert img == kernel.w(0, 2)
     img = interpolate_2d_vec(sdf_2, 'A', 'B',
                              x_pixels=1, y_pixels=1,
-                             xlim=(-1, 1), ylim=(-1, 1),
-                             kernel=kernel,
-                             normalize=False, hmin=False)
+                             xlim=(-1, 1), ylim=(-1, 1), **kwargs)
     assert img[0] == kernel.w(0, 2)
     assert img[1] == kernel.w(0, 2)
 
     img = interpolate_2d_line(sdf_2, 'A',
                               pixels=1,
-                              xlim=(-1, 1), ylim=(-1, 1),
-                              kernel=kernel,
-                              normalize=False, hmin=False)
+                              xlim=(-1, 1), ylim=(-1, 1), **kwargs)
     assert img == kernel.w(0, 2)
 
     img = interpolate_3d_proj(sdf_3, 'A',
                               x_pixels=1, y_pixels=1,
-                              xlim=(-1, 1), ylim=(-1, 1),
-                              kernel=kernel,
-                              normalize=False, hmin=False)
+                              xlim=(-1, 1), ylim=(-1, 1), **kwargs)
     assert img == kernel.get_column_kernel()[0]
     img = interpolate_3d_vec(sdf_3, 'A', 'B', 'C',
                              x_pixels=1, y_pixels=1,
-                             xlim=(-1, 1), ylim=(-1, 1),
-                             kernel=kernel,
-                             normalize=False, hmin=False)
+                             xlim=(-1, 1), ylim=(-1, 1), **kwargs)
     assert img[0] == kernel.get_column_kernel()[0]
     assert img[1] == kernel.get_column_kernel()[0]
 
     img = interpolate_3d_cross(sdf_3, 'A',
                                x_pixels=1, y_pixels=1,
-                               xlim=(-1, 1), ylim=(-1, 1),
-                               kernel=kernel,
-                               normalize=False, hmin=False)
+                               xlim=(-1, 1), ylim=(-1, 1), **kwargs)
     assert img == kernel.w(0, 3)
     img = interpolate_3d_cross_vec(sdf_3, 'A', 'B', 'C',
                                    x_pixels=1, y_pixels=1,
-                                   xlim=(-1, 1), ylim=(-1, 1),
-                                   kernel=kernel,
-                                   normalize=False, hmin=False)
+                                   xlim=(-1, 1), ylim=(-1, 1), **kwargs)
     assert img[0] == kernel.w(0, 3)
     assert img[1] == kernel.w(0, 3)
 
     img = interpolate_3d_grid(sdf_3, 'A',
                               x_pixels=1, y_pixels=1, z_pixels=1,
                               xlim=(-1, 1), ylim=(-1, 1), zlim=(-1, 1),
-                              kernel=kernel,
-                              normalize=False, hmin=False)
+                              **kwargs)
     assert img == kernel.w(0, 3)
 
     img = interpolate_3d_line(sdf_3, 'A',
                               pixels=1,
-                              xlim=(-1, 1), ylim=(-1, 1),
-                              kernel=kernel,
-                              normalize=False, hmin=False)
+                              xlim=(-1, 1), ylim=(-1, 1), **kwargs)
     assert img == kernel.w(0, 3)
 
 
@@ -1230,44 +1171,39 @@ def test_invalid_region(backend):
 
 
 @mark.parametrize("backend", backends)
-def test_required_columns(backend):
+@mark.parametrize("func", funcs)
+@mark.parametrize("column", ['m', 'h'])
+def test_required_columns(backend, func, column):
     """
     Interpolation without one of the required columns results in a KeyError.
     """
     # This test is currently expected to fail on both backends, since dropping
     # a column from a SarracenDataFrame returns a DataFrame.
-    data_2 = {'x': [-1, 1], 'y': [1, -1],
-              'A': [2, 1.5], 'B': [5, 4], 'C': [3, 2],
-              'h': [1.1, 1.3], 'rho': [0.55, 0.45], 'm': [0.04, 0.05]}
-    sdf_2 = SarracenDataFrame(data_2, params=dict())
-    data_3 = {'x': [-1, 1], 'y': [1, -1], 'z': [1, -1],
-              'A': [2, 1.5], 'B': [5, 4], 'C': [3, 2],
-              'h': [1.1, 1.3], 'rho': [0.55, 0.45], 'm': [0.04, 0.05]}
-    sdf_3 = SarracenDataFrame(data_3, params=dict())
+    data = {'x': [-1, 1], 'y': [1, -1],
+            'A': [2, 1.5], 'B': [5, 4], 'C': [3, 2],
+            'h': [1.1, 1.3], 'rho': [0.55, 0.45], 'm': [0.04, 0.05]}
 
-    sdf_2.backend = backend
-    sdf_3.backend = backend
+    if func in funcs3d + funcs3dvec:
+        data['z'] = [1, -1]
 
-    for column in ['m', 'h']:
-        sdf_dropped = sdf_2.drop(column, axis=1)
-        with raises(KeyError):
-            interpolate_2d(sdf_dropped, 'A')
-        with raises(KeyError):
-            interpolate_2d_line(sdf_dropped, 'A')
-        with raises(KeyError):
-            interpolate_2d_vec(sdf_dropped, 'A', 'B')
+    sdf = SarracenDataFrame(data, params=dict())
+    sdf.backend = backend
 
-        sdf_dropped = sdf_3.drop(column, axis=1)
-        with raises(KeyError):
-            interpolate_3d_proj(sdf_dropped, 'A')
-        with raises(KeyError):
-            interpolate_3d_cross(sdf_dropped, 'A')
-        with raises(KeyError):
-            interpolate_3d_vec(sdf_dropped, 'A', 'B', 'C')
-        with raises(KeyError):
-            interpolate_3d_cross_vec(sdf_dropped, 'A', 'B', 'C')
-        with raises(KeyError):
-            interpolate_3d_grid(sdf_dropped, 'A')
+    kwargs = dict()
+    if func in funcs2d + funcs3d:
+        kwargs['target'] = 'A'
+    elif func in funcs2dvec:
+        kwargs['target_x'] = 'A'
+        kwargs['target_y'] = 'B'
+    elif func in funcs3dvec:
+        kwargs['target_x'] = 'A'
+        kwargs['target_y'] = 'B'
+        kwargs['target_z'] = 'C'
+
+    sdf_dropped = sdf.drop(column, axis=1)
+
+    with raises(KeyError):
+        func(sdf_dropped, **kwargs)
 
 
 @mark.parametrize("backend", backends)
@@ -1308,100 +1244,68 @@ def test_exact_interpolation(backend):
 
 
 @mark.parametrize("backend", backends)
-def test_density_weighted(backend):
+@mark.parametrize("func", funcs)
+@mark.parametrize("dens_weight", [True, False])
+def test_density_weighted(backend, func, dens_weight):
     """
     Enabling density weighted interpolation will change the resultant image
     """
-    data_2 = {'x': [0], 'y': [0], 'A': [2], 'B': [3],
-              'h': [0.5], 'rho': [0.25], 'm': [0.75]}
-    sdf_2 = SarracenDataFrame(data_2, params=dict())
-    data_3 = {'x': [0], 'y': [0], 'z': [0],
-              'A': [2], 'B': [3], 'C': [4],
-              'h': [0.5], 'rho': [0.25], 'm': [0.75]}
-    sdf_3 = SarracenDataFrame(data_3, params=dict())
+
+    data = {'x': [0], 'y': [0], 'A': [2], 'B': [3],
+            'h': [0.5], 'rho': [0.25], 'm': [0.75]}
+
+    if func in funcs3d + funcs3dvec:
+        data['z'] = [0]
+        data['C'] = [4]
+
+    sdf = SarracenDataFrame(data, params=dict())
+    sdf.backend = backend
+
+    if func in funcs2d + funcs2dvec + funcscolumn:
+        ndim = 2
+    else:
+        ndim = 3
 
     kernel = CubicSplineKernel()
-    sdf_2.backend = backend
-    sdf_3.backend = backend
+    if func in funcscolumn:
+        w = kernel.get_column_kernel()[0]
+    else:
+        w = kernel.w(0, ndim)
 
-    w_2 = kernel.w(0, 2)
-    w_3 = kernel.w(0, 3)
-    column_w = kernel.get_column_kernel()[0]
+    weight = sdf['m'][0] / (sdf['h'][0] ** ndim)
+    if not dens_weight:
+        weight = weight / sdf['rho'][0]
 
-    for dens_weight in [True, False]:
-        if dens_weight:
-            weight2d = sdf_2['m'][0] / (sdf_2['h'][0] ** 2)
-            weight3d = sdf_2['m'][0] / (sdf_2['h'][0] ** 3)
-        else:
-            weight2d = sdf_2['m'][0] / (sdf_2['rho'][0] * sdf_2['h'][0] ** 2)
-            weight3d = sdf_2['m'][0] / (sdf_2['rho'][0] * sdf_2['h'][0] ** 3)
+    kwargs = {'xlim': (-1, 1), 'ylim': (-1, 1),
+              'dens_weight': dens_weight,
+              'normalize': False, 'hmin': False}
 
-        img = interpolate_2d(sdf_2, 'A',
-                             x_pixels=1, y_pixels=1,
-                             xlim=(-1, 1), ylim=(-1, 1),
-                             dens_weight=dens_weight,
-                             normalize=False, hmin=False)
-        assert img == weight2d * sdf_2['A'][0] * w_2
-        img = interpolate_2d_vec(sdf_2, 'A', 'B',
-                                 x_pixels=1, y_pixels=1,
-                                 xlim=(-1, 1), ylim=(-1, 1),
-                                 dens_weight=dens_weight,
-                                 normalize=False, hmin=False)
-        assert img[0] == weight2d * sdf_2['A'][0] * w_2
-        assert img[1] == weight2d * sdf_2['B'][0] * w_2
+    if func in funcsline:
+        kwargs['pixels'] = 1
+    else:
+        kwargs['x_pixels'] = 1
+        kwargs['y_pixels'] = 1
 
-        img = interpolate_2d_line(sdf_2, 'A',
-                                  pixels=1,
-                                  xlim=(-1, 1), ylim=(-1, 1),
-                                  dens_weight=dens_weight,
-                                  normalize=False, hmin=False)
-        assert img[0] == weight2d * sdf_2['A'][0] * w_2
+    if func in [interpolate_3d_grid]:
+        kwargs['z_pixels'] = 1
+        kwargs['zlim'] = (-1, 1)
 
-        img = interpolate_3d_proj(sdf_3, 'A',
-                                  x_pixels=1, y_pixels=1,
-                                  xlim=(-1, 1), ylim=(-1, 1),
-                                  dens_weight=dens_weight,
-                                  normalize=False, hmin=False)
-        assert img[0] == weight2d * sdf_2['A'][0] * column_w
-        img = interpolate_3d_vec(sdf_3, 'A', 'B', 'C',
-                                 x_pixels=1, y_pixels=1,
-                                 xlim=(-1, 1), ylim=(-1, 1),
-                                 dens_weight=dens_weight,
-                                 normalize=False, hmin=False)
-        assert img[0] == weight2d * sdf_2['A'][0] * column_w
-        assert img[1] == weight2d * sdf_2['B'][0] * column_w
-
-        img = interpolate_3d_cross(sdf_3, 'A',
-                                   x_pixels=1, y_pixels=1,
-                                   xlim=(-1, 1), ylim=(-1, 1),
-                                   dens_weight=dens_weight,
-                                   normalize=False, hmin=False)
-        assert img[0] == weight3d * sdf_2['A'][0] * w_3
-        img = interpolate_3d_cross_vec(sdf_3, 'A', 'B', 'C',
-                                       x_pixels=1, y_pixels=1,
-                                       xlim=(-1, 1), ylim=(-1, 1),
-                                       dens_weight=dens_weight,
-                                       normalize=False, hmin=False)
-        assert img[0] == weight3d * sdf_2['A'][0] * w_3
-        assert img[1] == weight3d * sdf_2['B'][0] * w_3
-
-        img = interpolate_3d_grid(sdf_3, 'A',
-                                  x_pixels=1, y_pixels=1, z_pixels=1,
-                                  xlim=(-1, 1), ylim=(-1, 1), zlim=(-1, 1),
-                                  dens_weight=dens_weight,
-                                  normalize=False, hmin=False)
-        assert img[0] == weight3d * sdf_2['A'][0] * w_3
-
-        img = interpolate_3d_line(sdf_3, 'A',
-                                  pixels=1,
-                                  xlim=(-1, 1), ylim=(-1, 1),
-                                  dens_weight=dens_weight,
-                                  normalize=False, hmin=False)
-        assert img[0] == weight3d * sdf_2['A'][0] * w_3
+    if func in funcs2dvec:
+        img = func(sdf, 'A', 'B', **kwargs)
+        assert img[0] == weight * sdf['A'][0] * w
+        assert img[1] == weight * sdf['B'][0] * w
+    elif func in funcs3dvec:
+        img = func(sdf, 'A', 'B', 'C', **kwargs)
+        assert img[0] == weight * sdf['A'][0] * w
+        assert img[1] == weight * sdf['B'][0] * w
+    else:
+        img = func(sdf, 'A', **kwargs)
+        assert img == weight * sdf['A'][0] * w
 
 
 @mark.parametrize("backend", backends)
-def test_normalize_interpolation(backend):
+@mark.parametrize("normalize", [False, True])
+def test_normalize_interpolation(backend, normalize):
     data_2 = {'x': [0], 'y': [0],
               'A': [2], 'B': [3],
               'h': [0.5], 'rho': [0.25], 'm': [0.75]}
@@ -1421,80 +1325,57 @@ def test_normalize_interpolation(backend):
     weight3d = weight / sdf_2['h'][0] * kernel.w(0, 3)
     weight3d_column = weight * kernel.get_column_kernel()[0]
 
-    for normalize in [True, False]:
+    norm2d = 1.0
+    norm3d = 1.0
+    norm3d_column = 1.0
+    if normalize:
+        weight = sdf_2['m'][0] / (sdf_2['rho'][0] * sdf_2['h'][0] ** 2)
+        norm2d = weight * kernel.w(0, 2)
+        norm3d = weight / sdf_2['h'][0] * kernel.w(0, 3)
+        norm3d_column = weight * kernel.get_column_kernel()[0]
 
-        norm2d = 1.0
-        norm3d = 1.0
-        norm3d_column = 1.0
-        if normalize:
-            weight = sdf_2['m'][0] / (sdf_2['rho'][0] * sdf_2['h'][0] ** 2)
-            norm2d = weight * kernel.w(0, 2)
-            norm3d = weight / sdf_2['h'][0] * kernel.w(0, 3)
-            norm3d_column = weight * kernel.get_column_kernel()[0]
+    kwargs = {'xlim': (-1, 1), 'ylim': (-1, 1),
+              'dens_weight': False, 'normalize': normalize}
 
-        img = interpolate_2d(sdf_2, 'A',
-                             x_pixels=1, y_pixels=1,
-                             xlim=(-1, 1), ylim=(-1, 1),
-                             dens_weight=False,
-                             normalize=normalize)
-        assert img == weight2d * sdf_2['A'][0] / norm2d
+    img = interpolate_2d(sdf_2, 'A',
+                         x_pixels=1, y_pixels=1, **kwargs)
+    assert img == weight2d * sdf_2['A'][0] / norm2d
 
-        img = interpolate_2d_vec(sdf_2, 'A', 'B',
-                                 x_pixels=1, y_pixels=1,
-                                 xlim=(-1, 1), ylim=(-1, 1),
-                                 dens_weight=False,
-                                 normalize=normalize)
-        assert img[0] == weight2d * sdf_2['A'][0] / norm2d
-        assert img[1] == weight2d * sdf_2['B'][0] / norm2d
+    img = interpolate_2d_vec(sdf_2, 'A', 'B',
+                             x_pixels=1, y_pixels=1, **kwargs)
+    assert img[0] == weight2d * sdf_2['A'][0] / norm2d
+    assert img[1] == weight2d * sdf_2['B'][0] / norm2d
 
-        img = interpolate_2d_line(sdf_2, 'A',
-                                  pixels=1,
-                                  xlim=(-1, 1), ylim=(-1, 1),
-                                  dens_weight=False,
-                                  normalize=normalize)
-        assert img[0] == weight2d * sdf_2['A'][0] / norm2d
+    img = interpolate_2d_line(sdf_2, 'A',
+                              pixels=1, **kwargs)
+    assert img[0] == weight2d * sdf_2['A'][0] / norm2d
 
-        img = interpolate_3d_proj(sdf_3, 'A',
-                                  x_pixels=1, y_pixels=1,
-                                  xlim=(-1, 1), ylim=(-1, 1),
-                                  dens_weight=False,
-                                  normalize=normalize)
-        assert img[0] == weight3d_column * sdf_2['A'][0] / norm3d_column
-        img = interpolate_3d_vec(sdf_3, 'A', 'B', 'C',
-                                 x_pixels=1, y_pixels=1,
-                                 xlim=(-1, 1), ylim=(-1, 1),
-                                 dens_weight=False,
-                                 normalize=normalize)
-        assert img[0] == weight3d_column * sdf_2['A'][0] / norm3d_column
-        assert img[1] == weight3d_column * sdf_2['B'][0] / norm3d_column
+    img = interpolate_3d_proj(sdf_3, 'A',
+                              x_pixels=1, y_pixels=1, **kwargs)
+    assert img[0] == weight3d_column * sdf_2['A'][0] / norm3d_column
 
-        img = interpolate_3d_cross(sdf_3, 'A',
-                                   x_pixels=1, y_pixels=1,
-                                   xlim=(-1, 1), ylim=(-1, 1),
-                                   dens_weight=False,
-                                   normalize=normalize)
-        assert img[0] == weight3d * sdf_2['A'][0] / norm3d
-        img = interpolate_3d_cross_vec(sdf_3, 'A', 'B', 'C',
-                                       x_pixels=1, y_pixels=1,
-                                       xlim=(-1, 1), ylim=(-1, 1),
-                                       dens_weight=False,
-                                       normalize=normalize)
-        assert img[0] == weight3d * sdf_2['A'][0] / norm3d
-        assert img[1] == weight3d * sdf_2['B'][0] / norm3d
+    img = interpolate_3d_vec(sdf_3, 'A', 'B', 'C',
+                             x_pixels=1, y_pixels=1, **kwargs)
+    assert img[0] == weight3d_column * sdf_2['A'][0] / norm3d_column
+    assert img[1] == weight3d_column * sdf_2['B'][0] / norm3d_column
 
-        img = interpolate_3d_grid(sdf_3, 'A',
-                                  x_pixels=1, y_pixels=1, z_pixels=1,
-                                  xlim=(-1, 1), ylim=(-1, 1), zlim=(-1, 1),
-                                  dens_weight=False,
-                                  normalize=normalize)
-        assert img[0] == weight3d * sdf_2['A'][0] / norm3d
+    img = interpolate_3d_cross(sdf_3, 'A',
+                               x_pixels=1, y_pixels=1, **kwargs)
+    assert img[0] == weight3d * sdf_2['A'][0] / norm3d
 
-        img = interpolate_3d_line(sdf_3, 'A',
-                                  pixels=1,
-                                  xlim=(-1, 1), ylim=(-1, 1),
-                                  dens_weight=False,
-                                  normalize=normalize)
-        assert img[0] == weight3d * sdf_2['A'][0] / norm3d
+    img = interpolate_3d_cross_vec(sdf_3, 'A', 'B', 'C',
+                                   x_pixels=1, y_pixels=1, **kwargs)
+    assert img[0] == weight3d * sdf_2['A'][0] / norm3d
+    assert img[1] == weight3d * sdf_2['B'][0] / norm3d
+
+    img = interpolate_3d_grid(sdf_3, 'A',
+                              x_pixels=1, y_pixels=1, z_pixels=1,
+                              zlim=(-1, 1), **kwargs)
+    assert img[0] == weight3d * sdf_2['A'][0] / norm3d
+
+    img = interpolate_3d_line(sdf_3, 'A',
+                              pixels=1, **kwargs)
+    assert img[0] == weight3d * sdf_2['A'][0] / norm3d
 
 
 @mark.parametrize("backend", backends)
