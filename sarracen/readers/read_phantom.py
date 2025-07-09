@@ -131,7 +131,7 @@ def _read_global_header(fp, def_int_dtype, def_real_dtype):
         new_keys, new_data = _read_global_header_block(fp, dtype)
 
         keys += new_keys
-        data = np.append(data, new_data)
+        data = data + list(new_data)
 
     keys = _rename_duplicates(keys)
 
@@ -280,6 +280,8 @@ def read_phantom(filename: str,
         header_vars = _read_global_header(fp, def_int_dtype, def_real_dtype)
         header_vars['file_identifier'] = file_identifier
         header_vars['iversion'] = iversion
+        header_vars['def_int_dtype'] = def_int_dtype
+        header_vars['def_real_dtype'] = def_real_dtype
 
         df, df_sinks = _read_array_blocks(fp, def_int_dtype, def_real_dtype)
 

@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import sys
 from ..sarracen_dataframe import SarracenDataFrame
+from typing import Union
 
 
 def _get_mass(data: 'SarracenDataFrame'):
@@ -22,12 +23,12 @@ def _get_origin(origin: list) -> list:
 
 
 def _bin_particles_by_radius(data: 'SarracenDataFrame',
-                             r_in: float = None,
-                             r_out: float = None,
+                             r_in: Union[float, None] = None,
+                             r_out: Union[float, None] = None,
                              bins: int = 300,
                              log: bool = False,
                              geometry: str = 'cylindrical',
-                             origin: list = None):
+                             origin: list = [0, 0, 0]):
     """
     Utility function to bin particles in discrete intervals by radius.
 

@@ -123,31 +123,31 @@ def _set_pixels(x_pixels, y_pixels, xlim, ylim, default):
 
 def render(data: 'SarracenDataFrame',  # noqa: F821
            target: str,
-           x: str = None,
-           y: str = None,
-           z: str = None,
-           xsec: float = None,
-           kernel: BaseKernel = None,
-           x_pixels: int = None,
-           y_pixels: int = None,
-           xlim: Tuple[float, float] = None,
-           ylim: Tuple[float, float] = None,
+           x: Union[str, None] = None,
+           y: Union[str, None] = None,
+           z: Union[str, None] = None,
+           xsec: Union[float, None] = None,
+           kernel: Union[BaseKernel, None] = None,
+           x_pixels: Union[int, None] = None,
+           y_pixels: Union[int, None] = None,
+           xlim: Union[Tuple[float, float], None] = None,
+           ylim: Union[Tuple[float, float], None] = None,
            cmap: Union[str, Colormap] = 'gist_heat',
            cbar: bool = True,
            cbar_kws: dict = {},
-           cbar_ax: Axes = None,
-           ax: Axes = None,
-           exact: bool = None,
-           backend: str = None,
+           cbar_ax: Union[Axes, None] = None,
+           ax: Union[Axes, None] = None,
+           exact: bool = False,
+           backend: Union[str, None] = None,
            integral_samples: int = 1000,
-           rotation: Union[np.ndarray, list, Rotation] = None,
-           rot_origin: Union[np.ndarray, list, str] = None,
+           rotation: Union[np.ndarray, list, Rotation, None] = None,
+           rot_origin: Union[np.ndarray, list, str, None] = None,
            log_scale: bool = False,
            symlog_scale: bool = False,
-           dens_weight: bool = None,
-           normalize: bool = True,
+           dens_weight: Union[bool, None] = None,
+           normalize: bool = False,
            hmin: bool = False,
-           corotation: Union[np.ndarray, list] = None,
+           corotation: Union[np.ndarray, list, None] = None,
            plot_apr = False,
            **kwargs) -> Axes:
     """
@@ -213,7 +213,7 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
         "linscale" to kwargs to set the linear region and the scaling of linear
         values, respectively (defaults to 1e-9 and 1, respectevely). Only works
         if log_scale == True.
-    cototation: list, optional
+    corotation: list, optional
         Moves particles to the co-rotating frame of two location. corotation
         contains two lists which correspond to the two x, y, z coordinates
     plot_apr: bool
@@ -316,15 +316,19 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
     kwargs.setdefault("origin", 'lower')
     kwargs.setdefault("extent", [xlim[0], xlim[1], ylim[0], ylim[1]])
     if log_scale:
+        # By default, a log scale plot will only cover 4 levels of magnitude.
+        vminref = 10 ** (np.log10(kwargs.get("vmax", img.max())) - 4)
+        vmin = kwargs.get('vmin', max(vminref, img.min()))
+
         if symlog_scale:
             kwargs.setdefault("norm",
                               SymLogNorm(kwargs.pop("linthresh", 1e-9),
                                          linscale=kwargs.pop("linscale", 1.),
-                                         vmin=kwargs.get('vmin'),
+                                         vmin=vmin,
                                          vmax=kwargs.get('vmax')))
         else:
             kwargs.setdefault("norm", LogNorm(clip=True,
-                                              vmin=kwargs.get('vmin'),
+                                              vmin=vmin,
                                               vmax=kwargs.get('vmax')))
         kwargs.pop("vmin", None)
         kwargs.pop("vmax", None)
@@ -390,15 +394,16 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
 
 def lineplot(data: 'SarracenDataFrame',  # noqa: F821
              target: str,
-             x: str = None,
-             y: str = None,
-             z: str = None,
-             kernel: BaseKernel = None,
+             x: Union[str, None] = None,
+             y: Union[str, None] = None,
+             z: Union[str, None] = None,
+             kernel: Union[BaseKernel, None] = None,
              pixels: int = 512,
-             xlim: Tuple[float, float] = None,
-             ylim: Tuple[float, float] = None,
-             zlim: Tuple[float, float] = None,
-             ax: Axes = None, backend: str = None,
+             xlim: Union[Tuple[float, float], None] = None,
+             ylim: Union[Tuple[float, float], None] = None,
+             zlim: Union[Tuple[float, float], None] = None,
+             ax: Union[Axes, None] = None,
+             backend: Union[str, None] = None,
              log_scale: bool = False,
              dens_weight: bool = False,
              normalize: bool = True,
@@ -517,22 +522,22 @@ def lineplot(data: 'SarracenDataFrame',  # noqa: F821
 
 def streamlines(data: 'SarracenDataFrame',  # noqa: F821
                 target: Union[Tuple[str, str], Tuple[str, str, str]],
-                x: str = None,
-                y: str = None,
-                z: str = None,
-                xsec: float = None,
-                kernel: BaseKernel = None,
+                x: Union[str, None] = None,
+                y: Union[str, None] = None,
+                z: Union[str, None] = None,
+                xsec: Union[float, None] = None,
+                kernel: Union[BaseKernel, None] = None,
                 integral_samples: int = 1000,
-                rotation: Union[np.ndarray, list, Rotation] = None,
-                rot_origin: Union[np.ndarray, list, str] = None,
-                x_pixels: int = None,
-                y_pixels: int = None,
-                xlim: Tuple[float, float] = None,
-                ylim: Tuple[float, float] = None,
-                ax: Axes = None,
-                exact: bool = None,
-                backend: str = None,
-                dens_weight: bool = None,
+                rotation: Union[np.ndarray, list, Rotation, None] = None,
+                rot_origin: Union[np.ndarray, list, str, None] = None,
+                x_pixels: Union[int, None] = None,
+                y_pixels: Union[int, None] = None,
+                xlim: Union[Tuple[float, float], None] = None,
+                ylim: Union[Tuple[float, float], None] = None,
+                ax: Union[Axes, None] = None,
+                exact: bool = False,
+                backend: Union[str, None] = None,
+                dens_weight: Union[bool, None] = None,
                 normalize: bool = True,
                 hmin: bool = False,
                 **kwargs) -> Axes:
@@ -619,35 +624,27 @@ def streamlines(data: 'SarracenDataFrame',  # noqa: F821
     """
     # Choose between the various interpolation functions available, based on
     # initial data passed to this function.
-    interpolation_type = None
-
     if data.get_dim() == 2:
         if not len(target) == 2:
             raise ValueError('Target vector is not 2-dimensional.')
-        interpolation_type = '2d'
+        img = interpolate_2d_vec(data, target[0], target[1], x, y, kernel,
+                                 x_pixels, y_pixels, xlim, ylim, exact,
+                                 backend, dens_weight, normalize, hmin)
     elif data.get_dim() == 3:
         if not len(target) == 3:
             raise ValueError('Target vector is not 3-dimensional.')
         if xsec is not None:
-            interpolation_type = '3d_cross'
+            img = interpolate_3d_cross_vec(data, target[0], target[1],
+                                           target[2], xsec, x, y, z, kernel,
+                                           rotation, rot_origin, x_pixels,
+                                           y_pixels, xlim, ylim, backend,
+                                           dens_weight, normalize, hmin)
         else:
-            interpolation_type = '3d'
-
-    if interpolation_type == '2d':
-        img = interpolate_2d_vec(data, target[0], target[1], x, y, kernel,
-                                 x_pixels, y_pixels, xlim, ylim, exact,
-                                 backend, dens_weight, normalize, hmin)
-    elif interpolation_type == '3d_cross':
-        img = interpolate_3d_cross_vec(data, target[0], target[1], target[2],
-                                       xsec, x, y, z, kernel, rotation,
-                                       rot_origin, x_pixels, y_pixels, xlim,
-                                       ylim, backend, dens_weight, normalize,
-                                       hmin)
-    elif interpolation_type == '3d':
-        img = interpolate_3d_vec(data, target[0], target[1], target[2], x, y,
-                                 kernel, integral_samples, rotation,
-                                 rot_origin, x_pixels, y_pixels, xlim, ylim,
-                                 exact, backend, dens_weight, normalize, hmin)
+            img = interpolate_3d_vec(data, target[0], target[1], target[2], x,
+                                     y, kernel, integral_samples, rotation,
+                                     rot_origin, x_pixels, y_pixels, xlim,
+                                     ylim, exact, backend, dens_weight,
+                                     normalize, hmin)
     else:
         raise ValueError('`data` is not a valid number of dimensions.')
 
@@ -679,24 +676,24 @@ def streamlines(data: 'SarracenDataFrame',  # noqa: F821
 
 def arrowplot(data: 'SarracenDataFrame',  # noqa: F821
               target: Union[Tuple[str, str], Tuple[str, str, str]],
-              x: str = None,
-              y: str = None,
-              z: str = None,
-              xsec: float = None,
-              kernel: BaseKernel = None,
+              x: Union[str, None] = None,
+              y: Union[str, None] = None,
+              z: Union[str, None] = None,
+              xsec: Union[float, None] = None,
+              kernel: Union[BaseKernel, None] = None,
               integral_samples: int = 1000,
-              rotation: Union[np.ndarray, list, Rotation] = None,
-              rot_origin: Union[np.ndarray, list, str] = None,
-              x_arrows: int = None,
-              y_arrows: int = None,
-              xlim: Tuple[float, float] = None,
-              ylim: Tuple[float, float] = None,
-              ax: Axes = None,
+              rotation: Union[np.ndarray, list, Rotation, None] = None,
+              rot_origin: Union[np.ndarray, list, str, None] = None,
+              x_arrows: Union[int, None] = None,
+              y_arrows: Union[int, None] = None,
+              xlim: Union[Tuple[float, float], None] = None,
+              ylim: Union[Tuple[float, float], None] = None,
+              ax: Union[Axes, None] = None,
               qkey: bool = True,
-              qkey_kws=None,
-              exact: bool = None,
-              backend: str = None,
-              dens_weight: bool = None,
+              qkey_kws: Union[dict, None] = None,
+              exact: bool = False,
+              backend: Union[str, None] = None,
+              dens_weight: Union[bool, None] = None,
               normalize: bool = True,
               hmin: bool = False,
               **kwargs) -> Axes:
@@ -789,36 +786,27 @@ def arrowplot(data: 'SarracenDataFrame',  # noqa: F821
     xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
     x_arrows, y_arrows = _set_pixels(x_arrows, y_arrows, xlim, ylim, 20)
 
-    interpolation_type = None
-
     if data.get_dim() == 2:
         if not len(target) == 2:
             raise ValueError('Target vector is not 2-dimensional.')
-        interpolation_type = '2d'
+        img = interpolate_2d_vec(data, target[0], target[1], x, y, kernel,
+                                 x_arrows, y_arrows, xlim, ylim, exact,
+                                 backend, dens_weight, normalize, hmin)
     elif data.get_dim() == 3:
         if not len(target) == 3:
             raise ValueError('Target vector is not 3-dimensional.')
         if xsec is not None:
-            interpolation_type = '3d_cross'
+            img = interpolate_3d_cross_vec(data, target[0], target[1],
+                                           target[2], xsec, x, y, z, kernel,
+                                           rotation, rot_origin, x_arrows,
+                                           y_arrows, xlim, ylim, backend,
+                                           dens_weight, normalize, hmin)
         else:
-            interpolation_type = '3d'
-
-    if interpolation_type == '2d':
-        img = interpolate_2d_vec(data, target[0], target[1], x, y, kernel,
-                                 x_arrows, y_arrows, xlim, ylim, exact,
-                                 backend, dens_weight, normalize, hmin)
-    elif interpolation_type == '3d_cross':
-        img = interpolate_3d_cross_vec(data, target[0], target[1], target[2],
-                                       xsec, x, y, z, kernel, rotation,
-                                       rot_origin, x_arrows, y_arrows, xlim,
-                                       ylim, backend, dens_weight, normalize,
-                                       hmin)
-    elif interpolation_type == '3d':
-        img = interpolate_3d_vec(data, target[0], target[1], target[2], x, y,
-                                 kernel, integral_samples, rotation,
-                                 rot_origin, x_arrows, y_arrows, xlim, ylim,
-                                 exact, backend, dens_weight, normalize,
-                                 hmin)
+            img = interpolate_3d_vec(data, target[0], target[1], target[2], x,
+                                     y, kernel, integral_samples, rotation,
+                                     rot_origin, x_arrows, y_arrows, xlim,
+                                     ylim, exact, backend, dens_weight,
+                                     normalize, hmin)
     else:
         raise ValueError('`data` is not a valid number of dimensions.')
 
