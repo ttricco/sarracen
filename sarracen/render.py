@@ -24,7 +24,9 @@ from .interpolate import interpolate_2d_line, interpolate_2d, \
 from .kernels import BaseKernel
 
 
-def _default_axes(data, x, y):
+def _default_axes(data: 'SarracenDataFrame',
+                  x: Union[str, None],
+                  y: Union[str, None]):
     """
     Utility function to determine the x & y columns to use for rendering.
 
@@ -49,9 +51,13 @@ def _default_axes(data, x, y):
     return x, y
 
 
-def _default_bounds(data, x, y,
-                    xlim,
-                    ylim) -> Tuple[Tuple[float, float], Tuple[float, float]]:
+def _default_bounds(data: 'SarracenDataFrame',
+                    x: str,
+                    y: str,
+                    xlim: Union[Tuple[float, float], None],
+                    ylim: Union[Tuple[float, float],
+                                None]) -> Tuple[Tuple[float, float],
+                                                Tuple[float, float]]:
     """
     Utility function to determine the 2-dimensional boundaries to use in 2D
     rendering.
@@ -62,7 +68,7 @@ def _default_bounds(data, x, y,
         The particle dataset to render.
     x, y: str
         The directional column labels that will be used for rendering.
-    xlim, ylim: float
+    xlim, ylim: tuple of float
         The minimum and maximum values passed to the render function, in
         particle data space.
 
