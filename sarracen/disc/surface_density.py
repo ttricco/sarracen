@@ -4,15 +4,17 @@ from ..sarracen_dataframe import SarracenDataFrame
 from .utils import _get_mass, _get_origin
 from .utils import _bin_particles_by_radius, _get_bin_midpoints
 
+from typing import Union
+
 
 def azimuthal_average(data: 'SarracenDataFrame',
                       target: str,
-                      r_in: float = None,
-                      r_out: float = None,
+                      r_in: Union[float, None] = None,
+                      r_out: Union[float, None] = None,
                       bins: int = 300,
                       log: bool = False,
                       geometry: str = 'cylindrical',
-                      origin: list = None,
+                      origin: Union[list, None] = None,
                       retbins: bool = False):
     """
     Calculates the 1D azimuthally-averaged profile for a target quantity.
@@ -71,12 +73,12 @@ def azimuthal_average(data: 'SarracenDataFrame',
 
 
 def surface_density(data: 'SarracenDataFrame',
-                    r_in: float = None,
-                    r_out: float = None,
+                    r_in: Union[float, None] = None,
+                    r_out: Union[float, None] = None,
                     bins: int = 300,
                     log: bool = False,
                     geometry: str = 'cylindrical',
-                    origin: list = None,
+                    origin: Union[list, None] = None,
                     retbins: bool = False):
     """
     Calculates the 1D azimuthally-averaged surface density profile.
@@ -200,12 +202,12 @@ def _calc_angular_momentum(data: 'SarracenDataFrame',
 
 
 def angular_momentum(data: 'SarracenDataFrame',
-                     r_in: float = None,
-                     r_out: float = None,
+                     r_in: Union[float, None] = None,
+                     r_out: Union[float, None] = None,
                      bins: int = 300,
                      log: bool = False,
                      geometry: str = 'cylindrical',
-                     origin: list = None,
+                     origin: Union[list, None] = None,
                      retbins: bool = False,
                      unit_vector: bool = True):
     """
@@ -265,7 +267,7 @@ def angular_momentum(data: 'SarracenDataFrame',
 
 def _calc_scale_height(data: 'SarracenDataFrame',
                        rbins: pd.Series,
-                       origin: list = None):
+                       origin: Union[list, None] = None):
     """
     Utility function to calculate the scale height of the disc.
 
@@ -284,6 +286,8 @@ def _calc_scale_height(data: 'SarracenDataFrame',
     H: Series
         The scale height of the disc.
     """
+
+    origin = _get_origin(origin)
     Lx, Ly, Lz = _calc_angular_momentum(data, rbins, origin, unit_vector=True)
 
     zdash = rbins.map(Lx).to_numpy() * data[data.xcol] \
@@ -294,12 +298,12 @@ def _calc_scale_height(data: 'SarracenDataFrame',
 
 
 def scale_height(data: 'SarracenDataFrame',
-                 r_in: float = None,
-                 r_out: float = None,
+                 r_in: Union[float, None] = None,
+                 r_out: Union[float, None] = None,
                  bins: int = 300,
                  log: bool = False,
                  geometry: str = 'cylindrical',
-                 origin: list = None,
+                 origin: Union[list, None] = None,
                  retbins: bool = False):
     """
     Calculates the scale height, H/R, of the disc.
@@ -364,12 +368,12 @@ def scale_height(data: 'SarracenDataFrame',
 
 
 def honH(data: 'SarracenDataFrame',
-         r_in: float = None,
-         r_out: float = None,
+         r_in: Union[float, None] = None,
+         r_out: Union[float, None] = None,
          bins: int = 300,
          log: bool = False,
          geometry: str = 'cylindrical',
-         origin: list = None,
+         origin: Union[list, None] = None,
          retbins: bool = False):
     """
     Calculates <h>/H, the averaged smoothing length divided by the scale

@@ -15,7 +15,7 @@ def _get_mass(data: 'SarracenDataFrame'):
     return data[data.mcol]
 
 
-def _get_origin(origin: list) -> list:
+def _get_origin(origin: Union[list, None]) -> list:
     if origin is None:
         return [0.0, 0.0, 0.0]
     else:
@@ -28,7 +28,7 @@ def _bin_particles_by_radius(data: 'SarracenDataFrame',
                              bins: int = 300,
                              log: bool = False,
                              geometry: str = 'cylindrical',
-                             origin: list = [0, 0, 0]):
+                             origin: Union[list, None] = None):
     """
     Utility function to bin particles in discrete intervals by radius.
 
@@ -60,6 +60,7 @@ def _bin_particles_by_radius(data: 'SarracenDataFrame',
         Locations of the bin edges.
     """
 
+    origin = _get_origin(origin)
     if geometry == 'spherical':
         r = np.sqrt((data[data.xcol] - origin[0]) ** 2
                     + (data[data.ycol] - origin[1]) ** 2
