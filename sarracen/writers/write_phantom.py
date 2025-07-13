@@ -2,6 +2,8 @@ import numpy as np
 
 from ..sarracen_dataframe import SarracenDataFrame
 
+from typing import Union
+
 
 def _write_fortran_block(value: list,
                          dtype: type):
@@ -21,13 +23,13 @@ def _write_file_identifier(sdf: SarracenDataFrame):
 
 def _write_capture_pattern(def_int: np.dtype,
                            def_real: np.dtype,
-                           iversion: int = 1):
-    write_tag = 16 + def_real().itemsize
-    write_tag = np.array([write_tag], dtype='int32')
+                           iversion_int: int = 1):
+    write_tag_int = 16 + def_real.itemsize
+    write_tag = np.array([write_tag_int], dtype=np.int32)
     i1 = np.array([60769], dtype=def_int)
     r2 = np.array([60878], dtype=def_real)
     i2 = np.array([60878], dtype=np.int32)
-    iversion = np.array([iversion], dtype=np.int32)
+    iversion = np.array([iversion_int], dtype=np.int32)
     i3 = np.array([690706], dtype=np.int32)
 
     capture_pattern = bytearray(write_tag.tobytes())
@@ -62,12 +64,13 @@ def _write_global_header_tags_and_values(tags,
 
 
 def _write_global_header(sdf: SarracenDataFrame,
-                         def_int: np.dtype,
-                         def_real: np.dtype):
+                         def_int: type,
+                         def_real: type):
     params_dict = _remove_invalid_keys(sdf)
     dtypes = [def_int, np.int8, np.int16, np.int32, np.int64,
               def_real, np.float32, np.float64]
-    header_data = [(dtype, [], []) for dtype in dtypes]
+    header_data: list[tuple[type, list, list]] = [(dtype, [], [])
+                                                  for dtype in dtypes]
     used_keys = set()
 
     for dtype, tags, values in header_data:
@@ -106,9 +109,9 @@ def _get_last_index(sdf):
 
 
 def _write_value_arrays(data: SarracenDataFrame,
-                        def_int: np.dtype,
-                        def_real: np.dtype,
-                        sinks: SarracenDataFrame = None):
+                        def_int: type,
+                        def_real: type,
+                        sinks: Union[SarracenDataFrame, None] = None):
 
     dtypes = [def_int, np.int8, np.int16, np.int32, np.int64,
               def_real, np.float32, np.float64]
@@ -151,7 +154,7 @@ def _write_value_arrays(data: SarracenDataFrame,
 
 def write_phantom(filename: str,
                   data: SarracenDataFrame,
-                  sinks: SarracenDataFrame = None):
+                  sinks: Union[SarracenDataFrame, None] = None):
     if data.isnull().values.any():
         raise ValueError("particle DataFrame contains NaNs or missing values.")
 
