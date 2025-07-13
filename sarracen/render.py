@@ -286,14 +286,14 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
             if dens_weight is None:
                 dens_weight = False
             img = interpolate_3d_cross(data, target, x, y, z, xsec, kernel,
-                                       corotation, rotation, rot_origin, 
+                                       corotation, rotation, rot_origin,
                                        x_pixels, y_pixels, xlim, ylim, backend,
                                        dens_weight, normalize, hmin)
         else:
-            img = interpolate_3d_proj(data, target, x, y, kernel, 
-                                      integral_samples, corotation, rotation, 
-                                      rot_origin, x_pixels, y_pixels, xlim, 
-                                      ylim, exact, backend, dens_weight, 
+            img = interpolate_3d_proj(data, target, x, y, kernel,
+                                      integral_samples, corotation, rotation,
+                                      rot_origin, x_pixels, y_pixels, xlim,
+                                      ylim, exact, backend, dens_weight,
                                       normalize, hmin)
     else:
         raise ValueError('`data` is not a valid number of dimensions.')
