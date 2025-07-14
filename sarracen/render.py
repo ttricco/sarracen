@@ -24,7 +24,7 @@ from .interpolate import interpolate_2d_line, interpolate_2d, \
 from .kernels import BaseKernel
 
 
-def _default_axes(data: 'SarracenDataFrame',
+def _default_axes(data: 'SarracenDataFrame',  # noqa: F821
                   x: Union[str, None],
                   y: Union[str, None]) -> Tuple[str, str]:
     """
@@ -51,7 +51,7 @@ def _default_axes(data: 'SarracenDataFrame',
     return x, y
 
 
-def _default_bounds(data: 'SarracenDataFrame',
+def _default_bounds(data: 'SarracenDataFrame',  # noqa: F821
                     x: str,
                     y: str,
                     xlim: Union[Tuple[float, float], None],
