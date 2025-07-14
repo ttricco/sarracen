@@ -26,7 +26,7 @@ from .kernels import BaseKernel
 
 def _default_axes(data: 'SarracenDataFrame',
                   x: Union[str, None],
-                  y: Union[str, None]):
+                  y: Union[str, None]) -> Tuple[str, str]:
     """
     Utility function to determine the x & y columns to use for rendering.
 
@@ -93,7 +93,11 @@ def _default_bounds(data: 'SarracenDataFrame',
     return (x_min, x_max), (y_min, y_max)
 
 
-def _set_pixels(x_pixels, y_pixels, xlim, ylim, default):
+def _set_pixels(x_pixels: Union[int, None],
+                y_pixels: Union[int, None],
+                xlim: Tuple[float, float],
+                ylim: Tuple[float, float],
+                default: int) -> Tuple[int, int]:
     """
     Utility function to determine the number of pixels to interpolate over in
     2D interpolation.
@@ -107,7 +111,7 @@ def _set_pixels(x_pixels, y_pixels, xlim, ylim, default):
         data space.
     Returns
     -------
-    x_pixels, y_pixels
+    x_pixels, y_pixels: int
         The number of pixels in the x & y directions to use in 2D
         interpolation.
     """
@@ -117,12 +121,12 @@ def _set_pixels(x_pixels, y_pixels, xlim, ylim, default):
     dx = xlim[1] - xlim[0]
     dy = ylim[1] - ylim[0]
 
-    if x_pixels is None and y_pixels is None:
-        x_pixels = default
-    if x_pixels is None:
-        x_pixels = int(np.rint(y_pixels * (dx / dy)))
     if y_pixels is None:
+        if x_pixels is None:
+            x_pixels = default
         y_pixels = int(np.rint(x_pixels * (dy / dx)))
+    elif x_pixels is None:
+        x_pixels = int(np.rint(y_pixels * (dx / dy)))
 
     return x_pixels, y_pixels
 
