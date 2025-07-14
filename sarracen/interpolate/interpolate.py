@@ -161,7 +161,9 @@ def _set_pixels(x_pixels: Union[int, None],
     return x_pixels, y_pixels
 
 
-def _verify_columns(data, x, y):
+def _verify_columns(data: 'SarracenDataFrame',  # noqa: F821
+                    x: str,
+                    y: str) -> None:
     """
     Verify that columns required for 2D interpolation exist in `data`.
 
@@ -194,7 +196,7 @@ def _verify_columns(data, x, y):
 def _check_boundaries(x_pixels: int,
                       y_pixels: int,
                       xlim: Tuple[float, float],
-                      ylim: Tuple[float, float]):
+                      ylim: Tuple[float, float]) -> None:
     """
     Verify that the pixel count and boundaries of a 2D plot describe a valid
     region.
@@ -225,7 +227,8 @@ def _check_boundaries(x_pixels: int,
         raise ValueError("`y_pixels` must be greater than zero!")
 
 
-def _check_dimension(data, dim):
+def _check_dimension(data: 'SarracenDataFrame',  # noqa: F821
+                     dim: int) -> None:
     """
     Verify that a given dataset describes data with a required number of
     dimensions.
@@ -246,7 +249,15 @@ def _check_dimension(data, dim):
         raise TypeError(f"Dataset is not {dim}-dimensional.")
 
 
-def _rotate_data(data, x, y, z, rotation, rot_origin):
+def _rotate_data(data: 'SarracenDataFrame',  # noqa: F821
+                 x: str,
+                 y: str,
+                 z: str,
+                 given_rotation: Union[np.ndarray, list, Rotation, None],
+                 rot_origin: Union[np.ndarray, list,
+                                   str, None]) -> Tuple[np.ndarray,
+                                                        np.ndarray,
+                                                        np.ndarray]:
     """
     Rotate vector data in a particle dataset.
 
@@ -274,9 +285,11 @@ def _rotate_data(data, x, y, z, rotation, rot_origin):
     x_data = data[x].to_numpy()
     y_data = data[y].to_numpy()
     z_data = data[z].to_numpy()
-    if rotation is not None:
-        if not isinstance(rotation, Rotation):
-            rotation = Rotation.from_euler('zyx', rotation, degrees=True)
+    if given_rotation is not None:
+        if not isinstance(given_rotation, Rotation):
+            rotation = Rotation.from_euler('zyx',
+                                           given_rotation,
+                                           degrees=True)
 
         vectors = data[[x, y, z]].to_numpy()
 
@@ -310,7 +323,15 @@ def _rotate_data(data, x, y, z, rotation, rot_origin):
     return x_data, y_data, z_data
 
 
-def _rotate_xyz(data, x, y, z, rotation, rot_origin):
+def _rotate_xyz(data: 'SarracenDataFrame',  # noqa: F821
+                x: str,
+                y: str,
+                z: str,
+                rotation: Union[np.ndarray, list, Rotation, None],
+                rot_origin: Union[np.ndarray, list,
+                                  str, None]) -> Tuple[np.ndarray,
+                                                       np.ndarray,
+                                                       np.ndarray]:
     """
     Rotate positional data in a particle dataset.
 
@@ -356,7 +377,14 @@ def _rotate_xyz(data, x, y, z, rotation, rot_origin):
     return x_data, y_data, z_data
 
 
-def _corotate(corotation, rotation):
+def _corotate(corotation: Union[np.ndarray, list],
+              rotation: Union[np.ndarray,
+                              list,
+                              Rotation,
+                              None]) -> Tuple[Union[np.ndarray, list,
+                                                    Rotation, None],
+                                              Union[np.ndarray,
+                                                    list]]:
     """
     Calculates the rotation matrix for a corotating frame.
 
@@ -365,12 +393,12 @@ def _corotate(corotation, rotation):
     corotation: array_like
         The x, y, z coordinates of two locations which determines the
         corotating frame. Each coordinate is also array_like.
-    rotation: array_like, optional
+    rotation: array_like or SciPy Rotation, optional
         An additional rotation to apply to the corotating frame.
 
     Returns
     -------
-    rotation: array_like
+    rotation: array_like or SciPy Rotation
         The rotation to apply to the data before interpolation.
     rot_origin: array_like
         Point of rotation of the data.
