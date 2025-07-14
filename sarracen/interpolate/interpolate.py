@@ -13,7 +13,9 @@ from typing import Tuple, Union, Optional
 import warnings
 
 
-def _default_xy(data, x, y):
+def _default_xy(data: 'SarracenDataFrame',  # noqa: F821
+                x: Union[str, None],
+                y: Union[str, None]) -> Tuple[str, str]:
     """
     Utility function to determine the x & y columns to use during 2D
     interpolation.
@@ -39,7 +41,10 @@ def _default_xy(data, x, y):
     return x, y
 
 
-def _default_xyz(data, x, y, z):
+def _default_xyz(data: 'SarracenDataFrame',  # noqa: F821
+                 x: Union[str, None],
+                 y: Union[str, None],
+                 z: Union[str, None]) -> Tuple[str, str, str]:
     """
     Utility function to determine the x, y and z columns to use during 3-D
     interpolation.
@@ -74,11 +79,14 @@ def _default_xyz(data, x, y, z):
     return x, y, z
 
 
-def _default_bounds(data,
-                    x,
-                    y,
-                    xlim,
-                    ylim) -> Tuple[Tuple[float, float], Tuple[float, float]]:
+def _default_bounds(data: 'SarracenDataFrame',  # noqa: F821
+                    x: str,
+                    y: str,
+                    xlim: Union[Tuple[Union[float, None], Union[float, None]],
+                                None],
+                    ylim: Union[Tuple[Union[float, None], Union[float, None]],
+                                None]) -> Tuple[Tuple[float, float],
+                                                Tuple[float, float]]:
     """
     Utility function to determine the 2-dimensional boundaries to use in 2D
     interpolation.
