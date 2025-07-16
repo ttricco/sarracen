@@ -378,13 +378,12 @@ def _rotate_xyz(data: 'SarracenDataFrame',  # noqa: F821
 
 
 def _corotate(corotation: Union[np.ndarray, list],
-              rotation: Union[np.ndarray,
-                              list,
-                              Rotation,
-                              None]) -> Tuple[Union[np.ndarray, list,
-                                                    Rotation, None],
-                                              Union[np.ndarray,
-                                                    list]]:
+              rotation: Union[np.ndarray, list,
+                              Rotation, None]) -> Tuple[Union[np.ndarray,
+                                                              list,
+                                                              Rotation],
+                                                        Union[np.ndarray,
+                                                              list]]:
     """
     Calculates the rotation matrix for a corotating frame.
 
@@ -423,7 +422,8 @@ def _corotate(corotation: Union[np.ndarray, list],
     return rotation, rot_origin
 
 
-def _get_mass(data: 'SarracenDataFrame'):  # noqa: F821
+def _get_mass(data: 'SarracenDataFrame') -> Union[np.ndarray,  # noqa: F821
+                                                  float]:
     if data.mcol is None:
         if 'mass' not in data.params:
             raise KeyError("'mass' column does not exist in this "
@@ -433,7 +433,7 @@ def _get_mass(data: 'SarracenDataFrame'):  # noqa: F821
     return data[data.mcol].to_numpy()
 
 
-def _get_density(data: 'SarracenDataFrame'):  # noqa: F821
+def _get_density(data: 'SarracenDataFrame') -> np.ndarray:  # noqa: F821
     if data.rhocol is None:
         if data.hcol not in data.columns or 'hfact' not in data.params:
             raise KeyError('Density cannot be derived from the columns in '
@@ -448,7 +448,7 @@ def _get_density(data: 'SarracenDataFrame'):  # noqa: F821
 
 def _get_weight(data: 'SarracenDataFrame',  # noqa: F821
                 target: Union[str, np.ndarray],
-                dens_weight: bool):
+                dens_weight: bool) -> np.ndarray:
 
     if type(target) is str:
         if target == 'rho':
@@ -474,11 +474,11 @@ def _get_weight(data: 'SarracenDataFrame',  # noqa: F821
 
 
 def _get_smoothing_lengths(data: 'SarracenDataFrame',  # noqa: F821
-                           hmin: float,
+                           hmin: bool,
                            x_pixels: int,
                            y_pixels: int,
                            xlim: Tuple[float, float],
-                           ylim: Tuple[float, float]):
+                           ylim: Tuple[float, float]) -> np.ndarray:
     """ Return smoothing lengths, imposing a min length if hmin is True. """
 
     if hmin:
@@ -613,7 +613,7 @@ def interpolate_2d_vec(data: 'SarracenDataFrame',  # noqa: F821
                        backend: Union[str, None] = None,
                        dens_weight: bool = False,
                        normalize: bool = True,
-                       hmin: bool = False):
+                       hmin: bool = False) -> Tuple[np.ndarray, np.ndarray]:
     """
     Interpolate vector particle data across two directional axes to a 2D grid
     of particles.
@@ -835,7 +835,7 @@ def interpolate_3d_line(data: 'SarracenDataFrame',  # noqa: F821
                         backend: Union[str, None] = None,
                         dens_weight: bool = False,
                         normalize: bool = True,
-                        hmin: bool = False):
+                        hmin: bool = False) -> np.ndarray:
     """
     Interpolate vector particle data across three directional axes to a 1D
     line.
@@ -964,7 +964,7 @@ def interpolate_3d_proj(data: 'SarracenDataFrame',  # noqa: F821
                         backend: Union[str, None] = None,
                         dens_weight: Union[bool, None] = None,
                         normalize: bool = True,
-                        hmin: bool = False):
+                        hmin: bool = False) -> np.ndarray:
     """
     Interpolate 3D particle data to a 2D grid of pixels.
 
@@ -1107,7 +1107,7 @@ def interpolate_3d_vec(data: 'SarracenDataFrame',  # noqa: F821
                        backend: Union[str, None] = None,
                        dens_weight: bool = False,
                        normalize: bool = True,
-                       hmin: bool = False):
+                       hmin: bool = False) -> Tuple[np.ndarray, np.ndarray]:
     """
     Interpolate 3D vector particle data to a 2D grid of pixels.
 
@@ -1246,7 +1246,7 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',  # noqa: F821
                          backend: Union[str, None] = None,
                          dens_weight: bool = False,
                          normalize: bool = True,
-                         hmin: bool = False):
+                         hmin: bool = False) -> np.ndarray:
     """
     Interpolate 3D particle data to a 2D grid, using a 3D cross-section.
 
@@ -1385,7 +1385,8 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame',  # noqa: F821
                              backend: Union[str, None] = None,
                              dens_weight: bool = False,
                              normalize: bool = True,
-                             hmin: bool = False):
+                             hmin: bool = False) -> Tuple[np.ndarray,
+                                                          np.ndarray]:
     """
     Interpolate 3D vector particle data to a 2D grid, using a 3D cross-section.
 
@@ -1521,7 +1522,7 @@ def interpolate_3d_grid(data: 'SarracenDataFrame',  # noqa: F821
                         backend: Union[str, None] = None,
                         dens_weight: bool = False,
                         normalize: bool = True,
-                        hmin: bool = False):
+                        hmin: bool = False) -> np.ndarray:
     """
     Interpolate 3D particle data to a 3D grid of pixels
 
