@@ -267,7 +267,7 @@ def angular_momentum(data: 'SarracenDataFrame',
 
 def _calc_scale_height(data: 'SarracenDataFrame',
                        rbins: pd.Series,
-                       origin: Union[list, None] = None):
+                       origin: list):
     """
     Utility function to calculate the scale height of the disc.
 
@@ -287,7 +287,6 @@ def _calc_scale_height(data: 'SarracenDataFrame',
         The scale height of the disc.
     """
 
-    origin = _get_origin(origin)
     Lx, Ly, Lz = _calc_angular_momentum(data, rbins, origin, unit_vector=True)
 
     zdash = rbins.map(Lx).to_numpy() * data[data.xcol] \
