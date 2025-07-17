@@ -64,8 +64,8 @@ def _write_global_header_tags_and_values(tags,
 
 
 def _write_global_header(sdf: SarracenDataFrame,
-                         def_int: type,
-                         def_real: type):
+                         def_int: type[np.number],
+                         def_real: type[np.number]):
     params_dict = _remove_invalid_keys(sdf)
     dtypes = [def_int, np.int8, np.int16, np.int32, np.int64,
               def_real, np.float32, np.float64]
@@ -109,8 +109,8 @@ def _get_last_index(sdf):
 
 
 def _write_value_arrays(data: SarracenDataFrame,
-                        def_int: type,
-                        def_real: type,
+                        def_int: type[np.number],
+                        def_real: type[np.number],
                         sinks: Union[SarracenDataFrame, None] = None):
 
     dtypes = [def_int, np.int8, np.int16, np.int32, np.int64,
