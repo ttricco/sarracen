@@ -286,31 +286,25 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
     which uses the integral of the kernel along the chosen line of sight.
     """
     if data.get_dim() == 2:
-        interpolation_type = '2d'
         if dens_weight is None:
             dens_weight = False
-    else:
-        if xsec is not None:
-            interpolation_type = '3d_cross'
-            if dens_weight is None:
-                dens_weight = False
-        else:
-            interpolation_type = '3d'
-
-    if interpolation_type == '2d':
         img = interpolate_2d(data, target, x, y, kernel, x_pixels, y_pixels,
                              xlim, ylim, exact, backend, dens_weight,
                              normalize, hmin)
-    elif interpolation_type == '3d_cross':
-        img = interpolate_3d_cross(data, target, x, y, z, xsec, kernel,
-                                   corotation, rotation, rot_origin, x_pixels,
-                                   y_pixels, xlim, ylim, backend, dens_weight,
-                                   normalize, hmin)
-    elif interpolation_type == '3d':
-        img = interpolate_3d_proj(data, target, x, y, kernel, integral_samples,
-                                  corotation, rotation, rot_origin, x_pixels,
-                                  y_pixels, xlim, ylim, exact, backend,
-                                  dens_weight, normalize, hmin)
+    elif data.get_dim() == 3:
+        if xsec is not None:
+            if dens_weight is None:
+                dens_weight = False
+            img = interpolate_3d_cross(data, target, x, y, z, xsec, kernel,
+                                       corotation, rotation, rot_origin,
+                                       x_pixels, y_pixels, xlim, ylim, backend,
+                                       dens_weight, normalize, hmin)
+        else:
+            img = interpolate_3d_proj(data, target, x, y, kernel,
+                                      integral_samples, corotation, rotation,
+                                      rot_origin, x_pixels, y_pixels, xlim,
+                                      ylim, exact, backend, dens_weight,
+                                      normalize, hmin)
     else:
         raise ValueError('`data` is not a valid number of dimensions.')
 
