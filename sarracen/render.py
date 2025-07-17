@@ -24,7 +24,9 @@ from .interpolate import interpolate_2d_line, interpolate_2d, \
 from .kernels import BaseKernel
 
 
-def _default_axes(data, x, y):
+def _default_axes(data: 'SarracenDataFrame',  # noqa: F821
+                  x: Union[str, None],
+                  y: Union[str, None]) -> Tuple[str, str]:
     """
     Utility function to determine the x & y columns to use for rendering.
 
@@ -49,9 +51,13 @@ def _default_axes(data, x, y):
     return x, y
 
 
-def _default_bounds(data, x, y,
-                    xlim,
-                    ylim) -> Tuple[Tuple[float, float], Tuple[float, float]]:
+def _default_bounds(data: 'SarracenDataFrame',  # noqa: F821
+                    x: str,
+                    y: str,
+                    xlim: Union[Tuple[float, float], None],
+                    ylim: Union[Tuple[float, float],
+                                None]) -> Tuple[Tuple[float, float],
+                                                Tuple[float, float]]:
     """
     Utility function to determine the 2-dimensional boundaries to use in 2D
     rendering.
@@ -62,7 +68,7 @@ def _default_bounds(data, x, y,
         The particle dataset to render.
     x, y: str
         The directional column labels that will be used for rendering.
-    xlim, ylim: float
+    xlim, ylim: tuple of float
         The minimum and maximum values passed to the render function, in
         particle data space.
 
@@ -87,7 +93,11 @@ def _default_bounds(data, x, y,
     return (x_min, x_max), (y_min, y_max)
 
 
-def _set_pixels(x_pixels, y_pixels, xlim, ylim, default):
+def _set_pixels(x_pixels: Union[int, None],
+                y_pixels: Union[int, None],
+                xlim: Tuple[float, float],
+                ylim: Tuple[float, float],
+                default: int) -> Tuple[int, int]:
     """
     Utility function to determine the number of pixels to interpolate over in
     2D interpolation.
@@ -101,7 +111,7 @@ def _set_pixels(x_pixels, y_pixels, xlim, ylim, default):
         data space.
     Returns
     -------
-    x_pixels, y_pixels
+    x_pixels, y_pixels: int
         The number of pixels in the x & y directions to use in 2D
         interpolation.
     """
@@ -111,12 +121,12 @@ def _set_pixels(x_pixels, y_pixels, xlim, ylim, default):
     dx = xlim[1] - xlim[0]
     dy = ylim[1] - ylim[0]
 
-    if x_pixels is None and y_pixels is None:
-        x_pixels = default
-    if x_pixels is None:
-        x_pixels = int(np.rint(y_pixels * (dx / dy)))
     if y_pixels is None:
+        if x_pixels is None:
+            x_pixels = default
         y_pixels = int(np.rint(x_pixels * (dy / dx)))
+    elif x_pixels is None:
+        x_pixels = int(np.rint(y_pixels * (dx / dy)))
 
     return x_pixels, y_pixels
 

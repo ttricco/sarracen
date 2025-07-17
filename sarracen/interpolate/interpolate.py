@@ -13,7 +13,9 @@ from typing import Tuple, Union, Optional
 import warnings
 
 
-def _default_xy(data, x, y):
+def _default_xy(data: 'SarracenDataFrame',  # noqa: F821
+                x: Union[str, None],
+                y: Union[str, None]) -> Tuple[str, str]:
     """
     Utility function to determine the x & y columns to use during 2D
     interpolation.
@@ -39,7 +41,10 @@ def _default_xy(data, x, y):
     return x, y
 
 
-def _default_xyz(data, x, y, z):
+def _default_xyz(data: 'SarracenDataFrame',  # noqa: F821
+                 x: Union[str, None],
+                 y: Union[str, None],
+                 z: Union[str, None]) -> Tuple[str, str, str]:
     """
     Utility function to determine the x, y and z columns to use during 3-D
     interpolation.
@@ -74,11 +79,14 @@ def _default_xyz(data, x, y, z):
     return x, y, z
 
 
-def _default_bounds(data,
-                    x,
-                    y,
-                    xlim,
-                    ylim) -> Tuple[Tuple[float, float], Tuple[float, float]]:
+def _default_bounds(data: 'SarracenDataFrame',  # noqa: F821
+                    x: str,
+                    y: str,
+                    xlim: Union[Tuple[Union[float, None], Union[float, None]],
+                                None],
+                    ylim: Union[Tuple[Union[float, None], Union[float, None]],
+                                None]) -> Tuple[Tuple[float, float],
+                                                Tuple[float, float]]:
     """
     Utility function to determine the 2-dimensional boundaries to use in 2D
     interpolation.
@@ -153,7 +161,9 @@ def _set_pixels(x_pixels: Union[int, None],
     return x_pixels, y_pixels
 
 
-def _verify_columns(data, x, y):
+def _verify_columns(data: 'SarracenDataFrame',  # noqa: F821
+                    x: str,
+                    y: str) -> None:
     """
     Verify that columns required for 2D interpolation exist in `data`.
 
@@ -186,7 +196,7 @@ def _verify_columns(data, x, y):
 def _check_boundaries(x_pixels: int,
                       y_pixels: int,
                       xlim: Tuple[float, float],
-                      ylim: Tuple[float, float]):
+                      ylim: Tuple[float, float]) -> None:
     """
     Verify that the pixel count and boundaries of a 2D plot describe a valid
     region.
@@ -217,7 +227,8 @@ def _check_boundaries(x_pixels: int,
         raise ValueError("`y_pixels` must be greater than zero!")
 
 
-def _check_dimension(data, dim):
+def _check_dimension(data: 'SarracenDataFrame',  # noqa: F821
+                     dim: int) -> None:
     """
     Verify that a given dataset describes data with a required number of
     dimensions.
@@ -238,7 +249,15 @@ def _check_dimension(data, dim):
         raise TypeError(f"Dataset is not {dim}-dimensional.")
 
 
-def _rotate_data(data, x, y, z, rotation, rot_origin):
+def _rotate_data(data: 'SarracenDataFrame',  # noqa: F821
+                 x: str,
+                 y: str,
+                 z: str,
+                 given_rotation: Union[np.ndarray, list, Rotation, None],
+                 rot_origin: Union[np.ndarray, list,
+                                   str, None]) -> Tuple[np.ndarray,
+                                                        np.ndarray,
+                                                        np.ndarray]:
     """
     Rotate vector data in a particle dataset.
 
@@ -266,9 +285,11 @@ def _rotate_data(data, x, y, z, rotation, rot_origin):
     x_data = data[x].to_numpy()
     y_data = data[y].to_numpy()
     z_data = data[z].to_numpy()
-    if rotation is not None:
-        if not isinstance(rotation, Rotation):
-            rotation = Rotation.from_euler('zyx', rotation, degrees=True)
+    if given_rotation is not None:
+        if not isinstance(given_rotation, Rotation):
+            rotation = Rotation.from_euler('zyx',
+                                           given_rotation,
+                                           degrees=True)
 
         vectors = data[[x, y, z]].to_numpy()
 
@@ -302,7 +323,15 @@ def _rotate_data(data, x, y, z, rotation, rot_origin):
     return x_data, y_data, z_data
 
 
-def _rotate_xyz(data, x, y, z, rotation, rot_origin):
+def _rotate_xyz(data: 'SarracenDataFrame',  # noqa: F821
+                x: str,
+                y: str,
+                z: str,
+                rotation: Union[np.ndarray, list, Rotation, None],
+                rot_origin: Union[np.ndarray, list,
+                                  str, None]) -> Tuple[np.ndarray,
+                                                       np.ndarray,
+                                                       np.ndarray]:
     """
     Rotate positional data in a particle dataset.
 
@@ -348,7 +377,13 @@ def _rotate_xyz(data, x, y, z, rotation, rot_origin):
     return x_data, y_data, z_data
 
 
-def _corotate(corotation, rotation):
+def _corotate(corotation: Union[np.ndarray, list],
+              rotation: Union[np.ndarray, list,
+                              Rotation, None]) -> Tuple[Union[np.ndarray,
+                                                              list,
+                                                              Rotation],
+                                                        Union[np.ndarray,
+                                                              list]]:
     """
     Calculates the rotation matrix for a corotating frame.
 
@@ -357,12 +392,12 @@ def _corotate(corotation, rotation):
     corotation: array_like
         The x, y, z coordinates of two locations which determines the
         corotating frame. Each coordinate is also array_like.
-    rotation: array_like, optional
+    rotation: array_like or SciPy Rotation, optional
         An additional rotation to apply to the corotating frame.
 
     Returns
     -------
-    rotation: array_like
+    rotation: array_like or SciPy Rotation
         The rotation to apply to the data before interpolation.
     rot_origin: array_like
         Point of rotation of the data.
@@ -387,7 +422,8 @@ def _corotate(corotation, rotation):
     return rotation, rot_origin
 
 
-def _get_mass(data: 'SarracenDataFrame'):  # noqa: F821
+def _get_mass(data: 'SarracenDataFrame') -> Union[np.ndarray,  # noqa: F821
+                                                  float]:
     if data.mcol is None:
         if 'mass' not in data.params:
             raise KeyError("'mass' column does not exist in this "
@@ -397,7 +433,7 @@ def _get_mass(data: 'SarracenDataFrame'):  # noqa: F821
     return data[data.mcol].to_numpy()
 
 
-def _get_density(data: 'SarracenDataFrame'):  # noqa: F821
+def _get_density(data: 'SarracenDataFrame') -> np.ndarray:  # noqa: F821
     if data.rhocol is None:
         if data.hcol not in data.columns or 'hfact' not in data.params:
             raise KeyError('Density cannot be derived from the columns in '
@@ -412,7 +448,7 @@ def _get_density(data: 'SarracenDataFrame'):  # noqa: F821
 
 def _get_weight(data: 'SarracenDataFrame',  # noqa: F821
                 target: Union[str, np.ndarray],
-                dens_weight: bool):
+                dens_weight: bool) -> np.ndarray:
 
     if type(target) is str:
         if target == 'rho':
@@ -438,11 +474,11 @@ def _get_weight(data: 'SarracenDataFrame',  # noqa: F821
 
 
 def _get_smoothing_lengths(data: 'SarracenDataFrame',  # noqa: F821
-                           hmin: float,
+                           hmin: bool,
                            x_pixels: int,
                            y_pixels: int,
                            xlim: Tuple[float, float],
-                           ylim: Tuple[float, float]):
+                           ylim: Tuple[float, float]) -> np.ndarray:
     """ Return smoothing lengths, imposing a min length if hmin is True. """
 
     if hmin:
@@ -577,7 +613,7 @@ def interpolate_2d_vec(data: 'SarracenDataFrame',  # noqa: F821
                        backend: Union[str, None] = None,
                        dens_weight: bool = False,
                        normalize: bool = True,
-                       hmin: bool = False):
+                       hmin: bool = False) -> Tuple[np.ndarray, np.ndarray]:
     """
     Interpolate vector particle data across two directional axes to a 2D grid
     of particles.
@@ -799,7 +835,7 @@ def interpolate_3d_line(data: 'SarracenDataFrame',  # noqa: F821
                         backend: Union[str, None] = None,
                         dens_weight: bool = False,
                         normalize: bool = True,
-                        hmin: bool = False):
+                        hmin: bool = False) -> np.ndarray:
     """
     Interpolate vector particle data across three directional axes to a 1D
     line.
@@ -928,7 +964,7 @@ def interpolate_3d_proj(data: 'SarracenDataFrame',  # noqa: F821
                         backend: Union[str, None] = None,
                         dens_weight: Union[bool, None] = None,
                         normalize: bool = True,
-                        hmin: bool = False):
+                        hmin: bool = False) -> np.ndarray:
     """
     Interpolate 3D particle data to a 2D grid of pixels.
 
@@ -1071,7 +1107,7 @@ def interpolate_3d_vec(data: 'SarracenDataFrame',  # noqa: F821
                        backend: Union[str, None] = None,
                        dens_weight: bool = False,
                        normalize: bool = True,
-                       hmin: bool = False):
+                       hmin: bool = False) -> Tuple[np.ndarray, np.ndarray]:
     """
     Interpolate 3D vector particle data to a 2D grid of pixels.
 
@@ -1210,7 +1246,7 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',  # noqa: F821
                          backend: Union[str, None] = None,
                          dens_weight: bool = False,
                          normalize: bool = True,
-                         hmin: bool = False):
+                         hmin: bool = False) -> np.ndarray:
     """
     Interpolate 3D particle data to a 2D grid, using a 3D cross-section.
 
@@ -1349,7 +1385,8 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame',  # noqa: F821
                              backend: Union[str, None] = None,
                              dens_weight: bool = False,
                              normalize: bool = True,
-                             hmin: bool = False):
+                             hmin: bool = False) -> Tuple[np.ndarray,
+                                                          np.ndarray]:
     """
     Interpolate 3D vector particle data to a 2D grid, using a 3D cross-section.
 
@@ -1485,7 +1522,7 @@ def interpolate_3d_grid(data: 'SarracenDataFrame',  # noqa: F821
                         backend: Union[str, None] = None,
                         dens_weight: bool = False,
                         normalize: bool = True,
-                        hmin: bool = False):
+                        hmin: bool = False) -> np.ndarray:
     """
     Interpolate 3D particle data to a 3D grid of pixels
 
