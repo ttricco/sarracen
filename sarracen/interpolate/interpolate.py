@@ -243,12 +243,12 @@ def _check_dimension(data: 'SarracenDataFrame',  # noqa: F821
     Returns
     -------
     ValueError
-        If the dataset is not `dim`-dimensional.
+        If the dataset is not `dim`-dimensional or `dim` is not 2 or 3.
     """
     if dim not in [2, 3]:
         raise ValueError("`dim` must be 2 or 3.")
     if data.get_dim() != dim:
-        raise TypeError(f"Dataset is not {dim}-dimensional.")
+        raise ValueError(f"Dataset is not {dim}-dimensional.")
 
 
 def _rotate_data(data: 'SarracenDataFrame',  # noqa: F821
