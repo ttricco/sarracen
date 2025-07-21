@@ -23,19 +23,19 @@ def _write_file_identifier(sdf: SarracenDataFrame):
 
 def _write_capture_pattern(def_int: Type[np.number],
                            def_real: Type[np.number],
-                           iversion_int: int = 1):
-    write_tag = np.array([16 + def_real.itemsize], dtype=np.int32)
+                           iversion: int = 1):
+    write_tag = np.array([16 + def_real().itemsize], dtype=np.int32)
     i1 = np.array([60769], dtype=def_int)
     r2 = np.array([60878], dtype=def_real)
     i2 = np.array([60878], dtype=np.int32)
-    iversion = np.array([iversion_int], dtype=np.int32)
+    iversion_arr = np.array([iversion], dtype=np.int32)
     i3 = np.array([690706], dtype=np.int32)
 
     capture_pattern = bytearray(write_tag.tobytes())
     capture_pattern += bytearray(i1.tobytes())
     capture_pattern += bytearray(r2.tobytes())
     capture_pattern += bytearray(i2.tobytes())
-    capture_pattern += bytearray(iversion.tobytes())
+    capture_pattern += bytearray(iversion_arr.tobytes())
     capture_pattern += bytearray(i3.tobytes())
     capture_pattern += bytearray(write_tag.tobytes())
 
