@@ -131,7 +131,8 @@ def _write_value_arrays(data: SarracenDataFrame,
             dtype_tags.append((dtype, tags))
             used.add(dtype)
 
-        counts = np.array([len(tags) for _, tags in dtype_tags], dtype=np.int32)
+        counts = np.array([len(tags) for _, tags in dtype_tags],
+                          dtype=np.int32)
         write_tag = np.array([len(nvars) * nvars.dtype.itemsize
                               + len(counts) * counts.dtype.itemsize],
                              dtype=np.int32)

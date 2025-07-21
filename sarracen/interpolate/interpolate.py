@@ -246,7 +246,7 @@ def _check_dimension(data: 'SarracenDataFrame',  # noqa: F821
         If the dataset is not `dim`-dimensional.
     """
     if dim not in [2, 3]:
-        raise ValueError(f"dim must be 2 or 3.")
+        raise ValueError("`dim` must be 2 or 3.")
     if data.get_dim() != dim:
         raise TypeError(f"Dataset is not {dim}-dimensional.")
 
@@ -290,8 +290,8 @@ def _rotate_data(data: 'SarracenDataFrame',  # noqa: F821
     if rotation is not None:
         if not isinstance(rotation, Rotation):
             rotation_obj = Rotation.from_euler('zyx',
-                                           rotation,
-                                           degrees=True)
+                                               rotation,
+                                               degrees=True)
         else:
             rotation_obj = rotation
 
