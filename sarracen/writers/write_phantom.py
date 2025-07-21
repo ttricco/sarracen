@@ -2,7 +2,7 @@ import numpy as np
 
 from ..sarracen_dataframe import SarracenDataFrame
 
-from typing import Union
+from typing import Union, Type
 
 
 def _write_fortran_block(value: list,
@@ -21,11 +21,10 @@ def _write_file_identifier(sdf: SarracenDataFrame):
     return file
 
 
-def _write_capture_pattern(def_int: np.dtype,
-                           def_real: np.dtype,
+def _write_capture_pattern(def_int: Type[np.number],
+                           def_real: Type[np.number],
                            iversion_int: int = 1):
-    write_tag_int = 16 + def_real.itemsize
-    write_tag = np.array([write_tag_int], dtype=np.int32)
+    write_tag = np.array([16 + def_real.itemsize], dtype=np.int32)
     i1 = np.array([60769], dtype=def_int)
     r2 = np.array([60878], dtype=def_real)
     i2 = np.array([60878], dtype=np.int32)
@@ -64,8 +63,8 @@ def _write_global_header_tags_and_values(tags,
 
 
 def _write_global_header(sdf: SarracenDataFrame,
-                         def_int: type[np.number],
-                         def_real: type[np.number]):
+                         def_int: Type[np.number],
+                         def_real: Type[np.number]):
     params_dict = _remove_invalid_keys(sdf)
     dtypes = [def_int, np.int8, np.int16, np.int32, np.int64,
               def_real, np.float32, np.float64]
@@ -109,8 +108,8 @@ def _get_last_index(sdf):
 
 
 def _write_value_arrays(data: SarracenDataFrame,
-                        def_int: type[np.number],
-                        def_real: type[np.number],
+                        def_int: Type[np.number],
+                        def_real: Type[np.number],
                         sinks: Union[SarracenDataFrame, None] = None):
 
     dtypes = [def_int, np.int8, np.int16, np.int32, np.int64,
@@ -123,7 +122,7 @@ def _write_value_arrays(data: SarracenDataFrame,
     sdf_dtype_info = []
 
     for sdf in sdf_list:
-        nvars = np.array([_get_last_index(sdf)], dtype='int64')
+        nvars = np.array([_get_last_index(sdf)], dtype=np.int64)
         dtype_tags = []
         used = set()
 
@@ -132,7 +131,7 @@ def _write_value_arrays(data: SarracenDataFrame,
             dtype_tags.append((dtype, tags))
             used.add(dtype)
 
-        counts = np.array([len(tags) for _, tags in dtype_tags], dtype='int32')
+        counts = np.array([len(tags) for _, tags in dtype_tags], dtype=np.int32)
         write_tag = np.array([len(nvars) * nvars.dtype.itemsize
                               + len(counts) * counts.dtype.itemsize],
                              dtype=np.int32)
