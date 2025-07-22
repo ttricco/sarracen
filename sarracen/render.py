@@ -600,6 +600,8 @@ def streamlines(data: 'SarracenDataFrame',  # noqa: F821
     if data.get_dim() == 2:
         if not len(target) == 2:
             raise ValueError('Target vector is not 2-dimensional.')
+        if dens_weight is None:
+            dens_weight = False
         img = interpolate_2d_vec(data, target[0], target[1], x, y, kernel,
                                  x_pixels, y_pixels, xlim, ylim, exact,
                                  backend, dens_weight, normalize, hmin)
@@ -607,6 +609,8 @@ def streamlines(data: 'SarracenDataFrame',  # noqa: F821
         if not len(target) == 3:
             raise ValueError('Target vector is not 3-dimensional.')
         if xsec is not None:
+            if dens_weight is None:
+                dens_weight = False
             img = interpolate_3d_cross_vec(data, target[0], target[1],
                                            target[2], xsec, x, y, z, kernel,
                                            rotation, rot_origin, x_pixels,
@@ -762,6 +766,8 @@ def arrowplot(data: 'SarracenDataFrame',  # noqa: F821
     if data.get_dim() == 2:
         if not len(target) == 2:
             raise ValueError('Target vector is not 2-dimensional.')
+        if dens_weight is None:
+            dens_weight = False
         img = interpolate_2d_vec(data, target[0], target[1], x, y, kernel,
                                  x_arrows, y_arrows, xlim, ylim, exact,
                                  backend, dens_weight, normalize, hmin)
@@ -769,6 +775,8 @@ def arrowplot(data: 'SarracenDataFrame',  # noqa: F821
         if not len(target) == 3:
             raise ValueError('Target vector is not 3-dimensional.')
         if xsec is not None:
+            if dens_weight is None:
+                dens_weight = False
             img = interpolate_3d_cross_vec(data, target[0], target[1],
                                            target[2], xsec, x, y, z, kernel,
                                            rotation, rot_origin, x_arrows,
