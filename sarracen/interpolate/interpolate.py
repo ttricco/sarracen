@@ -171,8 +171,6 @@ def _verify_columns(data: 'SarracenDataFrame',  # noqa: F821
     ----------
     data: SarracenDataFrame
         The particle dataset to interpolate over.
-    target:
-        Column label of the target variable to interpolate over.
     x, y: str
         The directional column labels that will be used in interpolation.
 
