@@ -2,7 +2,7 @@ import numpy as np
 
 from ..sarracen_dataframe import SarracenDataFrame
 
-from typing import Union, Type
+from typing import List, Tuple, Union, Type
 
 
 def _write_fortran_block(value: list,
@@ -68,7 +68,7 @@ def _write_global_header(sdf: SarracenDataFrame,
     params_dict = _remove_invalid_keys(sdf)
     dtypes = [def_int, np.int8, np.int16, np.int32, np.int64,
               def_real, np.float32, np.float64]
-    header_data: list[tuple[type, list, list]] = [(dtype, [], [])
+    header_data: List[Tuple[type, list, list]] = [(dtype, [], [])
                                                   for dtype in dtypes]
     used_keys = set()
 
