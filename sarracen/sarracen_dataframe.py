@@ -743,7 +743,7 @@ class SarracenDataFrame(DataFrame):
     def backend(self, new_backend: str):
         self._backend = new_backend
 
-    def get_dim(self):
+    def get_dim(self) -> int:
         """
         Get the dimensionality of the data in this dataframe.
 
