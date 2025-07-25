@@ -33,11 +33,11 @@ def read_gradsph(filename: str, separate_types: str = 'sinks'):
     """
     with open(filename, 'r') as fp:
 
-        n, ninactive, nsink = fp.readline().split()
-        n, ninactive, nsink = int(n), int(ninactive), int(nsink)
+        n_str, ninactive_str, nsink_str = fp.readline().split()
+        n, ninactive, nsink = int(n_str), int(ninactive_str), int(nsink_str)
 
-        t, gamma = fp.readline().split()
-        t, gamma = float(t), float(gamma)
+        t_str, gamma_str = fp.readline().split()
+        t, gamma = float(t_str), float(gamma_str)
 
         params = {'n': n,
                   'ninactive': ninactive,

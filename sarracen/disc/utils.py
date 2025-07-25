@@ -15,7 +15,7 @@ def _get_mass(data: 'SarracenDataFrame'):
     return data[data.mcol]
 
 
-def _get_origin(origin: list) -> list:
+def _get_origin(origin: Union[list, None]) -> list:
     if origin is None:
         return [0.0, 0.0, 0.0]
     else:
@@ -23,12 +23,12 @@ def _get_origin(origin: list) -> list:
 
 
 def _bin_particles_by_radius(data: 'SarracenDataFrame',
-                             r_in: Union[float, None] = None,
-                             r_out: Union[float, None] = None,
-                             bins: int = 300,
-                             log: bool = False,
-                             geometry: str = 'cylindrical',
-                             origin: list = [0, 0, 0]):
+                             r_in: Union[float, None],
+                             r_out: Union[float, None],
+                             bins: int,
+                             log: bool,
+                             geometry: str,
+                             origin: list):
     """
     Utility function to bin particles in discrete intervals by radius.
 
@@ -36,19 +36,19 @@ def _bin_particles_by_radius(data: 'SarracenDataFrame',
     ----------
     data: SarracenDataFrame
         The particle dataset.
-    r_in : float, optional
+    r_in : float
         Inner radius of the disc. Defaults to the minimum r value.
-    r_out : float, optional
+    r_out : float
         Outer radius of the disc. Defaults to the maximum r value.
-    bins : int, optional
+    bins : int
         Defines the number of equal-width bins in the range [r_in, r_out].
         Default is 300.
-    log : bool, optional
+    log : bool
         Whether to bin in log scale or not. Defaults to False.
-    geometry : str, optional
+    geometry : str
         Coordinate system to use to calculate the particle radii. Can be
         either *spherical* or *cylindrical*. Defaults to *cylindrical*.
-    origin : array-like, optional
+    origin : array-like
         The x, y and z centre point around which to compute radii. Defaults to
         [0, 0, 0].
 

@@ -9,7 +9,7 @@ from scipy.spatial.transform import Rotation
 from ..interpolate import BaseBackend, CPUBackend, GPUBackend
 from ..kernels import BaseKernel
 
-from typing import Tuple, Union, Optional
+from typing import Tuple, Union, Optional, Type, Literal
 import warnings
 
 
@@ -228,7 +228,7 @@ def _check_boundaries(x_pixels: int,
 
 
 def _check_dimension(data: 'SarracenDataFrame',  # noqa: F821
-                     dim: int) -> None:
+                     dim: Literal[2, 3]) -> None:
     """
     Verify that a given dataset describes data with a required number of
     dimensions.
@@ -243,17 +243,19 @@ def _check_dimension(data: 'SarracenDataFrame',  # noqa: F821
     Returns
     -------
     ValueError
-        If the dataset is not `dim`-dimensional.
+        If the dataset is not `dim`-dimensional or `dim` is not 2 or 3.
     """
+    if dim not in [2, 3]:
+        raise ValueError("`dim` must be 2 or 3.")
     if data.get_dim() != dim:
-        raise TypeError(f"Dataset is not {dim}-dimensional.")
+        raise ValueError(f"Dataset is not {dim}-dimensional.")
 
 
 def _rotate_data(data: 'SarracenDataFrame',  # noqa: F821
                  x: str,
                  y: str,
                  z: str,
-                 given_rotation: Union[np.ndarray, list, Rotation, None],
+                 rotation: Union[np.ndarray, list, Rotation, None],
                  rot_origin: Union[np.ndarray, list,
                                    str, None]) -> Tuple[np.ndarray,
                                                         np.ndarray,
@@ -267,10 +269,10 @@ def _rotate_data(data: 'SarracenDataFrame',  # noqa: F821
         The particle dataset to interpolate over.
     x, y, z: str
         Directional column labels containing each dimension of the vector data.
-    rotation: array_like or SciPy Rotation, optional
+    rotation: array_like or SciPy Rotation
         The rotation to apply to the vector data. If defined as an array, the
         order of rotations is [z, y, x] in degrees
-    rot_origin: array_like or ['com', 'midpoint'], optional
+    rot_origin: array_like or ['com', 'midpoint']
         Point of rotation of the data. Only applies to 3D datasets. If
         array_like, then the [x, y, z] coordinates specify the point around
         which the data is rotated. If 'com', then data is rotated around the
@@ -285,11 +287,13 @@ def _rotate_data(data: 'SarracenDataFrame',  # noqa: F821
     x_data = data[x].to_numpy()
     y_data = data[y].to_numpy()
     z_data = data[z].to_numpy()
-    if given_rotation is not None:
-        if not isinstance(given_rotation, Rotation):
-            rotation = Rotation.from_euler('zyx',
-                                           given_rotation,
-                                           degrees=True)
+    if rotation is not None:
+        if not isinstance(rotation, Rotation):
+            rotation_obj = Rotation.from_euler('zyx',
+                                               rotation,
+                                               degrees=True)
+        else:
+            rotation_obj = rotation
 
         vectors = data[[x, y, z]].to_numpy()
 
@@ -313,7 +317,7 @@ def _rotate_data(data: 'SarracenDataFrame',  # noqa: F821
             raise ValueError("rot_origin should specify [x, y, z] point.")
 
         vectors = vectors - rot_origin
-        vectors = rotation.apply(vectors)
+        vectors = rotation_obj.apply(vectors)
         vectors = vectors + rot_origin
 
         x_data = vectors[:, 0]
@@ -1640,7 +1644,7 @@ def interpolate_3d_grid(data: 'SarracenDataFrame',  # noqa: F821
     return grid
 
 
-def get_backend(code: str) -> type[BaseBackend]:
+def get_backend(code: str) -> Type[BaseBackend]:
     """
     Get the interpolation backend associated with a string code.
 
