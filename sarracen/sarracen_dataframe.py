@@ -40,7 +40,8 @@ class SarracenDataFrame(DataFrame):
                                                       '_zcol', '_mcol',
                                                       '_rhocol', '_hcol',
                                                       '_vxcol', '_vycol',
-                                                      '_vzcol']
+                                                      '_vzcol',
+                                                      '_dustfracscol']
     _internal_names_set = set(_internal_names)
 
     _metadata = ['_params', '_units', '_kernel']
@@ -118,6 +119,7 @@ class SarracenDataFrame(DataFrame):
         self._xcol, self._ycol, self._zcol = None, None, None
         self._hcol, self._mcol, self._rhocol = None, None, None
         self._vxcol, self._vycol, self._vzcol = None, None, None
+        self._dustfracscol = []
 
         self._identify_special_columns()
 
@@ -190,6 +192,11 @@ class SarracenDataFrame(DataFrame):
         if 'vz' in self.columns:
             self.vzcol = 'vz'
 
+        # Look for the keyword 'dustfrac' in the data.
+        for column in self.columns:
+            if column.startswith('dustfrac'):
+                self.dustfracscol.append(column)
+
     def create_mass_column(self):
         """
         Create a new column 'm', copied from the 'massoftype' parameter.
@@ -251,6 +258,45 @@ class SarracenDataFrame(DataFrame):
         self['rho'] = mass * (hfact / self[self.hcol])**self.get_dim()
         self.rhocol = 'rho'
 
+    def calc_one_fluid_quantities(self):
+        """
+        Create new columns that contain the densities of gas, dust (total),
+        each dust grain size and the dust-to gas ratio in one-fluid
+        (a.k.a. dust-as-mixture) simulations.
+
+        Raises
+        -------
+        KeyError
+            If the `dustfrac` column does not exist.
+        ValueError
+            If `ndustsmall` is zero or `ndustlarge` is non zero.
+        """
+        if not {self.dustfracscol[0]}.issubset(self.columns):
+            raise KeyError('Missing dust fraction data in this '
+                           'SarracenDataFrame')
+        # use self[self.dustfrac], check if columns exist
+        if not {self.rhocol}.issubset(self.columns):
+            self.calc_density()
+
+        if (int(self.params['ndustsmall']) == 0 or
+                int(self.params['ndustlarge']) != 0):
+            raise ValueError('Not a one-fluid-only dump.')
+        else:
+            if int(self.params['ndustsmall']) == 1:
+                self['rho_g'] = self['rho'] * self['dustfrac']
+                self['rho_d'] = self['rho'] * (1 - self['dustfrac'])
+                self['dtg'] = self['rho_d'] / self['rho_g']
+            else:
+                self['dustfrac_total'] = self[self.dustfracscol].sum(axis=1)
+                self['rho_g'] = self['rho'] * (1 - self['dustfrac_total'])
+                self['rho_d_total'] = self['rho'] * self['dustfrac_total']
+                self['rho_d'] = self['rho'] * self[self.dustfracscol[0]]
+                for i in range(1, int(self.params['ndustsmall'])):
+                    self[f'rho_d_{i+1}'] = self['rho'] * \
+                                                    self[self.dustfracscol[i]]
+                self['dtg'] = self['dustfrac_total'] / (1 -
+                                                        self['dustfrac_total'])
+
     def centre_of_mass(self):
         """
         Returns the centre of mass of the data.
@@ -270,6 +316,45 @@ class SarracenDataFrame(DataFrame):
             mass = 1.0 / (len(self) * mass)
 
         return [com_x * mass, com_y * mass, com_z * mass]
+
+    def classify_sink(self, sdf_sinks):
+        """
+        Creates column calculating the energy of particles
+        relative to each sink.
+        Creates a new column 'sink' that classifies particles by the sink they
+        are bound to, or -1 if they are not bound to any sink.
+        """
+        # calculate the energy of particles relative to each sink
+        v = np.array([self[self.vxcol], self[self.vycol], self[self.vzcol]]).T
+        for index, sink in sdf_sinks.iterrows():
+
+            # kinetic energy
+            v_sink = np.array([sink[sdf_sinks.vxcol],
+                               sink[sdf_sinks.vycol],
+                               sink[sdf_sinks.vzcol]])
+            v_rel = np.linalg.norm(v-v_sink, axis=1)
+            if {self.mcol}.issubset(self.columns):
+                mass = self[self.mcol]
+            else:
+                mass = self.params['mass']
+            E_k = 0.5 * mass * v_rel**2
+
+            # potential energy
+            rel_pos = self[[self.xcol, self.ycol, self.zcol]] - sdf_sinks[
+                [sdf_sinks.xcol, sdf_sinks.ycol, sdf_sinks.zcol]].loc[index]
+            r = np.linalg.norm(rel_pos, axis=1)
+            E_pot = -sink[sdf_sinks.mcol] * mass / r
+
+            self[f"E_{index}"] = E_k + E_pot
+
+        # classify particles by sink they are bound to
+        energies = np.array([[self[f"E_{index}"]]
+                            for index in sdf_sinks.index])
+        self["sink"] = np.argmin(energies, axis=0)[0, :]
+
+        # identify particles not bound to any sink
+        unbound = pd.Series((energies.min(axis=0) > 0)[0, :], index=self.index)
+        self.loc[unbound[unbound].index, "sink"] = -1
 
     @_copy_doc(render)
     def render(self,
@@ -658,6 +743,15 @@ class SarracenDataFrame(DataFrame):
             self._vzcol = new_col
 
     @property
+    def dustfracscol(self):
+        return self._dustfracscol
+
+    @dustfracscol.setter
+    def dustfracscol(self, new_col: str):
+        if new_col in self or new_col is None:
+            self._dustfracscol = new_col
+
+    @property
     def kernel(self):
         """
         BaseKernel : The default kernel to use for interpolation operations
@@ -688,7 +782,7 @@ class SarracenDataFrame(DataFrame):
     def backend(self, new_backend: str):
         self._backend = new_backend
 
-    def get_dim(self):
+    def get_dim(self) -> int:
         """
         Get the dimensionality of the data in this dataframe.
 
