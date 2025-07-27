@@ -21,8 +21,8 @@ def _write_file_identifier(sdf: SarracenDataFrame):
     return file
 
 
-def _write_capture_pattern(def_int: Type[np.number],
-                           def_real: Type[np.number],
+def _write_capture_pattern(def_int: Type[np.generic],
+                           def_real: Type[np.generic],
                            iversion: int = 1):
     write_tag = np.array([16 + def_real().itemsize], dtype=np.int32)
     i1 = np.array([60769], dtype=def_int)
