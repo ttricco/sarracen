@@ -130,7 +130,7 @@ class SarracenDataFrame(DataFrame):
     def _constructor(self):
         return SarracenDataFrame
 
-    def _identify_special_columns(self):
+    def _identify_special_columns(self) -> None:
         """
         Identify special columns commonly used in analysis functions.
 
@@ -197,7 +197,7 @@ class SarracenDataFrame(DataFrame):
             if column.startswith('dustfrac'):
                 self.dustfracscol.append(column)
 
-    def create_mass_column(self):
+    def create_mass_column(self) -> None:
         """
         Create a new column 'm', copied from the 'massoftype' parameter.
 
@@ -215,7 +215,7 @@ class SarracenDataFrame(DataFrame):
         self['m'] = self.params['mass']
         self.mcol = 'm'
 
-    def calc_density(self):
+    def calc_density(self) -> None:
         """
         Create a new column 'rho' that contains particle densities.
 
@@ -258,7 +258,7 @@ class SarracenDataFrame(DataFrame):
         self['rho'] = mass * (hfact / self[self.hcol])**self.get_dim()
         self.rhocol = 'rho'
 
-    def calc_one_fluid_quantities(self):
+    def calc_one_fluid_quantities(self) -> None:
         """
         Create new columns that contain the densities of gas, dust (total),
         each dust grain size and the dust-to gas ratio in one-fluid
@@ -297,7 +297,7 @@ class SarracenDataFrame(DataFrame):
                 self['dtg'] = self['dustfrac_total'] / (1 -
                                                         self['dustfrac_total'])
 
-    def centre_of_mass(self):
+    def centre_of_mass(self) -> list:
         """
         Returns the centre of mass of the data.
         """
@@ -317,7 +317,7 @@ class SarracenDataFrame(DataFrame):
 
         return [com_x * mass, com_y * mass, com_z * mass]
 
-    def classify_sink(self, sdf_sinks):
+    def classify_sink(self, sdf_sinks) -> None:
         """
         Creates column calculating the energy of particles
         relative to each sink.
