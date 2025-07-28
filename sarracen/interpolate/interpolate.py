@@ -1105,7 +1105,7 @@ def interpolate_3d_vec(data: 'SarracenDataFrame',  # noqa: F821
                                             Optional[float]]] = None,
                        exact: bool = False,
                        backend: Union[str, None] = None,
-                       dens_weight: Union[bool, None] = None,
+                       dens_weight: bool = False,
                        normalize: bool = True,
                        hmin: bool = False) -> Tuple[np.ndarray, np.ndarray]:
     """

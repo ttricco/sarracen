@@ -617,6 +617,8 @@ def streamlines(data: 'SarracenDataFrame',  # noqa: F821
                                            y_pixels, xlim, ylim, backend,
                                            dens_weight, normalize, hmin)
         else:
+            if dens_weight is None:
+                dens_weight = True
             img = interpolate_3d_vec(data, target[0], target[1], target[2], x,
                                      y, kernel, integral_samples, rotation,
                                      rot_origin, x_pixels, y_pixels, xlim,
@@ -783,6 +785,8 @@ def arrowplot(data: 'SarracenDataFrame',  # noqa: F821
                                            y_arrows, xlim, ylim, backend,
                                            dens_weight, normalize, hmin)
         else:
+            if dens_weight is None:
+                dens_weight = True
             img = interpolate_3d_vec(data, target[0], target[1], target[2], x,
                                      y, kernel, integral_samples, rotation,
                                      rot_origin, x_arrows, y_arrows, xlim,
