@@ -171,8 +171,6 @@ def _verify_columns(data: 'SarracenDataFrame',  # noqa: F821
     ----------
     data: SarracenDataFrame
         The particle dataset to interpolate over.
-    target:
-        Column label of the target variable to interpolate over.
     x, y: str
         The directional column labels that will be used in interpolation.
 
@@ -191,6 +189,12 @@ def _verify_columns(data: 'SarracenDataFrame',  # noqa: F821
     if data.hcol is None:
         raise KeyError("Smoothing length column does not exist in the "
                        "provided dataset.")
+    if data.mcol is None and 'mass' not in data.params:
+        raise KeyError("Missing particle mass data in this "
+                       "SarracenDataFrame.")
+    if data.rhocol is None and 'hfact' not in data.params:
+        raise KeyError("Density cannot be derived from the columns in "
+                       "this SarracenDataFrame.")
 
 
 def _check_boundaries(x_pixels: int,
@@ -429,9 +433,6 @@ def _corotate(corotation: Union[np.ndarray, list],
 def _get_mass(data: 'SarracenDataFrame') -> Union[np.ndarray,  # noqa: F821
                                                   float]:
     if data.mcol is None:
-        if 'mass' not in data.params:
-            raise KeyError("'mass' column does not exist in this "
-                           "SarracenDataFrame.")
         return data.params['mass']
 
     return data[data.mcol].to_numpy()
@@ -439,10 +440,6 @@ def _get_mass(data: 'SarracenDataFrame') -> Union[np.ndarray,  # noqa: F821
 
 def _get_density(data: 'SarracenDataFrame') -> np.ndarray:  # noqa: F821
     if data.rhocol is None:
-        if data.hcol not in data.columns or 'hfact' not in data.params:
-            raise KeyError('Density cannot be derived from the columns in '
-                           'this SarracenDataFrame.')
-
         hfact = data.params['hfact']
         mass = _get_mass(data)
         return ((hfact / data[data.hcol])**(data.get_dim()) * mass).to_numpy()
