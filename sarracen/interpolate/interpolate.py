@@ -301,20 +301,21 @@ def _rotate_data(data: 'SarracenDataFrame',  # noqa: F821
 
         if rot_origin is None:
             # rot_origin = [0, 0, 0]
-            rot_origin = (vectors.min(0) + vectors.max(0)) / 2
+            rot_origin_arr = (vectors.min(0) + vectors.max(0)) / 2
         elif rot_origin == 'com':
-            rot_origin = data.centre_of_mass()
+            rot_origin_arr = data.centre_of_mass()
         elif rot_origin == 'midpoint':
-            rot_origin = (vectors.min(0) + vectors.max(0)) / 2
+            rot_origin_arr = (vectors.min(0) + vectors.max(0)) / 2
         elif not isinstance(rot_origin, (list, pd.Series, np.ndarray)):
             raise ValueError("rot_origin should be an [x, y, z] point or "
                              "'com' or 'midpoint'")
         elif len(rot_origin) != 3:
             raise ValueError("rot_origin should specify [x, y, z] point.")
-
-        vectors = vectors - rot_origin
+        else:
+            rot_origin_arr = rot_origin
+        vectors = vectors - rot_origin_arr
         vectors = rotation.apply(vectors)
-        vectors = vectors + rot_origin
+        vectors = vectors + rot_origin_arr
 
         x_data = vectors[:, 0]
         y_data = vectors[:, 1]
@@ -1069,7 +1070,7 @@ def interpolate_3d_proj(data: 'SarracenDataFrame',  # noqa: F821
     h_data = _get_smoothing_lengths(data, hmin, x_pixels, y_pixels, xlim, ylim)
 
     grid = get_backend(backend) \
-        .interpolate_3d_projection(x_data, y_data, z_data, w_data, h_data,
+        .interpolate_3d_projection(x_data, y_data, w_data, h_data,
                                    weight_function, kernel.get_radius(),
                                    x_pixels, y_pixels,
                                    xlim[0], xlim[1], ylim[0], ylim[1], exact)
@@ -1077,7 +1078,7 @@ def interpolate_3d_proj(data: 'SarracenDataFrame',  # noqa: F821
     if normalize:
         w_norm = _get_weight(data, np.array([1] * len(w_data)), dens_weight)
         norm_grid = get_backend(backend) \
-            .interpolate_3d_projection(x_data, y_data, z_data, w_norm, h_data,
+            .interpolate_3d_projection(x_data, y_data, w_norm, h_data,
                                        weight_function, kernel.get_radius(),
                                        x_pixels, y_pixels, xlim[0], xlim[1],
                                        ylim[0], ylim[1], exact)
