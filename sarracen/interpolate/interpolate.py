@@ -254,7 +254,7 @@ def _rotate_data(data: 'SarracenDataFrame',  # noqa: F821
                  y: str,
                  z: str,
                  given_rotation: Union[np.ndarray, list, Rotation, None],
-                 rot_origin: Union[np.ndarray, list,
+                 rot_origin: Union[np.ndarray, list, pd.Series,
                                    str, None]) -> Tuple[np.ndarray,
                                                         np.ndarray,
                                                         np.ndarray]:
