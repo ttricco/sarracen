@@ -407,7 +407,7 @@ class SarracenDataFrame(DataFrame):
                  dens_weight: bool = False,
                  normalize: bool = False,
                  hmin: bool = False,
-                 **kwargs):
+                 **kwargs) -> Axes:
         return lineplot(self, target, x, y, z, kernel, pixels, xlim, ylim,
                         zlim,  ax, backend, log_scale, dens_weight, normalize,
                         hmin, **kwargs)
