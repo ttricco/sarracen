@@ -192,10 +192,9 @@ def _verify_columns(data: 'SarracenDataFrame',  # noqa: F821
     if data.mcol is None and 'mass' not in data.params:
         raise KeyError("Missing particle mass data in this "
                        "SarracenDataFrame.")
-    if data.rhocol is None:
-        if data.hcol not in data.columns or 'hfact' not in data.params:
-            raise KeyError('Density cannot be derived from the columns in '
-                           'this SarracenDataFrame.')
+    if data.rhocol is None and 'hfact' not in data.params:
+        raise KeyError("Density cannot be derived from the columns in "
+                       "this SarracenDataFrame.")
 
 
 def _check_boundaries(x_pixels: int,
