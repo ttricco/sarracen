@@ -148,7 +148,7 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
            normalize: bool = False,
            hmin: bool = False,
            corotation: Union[np.ndarray, list, None] = None,
-           plot_apr = False,
+           plot_apr: bool = False,
            **kwargs) -> Axes:
     """
     Render a scalar SPH target variable to a grid plot.
@@ -216,8 +216,9 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
     corotation: list, optional
         Moves particles to the co-rotating frame of two location. corotation
         contains two lists which correspond to the two x, y, z coordinates
-    plot_apr: bool
-        Plots the APR regions on top of the rendered quantity if True
+    plot_apr: bool, optional
+        Plots the APR regions on top of the rendered quantity if True,
+        default is False.
     kwargs: other keyword arguments
         Keyword arguments to pass to ax.imshow.
 
@@ -368,9 +369,9 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
             else:
                 xpos = data.params['apr_centre_x']
                 ypos = data.params['apr_centre_y']
-                zpos = data.params['apr_centre_z']  
+                zpos = data.params['apr_centre_z']
 
-            # across the different levels in that zone         
+            # across the different levels in that zone
             for i in range(apr_max):
                 # for the radius
                 if (i > 0):
@@ -379,14 +380,15 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
                     rad = data.params['apr_regions']
 
                 # for the line style
-                if ((i+1) == apr_max):
-                    iline = '-'
-                else:
-                    iline = ':'
+                iline = '-' if (i+1) == apr_max else ':'
 
-                # there will be at least one stupidly large zone no matter what we do, ignore it
-                if (rad < 1.e+300):      
-                    circle = plt.Circle((xpos,ypos),rad,linestyle=iline,fill=False)
+                # there will be at least one stupidly large zone
+                # no matter what we do, ignore it
+                if (rad < 1.e+300):
+                    circle = plt.Circle((xpos,ypos),
+                                        rad,
+                                        linestyle=iline,
+                                        fill=False)
                     ax.add_patch(circle)
 
     return ax
