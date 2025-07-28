@@ -258,7 +258,7 @@ class GPUBackend(BaseBackend):
                      y_min: float,
                      y_max: float,
                      n_dims: int,
-                     image):
+                     image) -> None:
             pixwidthx = (x_max - x_min) / x_pixels
             pixwidthy = (y_max - y_min) / y_pixels
 
@@ -362,7 +362,11 @@ class GPUBackend(BaseBackend):
         # Used in interpolation of 2D data,
         # and column integration / cross-sections of 3D data.
         @cuda.jit
-        def _2d_func(x_data, y_data, w_data, h_data, image):
+        def _2d_func(x_data: ndarray,
+                     y_data: ndarray,
+                     w_data: ndarray,
+                     h_data: ndarray,
+                     image) -> None:
             i = cuda.grid(1)
             if i < len(x_data):
                 term = w_data[i] / h_data[i] ** 2
@@ -497,7 +501,7 @@ class GPUBackend(BaseBackend):
                       y1: float,
                       y2: float) -> ndarray:
         # determine the slope of the cross-section line
-        gradient = 0
+        gradient = 0.0
         if not x2 - x1 == 0:
             gradient = (y2 - y1) / (x2 - x1)
         yint = y2 - gradient * x2
@@ -510,8 +514,17 @@ class GPUBackend(BaseBackend):
 
         # Underlying GPU numba-compiled code for 2D->1D cross-sections
         @cuda.jit(fastmath=True)
-        def _2d_func(x_data, y_data, w_data, h_data, kernel_radius, pixels,
-                     x1, x2, y1, y2, image):
+        def _2d_func(x_data: ndarray,
+                     y_data: ndarray,
+                     w_data: ndarray,
+                     h_data: ndarray,
+                     kernel_radius: float,
+                     pixels: int,
+                     x1: float,
+                     x2: float,
+                     y1: float,
+                     y2: float,
+                     image) -> None:
             i = cuda.grid(1)
             if i < x_data.size:
                 term = w_data[i] / h_data[i] ** 2
@@ -605,8 +618,20 @@ class GPUBackend(BaseBackend):
         ux, uy, uz = dx / length, dy / length, dz / length
 
         @cuda.jit(fastmath=True)
-        def _2d_func(x_data, y_data, z_data, w_data, h_data, kernel_radius,
-                     pixels, x1, x2, y1, y2, z1, z2, image):
+        def _2d_func(x_data: ndarray,
+                     y_data: ndarray,
+                     z_data: ndarray,
+                     w_data: ndarray,
+                     h_data: ndarray,
+                     kernel_radius: float,
+                     pixels: int,
+                     x1: float,
+                     x2: float,
+                     y1: float,
+                     y2: float,
+                     z1: float,
+                     z2: float,
+                     image) -> None:
             i = cuda.grid(1)
 
             if i < x_data.size:
@@ -679,7 +704,11 @@ class GPUBackend(BaseBackend):
         norm3d = 1 / np.pi
 
         @cuda.jit
-        def _3d_func(x_data, y_data, w_data, h_data, image):
+        def _3d_func(x_data: ndarray,
+                     y_data: ndarray,
+                     w_data: ndarray,
+                     h_data: ndarray,
+                     image) -> None:
             i = cuda.grid(1)
             if i < len(x_data):
                 dfac = h_data[i] ** 3 / (pixwidthx * pixwidthy * norm3d)
