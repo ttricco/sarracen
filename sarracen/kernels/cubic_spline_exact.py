@@ -380,8 +380,8 @@ def _full_integral_3d(d: float, r0: float, r1: float, h: float) -> float:
     r0h_2 = 1. / r0h2
     r0h_3 = 1. / r0h3
 
-    b1 = None
-    b2 = None
+    b1 = 0.0
+    b2 = 0.0
     if r0 > 2.0 * h:
         # The entire surface lies outside r > 2h.
         b3 = 0.25 * h2 * h

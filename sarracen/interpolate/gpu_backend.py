@@ -100,7 +100,6 @@ class GPUBackend(BaseBackend):
     @staticmethod
     def interpolate_3d_projection(x: ndarray,
                                   y: ndarray,
-                                  z: ndarray,
                                   weight: ndarray,
                                   h: ndarray,
                                   weight_function: CPUDispatcher,
@@ -226,16 +225,40 @@ class GPUBackend(BaseBackend):
     # approach. This is required since a CUDA numba kernel cannot easily take
     # weight_function as an argument.
     @staticmethod
-    def _fast_2d(x_data, y_data, z_data, z_slice, w_data, h_data,
-                 weight_function, kernel_radius, x_pixels, y_pixels,
-                 x_min, x_max, y_min, y_max, n_dims):
+    def _fast_2d(x_data: ndarray,
+                 y_data: ndarray,
+                 z_data: ndarray,
+                 z_slice: float,
+                 w_data: ndarray,
+                 h_data: ndarray,
+                 weight_function: CPUDispatcher,
+                 kernel_radius: float,
+                 x_pixels: int,
+                 y_pixels: int,
+                 x_min: float,
+                 x_max: float,
+                 y_min: float,
+                 y_max: float,
+                 n_dims: int) -> ndarray:
         # Underlying GPU numba-compiled code for interpolation to a 2D grid.
         # Used in interpolation of 2D data, and column integration /
         # cross-sections of 3D data.
         @cuda.jit(fastmath=True)
-        def _2d_func(z_slice, x_data, y_data, z_data, w_data, h_data,
-                     kernel_radius, x_pixels, y_pixels, x_min, x_max,
-                     y_min, y_max, n_dims, image):
+        def _2d_func(z_slice: float,
+                     x_data: ndarray,
+                     y_data: ndarray,
+                     z_data: ndarray, 
+                     w_data: ndarray,
+                     h_data: ndarray,
+                     kernel_radius: float,
+                     x_pixels: int, 
+                     y_pixels: int,
+                     x_min: float,
+                     x_max: float,
+                     y_min: float,
+                     y_max: float,
+                     n_dims: int,
+                     image):
             pixwidthx = (x_max - x_min) / x_pixels
             pixwidthy = (y_max - y_min) / y_pixels
 
@@ -322,8 +345,16 @@ class GPUBackend(BaseBackend):
     # Underlying CPU numba-compiled code for exact interpolation of 2D data
     # to a 2D grid.
     @staticmethod
-    def _exact_2d_render(x_data, y_data, w_data, h_data, x_pixels, y_pixels,
-                         x_min, x_max, y_min, y_max):
+    def _exact_2d_render(x_data: ndarray,
+                         y_data: ndarray,
+                         w_data: ndarray,
+                         h_data: ndarray,
+                         x_pixels: int,
+                         y_pixels: int,
+                         x_min: float,
+                         x_max: float,
+                         y_min: float,
+                         y_max: float) -> ndarray:
         pixwidthx = (x_max - x_min) / x_pixels
         pixwidthy = (y_max - y_min) / y_pixels
 
@@ -454,8 +485,17 @@ class GPUBackend(BaseBackend):
     # approach. This is required since a CUDA numba kernel cannot easily take
     # weight_function as an argument.
     @staticmethod
-    def _fast_2d_line(x_data, y_data, w_data, h_data, weight_function,
-                      kernel_radius, pixels, x1, x2, y1, y2):
+    def _fast_2d_line(x_data: ndarray,
+                      y_data: ndarray,
+                      w_data: ndarray,
+                      h_data: ndarray,
+                      weight_function: CPUDispatcher,
+                      kernel_radius: float,
+                      pixels: int,
+                      x1: float,
+                      x2: float,
+                      y1: float,
+                      y2: float) -> ndarray:
         # determine the slope of the cross-section line
         gradient = 0
         if not x2 - x1 == 0:
@@ -543,8 +583,20 @@ class GPUBackend(BaseBackend):
         return d_image.copy_to_host()
 
     @staticmethod
-    def _fast_3d_line(x_data, y_data, z_data, w_data, h_data, weight_function,
-                      kernel_radius, pixels, x1, x2, y1, y2, z1, z2):
+    def _fast_3d_line(x_data: ndarray,
+                      y_data: ndarray,
+                      z_data: ndarray,
+                      w_data: ndarray,
+                      h_data: ndarray,
+                      weight_function: CPUDispatcher,
+                      kernel_radius: float,
+                      pixels: int,
+                      x1: float,
+                      x2: float,
+                      y1: float,
+                      y2: float,
+                      z1: float,
+                      z2: float) -> ndarray:
         dx = x2 - x1
         dy = y2 - y1
         dz = z2 - z1
@@ -611,8 +663,16 @@ class GPUBackend(BaseBackend):
         return d_image.copy_to_host()
 
     @staticmethod
-    def _exact_3d_project(x_data, y_data, w_data, h_data, x_pixels, y_pixels,
-                          x_min, x_max, y_min, y_max):
+    def _exact_3d_project(x_data: ndarray,
+                          y_data: ndarray,
+                          w_data: ndarray,
+                          h_data: ndarray, 
+                          x_pixels: int,
+                          y_pixels: int,
+                          x_min: float,
+                          x_max: float, 
+                          y_min: float,
+                          y_max: float) -> ndarray:
         pixwidthx = (x_max - x_min) / x_pixels
         pixwidthy = (y_max - y_min) / y_pixels
 
