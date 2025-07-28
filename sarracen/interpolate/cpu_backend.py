@@ -239,7 +239,7 @@ class CPUBackend(BaseBackend):
                  x_max: float,
                  y_min: float,
                  y_max: float,
-                 n_dims:int) -> ndarray:
+                 n_dims: int) -> ndarray:
         output = np.zeros((y_pixels, x_pixels))
         pixwidthx = (x_max - x_min) / x_pixels
         pixwidthy = (y_max - y_min) / y_pixels
