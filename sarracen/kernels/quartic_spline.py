@@ -13,7 +13,7 @@ class QuarticSplineKernel(BaseKernel):
 
     @staticmethod
     @njit(fastmath=True)
-    def w(q: float, ndim: int):
+    def w(q: float, ndim: int) -> float:
         norm = 1 / 24 if (ndim == 1) \
             else 96 / (1199 * np.pi) if (ndim == 2) \
             else 1 / (20 * np.pi)
