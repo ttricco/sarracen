@@ -575,7 +575,7 @@ class SarracenDataFrame(DataFrame):
         raise ValueError('Invalid number of dimensions.')
 
     @property
-    def params(self):
+    def params(self) -> dict:
         """
         dict: Miscellaneous dataset-level parameters.
 
@@ -587,7 +587,7 @@ class SarracenDataFrame(DataFrame):
         return self._params
 
     @params.setter
-    def params(self, new_params):
+    def params(self, new_params: dict) -> None:
         if new_params is None:
             self._params = None
             return
@@ -596,16 +596,16 @@ class SarracenDataFrame(DataFrame):
         self._params = new_params
 
     @property
-    def units(self):
+    def units(self) -> Series:
         """Series: Units for each column of this dataset."""
         return self._units
 
     @units.setter
-    def units(self, new_units: Series):
+    def units(self, new_units: Series) -> None:
         self._units = new_units
 
     @property
-    def xcol(self):
+    def xcol(self) -> str:
         """
         str : Label of the column which contains x-positional data.
 
@@ -615,12 +615,12 @@ class SarracenDataFrame(DataFrame):
         return self._xcol
 
     @xcol.setter
-    def xcol(self, new_col: str):
+    def xcol(self, new_col: str) -> None:
         if new_col in self or new_col is None:
             self._xcol = new_col
 
     @property
-    def ycol(self):
+    def ycol(self) -> str:
         """
         str : Label of the column which contains y-positional data.
 
@@ -630,12 +630,12 @@ class SarracenDataFrame(DataFrame):
         return self._ycol
 
     @ycol.setter
-    def ycol(self, new_col: str):
+    def ycol(self, new_col: str) -> None:
         if new_col in self or new_col is None:
             self._ycol = new_col
 
     @property
-    def zcol(self):
+    def zcol(self) -> str:
         """
         str : Label of the column which contains z-positional data.
 
@@ -645,12 +645,12 @@ class SarracenDataFrame(DataFrame):
         return self._zcol
 
     @zcol.setter
-    def zcol(self, new_col: str):
+    def zcol(self, new_col: str) -> None:
         if new_col in self or new_col is None:
             self._zcol = new_col
 
     @property
-    def hcol(self):
+    def hcol(self) -> str:
         """
         str : Label of the column which contains smoothing length data.
 
@@ -660,12 +660,12 @@ class SarracenDataFrame(DataFrame):
         return self._hcol
 
     @hcol.setter
-    def hcol(self, new_col: str):
+    def hcol(self, new_col: str) -> None:
         if new_col in self or new_col is None:
             self._hcol = new_col
 
     @property
-    def mcol(self):
+    def mcol(self) -> str:
         """
         str : Label of the column which contains particle mass data.
 
@@ -675,12 +675,12 @@ class SarracenDataFrame(DataFrame):
         return self._mcol
 
     @mcol.setter
-    def mcol(self, new_col: str):
+    def mcol(self, new_col: str) -> None:
         if new_col in self or new_col is None:
             self._mcol = new_col
 
     @property
-    def rhocol(self):
+    def rhocol(self) -> str:
         """
         str : Label of the column which contains particle density data.
 
@@ -690,12 +690,12 @@ class SarracenDataFrame(DataFrame):
         return self._rhocol
 
     @rhocol.setter
-    def rhocol(self, new_col: str):
+    def rhocol(self, new_col: str) -> None:
         if new_col in self or new_col is None:
             self._rhocol = new_col
 
     @property
-    def vxcol(self):
+    def vxcol(self) -> str:
         """
         str : Label of the column which contains the x-component of the
         velocity.
@@ -706,12 +706,12 @@ class SarracenDataFrame(DataFrame):
         return self._vxcol
 
     @vxcol.setter
-    def vxcol(self, new_col: str):
+    def vxcol(self, new_col: str) -> None:
         if new_col in self or new_col is None:
             self._vxcol = new_col
 
     @property
-    def vycol(self):
+    def vycol(self) -> str:
         """
         str : Label of the column which contains the y-component of the
         velocity.
@@ -722,12 +722,12 @@ class SarracenDataFrame(DataFrame):
         return self._vycol
 
     @vycol.setter
-    def vycol(self, new_col: str):
+    def vycol(self, new_col: str) -> None:
         if new_col in self or new_col is None:
             self._vycol = new_col
 
     @property
-    def vzcol(self):
+    def vzcol(self) -> str:
         """
         str : Label of the column which contains the z-component of the
         velocity.
@@ -738,7 +738,7 @@ class SarracenDataFrame(DataFrame):
         return self._vzcol
 
     @vzcol.setter
-    def vzcol(self, new_col: str):
+    def vzcol(self, new_col: str) -> None:
         if new_col in self or new_col is None:
             self._vzcol = new_col
 
@@ -747,12 +747,12 @@ class SarracenDataFrame(DataFrame):
         return self._dustfracscol
 
     @dustfracscol.setter
-    def dustfracscol(self, new_col: str):
+    def dustfracscol(self, new_col: str) -> None:
         if new_col in self or new_col is None:
             self._dustfracscol = new_col
 
     @property
-    def kernel(self):
+    def kernel(self) -> BaseKernel:
         """
         BaseKernel : The default kernel to use for interpolation operations
         with this dataset.
@@ -763,12 +763,12 @@ class SarracenDataFrame(DataFrame):
         return self._kernel
 
     @kernel.setter
-    def kernel(self, new_kernel: BaseKernel):
+    def kernel(self, new_kernel: BaseKernel) -> None:
         if isinstance(new_kernel, BaseKernel):
             self._kernel = new_kernel
 
     @property
-    def backend(self):
+    def backend(self) -> str:
         """
         ['cpu', 'gpu'] : The default backend to use for interpolation
         operations with this dataset.
@@ -779,7 +779,7 @@ class SarracenDataFrame(DataFrame):
         return self._backend
 
     @backend.setter
-    def backend(self, new_backend: str):
+    def backend(self, new_backend: str) -> None:
         self._backend = new_backend
 
     def get_dim(self) -> int:
