@@ -6,7 +6,7 @@ from typing import List, Tuple, Union, Type
 
 
 def _write_fortran_block(value: list,
-                         dtype: type):
+                         dtype: type) -> bytearray:
     write_tag = np.array([len(value) * dtype().itemsize], dtype=np.int32)
     file = bytearray(write_tag.tobytes())
     file += bytearray(np.array(value, dtype=dtype).tobytes())
@@ -14,7 +14,7 @@ def _write_fortran_block(value: list,
     return file
 
 
-def _write_file_identifier(sdf: SarracenDataFrame):
+def _write_file_identifier(sdf: SarracenDataFrame) -> bytearray:
     file_id = sdf.params['file_identifier'].ljust(100)
     file_id = list(map(ord, file_id))
     file = _write_fortran_block(file_id, dtype=np.uint8)
@@ -23,7 +23,7 @@ def _write_file_identifier(sdf: SarracenDataFrame):
 
 def _write_capture_pattern(def_int: Type[np.generic],
                            def_real: Type[np.generic],
-                           iversion: int = 1):
+                           iversion: int = 1) -> bytearray:
     write_tag = np.array([16 + def_real().itemsize], dtype=np.int32)
     i1 = np.array([60769], dtype=def_int)
     r2 = np.array([60878], dtype=def_real)
@@ -42,16 +42,16 @@ def _write_capture_pattern(def_int: Type[np.generic],
     return capture_pattern
 
 
-def _rename_duplicate(tag):
+def _rename_duplicate(tag: str) -> str:
     if len(tag) > 1 and tag[-2] == '_' and tag[-1].isdigit():
         tag = tag[:-2]
 
     return tag
 
 
-def _write_global_header_tags_and_values(tags,
-                                         values,
-                                         dtype):
+def _write_global_header_tags_and_values(tags: list,
+                                         values: list,
+                                         dtype: type) -> bytearray:
     tags = [_rename_duplicate(tag) for tag in tags]
     tags = [list(map(ord, tag.ljust(16))) for tag in tags]
     tags = [c for tag in tags for c in tag]
@@ -64,7 +64,7 @@ def _write_global_header_tags_and_values(tags,
 
 def _write_global_header(sdf: SarracenDataFrame,
                          def_int: Type[np.number],
-                         def_real: Type[np.number]):
+                         def_real: Type[np.number]) -> bytearray:
     params_dict = _remove_invalid_keys(sdf)
     dtypes = [def_int, np.int8, np.int16, np.int32, np.int64,
               def_real, np.float32, np.float64]
@@ -93,24 +93,25 @@ def _write_global_header(sdf: SarracenDataFrame,
     return file
 
 
-def _remove_invalid_keys(sdf):
+def _remove_invalid_keys(sdf: SarracenDataFrame) -> dict:
     exclude = ['file_identifier', 'mass', 'def_int_dtype',
                'def_real_dtype', 'iversion']
     return {k: v for k, v in sdf.params.items() if k not in exclude}
 
 
-def _get_array_tags(test_sdf, dt):
+def _get_array_tags(test_sdf: SarracenDataFrame, dt: Type[np.number]) -> list:
     return list(test_sdf.select_dtypes(include=[dt]).columns)
 
 
-def _get_last_index(sdf):
+def _get_last_index(sdf: SarracenDataFrame) -> int:
     return 1 if sdf.index[-1] == 0 else sdf.shape[0]
 
 
 def _write_value_arrays(data: SarracenDataFrame,
                         def_int: Type[np.number],
                         def_real: Type[np.number],
-                        sinks: Union[SarracenDataFrame, None] = None):
+                        sinks: Union[SarracenDataFrame,
+                                     None] = None) -> bytearray:
 
     dtypes = [def_int, np.int8, np.int16, np.int32, np.int64,
               def_real, np.float32, np.float64]
@@ -154,7 +155,7 @@ def _write_value_arrays(data: SarracenDataFrame,
 
 def write_phantom(filename: str,
                   data: SarracenDataFrame,
-                  sinks: Union[SarracenDataFrame, None] = None):
+                  sinks: Union[SarracenDataFrame, None] = None) -> None:
     if data.isnull().values.any():
         raise ValueError("particle DataFrame contains NaNs or missing values.")
 
