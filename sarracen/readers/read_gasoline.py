@@ -9,9 +9,11 @@ from ..sarracen_dataframe import SarracenDataFrame
 
 
 def read_gasoline(filename: str,
-                  outtype: str = "sarracen") -> Union[int, Tuple[dict, ...],
-                                                      Tuple[SarracenDataFrame,
-                                                            ...]]:
+                  outtype: str = "sarracen") -> Union[Tuple[SarracenDataFrame,
+                                                            SarracenDataFrame,
+                                                            SarracenDataFrame],
+                                                      Tuple[dict, dict,
+                                                            dict, dict], int]:
     """
     Read data from a Gasoline tipsy file.
 
