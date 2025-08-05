@@ -128,7 +128,7 @@ def _marisa_read_tag(fp: IO) -> int:
     return tag
 
 
-def _marisa_read_data(fp: IO, dtype: Type[np.number]):
+def _marisa_read_data(fp: IO, dtype: Type[np.number]) -> np.ndarray:
     size = int.from_bytes(fp.read(4), byteorder='little')
     data = fp.read(size)
     return np.frombuffer(data, dtype=dtype)
@@ -144,9 +144,9 @@ def _marisa_parse_tags(fp: IO) -> Tuple[np.ndarray, np.ndarray]:
 
     _marisa_read_capture_pattern(fp)
 
-    tags = []
-    offsets = []
-    sizes = []
+    tags_list = []
+    offsets_list = []
+    sizes_list = []
 
     while (fp.tell() < endpos):
         tag = _marisa_read_tag(fp)
@@ -154,13 +154,13 @@ def _marisa_parse_tags(fp: IO) -> Tuple[np.ndarray, np.ndarray]:
         size = int.from_bytes(fp.read(4), byteorder='little')
         fp.seek(size, 1)
 
-        tags.append(tag)
-        sizes.append(size)
-        offsets.append(offset)
+        tags_list.append(tag)
+        sizes_list.append(size)
+        offsets_list.append(offset)
 
-    tags = np.array(tags)
-    offsets = np.array(offsets)
-    sizes = np.array(sizes)
+    tags = np.array(tags_list)
+    offsets = np.array(offsets_list)
+    sizes = np.array(sizes_list)
 
     fp.seek(currentpos, 0)
 
