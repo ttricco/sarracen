@@ -1,3 +1,5 @@
+from typing import Tuple, Union
+
 import numpy as np
 import pandas as pd
 import os
@@ -7,7 +9,9 @@ from ..sarracen_dataframe import SarracenDataFrame
 
 
 def read_gasoline(filename: str,
-                  outtype: str = "sarracen"):
+                  outtype: str = "sarracen") -> Union[int, Tuple[dict, ...],
+                                                      Tuple[SarracenDataFrame,
+                                                            ...]]:
     """
     Read data from a Gasoline tipsy file.
 
