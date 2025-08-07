@@ -1,4 +1,4 @@
-from typing import IO, Tuple, Type, Union
+from typing import IO, Tuple, Type, Union, List
 
 import numpy as np
 import pandas as pd
@@ -31,7 +31,7 @@ def _read_capture_pattern(fp: IO) -> Tuple[Type[np.generic],
 
     start_tag = fp.read(4)  # 4-byte Fortran tag
 
-    def_types: list[Tuple[Type[np.generic],
+    def_types: List[Tuple[Type[np.generic],
                           Type[np.generic]]] = [(np.int32, np.float64),
                                                 (np.int32, np.float32),
                                                 (np.int64, np.float64),
@@ -86,7 +86,7 @@ def _read_capture_pattern(fp: IO) -> Tuple[Type[np.generic],
     return def_int_dtype, def_real_dtype, iversion
 
 
-def _read_file_identifier(fp: IO):
+def _read_file_identifier(fp: IO) -> str:
     """ Read the 100 character file identifier.
 
     The file identifier contains code version and date information.
@@ -244,7 +244,7 @@ def _create_aprmass_column(df: pd.DataFrame,
 
 def read_phantom(filename: str,
                  separate_types: str = 'sinks',
-                 ignore_inactive: bool = True) -> Union[list[
+                 ignore_inactive: bool = True) -> Union[List[
                                                         SarracenDataFrame],
                                                         SarracenDataFrame]:
     """

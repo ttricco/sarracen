@@ -244,7 +244,7 @@ class CPUBackend(BaseBackend):
         pixwidthx = (x_max - x_min) / x_pixels
         pixwidthy = (y_max - y_min) / y_pixels
         if not n_dims == 2:
-            dz = np.float64(z_slice) - z_data
+            dz = np.subtract(np.float64(z_slice), z_data)
         else:
             dz = np.zeros(x_data.size)
 
@@ -340,7 +340,7 @@ class CPUBackend(BaseBackend):
             # iterate through the indexes of non-filtered particles
             for i in range(range_start, range_end):
 
-                rad = 2 * h_data[i]
+                rad = float(2 * h_data[i])
 
                 # determine pixels that this particle contributes to
                 ipixmin = int(np.floor((x_data[i] - rad - x_min) / pixwidthx))
@@ -640,7 +640,7 @@ class CPUBackend(BaseBackend):
             # iterate through the indexes of non-filtered particles
             for i in range(range_start, range_end):
 
-                rad = 2 * h_data[i]
+                rad = float(2 * h_data[i])
 
                 # determine pixels that this particle contributes to
                 ipixmin = int(np.floor((x_data[i] - rad - x_min) / pixwidthx))
@@ -651,7 +651,7 @@ class CPUBackend(BaseBackend):
                 # The width of the z contribution of this particle.
                 # = 2 * kernel_radius * h[i], where kernel_radius is 2 for the
                 # cubic spline kernel.
-                pixwidthz = 4 * h_data[i]
+                pixwidthz = float(4 * h_data[i])
 
                 if ipixmax < 0 or ipixmin >= x_pixels:
                     continue

@@ -1,4 +1,4 @@
-from typing import IO
+from typing import IO, List
 
 import struct
 import json
@@ -95,7 +95,7 @@ class FileReader:
         return data
 
 
-def decode_bytes_to_doubles(byte_data: bytes) -> list[float]:
+def decode_bytes_to_doubles(byte_data: bytes) -> List[float]:
     """
     Decodes a byte array into a list of double precision floats.
 

@@ -232,7 +232,7 @@ def read_marisa(filename: str,
     df = pd.DataFrame()
     params = dict()
     while not done:
-        fp.seek(offsets[i], 0)
+        fp.seek(int(offsets[i]), 0)
 
         tag = tags[i]
 
