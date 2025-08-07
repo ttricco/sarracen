@@ -1,9 +1,14 @@
+from typing import Union
+
 import pandas as pd
 
 from ..sarracen_dataframe import SarracenDataFrame
 
 
-def read_gradsph(filename: str, separate_types: str = 'sinks'):
+def read_gradsph(filename: str,
+                 separate_types: str = 'sinks') -> Union[list[
+                                                         SarracenDataFrame],
+                                                         SarracenDataFrame]:
     """
     Read data from a GradSPH dump file.
 
@@ -63,6 +68,4 @@ def read_gradsph(filename: str, separate_types: str = 'sinks'):
                                                    ignore_index=True),
                                          params=params)]
 
-        df_list = df_list[0] if len(df_list) == 1 else df_list
-
-        return df_list
+        return df_list[0] if len(df_list) == 1 else df_list
