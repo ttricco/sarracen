@@ -337,7 +337,7 @@ class SarracenDataFrame(DataFrame):
             if {self.mcol}.issubset(self.columns):
                 mass = self[self.mcol]
             else:
-                if self.params is None:
+                if self.params is None or 'mass' not in self.params:
                     raise KeyError("'mass' value does not exist in this "
                                    "SarracenDataFrame.")
                 mass = self.params['mass']
