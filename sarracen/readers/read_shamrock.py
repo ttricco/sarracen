@@ -59,7 +59,7 @@ class FileReader:
         # Decode the string from bytes to UTF-8 and return
         return string_bytes.decode("utf-8")
 
-    def read_from_position(self, offset: int, num_bytes: int):
+    def read_from_position(self, offset: int, num_bytes: int) -> bytes:
         """
         Read data from a specific position for a specified number of bytes.
 
@@ -136,7 +136,7 @@ def get_head_inc(off: int) -> int:
     return off
 
 
-def decode_patchdata(pdat, pdat_layout) -> dict:
+def decode_patchdata(pdat: bytes, pdat_layout) -> dict:
     """
     Decode a patchdata bytearray into a dictionary of numpy arrays.
 
