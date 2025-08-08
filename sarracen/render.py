@@ -9,7 +9,7 @@ Or, they can be accessed through a `SarracenDataFrame` object, for example:
     data.render_2d(target)
 """
 
-from typing import Union, Tuple
+from typing import Any, Union, Tuple
 
 import numpy as np
 from scipy.spatial.transform import Rotation
@@ -158,7 +158,7 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
            normalize: bool = False,
            hmin: bool = False,
            corotation: Union[np.ndarray, list, None] = None,
-           **kwargs) -> Axes:
+           **kwargs: Any) -> Axes:
     """
     Render a scalar SPH target variable to a grid plot.
 
@@ -375,7 +375,7 @@ def lineplot(data: 'SarracenDataFrame',  # noqa: F821
              dens_weight: bool = False,
              normalize: bool = True,
              hmin: bool = False,
-             **kwargs) -> Axes:
+             **kwargs: Any) -> Axes:
     """
     Render a scalar SPH target variable to line plot.
 
@@ -507,7 +507,7 @@ def streamlines(data: 'SarracenDataFrame',  # noqa: F821
                 dens_weight: Union[bool, None] = None,
                 normalize: bool = True,
                 hmin: bool = False,
-                **kwargs) -> Axes:
+                **kwargs: Any) -> Axes:
     """
     Create an SPH interpolated streamline plot of a target vector.
 
@@ -669,7 +669,7 @@ def arrowplot(data: 'SarracenDataFrame',  # noqa: F821
               dens_weight: Union[bool, None] = None,
               normalize: bool = True,
               hmin: bool = False,
-              **kwargs) -> Axes:
+              **kwargs: Any) -> Axes:
     """
     Create an SPH interpolated vector field plot of a target vector.
 
