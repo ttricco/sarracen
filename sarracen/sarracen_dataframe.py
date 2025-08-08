@@ -244,7 +244,7 @@ class SarracenDataFrame(DataFrame):
         if self.params is None or 'hfact' not in self.params:
             raise KeyError('hfact missing from params in this '
                            'SarracenDataFrame.')
-        if self.mcol not in self.columns and (self.params is None or 
+        if self.mcol not in self.columns and (self.params is None or
                                               'mass' not in self.params):
             raise KeyError('Missing particle mass data in this '
                            'SarracenDataFrame.')

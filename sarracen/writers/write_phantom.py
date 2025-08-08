@@ -17,7 +17,7 @@ def _write_fortran_block(value: list,
 def _write_file_identifier(sdf: SarracenDataFrame) -> bytearray:
     if sdf.params is None or 'file_identifier' not in sdf.params:
         raise KeyError("'file_identifier' missing from params in this "
-                        "SarracenDataFrame.")
+                       "SarracenDataFrame.")
     file_id = sdf.params['file_identifier'].ljust(100)
     file_id = list(map(ord, file_id))
     file = _write_fortran_block(file_id, dtype=np.uint8)
@@ -166,7 +166,7 @@ def write_phantom(filename: str,
 
     if sinks is not None and sinks.isnull().values.any():
         raise ValueError("sinks DataFrame contains NaNs or missing values.")
-    
+
     if data.params is None:
         raise ValueError("Parameters are not set in this SarracenDataFrame.")
 
