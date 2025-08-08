@@ -1,4 +1,4 @@
-from typing import Union, Callable, Tuple, Optional
+from typing import Any, Type, Union, Callable, Tuple, Optional
 
 from matplotlib.axes import Axes
 from matplotlib.colors import Colormap
@@ -127,7 +127,7 @@ class SarracenDataFrame(DataFrame):
         self._backend = 'gpu' if cuda.is_available() else 'cpu'
 
     @property
-    def _constructor(self):
+    def _constructor(self) -> Type:
         return SarracenDataFrame
 
     def _identify_special_columns(self) -> None:
@@ -317,7 +317,7 @@ class SarracenDataFrame(DataFrame):
 
         return [com_x * mass, com_y * mass, com_z * mass]
 
-    def classify_sink(self, sdf_sinks) -> None:
+    def classify_sink(self, sdf_sinks: Type) -> None:
         """
         Creates column calculating the energy of particles
         relative to each sink.
@@ -383,7 +383,7 @@ class SarracenDataFrame(DataFrame):
                dens_weight: Union[bool, None] = None,
                normalize: bool = False,
                hmin: bool = False,
-               **kwargs) -> Axes:
+               **kwargs: Any) -> Axes:
         return render(self, target, x, y, z, xsec, kernel, x_pixels, y_pixels,
                       xlim, ylim, cmap, cbar, cbar_kws, cbar_ax, ax, exact,
                       backend, integral_samples, rotation, rot_origin,
@@ -407,7 +407,7 @@ class SarracenDataFrame(DataFrame):
                  dens_weight: bool = False,
                  normalize: bool = False,
                  hmin: bool = False,
-                 **kwargs) -> Axes:
+                 **kwargs: Any) -> Axes:
         return lineplot(self, target, x, y, z, kernel, pixels, xlim, ylim,
                         zlim,  ax, backend, log_scale, dens_weight, normalize,
                         hmin, **kwargs)
@@ -433,7 +433,7 @@ class SarracenDataFrame(DataFrame):
                     dens_weight: bool = False,
                     normalize: bool = False,
                     hmin: bool = False,
-                    **kwargs) -> Axes:
+                    **kwargs: Any) -> Axes:
         return streamlines(self, target, x, y, z, xsec, kernel,
                            integral_samples, rotation, rot_origin, x_pixels,
                            y_pixels, xlim, ylim, ax, exact, backend,
@@ -462,7 +462,7 @@ class SarracenDataFrame(DataFrame):
                   dens_weight: Union[bool, None] = None,
                   normalize: bool = False,
                   hmin: bool = False,
-                  **kwargs) -> Axes:
+                  **kwargs: Any) -> Axes:
         return arrowplot(self, target, x, y, z, xsec, kernel, integral_samples,
                          rotation, rot_origin, x_arrows, y_arrows, xlim, ylim,
                          ax, qkey, qkey_kws, exact, backend, dens_weight,
@@ -743,13 +743,18 @@ class SarracenDataFrame(DataFrame):
             self._vzcol = new_col
 
     @property
-    def dustfracscol(self):
+    def dustfracscol(self) -> list:
         return self._dustfracscol
 
     @dustfracscol.setter
-    def dustfracscol(self, new_col: str) -> None:
-        if new_col in self or new_col is None:
-            self._dustfracscol = new_col
+    def dustfracscol(self, new_cols: Union[list, None]) -> None:
+        if new_cols is None:
+            self._dustfracscol = None
+            return
+        self.dustfracscol = []
+        for new_col in new_cols:
+            if new_col in self:
+                self.dustfracscol.append(new_col)
 
     @property
     def kernel(self) -> BaseKernel:
