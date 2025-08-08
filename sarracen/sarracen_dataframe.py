@@ -208,7 +208,7 @@ class SarracenDataFrame(DataFrame):
         KeyError
             If the 'massoftype' column does not exist in `params`.
         """
-        if 'mass' not in self.params:
+        if self.params is None or 'mass' not in self.params:
             raise KeyError("'mass' value does not exist in this "
                            "SarracenDataFrame.")
 
@@ -241,10 +241,11 @@ class SarracenDataFrame(DataFrame):
         if not {self.hcol}.issubset(self.columns):
             raise KeyError('Missing smoothing length data in this '
                            'SarracenDataFrame')
-        if 'hfact' not in self.params:
+        if self.params is None or 'hfact' not in self.params:
             raise KeyError('hfact missing from params in this '
                            'SarracenDataFrame.')
-        if self.mcol not in self.columns and 'mass' not in self.params:
+        if self.mcol not in self.columns and (self.params is None or 
+                                              'mass' not in self.params):
             raise KeyError('Missing particle mass data in this '
                            'SarracenDataFrame.')
 
@@ -336,6 +337,9 @@ class SarracenDataFrame(DataFrame):
             if {self.mcol}.issubset(self.columns):
                 mass = self[self.mcol]
             else:
+                if self.params is None:
+                    raise KeyError("'mass' value does not exist in this "
+                                   "SarracenDataFrame.")
                 mass = self.params['mass']
             E_k = 0.5 * mass * v_rel**2
 
@@ -575,7 +579,7 @@ class SarracenDataFrame(DataFrame):
         raise ValueError('Invalid number of dimensions.')
 
     @property
-    def params(self) -> dict:
+    def params(self) -> Union[dict, None]:
         """
         dict: Miscellaneous dataset-level parameters.
 
@@ -587,7 +591,7 @@ class SarracenDataFrame(DataFrame):
         return self._params
 
     @params.setter
-    def params(self, new_params: dict) -> None:
+    def params(self, new_params: Union[dict, None]) -> None:
         if new_params is None:
             self._params = None
             return
@@ -615,7 +619,7 @@ class SarracenDataFrame(DataFrame):
         return self._xcol
 
     @xcol.setter
-    def xcol(self, new_col: str) -> None:
+    def xcol(self, new_col: Union[str, None]) -> None:
         if new_col in self or new_col is None:
             self._xcol = new_col
 
@@ -630,7 +634,7 @@ class SarracenDataFrame(DataFrame):
         return self._ycol
 
     @ycol.setter
-    def ycol(self, new_col: str) -> None:
+    def ycol(self, new_col: Union[str, None]) -> None:
         if new_col in self or new_col is None:
             self._ycol = new_col
 
@@ -645,7 +649,7 @@ class SarracenDataFrame(DataFrame):
         return self._zcol
 
     @zcol.setter
-    def zcol(self, new_col: str) -> None:
+    def zcol(self, new_col: Union[str, None]) -> None:
         if new_col in self or new_col is None:
             self._zcol = new_col
 
@@ -660,7 +664,7 @@ class SarracenDataFrame(DataFrame):
         return self._hcol
 
     @hcol.setter
-    def hcol(self, new_col: str) -> None:
+    def hcol(self, new_col: Union[str, None]) -> None:
         if new_col in self or new_col is None:
             self._hcol = new_col
 
@@ -675,7 +679,7 @@ class SarracenDataFrame(DataFrame):
         return self._mcol
 
     @mcol.setter
-    def mcol(self, new_col: str) -> None:
+    def mcol(self, new_col: Union[str, None]) -> None:
         if new_col in self or new_col is None:
             self._mcol = new_col
 
@@ -690,7 +694,7 @@ class SarracenDataFrame(DataFrame):
         return self._rhocol
 
     @rhocol.setter
-    def rhocol(self, new_col: str) -> None:
+    def rhocol(self, new_col: Union[str, None]) -> None:
         if new_col in self or new_col is None:
             self._rhocol = new_col
 
@@ -706,7 +710,7 @@ class SarracenDataFrame(DataFrame):
         return self._vxcol
 
     @vxcol.setter
-    def vxcol(self, new_col: str) -> None:
+    def vxcol(self, new_col: Union[str, None]) -> None:
         if new_col in self or new_col is None:
             self._vxcol = new_col
 
@@ -722,7 +726,7 @@ class SarracenDataFrame(DataFrame):
         return self._vycol
 
     @vycol.setter
-    def vycol(self, new_col: str) -> None:
+    def vycol(self, new_col: Union[str, None]) -> None:
         if new_col in self or new_col is None:
             self._vycol = new_col
 
@@ -738,23 +742,18 @@ class SarracenDataFrame(DataFrame):
         return self._vzcol
 
     @vzcol.setter
-    def vzcol(self, new_col: str) -> None:
+    def vzcol(self, new_col: Union[str, None]) -> None:
         if new_col in self or new_col is None:
             self._vzcol = new_col
 
     @property
-    def dustfracscol(self) -> list:
+    def dustfracscol(self):
         return self._dustfracscol
 
     @dustfracscol.setter
-    def dustfracscol(self, new_cols: Union[list, None]) -> None:
-        if new_cols is None:
-            self._dustfracscol = None
-            return
-        self.dustfracscol = []
-        for new_col in new_cols:
-            if new_col in self:
-                self.dustfracscol.append(new_col)
+    def dustfracscol(self, new_col: str) -> None:
+        if new_col in self or new_col is None:
+            self._dustfracscol = new_col
 
     @property
     def kernel(self) -> BaseKernel:
