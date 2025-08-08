@@ -6,7 +6,7 @@ import pandas as pd
 from ..sarracen_dataframe import SarracenDataFrame
 
 
-def _read_fortran_block(fp: IO, bytesize: int):
+def _read_fortran_block(fp: IO, bytesize: int) -> bytes:
     """ Helper function to read Fortran-written data.
 
     Fortran will add a 4-byte tag before and after any data writes. The value
@@ -116,11 +116,11 @@ def _read_global_header_block(fp: IO,
 
     if (nvars > 0):
         # each tag is 16 characters in length
-        keys = _read_fortran_block(fp, 16*nvars).decode('ascii')
-        keys = [keys[i:i+16].strip() for i in range(0, len(keys), 16)]
+        keys_str = _read_fortran_block(fp, 16*nvars).decode('ascii')
+        keys = [keys_str[i:i+16].strip() for i in range(0, len(keys_str), 16)]
 
-        data = _read_fortran_block(fp, dtype().itemsize*nvars)
-        data = list(np.frombuffer(data, count=nvars, dtype=dtype))
+        raw_data = _read_fortran_block(fp, dtype().itemsize*nvars)
+        data = list(np.frombuffer(raw_data, count=nvars, dtype=dtype))
 
     return keys, data
 
@@ -173,8 +173,8 @@ def _read_array_block(fp: IO,
                     count += 1
                     tag = original_tag + f"_{count}"
 
-            data = _read_fortran_block(fp, dtype().itemsize * n)
-            data = np.frombuffer(data, dtype=dtype)
+            raw_data = _read_fortran_block(fp, dtype().itemsize * n)
+            data: np.ndarray = np.frombuffer(raw_data, dtype=dtype)
             df[tag] = data
 
     return df
