@@ -1,3 +1,5 @@
+from typing import Type, Union
+
 import pandas as pd
 import numpy as np
 from pandas import testing as tm
@@ -6,7 +8,8 @@ import pytest
 import tempfile
 
 
-def _create_capture_pattern(def_int, def_real):
+def _create_capture_pattern(def_int: Type[np.generic],
+                            def_real: Type[np.generic]) -> bytearray:
     """ Construct capture pattern. """
 
     read_tag = np.array([13], dtype='int32')
@@ -27,7 +30,7 @@ def _create_capture_pattern(def_int, def_real):
     return capture_pattern
 
 
-def _create_file_identifier():
+def _create_file_identifier() -> bytearray:
     """ Construct 100-character file identifier. """
 
     read_tag = np.array([13], dtype='int32')
@@ -38,8 +41,11 @@ def _create_file_identifier():
     return file
 
 
-def _create_global_header(massoftype=1e-6, massoftype_7=None,
-                          def_int=np.int32, def_real=np.float64):
+def _create_global_header(massoftype: float = 1e-6,
+                          massoftype_7: Union[float, None] = None,
+                          def_int: Type[np.generic] = np.int32,
+                          def_real: Type[np.generic
+                                         ] = np.float64) -> bytearray:
     """ Construct global variables. Only massoftype in this example. """
 
     read_tag = np.array([13], dtype='int32')
@@ -48,10 +54,10 @@ def _create_global_header(massoftype=1e-6, massoftype_7=None,
         file += bytearray(read_tag.tobytes())
         nvars = (i == 5) + (massoftype_7 is not None)
         if i == 5:  # default real
-            nvars = np.array([nvars], dtype='int32')
+            nvars_arr = np.array([nvars], dtype='int32')
         else:
-            nvars = np.array([0], dtype='int32')
-        file += bytearray(nvars.tobytes())
+            nvars_arr = np.array([0], dtype='int32')
+        file += bytearray(nvars_arr.tobytes())
         file += bytearray(read_tag.tobytes())
 
         if i == 5:  # default real
@@ -71,7 +77,9 @@ def _create_global_header(massoftype=1e-6, massoftype_7=None,
     return file
 
 
-def _create_particle_array(tag, data, dtype=np.float64):
+def _create_particle_array(tag: str,
+                           data: list,
+                           dtype: Type[np.generic] = np.float64) -> bytearray:
     read_tag = np.array([13], dtype='int32')
     file = bytearray(read_tag.tobytes())
     file += bytearray(map(ord, tag.ljust(16)))
@@ -85,7 +93,8 @@ def _create_particle_array(tag, data, dtype=np.float64):
 @pytest.mark.parametrize("def_int, def_real",
                          [(np.int32, np.float64), (np.int32, np.float32),
                           (np.int64, np.float64), (np.int64, np.float32)])
-def test_determine_default_precision2(def_int, def_real):
+def test_determine_default_precision2(def_int: Type[np.generic],
+                                      def_real: Type[np.generic]) -> None:
     """ Test if default int / real precision can be determined. """
 
     file = _create_capture_pattern(def_int, def_real)
@@ -120,7 +129,7 @@ def test_determine_default_precision2(def_int, def_real):
         assert list(sdf.dtypes) == [def_int, def_real]
 
 
-def test_gas_particles_only():
+def test_gas_particles_only() -> None:
 
     file = _create_capture_pattern(np.int32, np.float64)
     file += _create_file_identifier()
@@ -177,7 +186,7 @@ def test_gas_particles_only():
                                check_dtype=False)
 
 
-def test_gas_dust_particles():
+def test_gas_dust_particles() -> None:
 
     file = _create_capture_pattern(np.int32, np.float64)
     file += _create_file_identifier()
@@ -275,7 +284,7 @@ def test_gas_dust_particles():
                                check_dtype=False)
 
 
-def test_gas_sink_particles():
+def test_gas_sink_particles() -> None:
 
     file = _create_capture_pattern(np.int32, np.float64)
     file += _create_file_identifier()
@@ -373,7 +382,7 @@ def test_gas_sink_particles():
                                check_dtype=False)
 
 
-def test_gas_dust_sink_particles():
+def test_gas_dust_sink_particles() -> None:
 
     file = _create_capture_pattern(np.int32, np.float64)
     file += _create_file_identifier()
