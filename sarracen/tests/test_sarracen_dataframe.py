@@ -5,7 +5,7 @@ from matplotlib import pyplot as plt
 from sarracen import SarracenDataFrame, render
 
 
-def test_special_columns():
+def test_special_columns() -> None:
     # The 'x', 'y', 'rho', 'm', and 'h' keywords should be detected.
     # A 'z' column should not be detected.
     data = {'P': [1, 1], 'h': [1, 1], 'rho': [1, 1],
@@ -47,7 +47,7 @@ def test_special_columns():
     assert sdf.hcol == 'h'
 
 
-def test_dimensions():
+def test_dimensions() -> None:
     # This should be detected as 3-dimensional data.
     data = {'P': [1, 1], 'z': [4, 3], 'h': [1, 1], 'rho': [1, 1],
             'x': [5, 6], 'y': [5, 4], 'm': [1, 1]}
@@ -69,7 +69,7 @@ def test_dimensions():
     assert sdf.get_dim() == 2
 
 
-def test_column_changing():
+def test_column_changing() -> None:
     data = {'P': [1], 'z': [2], 'h': [3], 'rho': [4], 'x': [5],
             'y': [6], 'm': [7], 'd': [8], 'smooth': [9], 'ma': [10]}
     sdf = SarracenDataFrame(data)
@@ -110,7 +110,7 @@ def test_column_changing():
     assert sdf.hcol == 'smooth'
 
 
-def test_render_passthrough():
+def test_render_passthrough() -> None:
     # Basic tests that both sdf.render() and render(sdf) return the same plots
 
     # 2D dataset
@@ -153,7 +153,7 @@ def test_render_passthrough():
     assert repr(ax1) == repr(ax2)
 
 
-def test_calc_density():
+def test_calc_density() -> None:
     # Tests that the density calculation is working as intended.
 
     # 2D Data
@@ -183,7 +183,7 @@ def test_calc_density():
     assert sdf['rho'][1] == rho_1
 
 
-def test_centre_of_mass():
+def test_centre_of_mass() -> None:
     """ Basic test of centre of mass calculation. """
 
     # randomly place particles
