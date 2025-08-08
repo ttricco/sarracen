@@ -268,8 +268,13 @@ def angular_momentum(data: 'SarracenDataFrame',
     rbins, bin_edges = _bin_particles_by_radius(data, r_in, r_out, bins, log,
                                                 geometry, origin)
 
-    Lx, Ly, Lz = _calc_angular_momentum(data, rbins, origin, unit_vector)
-    Lx, Ly, Lz = Lx.to_numpy(), Ly.to_numpy(), Lz.to_numpy()
+    Lx_series, Ly_series, Lz_series = _calc_angular_momentum(data,
+                                                             rbins,
+                                                             origin,
+                                                             unit_vector)
+    Lx = Lx_series.to_numpy()
+    Ly = Ly_series.to_numpy()
+    Lz = Lz_series.to_numpy()
 
     if retbins:
         return Lx, Ly, Lz, _get_bin_midpoints(bin_edges, log)
