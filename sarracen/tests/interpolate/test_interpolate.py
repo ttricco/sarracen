@@ -1,6 +1,8 @@
 """
 pytest unit tests for interpolate.py functions.
 """
+from typing import Any, Callable, Dict
+
 import pandas as pd
 import numpy as np
 from numba import cuda
@@ -32,7 +34,7 @@ funcs = funcs2d + funcs2dvec + funcs3d + funcs3dvec
 
 
 @mark.parametrize("backend", backends)
-def test_single_particle(backend):
+def test_single_particle(backend: str) -> None:
     """
     The result of interpolation over a single particle should be equal to
     scaled kernel values at each point of the image.
@@ -146,7 +148,7 @@ def test_single_particle(backend):
 
 
 @mark.parametrize("backend", backends)
-def test_single_repeated_particle(backend):
+def test_single_repeated_particle(backend: str) -> None:
     """
     The result of interpolation over a single particle repeated several times
     should be equal to scaled kernel values at each point of the image
@@ -270,7 +272,7 @@ def test_single_repeated_particle(backend):
 
 @mark.parametrize("backend", backends)
 @mark.parametrize("func", funcs)
-def test_dimension_check(backend, func):
+def test_dimension_check(backend: str, func: Callable) -> None:
     """
     Passing a dataframe with invalid dimensions should raise a TypeError for
     all interpolation functions.
@@ -305,7 +307,7 @@ def test_dimension_check(backend, func):
 
 
 @mark.parametrize("backend", backends)
-def test_3d_xsec_equivalency(backend):
+def test_3d_xsec_equivalency(backend: str) -> None:
     """
     A single 3D column integration of a dataframe should be equivalent to the
     average of several evenly spaced 3D cross-sections.
@@ -363,7 +365,7 @@ def test_3d_xsec_equivalency(backend):
 
 
 @mark.parametrize("backend", backends)
-def test_2d_xsec_equivalency(backend):
+def test_2d_xsec_equivalency(backend: str) -> None:
     """
     A single 2D interpolation should be equivalent to several combined
     2D cross-sections.
@@ -402,7 +404,7 @@ def test_2d_xsec_equivalency(backend):
 
 
 @mark.parametrize("backend", backends)
-def test_corner_particles(backend):
+def test_corner_particles(backend: str) -> None:
     """
     Interpolation over a dataset with two particles should be equal to the sum
     of contributions at each point.
@@ -524,7 +526,7 @@ def test_corner_particles(backend):
 
 
 @mark.parametrize("backend", backends)
-def test_image_transpose(backend):
+def test_image_transpose(backend: str) -> None:
     """
     Interpolation with flipped x & y axes should be equivalent to the transpose
     of regular interpolation.
@@ -542,14 +544,14 @@ def test_image_transpose(backend):
                           normalize=False, hmin=False)
     assert_allclose(img1, img2.T)
 
-    img1 = interpolate_2d_vec(sdf, 'A', 'B',
-                              x_pixels=20, y_pixels=20,
-                              normalize=False, hmin=False)
-    img2 = interpolate_2d_vec(sdf, 'A', 'B', x='y', y='x',
-                              x_pixels=20, y_pixels=20,
-                              normalize=False, hmin=False)
-    assert_allclose(img1[0], img2[0].T)
-    assert_allclose(img1[1], img2[1].T)
+    img1_tuple = interpolate_2d_vec(sdf, 'A', 'B',
+                                    x_pixels=20, y_pixels=20,
+                                    normalize=False, hmin=False)
+    img2_tuple = interpolate_2d_vec(sdf, 'A', 'B', x='y', y='x',
+                                    x_pixels=20, y_pixels=20,
+                                    normalize=False, hmin=False)
+    assert_allclose(img1_tuple[0], img2_tuple[0].T)
+    assert_allclose(img1_tuple[1], img2_tuple[1].T)
 
     data = {'x': [-1, 1], 'y': [1, -1], 'z': [-1, 1],
             'A': [2, 1.5], 'B': [5, 4], 'C': [2.5, 3],
@@ -565,15 +567,15 @@ def test_image_transpose(backend):
                                normalize=False, hmin=False)
     assert_allclose(img1, img2.T)
 
-    img1 = interpolate_3d_vec(sdf, 'A', 'B', 'C',
-                              x_pixels=50, y_pixels=50,
-                              normalize=False, hmin=False)
-    img2 = interpolate_3d_vec(sdf, 'A', 'B', 'C',
-                              x='y', y='x',
-                              x_pixels=50, y_pixels=50,
-                              normalize=False, hmin=False)
-    assert_allclose(img1[0], img2[0].T)
-    assert_allclose(img1[1], img2[1].T)
+    img1_tuple = interpolate_3d_vec(sdf, 'A', 'B', 'C',
+                                    x_pixels=50, y_pixels=50,
+                                    normalize=False, hmin=False)
+    img2_tuple = interpolate_3d_vec(sdf, 'A', 'B', 'C',
+                                    x='y', y='x',
+                                    x_pixels=50, y_pixels=50,
+                                    normalize=False, hmin=False)
+    assert_allclose(img1_tuple[0], img2_tuple[0].T)
+    assert_allclose(img1_tuple[1], img2_tuple[1].T)
 
     img1 = interpolate_3d_cross(sdf, 'A',
                                 x_pixels=50, y_pixels=50,
@@ -584,15 +586,15 @@ def test_image_transpose(backend):
                                 normalize=False, hmin=False)
     assert_allclose(img1, img2.T)
 
-    img1 = interpolate_3d_cross_vec(sdf, 'A', 'B', 'C',
-                                    x_pixels=20, y_pixels=20,
-                                    normalize=False, hmin=False)
-    img2 = interpolate_3d_cross_vec(sdf, 'A', 'B', 'C',
-                                    x='y', y='x',
-                                    x_pixels=20, y_pixels=20,
-                                    normalize=False, hmin=False)
-    assert_allclose(img1[0], img2[0].T)
-    assert_allclose(img1[1], img2[1].T)
+    img1_tuple = interpolate_3d_cross_vec(sdf, 'A', 'B', 'C',
+                                          x_pixels=20, y_pixels=20,
+                                          normalize=False, hmin=False)
+    img2_tuple = interpolate_3d_cross_vec(sdf, 'A', 'B', 'C',
+                                          x='y', y='x',
+                                          x_pixels=20, y_pixels=20,
+                                          normalize=False, hmin=False)
+    assert_allclose(img1_tuple[0], img2_tuple[0].T)
+    assert_allclose(img1_tuple[1], img2_tuple[1].T)
 
     img1 = interpolate_3d_grid(sdf, 'A',
                                x_pixels=20, y_pixels=20,
@@ -606,7 +608,7 @@ def test_image_transpose(backend):
 
 @mark.parametrize("backend", backends)
 @mark.parametrize("use_default_kernel", [True, False])
-def test_default_kernel(backend, use_default_kernel):
+def test_default_kernel(backend: str, use_default_kernel: bool) -> None:
     """
     Interpolation should use the kernel supplied to the function. If no kernel
     is supplied, the kernel attached to the dataframe should be used.
@@ -622,7 +624,7 @@ def test_default_kernel(backend, use_default_kernel):
     sdf_2.backend = backend
     sdf_3.backend = backend
 
-    kwargs = {'normalize': False}
+    kwargs: Dict[str, Any] = {'normalize': False}
 
     if use_default_kernel:
         kernel = QuarticSplineKernel()
@@ -639,11 +641,11 @@ def test_default_kernel(backend, use_default_kernel):
                          x_pixels=1, y_pixels=1,
                          xlim=(-1, 1), ylim=(-1, 1), **kwargs)
     assert img == kernel.w(0, 2)
-    img = interpolate_2d_vec(sdf_2, 'A', 'B',
-                             x_pixels=1, y_pixels=1,
-                             xlim=(-1, 1), ylim=(-1, 1), **kwargs)
-    assert img[0] == kernel.w(0, 2)
-    assert img[1] == kernel.w(0, 2)
+    img_tuple = interpolate_2d_vec(sdf_2, 'A', 'B',
+                                   x_pixels=1, y_pixels=1,
+                                   xlim=(-1, 1), ylim=(-1, 1), **kwargs)
+    assert img_tuple[0] == kernel.w(0, 2)
+    assert img_tuple[1] == kernel.w(0, 2)
 
     img = interpolate_2d_line(sdf_2, 'A',
                               pixels=1,
@@ -654,21 +656,21 @@ def test_default_kernel(backend, use_default_kernel):
                               x_pixels=1, y_pixels=1,
                               xlim=(-1, 1), ylim=(-1, 1), **kwargs)
     assert img == kernel.get_column_kernel()[0]
-    img = interpolate_3d_vec(sdf_3, 'A', 'B', 'C',
-                             x_pixels=1, y_pixels=1,
-                             xlim=(-1, 1), ylim=(-1, 1), **kwargs)
-    assert img[0] == kernel.get_column_kernel()[0]
-    assert img[1] == kernel.get_column_kernel()[0]
+    img_tuple = interpolate_3d_vec(sdf_3, 'A', 'B', 'C',
+                                   x_pixels=1, y_pixels=1,
+                                   xlim=(-1, 1), ylim=(-1, 1), **kwargs)
+    assert img_tuple[0] == kernel.get_column_kernel()[0]
+    assert img_tuple[1] == kernel.get_column_kernel()[0]
 
     img = interpolate_3d_cross(sdf_3, 'A',
                                x_pixels=1, y_pixels=1,
                                xlim=(-1, 1), ylim=(-1, 1), **kwargs)
     assert img == kernel.w(0, 3)
-    img = interpolate_3d_cross_vec(sdf_3, 'A', 'B', 'C',
-                                   x_pixels=1, y_pixels=1,
-                                   xlim=(-1, 1), ylim=(-1, 1), **kwargs)
-    assert img[0] == kernel.w(0, 3)
-    assert img[1] == kernel.w(0, 3)
+    img_tuple = interpolate_3d_cross_vec(sdf_3, 'A', 'B', 'C',
+                                         x_pixels=1, y_pixels=1,
+                                         xlim=(-1, 1), ylim=(-1, 1), **kwargs)
+    assert img_tuple[0] == kernel.w(0, 3)
+    assert img_tuple[1] == kernel.w(0, 3)
 
     img = interpolate_3d_grid(sdf_3, 'A',
                               x_pixels=1, y_pixels=1, z_pixels=1,
@@ -683,7 +685,7 @@ def test_default_kernel(backend, use_default_kernel):
 
 
 @mark.parametrize("backend", backends)
-def test_column_samples(backend):
+def test_column_samples(backend: str) -> None:
     """
     3D column interpolation should use the number of integral samples supplied
     as an argument.
@@ -708,7 +710,7 @@ def test_column_samples(backend):
 # this test is incredibly slow on the GPU backend (30min+) so it only runs on
 # the CPU backend for now.
 # @mark.parametrize("backend", backends)
-def test_pixel_arguments():
+def test_pixel_arguments() -> None:
     """
     Default interpolation pixel counts should be selected to preserve the
     aspect ratio of the data.
@@ -898,7 +900,7 @@ def test_pixel_arguments():
 
 
 @mark.parametrize("backend", backends)
-def test_irregular_bounds(backend):
+def test_irregular_bounds(backend: str) -> None:
     """
     When the aspect ratio of pixels is different than the aspect ratio in
     particle space, the interpolation functions should still correctly
@@ -997,7 +999,7 @@ def test_irregular_bounds(backend):
 
 
 @mark.parametrize("backend", backends)
-def test_oob_particles(backend):
+def test_oob_particles(backend: str) -> None:
     """
     Particles outside the bounds of an interpolation operation should be
     included in the result.
@@ -1104,7 +1106,7 @@ def test_oob_particles(backend):
 
 
 @mark.parametrize("backend", backends)
-def test_invalid_region(backend):
+def test_invalid_region(backend: str) -> None:
     """
     Interpolation with invalid bounds should raise a ValueError.
     """
@@ -1173,7 +1175,7 @@ def test_invalid_region(backend):
 @mark.parametrize("backend", backends)
 @mark.parametrize("func", funcs)
 @mark.parametrize("column", ['m', 'h'])
-def test_required_columns(backend, func, column):
+def test_required_columns(backend: str, func: Callable, column: str) -> None:
     """
     Interpolation without one of the required columns results in a KeyError.
     """
@@ -1207,7 +1209,7 @@ def test_required_columns(backend, func, column):
 
 
 @mark.parametrize("backend", backends)
-def test_exact_interpolation(backend):
+def test_exact_interpolation(backend: str) -> None:
     """
     Exact interpolation over the entire effective area of a kernel should
     return 1 over the particle bounds, multiplied by the weight.
@@ -1246,7 +1248,9 @@ def test_exact_interpolation(backend):
 @mark.parametrize("backend", backends)
 @mark.parametrize("func", funcs)
 @mark.parametrize("dens_weight", [True, False])
-def test_density_weighted(backend, func, dens_weight):
+def test_density_weighted(backend: str,
+                          func: Callable,
+                          dens_weight: bool) -> None:
     """
     Enabling density weighted interpolation will change the resultant image
     """
@@ -1305,7 +1309,7 @@ def test_density_weighted(backend, func, dens_weight):
 
 @mark.parametrize("backend", backends)
 @mark.parametrize("normalize", [False, True])
-def test_normalize_interpolation(backend, normalize):
+def test_normalize_interpolation(backend: str, normalize: bool) -> None:
     data_2 = {'x': [0], 'y': [0],
               'A': [2], 'B': [3],
               'h': [0.5], 'rho': [0.25], 'm': [0.75]}
@@ -1341,10 +1345,10 @@ def test_normalize_interpolation(backend, normalize):
                          x_pixels=1, y_pixels=1, **kwargs)
     assert img == weight2d * sdf_2['A'][0] / norm2d
 
-    img = interpolate_2d_vec(sdf_2, 'A', 'B',
-                             x_pixels=1, y_pixels=1, **kwargs)
-    assert img[0] == weight2d * sdf_2['A'][0] / norm2d
-    assert img[1] == weight2d * sdf_2['B'][0] / norm2d
+    img_tuple = interpolate_2d_vec(sdf_2, 'A', 'B',
+                                   x_pixels=1, y_pixels=1, **kwargs)
+    assert img_tuple[0] == weight2d * sdf_2['A'][0] / norm2d
+    assert img_tuple[1] == weight2d * sdf_2['B'][0] / norm2d
 
     img = interpolate_2d_line(sdf_2, 'A',
                               pixels=1, **kwargs)
@@ -1354,19 +1358,19 @@ def test_normalize_interpolation(backend, normalize):
                               x_pixels=1, y_pixels=1, **kwargs)
     assert img[0] == weight3d_column * sdf_2['A'][0] / norm3d_column
 
-    img = interpolate_3d_vec(sdf_3, 'A', 'B', 'C',
-                             x_pixels=1, y_pixels=1, **kwargs)
-    assert img[0] == weight3d_column * sdf_2['A'][0] / norm3d_column
-    assert img[1] == weight3d_column * sdf_2['B'][0] / norm3d_column
+    img_tuple = interpolate_3d_vec(sdf_3, 'A', 'B', 'C',
+                                   x_pixels=1, y_pixels=1, **kwargs)
+    assert img_tuple[0] == weight3d_column * sdf_2['A'][0] / norm3d_column
+    assert img_tuple[1] == weight3d_column * sdf_2['B'][0] / norm3d_column
 
     img = interpolate_3d_cross(sdf_3, 'A',
                                x_pixels=1, y_pixels=1, **kwargs)
     assert img[0] == weight3d * sdf_2['A'][0] / norm3d
 
-    img = interpolate_3d_cross_vec(sdf_3, 'A', 'B', 'C',
-                                   x_pixels=1, y_pixels=1, **kwargs)
-    assert img[0] == weight3d * sdf_2['A'][0] / norm3d
-    assert img[1] == weight3d * sdf_2['B'][0] / norm3d
+    img_tuple = interpolate_3d_cross_vec(sdf_3, 'A', 'B', 'C',
+                                         x_pixels=1, y_pixels=1, **kwargs)
+    assert img_tuple[0] == weight3d * sdf_2['A'][0] / norm3d
+    assert img_tuple[1] == weight3d * sdf_2['B'][0] / norm3d
 
     img = interpolate_3d_grid(sdf_3, 'A',
                               x_pixels=1, y_pixels=1, z_pixels=1,
@@ -1379,7 +1383,7 @@ def test_normalize_interpolation(backend, normalize):
 
 
 @mark.parametrize("backend", backends)
-def test_exact_interpolation_culling(backend):
+def test_exact_interpolation_culling(backend: str) -> None:
     data_2 = {'x': [0], 'y': [0], 'A': [2],
               'h': [0.4], 'rho': [0.1], 'm': [1]}
     sdf_2 = SarracenDataFrame(data_2, params=dict())
@@ -1404,7 +1408,7 @@ def test_exact_interpolation_culling(backend):
 
 
 @mark.parametrize("backend", backends)
-def test_minimum_smoothing_length_2d(backend):
+def test_minimum_smoothing_length_2d(backend: str) -> None:
     """ Test that the minimum smoothing length evaluates correctly. """
 
     pixels = 5
@@ -1440,7 +1444,7 @@ def test_minimum_smoothing_length_2d(backend):
 
 
 @mark.parametrize("backend", backends)
-def test_minimum_smoothing_length_3d(backend):
+def test_minimum_smoothing_length_3d(backend: str) -> None:
     """ Test that the minimum smoothing length evaluates correctly. """
 
     pixels = 5
@@ -1480,7 +1484,7 @@ def test_minimum_smoothing_length_3d(backend):
 
 
 @mark.parametrize("backend", backends)
-def test_minimum_smoothing_length_1d_lines(backend):
+def test_minimum_smoothing_length_1d_lines(backend: str) -> None:
     """ Test that the minimum smoothing length evaluates correctly. """
 
     pixels = 5
