@@ -1,10 +1,13 @@
+from typing import Type, IO, Union
+
 import pandas as pd
 import numpy as np
 import sarracen
 import tempfile
 
 
-def _create_capture_pattern(def_int, def_real):
+def _create_capture_pattern(def_int: Type[np.generic],
+                            def_real: Type[np.generic]) -> bytearray:
     """ Construct capture pattern. """
 
     read_tag = np.array([13], dtype='int32')
@@ -25,7 +28,7 @@ def _create_capture_pattern(def_int, def_real):
     return capture_pattern
 
 
-def _create_file_identifier():
+def _create_file_identifier() -> bytearray:
     """ Construct 100-character file identifier. """
 
     read_tag = np.array([13], dtype='int32')
@@ -36,8 +39,11 @@ def _create_file_identifier():
     return bytes_file
 
 
-def _create_global_header(massoftype=1e-6, massoftype_7=None,
-                          def_int=np.int32, def_real=np.float64):
+def _create_global_header(massoftype: float = 1e-6,
+                          massoftype_7: Union[float, None] = None,
+                          def_int: Type[np.generic] = np.int32,
+                          def_real: Type[np.generic
+                                         ] = np.float64) -> bytearray:
     """ Construct global variables. Only massoftype in this example. """
 
     read_tag = np.array([13], dtype='int32')
@@ -46,10 +52,10 @@ def _create_global_header(massoftype=1e-6, massoftype_7=None,
         bytes_file += bytearray(read_tag.tobytes())
         nvars = (i == 5) + (massoftype_7 is not None)
         if i == 5:  # default real
-            nvars = np.array([nvars], dtype='int32')
+            nvars_arr = np.array([nvars], dtype='int32')
         else:
-            nvars = np.array([0], dtype='int32')
-        bytes_file += bytearray(nvars.tobytes())
+            nvars_arr = np.array([0], dtype='int32')
+        bytes_file += bytearray(nvars_arr.tobytes())
         bytes_file += bytearray(read_tag.tobytes())
 
         if i == 5:  # default real
@@ -70,7 +76,9 @@ def _create_global_header(massoftype=1e-6, massoftype_7=None,
     return bytes_file
 
 
-def _create_particle_array(tag, data, dtype=np.float64):
+def _create_particle_array(tag: str,
+                           data: list,
+                           dtype: Type[np.generic] = np.float64) -> bytearray:
     read_tag = np.array([13], dtype='int32')
     bytes_file = bytearray(read_tag.tobytes())
     bytes_file += bytearray(map(ord, tag.ljust(16)))
@@ -82,7 +90,7 @@ def _create_particle_array(tag, data, dtype=np.float64):
     return bytes_file
 
 
-def _get_one_block_phantom_file():
+def _get_one_block_phantom_file() -> bytearray:
     bytes_file = _create_capture_pattern(np.int32, np.float64)
     bytes_file += _create_file_identifier()
     bytes_file += _create_global_header()
@@ -112,7 +120,7 @@ def _get_one_block_phantom_file():
     return bytes_file
 
 
-def _get_gas_dust_sink_particles():
+def _get_gas_dust_sink_particles() -> bytearray:
 
     bytes_file = _create_capture_pattern(np.int32, np.float64)
     bytes_file += _create_file_identifier()
@@ -173,7 +181,7 @@ def _get_gas_dust_sink_particles():
     return bytes_file
 
 
-def _get_gas_sink_particles():
+def _get_gas_sink_particles() -> bytearray:
 
     bytes_file = _create_capture_pattern(np.int32, np.float64)
     bytes_file += _create_file_identifier()
@@ -220,7 +228,7 @@ def _get_gas_sink_particles():
     return bytes_file
 
 
-def test_write_phantom_one_block():
+def test_write_phantom_one_block() -> None:
 
     with tempfile.NamedTemporaryFile() as fp:
         fp.write(_get_one_block_phantom_file())
@@ -234,7 +242,7 @@ def test_write_phantom_one_block():
     pd.testing.assert_frame_equal(test_sdfs_from_new_file, test_sdf)
 
 
-def test_sink_particles():
+def test_sink_particles() -> None:
     with tempfile.NamedTemporaryFile() as fp:
         fp.write(_get_gas_sink_particles())
         _test_data_frames(fp)
@@ -248,7 +256,7 @@ def test_sink_particles():
 #         _test_data_frames(fp)
 
 
-def _test_data_frames(fp):
+def _test_data_frames(fp: IO) -> None:
     fp.seek(0)
     test_sdfs = sarracen.read_phantom(fp.name)
 
