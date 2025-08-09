@@ -216,12 +216,7 @@ def angular_momentum(data: 'SarracenDataFrame',
                      origin: Union[list, None] = None,
                      retbins: bool = False,
                      unit_vector: bool = True) -> Union[Tuple[np.ndarray,
-                                                              np.ndarray,
-                                                              np.ndarray],
-                                                        Tuple[np.ndarray,
-                                                              np.ndarray,
-                                                              np.ndarray,
-                                                              np.ndarray]]:
+                                                              ...]]:
     """
     Calculates the angular momentum profile of the disc.
 
