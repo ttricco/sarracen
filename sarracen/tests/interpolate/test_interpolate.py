@@ -1,7 +1,7 @@
 """
 pytest unit tests for interpolate.py functions.
 """
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, List
 
 import pandas as pd
 import numpy as np
@@ -11,7 +11,7 @@ from pytest import approx, raises, mark
 
 from sarracen import SarracenDataFrame
 from sarracen.kernels import CubicSplineKernel, QuarticSplineKernel, \
-    QuinticSplineKernel
+    QuinticSplineKernel, BaseKernel
 from sarracen.interpolate import interpolate_2d, interpolate_2d_line, \
     interpolate_3d_cross, interpolate_3d_proj, interpolate_2d_vec, \
     interpolate_3d_vec, interpolate_3d_cross_vec, interpolate_3d_grid, \
@@ -627,7 +627,7 @@ def test_default_kernel(backend: str, use_default_kernel: bool) -> None:
     kwargs: Dict[str, Any] = {'normalize': False}
 
     if use_default_kernel:
-        kernel = QuarticSplineKernel()
+        kernel: BaseKernel = QuarticSplineKernel()
         sdf_2.kernel = kernel
         sdf_3.kernel = kernel
     else:
@@ -775,7 +775,9 @@ def test_pixel_arguments() -> None:
         assert img.shape == (default_pixels, default_pixels, default_pixels)
 
     # Non-vector functions
-    for func in [interpolate_2d, interpolate_3d_proj, interpolate_3d_cross]:
+    functions_list: List[Callable] = [interpolate_2d, interpolate_3d_proj,
+                                      interpolate_3d_cross]
+    for func in functions_list:
         for axes in [('x', 'y'),
                      ('x', 'z'),
                      ('y', 'z'),
@@ -825,7 +827,7 @@ def test_pixel_arguments() -> None:
             assert img.shape == (default_pixels, default_pixels * 2)
 
     # 3D Vector-based functions
-    for func in [interpolate_3d_vec, interpolate_3d_cross_vec]:
+    for func in funcs3dvec:
         for axes in [('x', 'y'),
                      ('x', 'z'),
                      ('y', 'z'),
@@ -871,32 +873,32 @@ def test_pixel_arguments() -> None:
         ratio = np.abs(sdf_3[axes[1]][1] - sdf_3[axes[1]][0]) \
                 / np.abs(sdf_3[axes[0]][1] - sdf_3[axes[0]][0])
 
-        img = interpolate_2d_vec(sdf_2, 'A', 'B',
-                                 x=axes[0], y=axes[1],
-                                 normalize=False, hmin=False)
-        assert img[0].shape[0] / img[0].shape[1] == approx(ratio, rel=1e-2)
-        assert img[1].shape[0] / img[1].shape[1] == approx(ratio, rel=1e-2)
+        img_tuple = interpolate_2d_vec(sdf_2, 'A', 'B',
+                                       x=axes[0], y=axes[1],
+                                       normalize=False, hmin=False)
+        assert img_tuple[0].shape[0] / img_tuple[0].shape[1] == approx(ratio, rel=1e-2)
+        assert img_tuple[1].shape[0] / img_tuple[1].shape[1] == approx(ratio, rel=1e-2)
 
-        img = interpolate_2d_vec(sdf_2, 'A', 'B',
-                                 x=axes[0], y=axes[1],
-                                 x_pixels=default_pixels,
-                                 normalize=False, hmin=False)
-        assert img[0].shape == (round(default_pixels * ratio), default_pixels)
-        assert img[1].shape == (round(default_pixels * ratio), default_pixels)
+        img_tuple = interpolate_2d_vec(sdf_2, 'A', 'B',
+                                       x=axes[0], y=axes[1],
+                                       x_pixels=default_pixels,
+                                       normalize=False, hmin=False)
+        assert img_tuple[0].shape == (round(default_pixels * ratio), default_pixels)
+        assert img_tuple[1].shape == (round(default_pixels * ratio), default_pixels)
 
-        img = interpolate_2d_vec(sdf_2, 'A', 'B',
+        img_tuple = interpolate_2d_vec(sdf_2, 'A', 'B',
                                  x=axes[0], y=axes[1],
                                  y_pixels=default_pixels,
                                  normalize=False, hmin=False)
-        assert img[0].shape == (default_pixels, round(default_pixels / ratio))
-        assert img[1].shape == (default_pixels, round(default_pixels / ratio))
+        assert img_tuple[0].shape == (default_pixels, round(default_pixels / ratio))
+        assert img_tuple[1].shape == (default_pixels, round(default_pixels / ratio))
 
-        img = interpolate_2d_vec(sdf_2, 'A', 'B',
+        img_tuple = interpolate_2d_vec(sdf_2, 'A', 'B',
                                  x_pixels=default_pixels * 2,
                                  y_pixels=default_pixels,
                                  normalize=False, hmin=False)
-        assert img[0].shape == (default_pixels, default_pixels * 2)
-        assert img[1].shape == (default_pixels, default_pixels * 2)
+        assert img_tuple[0].shape == (default_pixels, default_pixels * 2)
+        assert img_tuple[1].shape == (default_pixels, default_pixels * 2)
 
 
 @mark.parametrize("backend", backends)
@@ -1468,9 +1470,10 @@ def test_minimum_smoothing_length_3d(backend: str) -> None:
     sdf_a.backend = backend
     sdf_b.backend = backend
 
-    for interpolate in [interpolate_3d_cross,
-                        interpolate_3d_proj,
-                        interpolate_3d_grid]:
+    functions_list: List[Callable] = [interpolate_3d_cross,
+                                      interpolate_3d_proj,
+                                      interpolate_3d_grid]
+    for interpolate in functions_list:
         grid = interpolate(sdf_a, 'rho',
                            x_pixels=pixels, y_pixels=pixels,
                            xlim=xlim, ylim=ylim,
