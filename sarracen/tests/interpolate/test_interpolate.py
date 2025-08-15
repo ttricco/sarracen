@@ -876,27 +876,33 @@ def test_pixel_arguments() -> None:
         img_tuple = interpolate_2d_vec(sdf_2, 'A', 'B',
                                        x=axes[0], y=axes[1],
                                        normalize=False, hmin=False)
-        assert img_tuple[0].shape[0] / img_tuple[0].shape[1] == approx(ratio, rel=1e-2)
-        assert img_tuple[1].shape[0] / img_tuple[1].shape[1] == approx(ratio, rel=1e-2)
+        assert img_tuple[0].shape[0] \
+               / img_tuple[0].shape[1] == approx(ratio, rel=1e-2)
+        assert img_tuple[1].shape[0] \
+               / img_tuple[1].shape[1] == approx(ratio, rel=1e-2)
 
         img_tuple = interpolate_2d_vec(sdf_2, 'A', 'B',
                                        x=axes[0], y=axes[1],
                                        x_pixels=default_pixels,
                                        normalize=False, hmin=False)
-        assert img_tuple[0].shape == (round(default_pixels * ratio), default_pixels)
-        assert img_tuple[1].shape == (round(default_pixels * ratio), default_pixels)
+        assert img_tuple[0].shape == (round(default_pixels * ratio),
+                                      default_pixels)
+        assert img_tuple[1].shape == (round(default_pixels * ratio),
+                                      default_pixels)
 
         img_tuple = interpolate_2d_vec(sdf_2, 'A', 'B',
-                                 x=axes[0], y=axes[1],
-                                 y_pixels=default_pixels,
-                                 normalize=False, hmin=False)
-        assert img_tuple[0].shape == (default_pixels, round(default_pixels / ratio))
-        assert img_tuple[1].shape == (default_pixels, round(default_pixels / ratio))
+                                       x=axes[0], y=axes[1],
+                                       y_pixels=default_pixels,
+                                       normalize=False, hmin=False)
+        assert img_tuple[0].shape == (default_pixels,
+                                      round(default_pixels / ratio))
+        assert img_tuple[1].shape == (default_pixels,
+                                      round(default_pixels / ratio))
 
         img_tuple = interpolate_2d_vec(sdf_2, 'A', 'B',
-                                 x_pixels=default_pixels * 2,
-                                 y_pixels=default_pixels,
-                                 normalize=False, hmin=False)
+                                       x_pixels=default_pixels * 2,
+                                       y_pixels=default_pixels,
+                                       normalize=False, hmin=False)
         assert img_tuple[0].shape == (default_pixels, default_pixels * 2)
         assert img_tuple[1].shape == (default_pixels, default_pixels * 2)
 
