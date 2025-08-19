@@ -4,7 +4,7 @@ from ..sarracen_dataframe import SarracenDataFrame
 from .utils import _get_mass, _get_origin
 from .utils import _bin_particles_by_radius, _get_bin_midpoints
 
-from typing import Union
+from typing import Tuple, Union
 
 
 def azimuthal_average(data: 'SarracenDataFrame',
@@ -15,7 +15,9 @@ def azimuthal_average(data: 'SarracenDataFrame',
                       log: bool = False,
                       geometry: str = 'cylindrical',
                       origin: Union[list, None] = None,
-                      retbins: bool = False):
+                      retbins: bool = False) -> Union[np.ndarray,
+                                                      Tuple[np.ndarray,
+                                                            np.ndarray]]:
     """
     Calculates the 1D azimuthally-averaged profile for a target quantity.
 
@@ -79,7 +81,9 @@ def surface_density(data: 'SarracenDataFrame',
                     log: bool = False,
                     geometry: str = 'cylindrical',
                     origin: Union[list, None] = None,
-                    retbins: bool = False):
+                    retbins: bool = False) -> Union[np.ndarray,
+                                                    Tuple[np.ndarray,
+                                                          np.ndarray]]:
     """
     Calculates the 1D azimuthally-averaged surface density profile.
 
@@ -150,7 +154,9 @@ def surface_density(data: 'SarracenDataFrame',
 def _calc_angular_momentum(data: 'SarracenDataFrame',
                            rbins: pd.Series,
                            origin: list,
-                           unit_vector: bool):
+                           unit_vector: bool) -> Tuple[pd.Series,
+                                                       pd.Series,
+                                                       pd.Series]:
     """
     Utility function to calculate angular momentum of the disc.
 
@@ -209,7 +215,8 @@ def angular_momentum(data: 'SarracenDataFrame',
                      geometry: str = 'cylindrical',
                      origin: Union[list, None] = None,
                      retbins: bool = False,
-                     unit_vector: bool = True):
+                     unit_vector: bool = True) -> Union[Tuple[np.ndarray,
+                                                              ...]]:
     """
     Calculates the angular momentum profile of the disc.
 
@@ -256,8 +263,13 @@ def angular_momentum(data: 'SarracenDataFrame',
     rbins, bin_edges = _bin_particles_by_radius(data, r_in, r_out, bins, log,
                                                 geometry, origin)
 
-    Lx, Ly, Lz = _calc_angular_momentum(data, rbins, origin, unit_vector)
-    Lx, Ly, Lz = Lx.to_numpy(), Ly.to_numpy(), Lz.to_numpy()
+    Lx_series, Ly_series, Lz_series = _calc_angular_momentum(data,
+                                                             rbins,
+                                                             origin,
+                                                             unit_vector)
+    Lx = Lx_series.to_numpy()
+    Ly = Ly_series.to_numpy()
+    Lz = Lz_series.to_numpy()
 
     if retbins:
         return Lx, Ly, Lz, _get_bin_midpoints(bin_edges, log)
@@ -267,7 +279,7 @@ def angular_momentum(data: 'SarracenDataFrame',
 
 def _calc_scale_height(data: 'SarracenDataFrame',
                        rbins: pd.Series,
-                       origin: list):
+                       origin: list) -> pd.Series:
     """
     Utility function to calculate the scale height of the disc.
 
@@ -303,7 +315,9 @@ def scale_height(data: 'SarracenDataFrame',
                  log: bool = False,
                  geometry: str = 'cylindrical',
                  origin: Union[list, None] = None,
-                 retbins: bool = False):
+                 retbins: bool = False) -> Union[np.ndarray,
+                                                 Tuple[np.ndarray,
+                                                       np.ndarray]]:
     """
     Calculates the scale height, H/R, of the disc.
 
@@ -373,7 +387,8 @@ def honH(data: 'SarracenDataFrame',
          log: bool = False,
          geometry: str = 'cylindrical',
          origin: Union[list, None] = None,
-         retbins: bool = False):
+         retbins: bool = False) -> Union[np.ndarray, Tuple[np.ndarray,
+                                                           np.ndarray]]:
     """
     Calculates <h>/H, the averaged smoothing length divided by the scale
     height.

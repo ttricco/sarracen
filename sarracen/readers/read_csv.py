@@ -1,8 +1,10 @@
+from typing import Any
+
 import pandas as pd
 from ..sarracen_dataframe import SarracenDataFrame
 
 
-def read_csv(*args, **kwargs) -> SarracenDataFrame:
+def read_csv(*args: Any, **kwargs: Any) -> SarracenDataFrame:
     """
     Read data from a csv file.
 
