@@ -1,7 +1,7 @@
 """
 pytest unit tests for interpolate.py functions.
 """
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Tuple
 
 import pandas as pd
 import numpy as np
@@ -21,14 +21,14 @@ backends = ['cpu']
 if cuda.is_available():
     backends.append('gpu')
 
-funcs2d = [interpolate_2d, interpolate_2d_line]
-funcs2dvec = [interpolate_2d_vec]
-funcs3d = [interpolate_3d_line, interpolate_3d_proj, interpolate_3d_cross,
-           interpolate_3d_grid]
-funcs3dvec = [interpolate_3d_vec, interpolate_3d_cross_vec]
+funcs2d: List[Callable] = [interpolate_2d, interpolate_2d_line]
+funcs2dvec: List[Callable] = [interpolate_2d_vec]
+funcs3d: List[Callable] = [interpolate_3d_line, interpolate_3d_proj,
+                           interpolate_3d_cross, interpolate_3d_grid]
+funcs3dvec: List[Callable] = [interpolate_3d_vec, interpolate_3d_cross_vec]
 
-funcscolumn = [interpolate_3d_proj, interpolate_3d_vec]
-funcsline = [interpolate_2d_line, interpolate_3d_line]
+funcscolumn: List[Callable] = [interpolate_3d_proj, interpolate_3d_vec]
+funcsline: List[Callable] = [interpolate_2d_line, interpolate_3d_line]
 
 funcs = funcs2d + funcs2dvec + funcs3d + funcs3dvec
 
@@ -730,36 +730,36 @@ def test_pixel_arguments() -> None:
     default_pixels = 12
 
     # 3D grid interpolation
-    for axes in [('x', 'y', 'z'),
+    for ax in [('x', 'y', 'z'),
                  ('x', 'z', 'y'),
                  ('y', 'z', 'x'),
                  ('y', 'x', 'z'),
                  ('z', 'x', 'y'),
                  ('z', 'y', 'x')]:
-        diff_0 = np.abs(sdf_3[axes[0]][1] - sdf_3[axes[0]][0])
-        diff_1 = np.abs(sdf_3[axes[1]][1] - sdf_3[axes[1]][0])
-        diff_2 = np.abs(sdf_3[axes[2]][1] - sdf_3[axes[2]][0])
+        diff_0 = np.abs(sdf_3[ax[0]][1] - sdf_3[ax[0]][0])
+        diff_1 = np.abs(sdf_3[ax[1]][1] - sdf_3[ax[1]][0])
+        diff_2 = np.abs(sdf_3[ax[2]][1] - sdf_3[ax[2]][0])
 
         ratio01 = diff_0 / diff_1
         ratio02 = diff_0 / diff_2
         ratio12 = diff_1 / diff_2
 
         img = interpolate_3d_grid(sdf_3, 'A',
-                                  x=axes[0], y=axes[1], z=axes[2],
+                                  x=ax[0], y=ax[1], z=ax[2],
                                   normalize=False, hmin=False)
         assert img.shape[2] / img.shape[1] == approx(ratio01, rel=1e-2)
         assert img.shape[1] / img.shape[0] == approx(ratio12, rel=1e-2)
         assert img.shape[2] / img.shape[0] == approx(ratio02, rel=1e-2)
 
         img = interpolate_3d_grid(sdf_3, 'A',
-                                  x=axes[0], y=axes[1], z=axes[2],
+                                  x=ax[0], y=ax[1], z=ax[2],
                                   x_pixels=default_pixels,
                                   normalize=False, hmin=False)
         assert img.shape == (round(default_pixels / ratio02),
                              round(default_pixels / ratio01), default_pixels)
 
         img = interpolate_3d_grid(sdf_3, 'A',
-                                  x=axes[0], y=axes[1], z=axes[2],
+                                  x=ax[0], y=ax[1], z=ax[2],
                                   y_pixels=default_pixels,
                                   normalize=False, hmin=False)
         assert img.shape == (round(default_pixels / ratio12),
@@ -767,7 +767,7 @@ def test_pixel_arguments() -> None:
                              round(default_pixels * ratio01))
 
         img = interpolate_3d_grid(sdf_3, 'A',
-                                  x=axes[0], y=axes[1], z=axes[2],
+                                  x=ax[0], y=ax[1], z=ax[2],
                                   x_pixels=default_pixels,
                                   y_pixels=default_pixels,
                                   z_pixels=default_pixels,
@@ -1199,7 +1199,7 @@ def test_required_columns(backend: str, func: Callable, column: str) -> None:
     sdf = SarracenDataFrame(data, params=dict())
     sdf.backend = backend
 
-    kwargs = dict()
+    kwargs: Dict[str, Any] = dict()
     if func in funcs2d + funcs3d:
         kwargs['target'] = 'A'
     elif func in funcs2dvec:
@@ -1234,7 +1234,7 @@ def test_exact_interpolation(backend: str) -> None:
     kernel = CubicSplineKernel()
     w = sdf_2['m'] * sdf_2['A'] / (sdf_2['rho'] * sdf_2['h'] ** 2)
 
-    bound = kernel.get_radius() * sdf_2['h'][0]
+    bound = kernel.get_radius() * float(sdf_2['h'][0])
     img = interpolate_2d(sdf_2, 'A',
                          x_pixels=1,
                          xlim=(-bound, bound), ylim=(-bound, bound),
@@ -1288,9 +1288,9 @@ def test_density_weighted(backend: str,
     if not dens_weight:
         weight = weight / sdf['rho'][0]
 
-    kwargs = {'xlim': (-1, 1), 'ylim': (-1, 1),
-              'dens_weight': dens_weight,
-              'normalize': False, 'hmin': False}
+    kwargs: Dict[str, Any] = {'xlim': (-1, 1), 'ylim': (-1, 1),
+                              'dens_weight': dens_weight,
+                              'normalize': False, 'hmin': False}
 
     if func in funcsline:
         kwargs['pixels'] = 1
@@ -1339,15 +1339,16 @@ def test_normalize_interpolation(backend: str, normalize: bool) -> None:
 
     norm2d = 1.0
     norm3d = 1.0
-    norm3d_column = 1.0
+    norm3d_column = pd.Series(np.ones(len(weight)))
+
     if normalize:
         weight = sdf_2['m'][0] / (sdf_2['rho'][0] * sdf_2['h'][0] ** 2)
         norm2d = weight * kernel.w(0, 2)
         norm3d = weight / sdf_2['h'][0] * kernel.w(0, 3)
         norm3d_column = weight * kernel.get_column_kernel()[0]
 
-    kwargs = {'xlim': (-1, 1), 'ylim': (-1, 1),
-              'dens_weight': False, 'normalize': normalize}
+    kwargs: Dict[str, Any] = {'xlim': (-1, 1), 'ylim': (-1, 1),
+                              'dens_weight': False, 'normalize': normalize}
 
     img = interpolate_2d(sdf_2, 'A',
                          x_pixels=1, y_pixels=1, **kwargs)
