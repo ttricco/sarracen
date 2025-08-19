@@ -1,4 +1,4 @@
-from typing import IO, Tuple, Type, Union, List
+from typing import IO, Tuple, Type, Union, List, overload, Literal
 
 import numpy as np
 import pandas as pd
@@ -241,7 +241,22 @@ def _create_aprmass_column(df: pd.DataFrame,
 
     return df
 
-
+@overload
+def read_phantom(filename: str,
+                 separate_types: None = ...,
+                 ignore_inactive: bool = True) -> SarracenDataFrame: ...
+@overload
+def read_phantom(filename: str,
+                 separate_types: Literal['sinks'],
+                 ignore_inactive: bool = True) -> Union[List[
+                                                        SarracenDataFrame],
+                                                        SarracenDataFrame]: ...
+@overload
+def read_phantom(filename: str,
+                 separate_types: Literal['all'],
+                 ignore_inactive: bool = True) -> Union[List[
+                                                        SarracenDataFrame],
+                                                        SarracenDataFrame]: ...
 def read_phantom(filename: str,
                  separate_types: Union[str, None] = 'sinks',
                  ignore_inactive: bool = True) -> Union[List[

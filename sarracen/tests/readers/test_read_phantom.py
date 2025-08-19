@@ -7,6 +7,8 @@ import sarracen
 import pytest
 import tempfile
 
+from sarracen import SarracenDataFrame
+
 
 def _create_capture_pattern(def_int: Type[np.generic],
                             def_real: Type[np.generic]) -> bytearray:
@@ -124,7 +126,7 @@ def test_determine_default_precision2(def_int: Type[np.generic],
         fp.write(file)
         fp.seek(0)
 
-        sdf = sarracen.read_phantom(fp.name)
+        sdf = sarracen.read_phantom(fp.name, separate_types=None)
 
         assert list(sdf.dtypes) == [def_int, def_real]
 
@@ -162,6 +164,8 @@ def test_gas_particles_only() -> None:
         fp.seek(0)
 
         sdf = sarracen.read_phantom(fp.name, separate_types='all')
+        assert isinstance(sdf, SarracenDataFrame)
+        assert sdf.params is not None
         assert sdf.params['massoftype'] == 1e-6
         assert sdf.params['mass'] == 1e-6
         assert 'mass' not in sdf.columns
@@ -170,6 +174,8 @@ def test_gas_particles_only() -> None:
                                check_dtype=False)
 
         sdf = sarracen.read_phantom(fp.name, separate_types='sinks')
+        assert isinstance(sdf, SarracenDataFrame)
+        assert sdf.params is not None
         assert sdf.params['massoftype'] == 1e-6
         assert sdf.params['mass'] == 1e-6
         assert 'mass' not in sdf.columns
@@ -178,6 +184,8 @@ def test_gas_particles_only() -> None:
                                check_dtype=False)
 
         sdf = sarracen.read_phantom(fp.name, separate_types=None)
+        assert isinstance(sdf, SarracenDataFrame)
+        assert sdf.params is not None
         assert sdf.params['massoftype'] == 1e-6
         assert sdf.params['mass'] == 1e-6
         assert 'mass' not in sdf.columns
@@ -231,6 +239,10 @@ def test_gas_dust_particles() -> None:
         fp.seek(0)
 
         sdf_g, sdf_d = sarracen.read_phantom(fp.name, separate_types='all')
+        assert isinstance(sdf_g, SarracenDataFrame)
+        assert isinstance(sdf_d, SarracenDataFrame)
+        assert sdf_g.params is not None
+        assert sdf_d.params is not None
         assert sdf_g.params['massoftype'] == 1e-6
         assert sdf_g.params['massoftype_7'] == 1e-4
         assert sdf_g.params['mass'] == 1e-6
@@ -250,6 +262,8 @@ def test_gas_dust_particles() -> None:
                                check_dtype=False)
 
         sdf = sarracen.read_phantom(fp.name, separate_types='sinks')
+        assert isinstance(sdf, SarracenDataFrame)
+        assert sdf.params is not None
         assert sdf.params['massoftype'] == 1e-6
         assert sdf.params['massoftype_7'] == 1e-4
         assert 'mass' not in sdf.params
@@ -267,6 +281,8 @@ def test_gas_dust_particles() -> None:
                                check_dtype=False)
 
         sdf = sarracen.read_phantom(fp.name, separate_types=None)
+        assert isinstance(sdf, SarracenDataFrame)
+        assert sdf.params is not None
         assert sdf.params['massoftype'] == 1e-6
         assert sdf.params['massoftype_7'] == 1e-4
         assert 'mass' not in sdf.params
@@ -333,6 +349,10 @@ def test_gas_sink_particles() -> None:
         fp.seek(0)
 
         sdf, sdf_sinks = sarracen.read_phantom(fp.name, separate_types='all')
+        assert isinstance(sdf, SarracenDataFrame)
+        assert isinstance(sdf_sinks, SarracenDataFrame)
+        assert sdf.params is not None
+        assert sdf_sinks.params is not None
         assert sdf.params['massoftype'] == 1e-6
         assert sdf_sinks.params['massoftype'] == 1e-6
         assert sdf.params['mass'] == 1e-6
@@ -350,6 +370,10 @@ def test_gas_sink_particles() -> None:
                                check_dtype=False)
 
         sdf, sdf_sinks = sarracen.read_phantom(fp.name, separate_types='sinks')
+        assert isinstance(sdf, SarracenDataFrame)
+        assert isinstance(sdf_sinks, SarracenDataFrame)
+        assert sdf.params is not None
+        assert sdf_sinks.params is not None
         assert sdf.params['massoftype'] == 1e-6
         assert sdf_sinks.params['massoftype'] == 1e-6
         assert sdf.params['mass'] == 1e-6
@@ -367,6 +391,10 @@ def test_gas_sink_particles() -> None:
                                check_dtype=False)
 
         sdf = sarracen.read_phantom(fp.name, separate_types=None)
+        assert isinstance(sdf, SarracenDataFrame)
+        assert isinstance(sdf_sinks, SarracenDataFrame)
+        assert sdf.params is not None
+        assert sdf_sinks.params is not None
         assert sdf.params['massoftype'] == 1e-6
         assert sdf.params['mass'] == 1e-6
         assert 'mass' not in sdf.columns
@@ -445,6 +473,12 @@ def test_gas_dust_sink_particles() -> None:
 
         sdf_g, sdf_d, sdf_sinks = sarracen.read_phantom(fp.name,
                                                         separate_types='all')
+        assert isinstance(sdf_g, SarracenDataFrame)
+        assert isinstance(sdf_d, SarracenDataFrame)
+        assert isinstance(sdf_sinks, SarracenDataFrame)
+        assert sdf_g.params is not None
+        assert sdf_d.params is not None
+        assert sdf_sinks.params is not None
         assert sdf_g.params['massoftype'] == 1e-6
         assert sdf_g.params['massoftype_7'] == 1e-4
         assert sdf_g.params['mass'] == 1e-6
@@ -475,6 +509,10 @@ def test_gas_dust_sink_particles() -> None:
 
         sdf, sdf_sinks = sarracen.read_phantom(fp.name,
                                                separate_types='sinks')
+        assert isinstance(sdf, SarracenDataFrame)
+        assert isinstance(sdf_sinks, SarracenDataFrame)
+        assert sdf.params is not None
+        assert sdf_sinks.params is not None
         assert sdf.params['massoftype'] == 1e-6
         assert sdf.params['massoftype_7'] == 1e-4
         assert 'mass' not in sdf.params
@@ -502,6 +540,8 @@ def test_gas_dust_sink_particles() -> None:
                                check_dtype=False)
 
         sdf = sarracen.read_phantom(fp.name, separate_types=None)
+        assert isinstance(sdf, SarracenDataFrame)
+        assert sdf.params is not None
         assert sdf.params['massoftype'] == 1e-6
         assert sdf.params['massoftype_7'] == 1e-4
         assert 'mass' not in sdf.params
