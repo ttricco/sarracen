@@ -1,4 +1,4 @@
-from typing import IO, Tuple, Type, Union, List
+from typing import IO, Tuple, Type, Union, List, overload, Literal
 
 import numpy as np
 import pandas as pd
@@ -188,8 +188,9 @@ def _read_array_blocks(fp: IO,
     """ Read particle data. Block 2 is always for sink particles?"""
     nblocks = np.frombuffer(_read_fortran_block(fp, 4), dtype=np.int32)[0]
 
-    n = []
-    nums = []
+    n: List[int] = []
+    nums: List[np.ndarray] = []
+
     for i in range(0, nblocks):
         start_tag = fp.read(4)
 
@@ -242,7 +243,23 @@ def _create_aprmass_column(df: pd.DataFrame,
     return df
 
 
+@overload
 def read_phantom(filename: str,
+                 separate_types: None,
+                 ignore_inactive: bool = True) -> SarracenDataFrame: ...
+@overload  # noqa: E302
+def read_phantom(filename: str,
+                 separate_types: Literal['sinks'] = 'sinks',
+                 ignore_inactive: bool = True) -> Union[List[
+                                                        SarracenDataFrame],
+                                                        SarracenDataFrame]: ...
+@overload  # noqa: E302
+def read_phantom(filename: str,
+                 separate_types: Literal['all'],
+                 ignore_inactive: bool = True) -> Union[List[
+                                                        SarracenDataFrame],
+                                                        SarracenDataFrame]: ...
+def read_phantom(filename: str,  # noqa: E302
                  separate_types: Union[str, None] = 'sinks',
                  ignore_inactive: bool = True) -> Union[List[
                                                         SarracenDataFrame],

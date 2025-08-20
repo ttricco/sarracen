@@ -756,8 +756,7 @@ def interpolate_2d_line(data: 'SarracenDataFrame',  # noqa: F821
     dens_weight: bool, optional
         If True, the target will be multiplied by density. Defaults to False.
     normalize: bool, optional
-        If True, will normalize the interpolation. Defaults to False (this may
-        change in future versions).
+        If True, will normalize the interpolation. Defaults to True.
     hmin: bool, optional
         If True, a minimum smoothing length of 0.5 * pixel size will be
         imposed. This ensures each particle contributes to at least one grid
@@ -872,8 +871,7 @@ def interpolate_3d_line(data: 'SarracenDataFrame',  # noqa: F821
     dens_weight: bool, optional
        If True, the target will be multiplied by density. Defaults to False.
     normalize: bool, optional
-        If True, will normalize the interpolation. Defaults to False (this may
-        change in future versions).
+        If True, will normalize the interpolation. Defaults to True.
     hmin: bool, optional
         If True, a minimum smoothing length of 0.5 * pixel size will be
         imposed. This ensures each particle contributes to at least one grid
@@ -1018,8 +1016,7 @@ def interpolate_3d_proj(data: 'SarracenDataFrame',  # noqa: F821
         column-integrated views, when the target is not density, and False for
         everything else.
     normalize: bool, optional
-        If True, will normalize the interpolation. Defaults to False (this may
-        change in future versions).
+        If True, will normalize the interpolation. Defaults to True.
     hmin: bool, optional
         If True, a minimum smoothing length of 0.5 * pixel size will be
         imposed. This ensures each particle contributes to at least one grid
@@ -1156,8 +1153,7 @@ def interpolate_3d_vec(data: 'SarracenDataFrame',  # noqa: F821
     dens_weight: bool, optional
         If True, the target will be multiplied by density. Defaults to False.
     normalize: bool, optional
-        If True, will normalize the interpolation. Defaults to False (this may
-        change in future versions).
+        If True, will normalize the interpolation. Defaults to True.
     hmin: bool, optional
         If True, a minimum smoothing length of 0.5 * pixel size will be
         imposed. This ensures each particle contributes to at least one grid
@@ -1298,8 +1294,7 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',  # noqa: F821
     dens_weight: bool, optional
         If True, the target will be multiplied by density. Defaults to False.
     normalize: bool, optional
-        If True, will normalize the interpolation. Defaults to False (this may
-        change in future versions).
+        If True, will normalize the interpolation. Defaults to True.
     hmin: bool, optional
         If True, a minimum smoothing length of 0.5 * pixel size will be
         imposed. This ensures each particle contributes to at least one grid
@@ -1434,8 +1429,7 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame',  # noqa: F821
     dens_weight: bool, optional
         If True, the target will be multiplied by density. Defaults to False.
     normalize: bool, optional
-        If True, will normalize the interpolation. Defaults to False (this may
-        change in future versions).
+        If True, will normalize the interpolation. Defaults to True.
     hmin: bool, optional
         If True, a minimum smoothing length of 0.5 * pixel size will be
         imposed. This ensures each particle contributes to at least one grid
@@ -1567,8 +1561,7 @@ def interpolate_3d_grid(data: 'SarracenDataFrame',  # noqa: F821
     dens_weight: bool, optional
         If True, the target will be multiplied by density. Defaults to False.
     normalize: bool, optional
-        If True, will normalize the interpolation. Defaults to False (this may
-        change in future versions).
+        If True, will normalize the interpolation. Defaults to True.
     hmin: bool, optional
         If True, a minimum smoothing length of 0.5 * pixel size will be
         imposed. This ensures each particle contributes to at least one grid
