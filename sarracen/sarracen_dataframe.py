@@ -309,11 +309,11 @@ class SarracenDataFrame(DataFrame):
         com_z = (self[self.zcol] * mass).sum()
 
         if isinstance(mass, pd.Series):
-            mass = 1.0 / mass.sum()
+            inv_mass = 1.0 / mass.sum()
         else:
-            mass = 1.0 / (len(self) * mass)
+            inv_mass = 1.0 / (len(self) * mass)
 
-        return [com_x * mass, com_y * mass, com_z * mass]
+        return [com_x * inv_mass, com_y * inv_mass, com_z * inv_mass]
 
     def classify_sink(self, sdf_sinks: Type) -> None:
         """

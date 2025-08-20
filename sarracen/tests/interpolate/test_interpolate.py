@@ -1340,7 +1340,7 @@ def test_normalize_interpolation(backend: str, normalize: bool) -> None:
 
     norm2d = 1.0
     norm3d = 1.0
-    norm3d_column = pd.Series(np.ones(len(weight)))
+    norm3d_column = 1.0
 
     if normalize:
         weight = sdf_2['m'][0] / (sdf_2['rho'][0] * sdf_2['h'][0] ** 2)

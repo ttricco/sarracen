@@ -1,4 +1,4 @@
-from typing import IO, List
+from typing import IO, List, Dict, Any
 
 import struct
 import json
@@ -136,7 +136,7 @@ def get_head_inc(off: int) -> int:
     return off
 
 
-def decode_patchdata(pdat: bytes, pdat_layout) -> dict:
+def decode_patchdata(pdat: bytes, pdat_layout: List[Dict[str, Any]]) -> dict:
     """
     Decode a patchdata bytearray into a dictionary of numpy arrays.
 
@@ -200,7 +200,7 @@ def decode_patchdata(pdat: bytes, pdat_layout) -> dict:
             )
             data = decode_bytes_to_doubles(pdat_dat[head: head + 8 * nobj * 3])
             array_size = len(data)
-            if array_size % 3 * nobj != 0:
+            if array_size % (3 * nobj) != 0:
                 raise ValueError(
                     f"Array size {array_size} is not equal to {3*nobj}"
                 )
@@ -249,7 +249,7 @@ class ShamrockDumpReader:
         ):
             self.file_map[pid] = {"bytecount": bcount, "offset": off}
 
-    def read_patch(self, pid) -> dict:
+    def read_patch(self, pid: np.uint64) -> dict:
         bcount = self.file_map[pid]["bytecount"]
         off = self.file_map[pid]["offset"]
 

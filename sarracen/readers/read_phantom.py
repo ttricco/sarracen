@@ -188,8 +188,9 @@ def _read_array_blocks(fp: IO,
     """ Read particle data. Block 2 is always for sink particles?"""
     nblocks = np.frombuffer(_read_fortran_block(fp, 4), dtype=np.int32)[0]
 
-    n = []
-    nums = []
+    n: List[int] = []
+    nums: List[np.ndarray] = []
+
     for i in range(0, nblocks):
         start_tag = fp.read(4)
 
