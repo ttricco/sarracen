@@ -286,10 +286,10 @@ def test_dimension_check(backend: str, func: Callable) -> None:
 
     # 2D dataframe passed to 3D interpolation functions
     if func in funcs3d:
-        with raises(TypeError):
+        with raises(ValueError):
             func(sdf, 'P', normalize=False, hmin=False)
     elif func in funcs3dvec:
-        with raises(TypeError):
+        with raises(ValueError):
             func(sdf, 'Ax', 'Ay', 'Az', normalize=False, hmin=False)
 
     # 3D dataframe passed to 2D interpolation functions
@@ -299,10 +299,10 @@ def test_dimension_check(backend: str, func: Callable) -> None:
         sdf.zcol = 'z'
 
         if func in funcs2d:
-            with raises(TypeError):
+            with raises(ValueError):
                 func(sdf, 'P', normalize=False, hmin=False)
         elif func in funcs2dvec:
-            with raises(TypeError):
+            with raises(ValueError):
                 func(sdf, 'Ax', 'Ay', normalize=False, hmin=False)
 
 
