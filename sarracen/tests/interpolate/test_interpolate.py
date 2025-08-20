@@ -747,6 +747,7 @@ def test_pixel_arguments() -> None:
         img = interpolate_3d_grid(sdf_3, 'A',
                                   x=ax[0], y=ax[1], z=ax[2],
                                   normalize=False, hmin=False)
+        assert len(img.shape) == 3
         assert img.shape[2] / img.shape[1] == approx(ratio01, rel=1e-2)
         assert img.shape[1] / img.shape[0] == approx(ratio12, rel=1e-2)
         assert img.shape[2] / img.shape[0] == approx(ratio02, rel=1e-2)

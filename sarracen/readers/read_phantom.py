@@ -243,11 +243,11 @@ def _create_aprmass_column(df: pd.DataFrame,
 
 @overload
 def read_phantom(filename: str,
-                 separate_types: None = ...,
+                 separate_types: None,
                  ignore_inactive: bool = True) -> SarracenDataFrame: ...
 @overload
 def read_phantom(filename: str,
-                 separate_types: Literal['sinks'],
+                 separate_types: Literal['sinks'] = 'sinks',
                  ignore_inactive: bool = True) -> Union[List[
                                                         SarracenDataFrame],
                                                         SarracenDataFrame]: ...

@@ -15,11 +15,11 @@ def _create_capture_pattern(def_int: Type[np.generic],
     """ Construct capture pattern. """
 
     read_tag = np.array([13], dtype='int32')
-    i1 = np.array([60769], dtype=def_int)
-    r2 = np.array([60878], dtype=def_real)
-    i2 = np.array([60878], dtype=def_int)
-    iversion = np.array([0], dtype=def_int)
-    i3 = np.array([690706], dtype=def_int)
+    i1: np.ndarray = np.array([60769], dtype=def_int)
+    r2: np.ndarray = np.array([60878], dtype=def_real)
+    i2: np.ndarray = np.array([60878], dtype=def_int)
+    iversion: np.ndarray = np.array([0], dtype=def_int)
+    i3: np.ndarray = np.array([690706], dtype=def_int)
 
     capture_pattern = bytearray(read_tag.tobytes())
     capture_pattern += bytearray(i1.tobytes())

@@ -30,7 +30,9 @@ def test_interpolation_passthrough(backend: str) -> None:
 
     fig, ax = plt.subplots()
     render(sdf, 'P', ax=ax)
-    assert_array_equal(ax.images[0].get_array(), interpolate_2d(sdf, 'P'))
+    img = ax.images[0].get_array()
+    assert img is not None
+    assert_array_equal(img, interpolate_2d(sdf, 'P'))
     plt.close(fig)
 
     fig, ax = plt.subplots()
@@ -47,15 +49,15 @@ def test_interpolation_passthrough(backend: str) -> None:
     fig, ax = plt.subplots()
     render(sdf, 'P', ax=ax)
     img = ax.images[0].get_array()
-    interpolation = interpolate_3d_proj(sdf, 'P')
-    assert_array_equal(img, interpolation)
+    assert img is not None
+    assert_array_equal(img, interpolate_3d_proj(sdf, 'P'))
     plt.close(fig)
 
     fig, ax = plt.subplots()
     render(sdf, 'P', xsec=1.5, ax=ax)
     img = ax.images[0].get_array()
-    interpolation = interpolate_3d_cross(sdf, 'P')
-    assert_array_equal(img, interpolation)
+    assert img is not None
+    assert_array_equal(img, interpolate_3d_cross(sdf, 'P'))
     plt.close(fig)
 
 
@@ -140,7 +142,9 @@ def test_cbar_keywords(backend: str) -> None:
         fig, ax = plt.subplots()
         render(args['data'], 'P', xsec=args['xsec'],
                cbar_kws={'orientation': 'horizontal'}, ax=ax)
-        assert ax.images[-1].colorbar.orientation == 'horizontal'
+        cb = ax.images[-1].colorbar
+        assert cb is not None
+        assert cb.orientation == 'horizontal'
         plt.close(fig)
 
 

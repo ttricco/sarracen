@@ -5,6 +5,8 @@ import numpy as np
 import sarracen
 import tempfile
 
+from sarracen import SarracenDataFrame
+
 
 def _create_capture_pattern(def_int: Type[np.generic],
                             def_real: Type[np.generic]) -> bytearray:
@@ -235,34 +237,50 @@ def test_write_phantom_one_block() -> None:
         fp.seek(0)
         test_sdf = sarracen.read_phantom(fp.name)
 
+    assert isinstance(test_sdf, SarracenDataFrame)
+
     with tempfile.NamedTemporaryFile() as fp2:
         sarracen.write_phantom(fp2.name, test_sdf)
         test_sdfs_from_new_file = sarracen.read_phantom(fp2.name)
 
+    assert isinstance(test_sdfs_from_new_file, SarracenDataFrame)
     pd.testing.assert_frame_equal(test_sdfs_from_new_file, test_sdf)
 
 
 def test_sink_particles() -> None:
     with tempfile.NamedTemporaryFile() as fp:
         fp.write(_get_gas_sink_particles())
-        _test_data_frames(fp)
+        fp.seek(0)
+        test_sdfs = sarracen.read_phantom(fp.name)
+
+    assert isinstance(test_sdfs, list)
+    assert isinstance(test_sdfs[0], SarracenDataFrame)
+    assert isinstance(test_sdfs[1], SarracenDataFrame)
+
+    with tempfile.NamedTemporaryFile() as fp:
+        sarracen.write_phantom(fp.name, test_sdfs[0], test_sdfs[1])
+        test_sdfs_from_new_file = sarracen.read_phantom(fp.name)
+
+    assert isinstance(test_sdfs_from_new_file, list)
+    assert isinstance(test_sdfs_from_new_file[0], SarracenDataFrame)
+    assert isinstance(test_sdfs_from_new_file[1], SarracenDataFrame)
+
+    pd.testing.assert_frame_equal(test_sdfs_from_new_file[0], test_sdfs[0])
+    pd.testing.assert_frame_equal(test_sdfs_from_new_file[1], test_sdfs[1])
+
 
 # This test fails with key error on reading the written file due
 # to "massoftype_7" being renamed (removing _7 ) in during writing.
 
 # def test_sink_particles_gas_and_dust():
 #     with tempfile.NamedTemporaryFile() as fp:
-#         fp.write(get_gas_dust_sink_particles())
-#         _test_data_frames(fp)
-
-
-def _test_data_frames(fp: IO) -> None:
-    fp.seek(0)
-    test_sdfs = sarracen.read_phantom(fp.name)
-
-    with tempfile.NamedTemporaryFile() as fp:
-        sarracen.write_phantom(fp.name, test_sdfs[0], test_sdfs[1])
-        test_sdfs_from_new_file = sarracen.read_phantom(fp.name)
-
-    pd.testing.assert_frame_equal(test_sdfs_from_new_file[0], test_sdfs[0])
-    pd.testing.assert_frame_equal(test_sdfs_from_new_file[1], test_sdfs[1])
+#         fp.write(_get_gas_dust_sink_particles())
+#         fp.seek(0)
+#         test_sdfs = sarracen.read_phantom(fp.name)
+#
+#     with tempfile.NamedTemporaryFile() as fp:
+#         sarracen.write_phantom(fp.name, test_sdfs[0], test_sdfs[1])
+#         test_sdfs_from_new_file = sarracen.read_phantom(fp.name)
+#
+#     pd.testing.assert_frame_equal(test_sdfs_from_new_file[0], test_sdfs[0])
+#     pd.testing.assert_frame_equal(test_sdfs_from_new_file[1], test_sdfs[1])
