@@ -155,7 +155,7 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
            log_scale: bool = False,
            symlog_scale: bool = False,
            dens_weight: Union[bool, None] = None,
-           normalize: bool = False,
+           normalize: bool = True,
            hmin: bool = False,
            corotation: Union[np.ndarray, list, None] = None,
            **kwargs: Any) -> Axes:
@@ -220,8 +220,17 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
         Whether to use a symmetrical logarithmic scale for color coding (i.e.,
         allows positive and negative values). Optionally add "linthresh" and
         "linscale" to kwargs to set the linear region and the scaling of linear
-        values, respectively (defaults to 1e-9 and 1, respectevely). Only works
+        values, respectively (defaults to 1e-9 and 1, respectively). Only works
         if log_scale == True.
+    dens_weight: bool, optional
+        If True, will plot the target multiplied by the density. Defaults to
+        True for column-integrated views and False for everything else.
+    normalize: bool, optional
+        If True, will normalize the interpolation. Defaults to True.
+    hmin: bool, optional
+        If True, a minimum smoothing length of 0.5 * pixel size will be
+        imposed. This ensures each particle contributes to at least one grid
+        cell / pixel. Defaults to False (this may change in a future verison).
     corotation: list, optional
         Moves particles to the co-rotating frame of two location. corotation
         contains two lists which correspond to the two x, y, z coordinates
