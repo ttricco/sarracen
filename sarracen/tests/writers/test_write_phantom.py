@@ -1,4 +1,4 @@
-from typing import Type, IO, Union
+from typing import Type, Union
 
 import pandas as pd
 import numpy as np

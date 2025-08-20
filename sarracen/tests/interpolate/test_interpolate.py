@@ -1,7 +1,7 @@
 """
 pytest unit tests for interpolate.py functions.
 """
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Callable, Dict, List
 
 import pandas as pd
 import numpy as np
@@ -731,11 +731,11 @@ def test_pixel_arguments() -> None:
 
     # 3D grid interpolation
     for ax in [('x', 'y', 'z'),
-                 ('x', 'z', 'y'),
-                 ('y', 'z', 'x'),
-                 ('y', 'x', 'z'),
-                 ('z', 'x', 'y'),
-                 ('z', 'y', 'x')]:
+               ('x', 'z', 'y'),
+               ('y', 'z', 'x'),
+               ('y', 'x', 'z'),
+               ('z', 'x', 'y'),
+               ('z', 'y', 'x')]:
         diff_0 = np.abs(sdf_3[ax[0]][1] - sdf_3[ax[0]][0])
         diff_1 = np.abs(sdf_3[ax[1]][1] - sdf_3[ax[1]][0])
         diff_2 = np.abs(sdf_3[ax[2]][1] - sdf_3[ax[2]][0])
