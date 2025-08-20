@@ -479,35 +479,31 @@ class CPUBackend(BaseBackend):
         # does not contribute to the cross-section, and can be removed.
         aa = 1 + gradient ** 2
         bb = 2 * gradient * (yint - y_data) - 2 * x_data
-        cc = x_data**2 + y_data**2 - 2 * yint * y_data \
+        det = x_data**2 + y_data**2 - 2 * yint * y_data \
             + yint**2 - (kernel_radius * h_data)**2
-        det = bb ** 2 - 4 * aa * cc
+        det = bb ** 2 - 4 * aa * det
 
         # create a filter for particles that do not contribute
         filter = det >= 0
         det = np.sqrt(det)
-        cc = None
 
         output = np.zeros(pixels)
 
         # the starting and ending x coordinates of the lines intersections with
         # a particle's smoothing circle
-        xstart = ((-bb[filter] - det[filter])
+        rstart = ((-bb[filter] - det[filter])
                   / (2 * aa)).clip(a_min=x1, a_max=x2)
-        xend = ((-bb[filter] + det[filter])
+        rend = ((-bb[filter] + det[filter])
                 / (2 * aa)).clip(a_min=x1, a_max=x2)
-        bb, det = None, None
 
         # start and end distances that are within a particle's smoothing circle
-        rstart = np.sqrt((xstart - x1)**2
-                         + ((gradient * xstart + yint) - y1)**2)
-        rend = np.sqrt((xend - x1)**2 + (((gradient * xend + yint) - y1)**2))
-        xstart, xend = None, None
+        rstart = np.sqrt((rstart - x1)**2
+                         + ((gradient * rstart + yint) - y1)**2)
+        rend = np.sqrt((rend - x1)**2 + (((gradient * rend + yint) - y1)**2))
 
         # the maximum and minimum pixels that each particle contributes to.
         ipixmin = np.rint(rstart / pixwidth).clip(a_min=0, a_max=pixels)
         ipixmax = np.rint(rend / pixwidth).clip(a_min=0, a_max=pixels)
-        rstart, rend = None, None
 
         output_local = np.zeros((get_num_threads(), pixels))
 
