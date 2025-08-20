@@ -1,4 +1,4 @@
-from typing import Any, Type, Union, Callable, Tuple, Optional
+from typing import Any, Type, Union, Callable, Tuple, Optional, Dict
 
 from matplotlib.axes import Axes
 from matplotlib.colors import Colormap
@@ -108,10 +108,7 @@ class SarracenDataFrame(DataFrame):
         # call pandas DataFrame constructor
         super().__init__(data, *args, **kwargs)
 
-        if params is None:
-            params = dict()
-        self._params = None
-        self.params = params
+        self._params = dict(params or {})
 
         self._units = None
         self.units = Series([np.nan for _ in range(len(self.columns))])
@@ -579,7 +576,7 @@ class SarracenDataFrame(DataFrame):
         raise ValueError('Invalid number of dimensions.')
 
     @property
-    def params(self) -> Union[dict, None]:
+    def params(self) -> Dict[str, Any]:
         """
         dict: Miscellaneous dataset-level parameters.
 
@@ -591,13 +588,10 @@ class SarracenDataFrame(DataFrame):
         return self._params
 
     @params.setter
-    def params(self, new_params: Union[dict, None]) -> None:
-        if new_params is None:
-            self._params = None
-            return
-        if not type(new_params) is dict:
+    def params(self, new_params: Union[Dict[str, Any], None]) -> None:
+        if new_params is not None and not isinstance(new_params, dict):
             raise TypeError("Parameters not a dictionary")
-        self._params = new_params
+        self._params = dict(new_params or {})
 
     @property
     def units(self) -> Series:
