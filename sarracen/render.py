@@ -641,7 +641,7 @@ def streamlines(data: 'SarracenDataFrame',  # noqa: F821
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
 
-    # remove the x & y ticks if the data is rotated, since these no longer have
+    # remove the x & y labels if the data is rotated, since these no longer have
     # physical relevance to the displayed data.
     if rotation is None:
         ax.set_xlabel(x)
@@ -826,7 +826,7 @@ def arrowplot(data: 'SarracenDataFrame',  # noqa: F821
 
         ax.quiverkey(Q, **qkey_kws)
 
-    # remove the x & y ticks if the data is rotated, since these no longer have
+    # remove the x & y labels if the data is rotated, since these no longer have
     # physical relevance to the displayed data.
     if rotation is None:
         ax.set_xlabel(x)
