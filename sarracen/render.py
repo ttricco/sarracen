@@ -344,11 +344,7 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
         kwargs.pop("vmax", None)
 
     graphic = ax.imshow(img, cmap=cmap, **kwargs)
-    if rotation is not None and data.get_dim() == 3:
-        if corotation is not None:
-            ax.set_xlabel(x)
-            ax.set_ylabel(y)
-    else:
+    if (rotation is not None and data.get_dim() == 3 and corotation is not None) or rotation is None:
         ax.set_xlabel(x)
         ax.set_ylabel(y)
 
