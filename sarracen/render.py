@@ -344,7 +344,8 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
         kwargs.pop("vmax", None)
 
     graphic = ax.imshow(img, cmap=cmap, **kwargs)
-    if (rotation is not None and data.get_dim() == 3 and corotation is not None) or rotation is None:
+    if (rotation is not None and data.get_dim() == 3 and
+        corotation is not None) or rotation is None:
         ax.set_xlabel(x)
         ax.set_ylabel(y)
 
@@ -637,8 +638,8 @@ def streamlines(data: 'SarracenDataFrame',  # noqa: F821
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
 
-    # remove the x & y labels if the data is rotated, since these no longer have
-    # physical relevance to the displayed data.
+    # remove the x & y labels if the data is rotated, since these no longer
+    # have physical relevance to the displayed data.
     if rotation is None:
         ax.set_xlabel(x)
         ax.set_ylabel(y)
@@ -822,8 +823,8 @@ def arrowplot(data: 'SarracenDataFrame',  # noqa: F821
 
         ax.quiverkey(Q, **qkey_kws)
 
-    # remove the x & y labels if the data is rotated, since these no longer have
-    # physical relevance to the displayed data.
+    # remove the x & y labels if the data is rotated, since these no longer
+    # have physical relevance to the displayed data.
     if rotation is None:
         ax.set_xlabel(x)
         ax.set_ylabel(y)
