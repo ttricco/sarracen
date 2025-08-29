@@ -300,7 +300,7 @@ def _rotate_data(data: 'SarracenDataFrame',  # noqa: F821
     x_data, y_data, z_data: ndarray
         The rotated x, y, and z directional data.
     """
-    vectors = [x_data, y_data, z_data].to_numpy()
+    vectors = np.array([x_data, y_data, z_data]).transpose()
     if rotation is not None:
         if not isinstance(rotation, Rotation):
             rotation_obj = Rotation.from_euler('zyx',
