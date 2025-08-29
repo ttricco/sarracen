@@ -375,8 +375,9 @@ def _rotate_xyz(data: 'SarracenDataFrame',  # noqa: F821
     x_data, y_data, z_data: ndarray
         The rotated x, y, and z directional data.
     """
-    rotated_x, rotated_y, rotated_z = _rotate_data(data, data.xcol, data.ycol,
-                                                   data.zcol, rotation,
+    rotated_x, rotated_y, rotated_z = _rotate_data(data, data[data.xcol],
+                                                   data[data.ycol],
+                                                   data[data.zcol], rotation,
                                                    rot_origin)
     x_data = rotated_x if x == data.xcol else \
         rotated_y if x == data.ycol else \
@@ -1202,8 +1203,9 @@ def interpolate_3d_vec(data: 'SarracenDataFrame',  # noqa: F821
     if target_z not in data.columns:
         raise KeyError(f"z-directional target column '{target_z}' does not "
                        f"exist in the provided dataset.")
-    target_x_data, target_y_data, _ = _rotate_data(data, target_x, target_y,
-                                                   target_z, rotation,
+    target_x_data, target_y_data, _ = _rotate_data(data, data[target_x],
+                                                   data[target_y],
+                                                   data[target_z], rotation,
                                                    rot_origin)
 
     wx_data = _get_weight(data, target_x_data, dens_weight)
@@ -1480,8 +1482,9 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame',  # noqa: F821
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     _check_boundaries(x_pixels, y_pixels, xlim, ylim)
 
-    target_x_data, target_y_data, _ = _rotate_data(data, target_x, target_y,
-                                                   target_z, rotation,
+    target_x_data, target_y_data, _ = _rotate_data(data, data[target_x],
+                                                   data[target_y],
+                                                   data[target_z], rotation,
                                                    rot_origin)
 
     wx_data = _get_weight(data, target_x_data, dens_weight)
