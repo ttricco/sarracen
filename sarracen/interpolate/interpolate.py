@@ -332,7 +332,6 @@ def _rotate_data(data: 'SarracenDataFrame',  # noqa: F821
         vectors = vectors - rot_origin_arr
         vectors = rotation_obj.apply(vectors)
         vectors = vectors + rot_origin_arr
-        warnings.warn("vectors is weird: "+str(vectors))
 
     return vectors[:, 0], vectors[:, 1], vectors[:, 2]
 
