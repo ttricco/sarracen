@@ -576,7 +576,8 @@ def interpolate_2d(data: 'SarracenDataFrame',  # noqa: F821
     x, y = _default_xy(data, x, y)
     _verify_columns(data, x, y)
 
-    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
+    xlim, ylim = _default_bounds(data, x, y, data[x], data[y], None,
+                                 xlim, ylim)
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     _check_boundaries(x_pixels, y_pixels, xlim, ylim)
     w_data = _get_weight(data, target, dens_weight)
@@ -683,7 +684,8 @@ def interpolate_2d_vec(data: 'SarracenDataFrame',  # noqa: F821
     x, y = _default_xy(data, x, y)
     _verify_columns(data, x, y)
 
-    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
+    xlim, ylim = _default_bounds(data, x, y, data[x], data[y], None,
+                                 xlim, ylim)
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     _check_boundaries(x_pixels, y_pixels, xlim, ylim)
 
@@ -793,7 +795,8 @@ def interpolate_2d_line(data: 'SarracenDataFrame',  # noqa: F821
     if isinstance(ylim, float) or isinstance(ylim, int):
         ylim = ylim, ylim
 
-    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
+    xlim, ylim = _default_bounds(data, x, y, data[x], data[y], None,
+                                 xlim, ylim)
     if xlim[0] == xlim[1] and ylim[0] == ylim[1]:
         raise ValueError('Zero length cross section!')
 
@@ -914,7 +917,8 @@ def interpolate_3d_line(data: 'SarracenDataFrame',  # noqa: F821
     z2 = data.loc[:, z].min() if zlim is None or zlim[1] is None else zlim[1]
     zlim = z1, z2
 
-    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
+    xlim, ylim = _default_bounds(data, x, y, data[x], data[y], data[z],
+                                 xlim, ylim)
     if ylim[1] == ylim[0] and xlim[1] == xlim[0] and zlim[1] == zlim[0]:
         raise ValueError('Zero length cross section!')
 
