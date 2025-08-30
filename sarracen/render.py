@@ -69,15 +69,17 @@ def _default_bounding_box(data: 'SarracenDataFrame',  # noqa: F821
 
     z_slice = 0 if z_slice is None else z_slice
 
+    corners = [[x_min, y_min], [x_min, y_max], [x_max, y_min], [x_max, y_max]]
+    # Padding for 3rd dimension
     if x == data.xcol and y == data.ycol:
-        corners = [(x_min, y_min, z_slice), (x_min, y_max, z_slice),
-                   (x_max, y_min, z_slice), (x_max, y_max, z_slice)]
+        for i in range(len(corners)):
+            corners[i].append(z_slice)
     elif x == data.xcol and y == data.zcol:
-        corners = [(x_min, z_slice, y_min), (x_min, z_slice, y_max),
-                   (x_max, z_slice, y_min), (x_max, z_slice, y_max)]
+        for i in range(len(corners)):
+            corners[i].insert(1, z_slice)
     elif x == data.ycol and y == data.zcol:
-        corners = [(z_slice, x_min, y_min), (z_slice, x_min, y_max),
-                   (z_slice, x_max, y_min), (z_slice, x_max, y_max)]
+        for i in range(len(corners)):
+            corners[i].insert(0, z_slice)
     else:
         raise ValueError("Please return in order of x-y, x-z or y-z.")
     return corners
