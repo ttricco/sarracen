@@ -50,6 +50,38 @@ def _default_axes(data: 'SarracenDataFrame',  # noqa: F821
 
     return x, y
 
+def _default_bounding_box(data: 'SarracenDataFrame',  # noqa: F821
+                          x: str,
+                          y: str,
+                          xlim: Union[Tuple[float, float], None],
+                          ylim: Union[Tuple[float, float], None],
+                          z_slice: Union[float, None] = None) -> list:
+    # boundaries of the plot default to the max & min values of the data.
+    x_min = xlim[0] if xlim is not None and xlim[0] is not None else None
+    y_min = ylim[0] if ylim is not None and ylim[0] is not None else None
+    x_max = xlim[1] if xlim is not None and xlim[1] is not None else None
+    y_max = ylim[1] if ylim is not None and ylim[1] is not None else None
+
+    x_min = data.loc[:, x].min() if x_min is None else x_min
+    y_min = data.loc[:, y].min() if y_min is None else y_min
+    x_max = data.loc[:, x].max() if x_max is None else x_max
+    y_max = data.loc[:, y].max() if y_max is None else y_max
+
+    z_slice = 0 if z_slice is None else z_slice
+
+    if x == data.xcol and y == data.ycol:
+        corners = [(x_min, y_min, z_slice), (x_min, y_max, z_slice),
+                   (x_max, y_min, z_slice), (x_max, y_max, z_slice)]
+    elif x == data.xcol and y == data.zcol:
+        corners = [(x_min, z_slice, y_min), (x_min, z_slice, y_max),
+                   (x_max, z_slice, y_min), (x_max, z_slice, y_max)]
+    elif x == data.ycol and y == data.zcol:
+        corners = [(z_slice, x_min, y_min), (z_slice, x_min, y_max),
+                   (z_slice, x_max, y_min), (z_slice, x_max, y_max)]
+    else:
+        raise ValueError("Please return in order of x-y, x-z or y-z.")
+    return corners
+
 
 def _default_bounds(data: 'SarracenDataFrame',  # noqa: F821
                     x: str,
