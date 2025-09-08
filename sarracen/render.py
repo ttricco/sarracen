@@ -94,12 +94,6 @@ def _rotate_data(data: 'SarracenDataFrame',  # noqa: F821
         else:
             rotation_obj = rotation
 
-        # warn whenever rotation is applied
-        msg = ("The default rotation point is currently the midpoint of the "
-               "x/y/z bounds, but will change to [x, y, z] = [0, 0, 0] in "
-               "Sarracen version 1.3.0.")
-        warnings.warn(msg, DeprecationWarning, stacklevel=6)
-
         if rot_origin is None:
             # rot_origin = [0, 0, 0]
             rot_origin_arr = (vectors.min(0) + vectors.max(0)) / 2
