@@ -12,6 +12,7 @@ Or, they can be accessed through a `SarracenDataFrame` object, for example:
 from typing import Any, Union, Tuple
 
 import numpy as np
+import pandas as pd
 from scipy.spatial.transform import Rotation
 import seaborn as sns
 from matplotlib import pyplot as plt
