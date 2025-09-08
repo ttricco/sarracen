@@ -120,11 +120,11 @@ def _default_bounds(data: 'SarracenDataFrame',  # noqa: F821
     y_max = ylim[1] if ylim is not None and ylim[1] is not None else None
 
     x_data_lim = x_data if x == data.xcol else \
-                 y_data if x == data.ycol else \
-                 z_data if (x == data.zcol and z_data is not None) else x_data
+        y_data if x == data.ycol else \
+        z_data if (x == data.zcol and z_data is not None) else x_data
     y_data_lim = x_data if y == data.xcol else \
-                 y_data if y == data.ycol else \
-                 z_data if (y == data.zcol and z_data is not None) else y_data
+        y_data if y == data.ycol else \
+        z_data if (y == data.zcol and z_data is not None) else y_data
 
     x_min = x_data_lim.min() if x_min is None else x_min
     y_min = y_data_lim.min() if y_min is None else y_min
@@ -1633,7 +1633,7 @@ def interpolate_3d_grid(data: 'SarracenDataFrame',  # noqa: F821
         raise ValueError("`z_max` must be greater than `z_min`!")
     if z_pixels <= 0:
         raise ValueError("`z_pixels` must be greater than zero!")
-    
+
     h_data = _get_smoothing_lengths(data, hmin, x_pixels, y_pixels,
                                     xlim, ylim)
 
