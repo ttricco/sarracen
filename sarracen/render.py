@@ -427,7 +427,7 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
 
     x, y = _default_axes(data, x, y)
     corners = _default_bounding_box(data, x, y, xlim, ylim, xsec)
-    rotated_corners = _rotate_data(corners[0], corners[1], corners[2],
+    rotated_corners = _rotate_data(data, corners[0], corners[1], corners[2],
                                    rotation, rot_origin)
     xlim, ylim = _default_bounds(data, rotated_corners[0], rotated_corners[1],
                                  xlim, ylim)
@@ -745,7 +745,7 @@ def streamlines(data: 'SarracenDataFrame',  # noqa: F821
 
     x, y = _default_axes(data, x, y)
     corners = _default_bounding_box(data, x, y, xlim, ylim, xsec)
-    rotated_corners = _rotate_data(corners[0], corners[1], corners[2],
+    rotated_corners = _rotate_data(data, corners[0], corners[1], corners[2],
                                    rotation, rot_origin)
     xlim, ylim = _default_bounds(data, rotated_corners[0], rotated_corners[1],
                                  xlim, ylim)
