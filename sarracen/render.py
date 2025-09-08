@@ -20,8 +20,7 @@ from matplotlib.colors import Colormap, LogNorm, SymLogNorm
 
 from .interpolate import interpolate_2d_line, interpolate_2d, \
     interpolate_3d_proj, interpolate_3d_cross, interpolate_3d_vec, \
-    interpolate_3d_cross_vec, interpolate_2d_vec, interpolate_3d_line, \
-    _rotate_data
+    interpolate_3d_cross_vec, interpolate_2d_vec, interpolate_3d_line
 from .kernels import BaseKernel
 
 
@@ -50,6 +49,76 @@ def _default_axes(data: 'SarracenDataFrame',  # noqa: F821
         y = data.ycol
 
     return x, y
+
+
+def _rotate_data(data: 'SarracenDataFrame',  # noqa: F821
+                 x_data: np.ndarray,
+                 y_data: np.ndarray,
+                 z_data: np.ndarray,
+                 rotation: Union[np.ndarray, list, Rotation, None],
+                 rot_origin: Union[np.ndarray, list, pd.Series,
+                                   str, None]) -> Tuple[np.ndarray,
+                                                        np.ndarray,
+                                                        np.ndarray]:
+    """
+    Rotate vector data in a particle dataset.
+
+    Parameters
+    ----------
+    data: SarracenDataFrame
+        The particle dataset to interpolate over.
+    x_data, y_data, z_data: ndarray
+        The directional vector data.
+    rotation: array_like or SciPy Rotation
+        The rotation to apply to the vector data. If defined as an array, the
+        order of rotations is [z, y, x] in degrees
+    rot_origin: array_like or ['com', 'midpoint']
+        Point of rotation of the data. Only applies to 3D datasets. If
+        array_like, then the [x, y, z] coordinates specify the point around
+        which the data is rotated. If 'com', then data is rotated around the
+        centre of mass. If 'midpoint', then data is rotated around the
+        midpoint, that is, min + max / 2. Defaults to the midpoint.
+
+    Returns
+    -------
+    x_data, y_data, z_data: ndarray
+        The rotated x, y, and z directional data.
+    """
+    vectors = np.array([x_data, y_data, z_data]).transpose()
+    if rotation is not None:
+        if not isinstance(rotation, Rotation):
+            rotation_obj = Rotation.from_euler('zyx',
+                                               rotation,
+                                               degrees=True)
+        else:
+            rotation_obj = rotation
+
+        # warn whenever rotation is applied
+        msg = ("The default rotation point is currently the midpoint of the "
+               "x/y/z bounds, but will change to [x, y, z] = [0, 0, 0] in "
+               "Sarracen version 1.3.0.")
+        warnings.warn(msg, DeprecationWarning, stacklevel=6)
+
+        if rot_origin is None:
+            # rot_origin = [0, 0, 0]
+            rot_origin_arr = (vectors.min(0) + vectors.max(0)) / 2
+        elif rot_origin == 'com':
+            rot_origin_arr = data.centre_of_mass()
+        elif rot_origin == 'midpoint':
+            rot_origin_arr = (vectors.min(0) + vectors.max(0)) / 2
+        elif not isinstance(rot_origin, (list, pd.Series, np.ndarray)):
+            raise ValueError("rot_origin should be an [x, y, z] point or "
+                             "'com' or 'midpoint'")
+        elif len(rot_origin) != 3:
+            raise ValueError("rot_origin should specify [x, y, z] point.")
+        else:
+            rot_origin_arr = rot_origin
+        vectors = vectors - rot_origin_arr
+        vectors = rotation_obj.apply(vectors)
+        vectors = vectors + rot_origin_arr
+
+    return vectors[:, 0], vectors[:, 1], vectors[:, 2]
+
 
 def _default_bounding_box(data: 'SarracenDataFrame',  # noqa: F821
                           x: str,
