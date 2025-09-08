@@ -20,7 +20,8 @@ from matplotlib.colors import Colormap, LogNorm, SymLogNorm
 
 from .interpolate import interpolate_2d_line, interpolate_2d, \
     interpolate_3d_proj, interpolate_3d_cross, interpolate_3d_vec, \
-    interpolate_3d_cross_vec, interpolate_2d_vec, interpolate_3d_line
+    interpolate_3d_cross_vec, interpolate_2d_vec, interpolate_3d_line, \
+    _rotate_data
 from .kernels import BaseKernel
 
 
@@ -55,7 +56,7 @@ def _default_bounding_box(data: 'SarracenDataFrame',  # noqa: F821
                           y: str,
                           xlim: Union[Tuple[float, float], None],
                           ylim: Union[Tuple[float, float], None],
-                          z_slice: Union[float, None] = None) -> list:
+                          z_slice: Union[float, None] = None) -> np.ndarray:
     # boundaries of the plot default to the max & min values of the data.
     x_min = xlim[0] if xlim is not None and xlim[0] is not None else None
     y_min = ylim[0] if ylim is not None and ylim[0] is not None else None
@@ -82,16 +83,16 @@ def _default_bounding_box(data: 'SarracenDataFrame',  # noqa: F821
             corners[i].insert(0, z_slice)
     else:
         raise ValueError("Please return in order of x-y, x-z or y-z.")
-    return corners
+    return np.array(corners).transpose()
 
 
 def _default_bounds(data: 'SarracenDataFrame',  # noqa: F821
-                    x: str,
-                    y: str,
+                    x_data: np.ndarray,
+                    y_data: np.ndarray,
                     xlim: Union[Tuple[float, float], None],
-                    ylim: Union[Tuple[float, float],
-                                None]) -> Tuple[Tuple[float, float],
-                                                Tuple[float, float]]:
+                    ylim: Union[Tuple[float, float], None],
+                    ) -> Tuple[Tuple[float, float],
+                               Tuple[float, float]]:
     """
     Utility function to determine the 2-dimensional boundaries to use in 2D
     rendering.
@@ -119,10 +120,10 @@ def _default_bounds(data: 'SarracenDataFrame',  # noqa: F821
     x_max = xlim[1] if xlim is not None and xlim[1] is not None else None
     y_max = ylim[1] if ylim is not None and ylim[1] is not None else None
 
-    x_min = data.loc[:, x].min() if x_min is None else x_min
-    y_min = data.loc[:, y].min() if y_min is None else y_min
-    x_max = data.loc[:, x].max() if x_max is None else x_max
-    y_max = data.loc[:, y].max() if y_max is None else y_max
+    x_min = min(x_data) if x_min is None else x_min
+    y_min = min(y_data) if y_min is None else y_min
+    x_max = max(x_data) if x_max is None else x_max
+    y_max = max(y_data) if y_max is None else y_max
 
     return (x_min, x_max), (y_min, y_max)
 
@@ -355,7 +356,11 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
         ax = plt.gca()
 
     x, y = _default_axes(data, x, y)
-    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
+    corners = _default_bounding_box(data, x, y, xlim, ylim, xsec)
+    rotated_corners = _rotate_data(corners[0], corners[1], corners[2],
+                                   rotation, rot_origin)
+    xlim, ylim = _default_bounds(data, rotated_corners[0], rotated_corners[1],
+                                 xlim, ylim)
 
     kwargs.setdefault("origin", 'lower')
     kwargs.setdefault("extent", [xlim[0], xlim[1], ylim[0], ylim[1]])
@@ -488,7 +493,8 @@ def lineplot(data: 'SarracenDataFrame',  # noqa: F821
         ylim = ylim, ylim
 
     x, y = _default_axes(data, x, y)
-    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
+    xlim, ylim = _default_bounds(data, data.loc[:, x], data.loc[:, y],
+                                 xlim, ylim)
 
     if data.get_dim() == 2:
         upper_lim = np.sqrt((xlim[1] - xlim[0])**2 + (ylim[1] - ylim[0])**2)
@@ -668,7 +674,11 @@ def streamlines(data: 'SarracenDataFrame',  # noqa: F821
         ax = plt.gca()
 
     x, y = _default_axes(data, x, y)
-    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
+    corners = _default_bounding_box(data, x, y, xlim, ylim, xsec)
+    rotated_corners = _rotate_data(corners[0], corners[1], corners[2],
+                                   rotation, rot_origin)
+    xlim, ylim = _default_bounds(data, rotated_corners[0], rotated_corners[1],
+                                 xlim, ylim)
 
     kwargs.setdefault("color", 'black')
     ax.streamplot(np.linspace(xlim[0], xlim[1], np.size(img[0], 1)),
@@ -799,7 +809,8 @@ def arrowplot(data: 'SarracenDataFrame',  # noqa: F821
         smoothing length columns do not exist in `data`.
     """
     x, y = _default_axes(data, x, y)
-    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
+    xlim, ylim = _default_bounds(data, data.loc[:, x], data.loc[:, y],
+                                 xlim, ylim)
     x_arrows, y_arrows = _set_pixels(x_arrows, y_arrows, xlim, ylim, 20)
 
     if data.get_dim() == 2:
