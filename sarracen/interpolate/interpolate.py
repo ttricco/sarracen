@@ -126,10 +126,10 @@ def _default_bounds(data: 'SarracenDataFrame',  # noqa: F821
                  y_data if y == data.ycol else \
                  z_data if (y == data.zcol and z_data is not None) else y_data
 
-    x_min = x_data.min() if x_min is None else x_min
-    y_min = y_data.min() if y_min is None else y_min
-    x_max = x_data.max() if x_max is None else x_max
-    y_max = y_data.max() if y_max is None else y_max
+    x_min = x_data_lim.min() if x_min is None else x_min
+    y_min = y_data_lim.min() if y_min is None else y_min
+    x_max = x_data_lim.max() if x_max is None else x_max
+    y_max = y_data_lim.max() if y_max is None else y_max
 
     return (x_min, x_max), (y_min, y_max)
 
