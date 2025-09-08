@@ -442,9 +442,6 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
         if corotation is not None:
             ax.set_xlabel(x)
             ax.set_ylabel(y)
-        else:
-            ax.set_xticks([])
-            ax.set_yticks([])
     else:
         ax.set_xlabel(x)
         ax.set_ylabel(y)
@@ -743,12 +740,9 @@ def streamlines(data: 'SarracenDataFrame',  # noqa: F821
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
 
-    # remove the x & y ticks if the data is rotated, since these no longer have
-    # physical relevance to the displayed data.
-    if rotation is not None:
-        ax.set_xticks([])
-        ax.set_yticks([])
-    else:
+    # remove the x & y labels if the data is rotated, since these no longer
+    # have physical relevance to the displayed data.
+    if rotation is None:
         ax.set_xlabel(x)
         ax.set_ylabel(y)
 
@@ -932,25 +926,13 @@ def arrowplot(data: 'SarracenDataFrame',  # noqa: F821
 
         ax.quiverkey(Q, **qkey_kws)
 
-    # remove the x & y ticks if the data is rotated, since these no longer have
-    # physical relevance to the displayed data.
-    if rotation is not None:
-        ax.set_xticks([])
-        ax.set_yticks([])
-    else:
+    # remove the x & y labels if the data is rotated, since these no longer
+    # have physical relevance to the displayed data.
+    if rotation is None:
         ax.set_xlabel(x)
         ax.set_ylabel(y)
 
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
-
-    # remove the x & y ticks if the data is rotated, since these no longer have
-    # physical relevance to the displayed data.
-    if rotation is not None:
-        ax.set_xticks([])
-        ax.set_yticks([])
-    else:
-        ax.set_xlabel(x)
-        ax.set_ylabel(y)
 
     return ax
