@@ -24,9 +24,9 @@ def _read_fortran_block(fp: IO, bytesize: int) -> bytes:
     return data
 
 
-def _read_capture_pattern(fp: IO) -> Tuple[Type[np.generic],
-                                           Type[np.generic],
-                                           int]:
+def _read_capture_pattern(fp: IO, big_endian: bool) -> Tuple[Type[np.generic],
+                                                             Type[np.generic],
+                                                             int]:
     """ Phantom dump validation plus default real and int sizes."""
 
     start_tag = fp.read(4)  # 4-byte Fortran tag
@@ -41,6 +41,10 @@ def _read_capture_pattern(fp: IO) -> Tuple[Type[np.generic],
     def_int_dtype, def_real_dtype = def_types[0]
 
     for def_int_dtype, def_real_dtype in def_types:
+        if big_endian:
+            def_int_dtype = def_int_dtype.newbyteorder('>')
+            def_real_dtype = def_real_dtype.newbyteorder('>')
+
         i1 = fp.read(def_int_dtype().itemsize)
         r1 = fp.read(def_real_dtype().itemsize)
         i2 = fp.read(def_int_dtype().itemsize)
@@ -108,7 +112,11 @@ def _rename_duplicates(keys: list) -> list:
 
 
 def _read_global_header_block(fp: IO,
-                              dtype: Type[np.generic]) -> Tuple[list, list]:
+                              dtype: Type[np.generic],
+                              big_endian: bool) -> Tuple[list, list]:
+    if big_endian:
+        dtype = dtype.newbyteorder('>')
+
     nvars = np.frombuffer(_read_fortran_block(fp, 4), dtype=np.int32)[0]
 
     keys = []
@@ -127,7 +135,8 @@ def _read_global_header_block(fp: IO,
 
 def _read_global_header(fp: IO,
                         def_int_dtype: Type[np.generic],
-                        def_real_dtype: Type[np.generic]) -> dict:
+                        def_real_dtype: Type[np.generic],
+                        big_endian: bool) -> dict:
     """ Read global variables. """
 
     dtypes = [def_int_dtype, np.int8, np.int16, np.int32, np.int64,
@@ -136,7 +145,7 @@ def _read_global_header(fp: IO,
     keys = []
     data = []
     for dtype in dtypes:
-        new_keys, new_data = _read_global_header_block(fp, dtype)
+        new_keys, new_data = _read_global_header_block(fp, dtype, big_endian)
 
         keys += new_keys
         data += new_data
@@ -261,9 +270,10 @@ def read_phantom(filename: str,
                                                         SarracenDataFrame]: ...
 def read_phantom(filename: str,  # noqa: E302
                  separate_types: Union[str, None] = 'sinks',
-                 ignore_inactive: bool = True) -> Union[List[
-                                                        SarracenDataFrame],
-                                                        SarracenDataFrame]:
+                 ignore_inactive: bool = True,
+                 big_endian: bool = False) -> Union[List[
+                                                    SarracenDataFrame],
+                                                    SarracenDataFrame]:
     """
     Read data from a Phantom dump file.
 
