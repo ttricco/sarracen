@@ -191,9 +191,8 @@ def _read_array_block(fp: IO,
 
 def _read_array_blocks(fp: IO,
                        def_int_dtype: Type[np.generic],
-                       def_real_dtype: Type[np.generic]) -> Tuple[
-                                                                 pd.DataFrame,
-                                                                 pd.DataFrame]:
+                       def_real_dtype: Type[np.generic],
+                       big_endian: bool) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """ Read particle data. Block 2 is always for sink particles?"""
     nblocks = np.frombuffer(_read_fortran_block(fp, 4), dtype=np.int32)[0]
 
