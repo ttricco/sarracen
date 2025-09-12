@@ -114,10 +114,9 @@ def _rename_duplicates(keys: list) -> list:
 def _read_global_header_block(fp: IO,
                               dtype: Type[np.generic],
                               big_endian: bool) -> Tuple[list, list]:
-    if big_endian:
-        dtype = dtype.newbyteorder('>')
-
-    nvars = np.frombuffer(_read_fortran_block(fp, 4), dtype=np.int32)[0]
+    nvars = np.frombuffer(_read_fortran_block(fp, 4),
+                          dtype=(np.int32.newbyteorder('>') if big_endian 
+                                 else np.int32))[0]
 
     keys = []
     data = []
@@ -141,6 +140,10 @@ def _read_global_header(fp: IO,
 
     dtypes = [def_int_dtype, np.int8, np.int16, np.int32, np.int64,
               def_real_dtype, np.float32, np.float64]
+    
+    if big_endian:
+        for i in range(len(dtypes)):
+            dtypes[i] = dtypes[i].newbyteorder('>')
 
     keys = []
     data = []
