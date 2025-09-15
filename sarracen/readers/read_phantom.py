@@ -214,7 +214,7 @@ def _read_array_blocks(fp: IO,
     for i in range(0, nblocks):
         start_tag = fp.read(4)
 
-        n_val = np.frombuffer(fp.read(8), dtype=np.int64)[0]      
+        n_val = np.frombuffer(fp.read(8), dtype=np.int64)[0]
         nums_val = np.frombuffer(fp.read(32), count=8, dtype=np.int32)
         if swap_endian:
             n_val.byteswap(inplace=True)
