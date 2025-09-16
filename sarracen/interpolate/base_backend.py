@@ -78,7 +78,6 @@ class BaseBackend:
     @staticmethod
     def interpolate_3d_projection(x: ndarray,
                                   y: ndarray,
-                                  z: ndarray,
                                   weight: ndarray,
                                   h: ndarray,
                                   weight_function: CPUDispatcher,

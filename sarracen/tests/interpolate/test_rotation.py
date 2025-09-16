@@ -1,3 +1,5 @@
+from typing import Callable, List, Tuple
+
 import numpy as np
 from numba import cuda
 from numpy.testing import assert_allclose
@@ -14,7 +16,10 @@ if cuda.is_available():
     backends.append('gpu')
 
 
-def rotate(target, rot_z, rot_y, rot_x):
+def rotate(target: Tuple[float, float, float],
+           rot_z: float,
+           rot_y: float,
+           rot_x: float) -> Tuple[float, float, float]:
     """ Perform a rotation of a target vector in three dimensions.
 
     A helper function for test_nonstandard_rotation()
@@ -47,7 +52,7 @@ def rotate(target, rot_z, rot_y, rot_x):
 
 
 @mark.parametrize("backend", backends)
-def test_nonstandard_rotation(backend):
+def test_nonstandard_rotation(backend: str) -> None:
     """
     Interpolation of a rotated dataframe with nonstandard angles.
     """
@@ -137,7 +142,7 @@ def test_nonstandard_rotation(backend):
 
 
 @mark.parametrize("backend", backends)
-def test_scipy_rotation_equivalency(backend):
+def test_scipy_rotation_equivalency(backend: str) -> None:
     """
     For interpolation functions, a [z, y, x] rotation defined with degrees
     should be equivalent to the scipy version using from_euler().
@@ -183,38 +188,38 @@ def test_scipy_rotation_equivalency(backend):
                                 normalize=False, hmin=False)
     assert_allclose(img1, img2)
 
-    img1 = interpolate_3d_vec(sdf, 'A', 'B', 'C',
-                              x_pixels=50, y_pixels=50,
-                              xlim=(-1, 1), ylim=(-1, 1),
-                              rotation=rotation,
-                              rot_origin=[0, 0, 0],
-                              normalize=False, hmin=False)
-    img2 = interpolate_3d_vec(sdf, 'A', 'B', 'C',
-                              x_pixels=50, y_pixels=50,
-                              xlim=(-1, 1), ylim=(-1, 1),
-                              rotation=scipy_rotation,
-                              rot_origin=[0, 0, 0],
-                              normalize=False,
-                              hmin=False)
-    assert_allclose(img1[0], img2[0])
-    assert_allclose(img1[1], img2[1])
-
-    img1 = interpolate_3d_cross_vec(sdf, 'A', 'B', 'C',
+    img1_tuple = interpolate_3d_vec(sdf, 'A', 'B', 'C',
                                     x_pixels=50, y_pixels=50,
                                     xlim=(-1, 1), ylim=(-1, 1),
-                                    z_slice=0,
                                     rotation=rotation,
                                     rot_origin=[0, 0, 0],
                                     normalize=False, hmin=False)
-    img2 = interpolate_3d_cross_vec(sdf, 'A', 'B', 'C',
+    img2_tuple = interpolate_3d_vec(sdf, 'A', 'B', 'C',
                                     x_pixels=50, y_pixels=50,
                                     xlim=(-1, 1), ylim=(-1, 1),
-                                    z_slice=0,
                                     rotation=scipy_rotation,
                                     rot_origin=[0, 0, 0],
-                                    normalize=False, hmin=False)
-    assert_allclose(img1[0], img2[0])
-    assert_allclose(img1[1], img2[1])
+                                    normalize=False,
+                                    hmin=False)
+    assert_allclose(img1_tuple[0], img2_tuple[0])
+    assert_allclose(img1_tuple[1], img2_tuple[1])
+
+    img1_tuple = interpolate_3d_cross_vec(sdf, 'A', 'B', 'C',
+                                          x_pixels=50, y_pixels=50,
+                                          xlim=(-1, 1), ylim=(-1, 1),
+                                          z_slice=0,
+                                          rotation=rotation,
+                                          rot_origin=[0, 0, 0],
+                                          normalize=False, hmin=False)
+    img2_tuple = interpolate_3d_cross_vec(sdf, 'A', 'B', 'C',
+                                          x_pixels=50, y_pixels=50,
+                                          xlim=(-1, 1), ylim=(-1, 1),
+                                          z_slice=0,
+                                          rotation=scipy_rotation,
+                                          rot_origin=[0, 0, 0],
+                                          normalize=False, hmin=False)
+    assert_allclose(img1_tuple[0], img2_tuple[0])
+    assert_allclose(img1_tuple[1], img2_tuple[1])
 
     img1 = interpolate_3d_grid(sdf, 'A',
                                x_pixels=50, y_pixels=50,
@@ -232,7 +237,7 @@ def test_scipy_rotation_equivalency(backend):
 
 
 @mark.parametrize("backend", backends)
-def test_quaternion_rotation(backend):
+def test_quaternion_rotation(backend: str) -> None:
     """
     Test quaternion rotation defined using scipy.
     """
@@ -322,7 +327,7 @@ def test_quaternion_rotation(backend):
 
 
 @mark.parametrize("backend", backends)
-def test_rotation_stability(backend):
+def test_rotation_stability(backend: str) -> None:
     """
     Rotation should not change values at the rotation origin.
     """
@@ -337,7 +342,9 @@ def test_rotation_stability(backend):
     real = -1 + (np.arange(0, 50) + 0.5) * (1 / 25)
     pixel_x, pixel_y = 12, 30
 
-    for func in [interpolate_3d_proj, interpolate_3d_cross]:
+    functions_list: List[Callable] = [interpolate_3d_proj,
+                                      interpolate_3d_cross]
+    for func in functions_list:
         img = func(sdf, 'A',
                    x_pixels=50, y_pixels=50,
                    xlim=(-1, 1), ylim=(-1, 1),
@@ -353,7 +360,7 @@ def test_rotation_stability(backend):
 
 
 @mark.parametrize("backend", backends)
-def test_axes_rotation_separation(backend):
+def test_axes_rotation_separation(backend: str) -> None:
     """
     Rotations should be independent of the defined x & y interpolation axes.
     Similar to test_image_transpose(), but a rotation is applied to all
@@ -379,18 +386,18 @@ def test_axes_rotation_separation(backend):
                                normalize=False, hmin=False)
     assert_allclose(img1, img2.T)
 
-    img1 = interpolate_3d_vec(sdf, 'A', 'B', 'C',
-                              x_pixels=50, y_pixels=50,
-                              xlim=(-1, 1), ylim=(-1, 1),
-                              rotation=rotation,
-                              normalize=False, hmin=False)
-    img2 = interpolate_3d_vec(sdf, 'A', 'B', 'C', x='y', y='x',
-                              x_pixels=50, y_pixels=50,
-                              xlim=(-1, 1), ylim=(-1, 1),
-                              rotation=rotation,
-                              normalize=False, hmin=False)
-    assert_allclose(img1[0], img2[0].T)
-    assert_allclose(img1[1], img2[1].T)
+    img1_tuple = interpolate_3d_vec(sdf, 'A', 'B', 'C',
+                                    x_pixels=50, y_pixels=50,
+                                    xlim=(-1, 1), ylim=(-1, 1),
+                                    rotation=rotation,
+                                    normalize=False, hmin=False)
+    img2_tuple = interpolate_3d_vec(sdf, 'A', 'B', 'C', x='y', y='x',
+                                    x_pixels=50, y_pixels=50,
+                                    xlim=(-1, 1), ylim=(-1, 1),
+                                    rotation=rotation,
+                                    normalize=False, hmin=False)
+    assert_allclose(img1_tuple[0], img2_tuple[0].T)
+    assert_allclose(img1_tuple[1], img2_tuple[1].T)
 
     img1 = interpolate_3d_cross(sdf, 'A',
                                 x_pixels=50, y_pixels=50,
@@ -406,21 +413,21 @@ def test_axes_rotation_separation(backend):
                                 normalize=False, hmin=False)
     assert_allclose(img1, img2.T)
 
-    img1 = interpolate_3d_cross_vec(sdf, 'A', 'B', 'C',
-                                    x_pixels=50, y_pixels=50,
-                                    xlim=(-1, 1), ylim=(-1, 1),
-                                    z_slice=0,
-                                    rotation=rotation,
-                                    normalize=False, hmin=False)
-    img2 = interpolate_3d_cross_vec(sdf, 'A', 'B', 'C',
-                                    x='y', y='x',
-                                    x_pixels=50, y_pixels=50,
-                                    xlim=(-1, 1), ylim=(-1, 1),
-                                    z_slice=0,
-                                    rotation=rotation,
-                                    normalize=False, hmin=False)
-    assert_allclose(img1[0], img2[0].T)
-    assert_allclose(img1[1], img2[1].T)
+    img1_tuple = interpolate_3d_cross_vec(sdf, 'A', 'B', 'C',
+                                          x_pixels=50, y_pixels=50,
+                                          xlim=(-1, 1), ylim=(-1, 1),
+                                          z_slice=0,
+                                          rotation=rotation,
+                                          normalize=False, hmin=False)
+    img2_tuple = interpolate_3d_cross_vec(sdf, 'A', 'B', 'C',
+                                          x='y', y='x',
+                                          x_pixels=50, y_pixels=50,
+                                          xlim=(-1, 1), ylim=(-1, 1),
+                                          z_slice=0,
+                                          rotation=rotation,
+                                          normalize=False, hmin=False)
+    assert_allclose(img1_tuple[0], img2_tuple[0].T)
+    assert_allclose(img1_tuple[1], img2_tuple[1].T)
 
     img1 = interpolate_3d_grid(sdf, 'A',
                                x_pixels=50, y_pixels=50, z_pixels=50,
@@ -436,7 +443,7 @@ def test_axes_rotation_separation(backend):
 
 
 @mark.parametrize("backend", backends)
-def test_axes_rotation_equivalency(backend):
+def test_axes_rotation_equivalency(backend: str) -> None:
     """
     A rotated interpolation (at multiples of 90 degrees) should be equivalent
     to a transformed interpolation with different x & y axes. For example,
@@ -456,8 +463,9 @@ def test_axes_rotation_equivalency(backend):
             for i_x in range(4):
                 rot_x, rot_y, rot_z = i_x * 90, i_y * 90, i_z * 90
 
-                for func in [interpolate_3d_proj, interpolate_3d_cross]:
-
+                functions_list: List[Callable] = [interpolate_3d_proj,
+                                                  interpolate_3d_cross]
+                for func in functions_list:
                     img1 = func(sdf, 'A',
                                 x_pixels=50, y_pixels=50,
                                 xlim=(-1, 1), ylim=(-1, 1),
@@ -482,7 +490,7 @@ def test_axes_rotation_equivalency(backend):
         flip_x, flip_y = not flip_y, flip_x
 
 
-def test_com_rotation():
+def test_com_rotation() -> None:
     """ Rotation around centre of mass should equal rotation around 0
     when positions have been reset around com. """
 
@@ -510,7 +518,9 @@ def test_com_rotation():
     sdf_zero = SarracenDataFrame({'x': x, 'y': y, 'z': z, 'h': h, 'val': val},
                                  params={'mass': mass, 'hfact': 1.2})
 
-    for func in [interpolate_3d_proj, interpolate_3d_cross]:
+    functions_list: List[Callable] = [interpolate_3d_proj,
+                                      interpolate_3d_cross]
+    for func in functions_list:
         img1 = func(sdf_com, 'val',
                     x_pixels=50, y_pixels=50,
                     rotation=[35, 60, 75],

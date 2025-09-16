@@ -2,9 +2,10 @@ import numpy as np
 import pandas as pd
 import sys
 from ..sarracen_dataframe import SarracenDataFrame
+from typing import Tuple, Union
 
 
-def _get_mass(data: 'SarracenDataFrame'):
+def _get_mass(data: 'SarracenDataFrame') -> Union[float, pd.Series]:
     if data.mcol is None:
         if 'mass' not in data.params:
             raise KeyError("'mass' column does not exist in this "
@@ -14,7 +15,7 @@ def _get_mass(data: 'SarracenDataFrame'):
     return data[data.mcol]
 
 
-def _get_origin(origin: list) -> list:
+def _get_origin(origin: Union[list, None]) -> list:
     if origin is None:
         return [0.0, 0.0, 0.0]
     else:
@@ -22,12 +23,12 @@ def _get_origin(origin: list) -> list:
 
 
 def _bin_particles_by_radius(data: 'SarracenDataFrame',
-                             r_in: float = None,
-                             r_out: float = None,
-                             bins: int = 300,
-                             log: bool = False,
-                             geometry: str = 'cylindrical',
-                             origin: list = None):
+                             r_in: Union[float, None],
+                             r_out: Union[float, None],
+                             bins: int,
+                             log: bool,
+                             geometry: str,
+                             origin: list) -> Tuple[pd.Series, np.ndarray]:
     """
     Utility function to bin particles in discrete intervals by radius.
 
@@ -35,19 +36,19 @@ def _bin_particles_by_radius(data: 'SarracenDataFrame',
     ----------
     data: SarracenDataFrame
         The particle dataset.
-    r_in : float, optional
+    r_in : float
         Inner radius of the disc. Defaults to the minimum r value.
-    r_out : float, optional
+    r_out : float
         Outer radius of the disc. Defaults to the maximum r value.
-    bins : int, optional
+    bins : int
         Defines the number of equal-width bins in the range [r_in, r_out].
         Default is 300.
-    log : bool, optional
+    log : bool
         Whether to bin in log scale or not. Defaults to False.
-    geometry : str, optional
+    geometry : str
         Coordinate system to use to calculate the particle radii. Can be
         either *spherical* or *cylindrical*. Defaults to *cylindrical*.
-    origin : array-like, optional
+    origin : array-like
         The x, y and z centre point around which to compute radii. Defaults to
         [0, 0, 0].
 
@@ -80,7 +81,7 @@ def _bin_particles_by_radius(data: 'SarracenDataFrame',
         bin_edges = np.logspace(np.log10(r_in), np.log10(r_out), bins+1)
     else:
         bin_edges = np.linspace(r_in, r_out, bins+1)
-    rbins = pd.cut(r, bin_edges)
+    rbins = pd.cut(r, pd.Series(bin_edges))
 
     return rbins, bin_edges
 

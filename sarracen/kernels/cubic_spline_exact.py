@@ -1,10 +1,11 @@
 import math
 
 from numba import njit
+from typing import Tuple
 
 
 @njit
-def line_int(r0, d1, d2, h):
+def line_int(r0: float, d1: float, d2: float, h: float) -> float:
     """ Calculate an exact 2D line integral over the cubic spline kernel.
 
     Used in exact calculation of a pixel surface integral in 2D.
@@ -54,7 +55,7 @@ def line_int(r0, d1, d2, h):
 
 
 @njit
-def _full_2d_mod(phi, q0):
+def _full_2d_mod(phi: float, q0: float) -> float:
     """ Calculate an exact 2D line integral over the cubic spline kernel.
 
     Assumes that one endpoint of the line is at the end of `q0`. Used in pint.
@@ -119,7 +120,7 @@ def _full_2d_mod(phi, q0):
 
 
 @njit
-def _f1_2d(phi, q0):
+def _f1_2d(phi: float, q0: float) -> float:
     """ Calculate an exact 2D line integral over the cubic spline kernel.
 
     Assumes that one endpoint of the line is at the end of `q0`. Only valid
@@ -152,7 +153,7 @@ def _f1_2d(phi, q0):
 
 
 @njit
-def _f2_2d(phi, q0):
+def _f2_2d(phi: float, q0: float) -> float:
     """ Calculate an exact 2D line integral over the cubic spline kernel.
 
     Assumes that one endpoint of the line is at the end of `q0`. Only valid
@@ -192,7 +193,7 @@ def _f2_2d(phi, q0):
 
 
 @njit
-def _f3_2d(phi):
+def _f3_2d(phi: float) -> float:
     """ Calculate an exact 2D line integral over the cubic spline kernel.
 
     Assumes that one endpoint of the line is at the end of `q0`. Only valid
@@ -212,7 +213,14 @@ def _f3_2d(phi):
 
 
 @njit
-def surface_int(r0, x1, y1, x2, y2, wx, wy, h):
+def surface_int(r0: float,
+                x1: float,
+                y1: float,
+                x2: float,
+                y2: float,
+                wx: float,
+                wy: float,
+                h: float) -> float:
     """ Calculate an exact 3D surface integral over the cubic spline kernel.
 
     Used to exactly calculating the contribution of a particle to a pixel's
@@ -268,7 +276,7 @@ def surface_int(r0, x1, y1, x2, y2, wx, wy, h):
 
 
 @njit
-def _line_int3d(r0, r1, d1, d2, h):
+def _line_int3d(r0: float, r1: float, d1: float, d2: float, h: float) -> float:
     """ Calculate an exact 3D line integral over the cubic spline kernel.
 
     Used in wallint.
@@ -336,7 +344,7 @@ def _line_int3d(r0, r1, d1, d2, h):
 
 
 @njit
-def _full_integral_3d(d, r0, r1, h):
+def _full_integral_3d(d: float, r0: float, r1: float, h: float) -> float:
     """ Calculate an exact 3D line integral over the cubic spline kernel.
 
     Assumes that one endpoint of the line is at the end of `r1`.
@@ -372,8 +380,8 @@ def _full_integral_3d(d, r0, r1, h):
     r0h_2 = 1. / r0h2
     r0h_3 = 1. / r0h3
 
-    b1 = None
-    b2 = None
+    b1 = 0.0
+    b2 = 0.0
     if r0 > 2.0 * h:
         # The entire surface lies outside r > 2h.
         b3 = 0.25 * h2 * h
@@ -439,7 +447,9 @@ def _full_integral_3d(d, r0, r1, h):
 
 
 @njit
-def get_I_terms(cosp, a2, a):
+def get_I_terms(cosp: float,
+                a2: float,
+                a: float) -> Tuple[float, float, float, float, float, float]:
     """Calculate I constants for calculations in _full_integral_3d"""
     cosp2 = cosp * cosp
     p = math.acos(cosp)
