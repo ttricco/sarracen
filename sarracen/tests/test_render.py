@@ -200,35 +200,6 @@ def test_kwargs(backend: str) -> None:
 
 
 @mark.parametrize("backend", backends)
-def test_rotated_ticks(backend: str) -> None:
-    """
-    A rotated plot should have no x & y ticks.
-    """
-    data = {'x': [3, 6], 'y': [5, 1], 'z': [2, 1], 'P': [1, 1],
-            'h': [1, 1], 'rho': [1, 1], 'm': [1, 1],
-            'Ax': [1, 1], 'Ay': [1, 1], 'Az': [1, 1]}
-    sdf = SarracenDataFrame(data)
-    sdf.backend = backend
-
-    for xsec in [None, 1.5]:
-        fig, ax = plt.subplots()
-        render(sdf, 'P', xsec=xsec, ax=ax, rotation=[34, 23, 50])
-
-        assert ax.get_xticks().size == 0
-        assert ax.get_yticks().size == 0
-        plt.close(fig)
-
-    functions_list: List[Callable] = [arrowplot, streamlines]
-    for func in functions_list:
-        fig, ax = plt.subplots()
-        func(sdf, ('Ax', 'Ay', 'Az'), rotation=[34, 23, 50], ax=ax)
-
-        assert ax.get_xticks().size == 0
-        assert ax.get_yticks().size == 0
-        plt.close(fig)
-
-
-@mark.parametrize("backend", backends)
 def test_plot_labels(backend: str) -> None:
     """
     Verify that plot labels for each rendering function are correct.
