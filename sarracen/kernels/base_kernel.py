@@ -46,7 +46,7 @@ class BaseKernel:
 
         Returns
         -------
-            A ndarray of length (samples), containing the kernel approximation.
+        A ndarray of length (samples), containing the kernel approximation.
 
         Examples
         --------

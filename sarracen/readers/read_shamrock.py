@@ -72,7 +72,7 @@ class FileReader:
 
         Returns
         -------
-        data
+        bytes
             The data read from the file.
 
         Raises

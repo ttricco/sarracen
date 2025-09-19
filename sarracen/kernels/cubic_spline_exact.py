@@ -21,7 +21,8 @@ def line_int(r0: float, d1: float, d2: float, h: float) -> float:
 
     Returns
     -------
-    float: The exact value of this line integral.
+    float
+        The exact value of this line integral.
     """
     if r0 == 0:
         return 0
@@ -71,7 +72,8 @@ def _full_2d_mod(phi: float, q0: float) -> float:
 
     Returns
     -------
-    float: The exact value of this line integral.
+    float
+        The exact value of this line integral.
     """
     if q0 <= 1.0:
         # At least part of the line lies within 0 < q <= 1
@@ -138,7 +140,8 @@ def _f1_2d(phi: float, q0: float) -> float:
 
     Returns
     -------
-    float: The exact value of this line integral segment.
+    float
+        The exact value of this line integral segment.
     """
     cphi2 = math.cos(phi) ** 2
     logs = math.log(math.tan(phi / 2. + math.pi / 4.))
@@ -170,7 +173,8 @@ def _f2_2d(phi: float, q0: float) -> float:
 
     Returns
     -------
-    float: The exact value of this line integral segment.
+    float
+        The exact value of this line integral segment.
     """
     cphi2 = math.cos(phi) ** 2
 
@@ -207,7 +211,8 @@ def _f3_2d(phi: float) -> float:
 
     Returns
     -------
-    float: The exact value of this line integral segment.
+    float
+        The exact value of this line integral segment.
     """
     return 0.5 / math.pi * phi
 
@@ -239,7 +244,8 @@ def surface_int(r0: float,
 
     Returns
     -------
-    float: The exact value of this surface integral.
+    float
+        The exact value of this surface integral.
     """
     result = 0.0
     dx = x2 - x1
@@ -294,7 +300,8 @@ def _line_int3d(r0: float, r1: float, d1: float, d2: float, h: float) -> float:
 
     Returns
     -------
-    float: The exact value of this line integral.
+    float
+        The exact value of this line integral.
     """
     if abs(r0) == 0:
         return 0
@@ -363,7 +370,8 @@ def _full_integral_3d(d: float, r0: float, r1: float, h: float) -> float:
 
     Returns
     -------
-    float: The exact value of this line integral.
+    float
+        The exact value of this line integral.
     """
     r0h = r0 / h
     # Angle between the end of the line and the end of r1,
