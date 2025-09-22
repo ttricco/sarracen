@@ -24,9 +24,8 @@ def _read_fortran_block(fp: IO, bytesize: int) -> bytes:
     return data
 
 
-def _read_capture_pattern(fp: IO, swap_endian: bool) -> Tuple[Type[np.generic],
-                                                              Type[np.generic],
-                                                              int]:
+def _read_capture_pattern(fp: IO) -> Tuple[Type[np.generic], Type[np.generic],
+                                           int, bool]:
     """ Phantom dump validation plus default real and int sizes."""
 
     start_tag = fp.read(4)  # 4-byte Fortran tag
@@ -40,6 +39,7 @@ def _read_capture_pattern(fp: IO, swap_endian: bool) -> Tuple[Type[np.generic],
     i1 = r1 = i2 = 0
     def_int_dtype, def_real_dtype = def_types[0]
 
+    swap_endian = False
     for def_int_dtype, def_real_dtype in def_types:
         i1 = fp.read(def_int_dtype().itemsize)
         r1 = fp.read(def_real_dtype().itemsize)
@@ -49,14 +49,17 @@ def _read_capture_pattern(fp: IO, swap_endian: bool) -> Tuple[Type[np.generic],
         r1 = np.frombuffer(r1, count=1, dtype=def_real_dtype)[0]
         i2 = np.frombuffer(i2, count=1, dtype=def_int_dtype)[0]
 
-        if swap_endian:
-            i1.byteswap(inplace=True)
-            r1.byteswap(inplace=True)
-            i2.byteswap(inplace=True)
-
         if (i1 == def_int_dtype(60769)
                 and i2 == def_int_dtype(60878)
                 and r1 == def_real_dtype(i2)):
+            break
+        if (i1.byteswap() == def_int_dtype(60769)
+                and i2.byteswap() == def_int_dtype(60878)
+                and r1.byteswap() == def_real_dtype(i2)):
+            swap_endian = True
+            i1.byteswap(inplace=True)
+            r1.byteswap(inplace=True)
+            i2.byteswap(inplace=True)
             break
         else:  # rewind and try again
             fp.seek(-def_int_dtype().itemsize, 1)
@@ -92,7 +95,7 @@ def _read_capture_pattern(fp: IO, swap_endian: bool) -> Tuple[Type[np.generic],
         raise AssertionError("Capture pattern error. Fortran tags mismatch. "
                              "Is this a Phantom data file?")
 
-    return def_int_dtype, def_real_dtype, iversion
+    return def_int_dtype, def_real_dtype, iversion, swap_endian
 
 
 def _read_file_identifier(fp: IO) -> str:
@@ -272,28 +275,24 @@ def _create_aprmass_column(df: pd.DataFrame,
 @overload
 def read_phantom(filename: str,
                  separate_types: None,
-                 ignore_inactive: bool = True,
-                 swap_endian: bool = False) -> SarracenDataFrame: ...
+                 ignore_inactive: bool = True) -> SarracenDataFrame: ...
 @overload  # noqa: E302
 def read_phantom(filename: str,
                  separate_types: Literal['sinks'] = 'sinks',
-                 ignore_inactive: bool = True,
-                 swap_endian: bool = False) -> Union[List[
-                                                     SarracenDataFrame],
-                                                     SarracenDataFrame]: ...
+                 ignore_inactive: bool = True) -> Union[List[
+                                                        SarracenDataFrame],
+                                                        SarracenDataFrame]: ...
 @overload  # noqa: E302
 def read_phantom(filename: str,
                  separate_types: Literal['all'],
-                 ignore_inactive: bool = True,
-                 swap_endian: bool = False) -> Union[List[
-                                                     SarracenDataFrame],
-                                                     SarracenDataFrame]: ...
+                 ignore_inactive: bool = True) -> Union[List[
+                                                        SarracenDataFrame],
+                                                        SarracenDataFrame]: ...
 def read_phantom(filename: str,  # noqa: E302
                  separate_types: Union[str, None] = 'sinks',
-                 ignore_inactive: bool = True,
-                 swap_endian: bool = False) -> Union[List[
-                                                     SarracenDataFrame],
-                                                     SarracenDataFrame]:
+                 ignore_inactive: bool = True) -> Union[List[
+                                                        SarracenDataFrame],
+                                                        SarracenDataFrame]:
     """
     Read data from a Phantom dump file.
 
@@ -342,8 +341,8 @@ def read_phantom(filename: str,  # noqa: E302
     >>> sdf_gas, sdf_dust, sdf_sinks = sarracen.read_phantom('dumpfile_00000', separate_types='all')
     """
     with open(filename, 'rb') as fp:
-        def_int_dtype, def_real_dtype, iversion = \
-            _read_capture_pattern(fp, swap_endian)
+        def_int_dtype, def_real_dtype, iversion, swap_endian = \
+            _read_capture_pattern(fp)
         file_identifier = _read_file_identifier(fp)
 
         header_vars = _read_global_header(fp, def_int_dtype, def_real_dtype,
