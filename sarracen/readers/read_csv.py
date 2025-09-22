@@ -1,8 +1,10 @@
+from typing import Any
+
 import pandas as pd
 from ..sarracen_dataframe import SarracenDataFrame
 
 
-def read_csv(*args, **kwargs) -> SarracenDataFrame:
+def read_csv(*args: Any, **kwargs: Any) -> SarracenDataFrame:
     """
     Read data from a csv file.
 
@@ -17,8 +19,8 @@ def read_csv(*args, **kwargs) -> SarracenDataFrame:
     """
     df = SarracenDataFrame(pd.read_csv(*args, **kwargs))
 
-    df.units = _get_units(df.columns)
-    df.columns = _get_labels(df.columns)
+    df.units = _get_units(df.columns.to_series())
+    df.columns = _get_labels(df.columns.to_series())
 
     return df
 

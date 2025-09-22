@@ -1,10 +1,12 @@
+from typing import IO, Tuple, Type, Union, List, overload, Literal
+
 import numpy as np
 import pandas as pd
 
 from ..sarracen_dataframe import SarracenDataFrame
 
 
-def _read_fortran_block(fp, bytesize):
+def _read_fortran_block(fp: IO, bytesize: int) -> bytes:
     """ Helper function to read Fortran-written data.
 
     Fortran will add a 4-byte tag before and after any data writes. The value
@@ -22,15 +24,18 @@ def _read_fortran_block(fp, bytesize):
     return data
 
 
-def _read_capture_pattern(fp):
+def _read_capture_pattern(fp: IO) -> Tuple[Type[np.generic],
+                                           Type[np.generic],
+                                           int]:
     """ Phantom dump validation plus default real and int sizes."""
 
     start_tag = fp.read(4)  # 4-byte Fortran tag
 
-    def_types = [(np.int32, np.float64),
-                 (np.int32, np.float32),
-                 (np.int64, np.float64),
-                 (np.int64, np.float32)]
+    def_types: List[Tuple[Type[np.generic],
+                          Type[np.generic]]] = [(np.int32, np.float64),
+                                                (np.int32, np.float32),
+                                                (np.int64, np.float64),
+                                                (np.int64, np.float32)]
 
     i1 = r1 = i2 = 0
     def_int_dtype, def_real_dtype = def_types[0]
@@ -81,7 +86,7 @@ def _read_capture_pattern(fp):
     return def_int_dtype, def_real_dtype, iversion
 
 
-def _read_file_identifier(fp):
+def _read_file_identifier(fp: IO) -> str:
     """ Read the 100 character file identifier.
 
     The file identifier contains code version and date information.
@@ -89,7 +94,7 @@ def _read_file_identifier(fp):
     return _read_fortran_block(fp, 100).decode('ascii').strip()
 
 
-def _rename_duplicates(keys):
+def _rename_duplicates(keys: list) -> list:
     seen = dict()
 
     for i, key in enumerate(keys):
@@ -102,7 +107,8 @@ def _rename_duplicates(keys):
     return keys
 
 
-def _read_global_header_block(fp, dtype):
+def _read_global_header_block(fp: IO,
+                              dtype: Type[np.generic]) -> Tuple[list, list]:
     nvars = np.frombuffer(_read_fortran_block(fp, 4), dtype=np.int32)[0]
 
     keys = []
@@ -110,16 +116,18 @@ def _read_global_header_block(fp, dtype):
 
     if (nvars > 0):
         # each tag is 16 characters in length
-        keys = _read_fortran_block(fp, 16*nvars).decode('ascii')
-        keys = [keys[i:i+16].strip() for i in range(0, len(keys), 16)]
+        keys_str = _read_fortran_block(fp, 16*nvars).decode('ascii')
+        keys = [keys_str[i:i+16].strip() for i in range(0, len(keys_str), 16)]
 
-        data = _read_fortran_block(fp, dtype().itemsize*nvars)
-        data = np.frombuffer(data, count=nvars, dtype=dtype)
+        raw_data = _read_fortran_block(fp, dtype().itemsize*nvars)
+        data = list(np.frombuffer(raw_data, count=nvars, dtype=dtype))
 
     return keys, data
 
 
-def _read_global_header(fp, def_int_dtype, def_real_dtype):
+def _read_global_header(fp: IO,
+                        def_int_dtype: Type[np.generic],
+                        def_real_dtype: Type[np.generic]) -> dict:
     """ Read global variables. """
 
     dtypes = [def_int_dtype, np.int8, np.int16, np.int32, np.int64,
@@ -131,7 +139,7 @@ def _read_global_header(fp, def_int_dtype, def_real_dtype):
         new_keys, new_data = _read_global_header_block(fp, dtype)
 
         keys += new_keys
-        data = data + list(new_data)
+        data += new_data
 
     keys = _rename_duplicates(keys)
 
@@ -142,7 +150,12 @@ def _read_global_header(fp, def_int_dtype, def_real_dtype):
     return global_vars
 
 
-def _read_array_block(fp, df, n, nums, def_int_dtype, def_real_dtype):
+def _read_array_block(fp: IO,
+                      df: pd.DataFrame,
+                      n: int,
+                      nums: np.ndarray,
+                      def_int_dtype: Type[np.generic],
+                      def_real_dtype: Type[np.generic]) -> pd.DataFrame:
 
     dtypes = [def_int_dtype, np.int8, np.int16, np.int32, np.int64,
               def_real_dtype, np.float32, np.float64]
@@ -160,19 +173,24 @@ def _read_array_block(fp, df, n, nums, def_int_dtype, def_real_dtype):
                     count += 1
                     tag = original_tag + f"_{count}"
 
-            data = _read_fortran_block(fp, dtype().itemsize * n)
-            data = np.frombuffer(data, dtype=dtype)
+            raw_data = _read_fortran_block(fp, dtype().itemsize * n)
+            data: np.ndarray = np.frombuffer(raw_data, dtype=dtype)
             df[tag] = data
 
     return df
 
 
-def _read_array_blocks(fp, def_int_dtype, def_real_dtype):
+def _read_array_blocks(fp: IO,
+                       def_int_dtype: Type[np.generic],
+                       def_real_dtype: Type[np.generic]) -> Tuple[
+                                                                 pd.DataFrame,
+                                                                 pd.DataFrame]:
     """ Read particle data. Block 2 is always for sink particles?"""
     nblocks = np.frombuffer(_read_fortran_block(fp, 4), dtype=np.int32)[0]
 
-    n = []
-    nums = []
+    n: List[int] = []
+    nums: List[np.ndarray] = []
+
     for i in range(0, nblocks):
         start_tag = fp.read(4)
 
@@ -199,7 +217,8 @@ def _read_array_blocks(fp, def_int_dtype, def_real_dtype):
     return df, df_sinks
 
 
-def _create_mass_column(df, header_vars):
+def _create_mass_column(df: pd.DataFrame,
+                        header_vars: dict) -> pd.DataFrame:
     """
     Creates a mass column with the mass of each particle when there are
     multiple itypes.
@@ -212,7 +231,8 @@ def _create_mass_column(df, header_vars):
     return df
 
 
-def _create_aprmass_column(df, header_vars):
+def _create_aprmass_column(df: pd.DataFrame,
+                           header_vars: dict) -> pd.DataFrame:
     """
     Creates a mass column with the mass of each particle when there are
     multiple refinement levels.
@@ -223,9 +243,27 @@ def _create_aprmass_column(df, header_vars):
     return df
 
 
+@overload
 def read_phantom(filename: str,
-                 separate_types: str = 'sinks',
-                 ignore_inactive: bool = True):
+                 separate_types: None,
+                 ignore_inactive: bool = True) -> SarracenDataFrame: ...
+@overload  # noqa: E302
+def read_phantom(filename: str,
+                 separate_types: Literal['sinks'] = 'sinks',
+                 ignore_inactive: bool = True) -> Union[List[
+                                                        SarracenDataFrame],
+                                                        SarracenDataFrame]: ...
+@overload  # noqa: E302
+def read_phantom(filename: str,
+                 separate_types: Literal['all'],
+                 ignore_inactive: bool = True) -> Union[List[
+                                                        SarracenDataFrame],
+                                                        SarracenDataFrame]: ...
+def read_phantom(filename: str,  # noqa: E302
+                 separate_types: Union[str, None] = 'sinks',
+                 ignore_inactive: bool = True) -> Union[List[
+                                                        SarracenDataFrame],
+                                                        SarracenDataFrame]:
     """
     Read data from a Phantom dump file.
 
@@ -330,6 +368,4 @@ def read_phantom(filename: str,
                                                    ignore_index=True),
                                          params=header_vars)]
 
-        df_list = df_list[0] if len(df_list) == 1 else df_list
-
-        return df_list
+        return df_list[0] if len(df_list) == 1 else df_list

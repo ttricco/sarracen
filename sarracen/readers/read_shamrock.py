@@ -1,3 +1,5 @@
+from typing import IO, List, Dict, Any
+
 import struct
 import json
 import numpy as np
@@ -7,7 +9,7 @@ from ..sarracen_dataframe import SarracenDataFrame
 
 
 class FileReader:
-    def __init__(self, file):
+    def __init__(self, file: IO) -> None:
         """
         Initialize the FileReader with a file object.
 
@@ -25,7 +27,7 @@ class FileReader:
         self.last_position = file.tell()  # Keeps track of
         # the last read position
 
-    def read_int64_and_string(self):
+    def read_int64_and_string(self) -> str:
         # Read the 64-bit integer (8 bytes)
         """
         Reads a 64-bit integer and the following string from the file.
@@ -57,7 +59,7 @@ class FileReader:
         # Decode the string from bytes to UTF-8 and return
         return string_bytes.decode("utf-8")
 
-    def read_from_position(self, offset, num_bytes):
+    def read_from_position(self, offset: int, num_bytes: int) -> bytes:
         """
         Read data from a specific position for a specified number of bytes.
 
@@ -70,7 +72,7 @@ class FileReader:
 
         Returns
         -------
-        data
+        bytes
             The data read from the file.
 
         Raises
@@ -93,7 +95,7 @@ class FileReader:
         return data
 
 
-def decode_bytes_to_doubles(byte_data):
+def decode_bytes_to_doubles(byte_data: bytes) -> List[float]:
     """
     Decodes a byte array into a list of double precision floats.
 
@@ -128,13 +130,13 @@ def decode_bytes_to_doubles(byte_data):
     return list(doubles)
 
 
-def get_head_inc(off):
+def get_head_inc(off: int) -> int:
     if off % 8 > 0:
         off += 8 - (off % 8)
     return off
 
 
-def decode_patchdata(pdat, pdat_layout):
+def decode_patchdata(pdat: bytes, pdat_layout: List[Dict[str, Any]]) -> dict:
     """
     Decode a patchdata bytearray into a dictionary of numpy arrays.
 
@@ -174,7 +176,7 @@ def decode_patchdata(pdat, pdat_layout):
         elif field["type"] == "f64":
             sz += get_head_inc(8 * nobj)
         else:
-            raise "No decoder for this type"
+            raise TypeError("No decoder for this type")
 
     head = 0
     pdat_dat = pdat[8 + len(pdat_layout) * 8:]
@@ -198,7 +200,7 @@ def decode_patchdata(pdat, pdat_layout):
             )
             data = decode_bytes_to_doubles(pdat_dat[head: head + 8 * nobj * 3])
             array_size = len(data)
-            if array_size % 3 * nobj != 0:
+            if array_size % (3 * nobj) != 0:
                 raise ValueError(
                     f"Array size {array_size} is not equal to {3*nobj}"
                 )
@@ -220,14 +222,14 @@ def decode_patchdata(pdat, pdat_layout):
 
             head += get_head_inc(8 * nobj)
         else:
-            raise "No decoder for this type"
+            raise TypeError("No decoder for this type")
 
     return dic_out
 
 
 class ShamrockDumpReader:
 
-    def __init__(self, file):
+    def __init__(self, file: IO) -> None:
         self.reader = FileReader(file)
 
         user_header = self.reader.read_int64_and_string()
@@ -247,7 +249,7 @@ class ShamrockDumpReader:
         ):
             self.file_map[pid] = {"bytecount": bcount, "offset": off}
 
-    def read_patch(self, pid):
+    def read_patch(self, pid: np.uint64) -> dict:
         bcount = self.file_map[pid]["bytecount"]
         off = self.file_map[pid]["offset"]
 
@@ -263,7 +265,7 @@ class ShamrockDumpReader:
         return decode_patchdata(patchdata, self.sched_meta["patchdata_layout"])
 
 
-def read_shamrock(filename):
+def read_shamrock(filename: str) -> SarracenDataFrame:
     """
     Read a Shamrock native binary format dump file.
 

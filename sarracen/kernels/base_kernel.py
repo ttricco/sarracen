@@ -2,12 +2,13 @@ import math
 
 import numpy as np
 from numba import njit, prange
+from typing import Callable
 
 
 class BaseKernel:
     """A generic kernel used for data interpolation."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._ckernel_func_cache = None
         self._column_cache = None
 
@@ -45,7 +46,7 @@ class BaseKernel:
 
         Returns
         -------
-            A ndarray of length (samples), containing the kernel approximation.
+        A ndarray of length (samples), containing the kernel approximation.
 
         Examples
         --------
@@ -64,7 +65,8 @@ class BaseKernel:
 
         return c_kernel
 
-    def get_column_kernel_func(self, samples):
+    def get_column_kernel_func(self, samples: int) -> Callable[[float, int],
+                                                               float]:
         """ Generate a numba-accelerated column kernel function.
 
         Creates a numba-accelerated function for column kernel weights. This
@@ -85,7 +87,7 @@ class BaseKernel:
         radius = self.get_radius()
 
         @njit(fastmath=True)
-        def func(q, dim):
+        def func(q: float, dim: int) -> float:
             # using np.linspace() would break compatibility with the GPU
             # backend, so the calculation here is performed manually.
             wab_index = q * (samples - 1) / radius
@@ -99,7 +101,9 @@ class BaseKernel:
     # Internal function for performing the integral in _get_column_kernel()
     @staticmethod
     @njit(fastmath=True, parallel=True)
-    def _int_func(radius, samples, wfunc):
+    def _int_func(radius: float,
+                  samples: int,
+                  wfunc: Callable[[float, int], float]) -> np.ndarray:
         result = np.zeros(samples)
 
         for i in prange(samples):
@@ -108,6 +112,6 @@ class BaseKernel:
             q_z = np.linspace(0, bounds, samples)
             q = np.sqrt(q_xy ** 2 + q_z ** 2)
             y = wfunc(q, 3)
-            result[i] = 2 * np.trapz(y, x=q_z)
+            result[i] = 2 * float(np.trapz(y, x=q_z))
 
         return result
