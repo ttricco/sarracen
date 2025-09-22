@@ -245,6 +245,9 @@ def angular_momentum(data: 'SarracenDataFrame',
         [0, 0, 0].
     retbins : bool, optional
         Whether to return the midpoints of the bins or not. Defaults to False.
+    unit_vector: bool, optional
+        Whether to convert the angular momentum to unit vectors.
+        Default is True.
 
     Returns
     -------
@@ -295,7 +298,7 @@ def _calc_scale_height(data: 'SarracenDataFrame',
 
     Returns
     -------
-    H: Series
+    Series
         The scale height of the disc.
     """
 
