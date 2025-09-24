@@ -24,9 +24,8 @@ def _read_fortran_block(fp: IO, bytesize: int) -> bytes:
     return data
 
 
-def _read_capture_pattern(fp: IO) -> Tuple[Type[np.generic],
-                                           Type[np.generic],
-                                           int]:
+def _read_capture_pattern(fp: IO) -> Tuple[Type[np.generic], Type[np.generic],
+                                           int, bool]:
     """ Phantom dump validation plus default real and int sizes."""
 
     start_tag = fp.read(4)  # 4-byte Fortran tag
@@ -40,6 +39,7 @@ def _read_capture_pattern(fp: IO) -> Tuple[Type[np.generic],
     i1 = r1 = i2 = 0
     def_int_dtype, def_real_dtype = def_types[0]
 
+    swap_endian = False
     for def_int_dtype, def_real_dtype in def_types:
         i1 = fp.read(def_int_dtype().itemsize)
         r1 = fp.read(def_real_dtype().itemsize)
@@ -52,6 +52,14 @@ def _read_capture_pattern(fp: IO) -> Tuple[Type[np.generic],
         if (i1 == def_int_dtype(60769)
                 and i2 == def_int_dtype(60878)
                 and r1 == def_real_dtype(i2)):
+            break
+        if (i1.byteswap() == def_int_dtype(60769)
+                and i2.byteswap() == def_int_dtype(60878)
+                and r1.byteswap() == def_real_dtype(i2)):
+            swap_endian = True
+            i1.byteswap(inplace=True)
+            r1.byteswap(inplace=True)
+            i2.byteswap(inplace=True)
             break
         else:  # rewind and try again
             fp.seek(-def_int_dtype().itemsize, 1)
@@ -68,10 +76,14 @@ def _read_capture_pattern(fp: IO) -> Tuple[Type[np.generic],
     # iversion -- we don't actually check this
     iversion = fp.read(def_int_dtype().itemsize)
     iversion = np.frombuffer(iversion, count=1, dtype=def_int_dtype)[0]
+    if swap_endian:
+        iversion.byteswap(inplace=True)
 
     # integer 3 == 690706
     i3 = fp.read(def_int_dtype().itemsize)
     i3 = np.frombuffer(i3, count=1, dtype=def_int_dtype)[0]
+    if swap_endian:
+        i3.byteswap(inplace=True)
     if i3 != def_int_dtype(690706):
         raise AssertionError("Capture pattern error. i3 mismatch. "
                              "Is this a Phantom data file?")
@@ -83,7 +95,7 @@ def _read_capture_pattern(fp: IO) -> Tuple[Type[np.generic],
         raise AssertionError("Capture pattern error. Fortran tags mismatch. "
                              "Is this a Phantom data file?")
 
-    return def_int_dtype, def_real_dtype, iversion
+    return def_int_dtype, def_real_dtype, iversion, swap_endian
 
 
 def _read_file_identifier(fp: IO) -> str:
@@ -108,8 +120,11 @@ def _rename_duplicates(keys: list) -> list:
 
 
 def _read_global_header_block(fp: IO,
-                              dtype: Type[np.generic]) -> Tuple[list, list]:
+                              dtype: Type[np.generic],
+                              swap_endian: bool) -> Tuple[list, list]:
     nvars = np.frombuffer(_read_fortran_block(fp, 4), dtype=np.int32)[0]
+    if swap_endian:
+        nvars.byteswap(inplace=True)
 
     keys = []
     data = []
@@ -120,14 +135,18 @@ def _read_global_header_block(fp: IO,
         keys = [keys_str[i:i+16].strip() for i in range(0, len(keys_str), 16)]
 
         raw_data = _read_fortran_block(fp, dtype().itemsize*nvars)
-        data = list(np.frombuffer(raw_data, count=nvars, dtype=dtype))
+        data_arr = np.frombuffer(raw_data, count=nvars, dtype=dtype)
+        if swap_endian:
+            data_arr.byteswap(inplace=True)
+        data = list(data_arr)
 
     return keys, data
 
 
 def _read_global_header(fp: IO,
                         def_int_dtype: Type[np.generic],
-                        def_real_dtype: Type[np.generic]) -> dict:
+                        def_real_dtype: Type[np.generic],
+                        swap_endian: bool) -> dict:
     """ Read global variables. """
 
     dtypes = [def_int_dtype, np.int8, np.int16, np.int32, np.int64,
@@ -136,7 +155,7 @@ def _read_global_header(fp: IO,
     keys = []
     data = []
     for dtype in dtypes:
-        new_keys, new_data = _read_global_header_block(fp, dtype)
+        new_keys, new_data = _read_global_header_block(fp, dtype, swap_endian)
 
         keys += new_keys
         data += new_data
@@ -155,7 +174,8 @@ def _read_array_block(fp: IO,
                       n: int,
                       nums: np.ndarray,
                       def_int_dtype: Type[np.generic],
-                      def_real_dtype: Type[np.generic]) -> pd.DataFrame:
+                      def_real_dtype: Type[np.generic],
+                      swap_endian: bool) -> pd.DataFrame:
 
     dtypes = [def_int_dtype, np.int8, np.int16, np.int32, np.int64,
               def_real_dtype, np.float32, np.float64]
@@ -175,6 +195,8 @@ def _read_array_block(fp: IO,
 
             raw_data = _read_fortran_block(fp, dtype().itemsize * n)
             data: np.ndarray = np.frombuffer(raw_data, dtype=dtype)
+            if swap_endian:
+                data.byteswap(inplace=True)
             df[tag] = data
 
     return df
@@ -182,11 +204,12 @@ def _read_array_block(fp: IO,
 
 def _read_array_blocks(fp: IO,
                        def_int_dtype: Type[np.generic],
-                       def_real_dtype: Type[np.generic]) -> Tuple[
-                                                                 pd.DataFrame,
-                                                                 pd.DataFrame]:
+                       def_real_dtype: Type[np.generic],
+                       swap_endian: bool) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """ Read particle data. Block 2 is always for sink particles?"""
     nblocks = np.frombuffer(_read_fortran_block(fp, 4), dtype=np.int32)[0]
+    if swap_endian:
+        nblocks.byteswap(inplace=True)
 
     n: List[int] = []
     nums: List[np.ndarray] = []
@@ -194,8 +217,13 @@ def _read_array_blocks(fp: IO,
     for i in range(0, nblocks):
         start_tag = fp.read(4)
 
-        n.append(np.frombuffer(fp.read(8), dtype=np.int64)[0])
-        nums.append(np.frombuffer(fp.read(32), count=8, dtype=np.int32))
+        n_val = np.frombuffer(fp.read(8), dtype=np.int64)[0]
+        nums_val = np.frombuffer(fp.read(32), count=8, dtype=np.int32)
+        if swap_endian:
+            n_val.byteswap(inplace=True)
+            nums_val.byteswap(inplace=True)
+        n.append(n_val)
+        nums.append(nums_val)
 
         end_tag = fp.read(4)
         if (start_tag != end_tag):
@@ -209,10 +237,11 @@ def _read_array_blocks(fp: IO,
         # For now we will just append sinks to the end of the data frame.
         if i == 1:
             df_sinks = _read_array_block(fp, df_sinks, n[i], nums[i],
-                                         def_int_dtype, def_real_dtype)
+                                         def_int_dtype, def_real_dtype,
+                                         swap_endian)
         else:
             df = _read_array_block(fp, df, n[i], nums[i], def_int_dtype,
-                                   def_real_dtype)
+                                   def_real_dtype, swap_endian)
 
     return df, df_sinks
 
@@ -312,16 +341,19 @@ def read_phantom(filename: str,  # noqa: E302
     >>> sdf_gas, sdf_dust, sdf_sinks = sarracen.read_phantom('dumpfile_00000', separate_types='all')
     """
     with open(filename, 'rb') as fp:
-        def_int_dtype, def_real_dtype, iversion = _read_capture_pattern(fp)
+        def_int_dtype, def_real_dtype, iversion, swap_endian = \
+            _read_capture_pattern(fp)
         file_identifier = _read_file_identifier(fp)
 
-        header_vars = _read_global_header(fp, def_int_dtype, def_real_dtype)
+        header_vars = _read_global_header(fp, def_int_dtype, def_real_dtype,
+                                          swap_endian)
         header_vars['file_identifier'] = file_identifier
         header_vars['iversion'] = iversion
         header_vars['def_int_dtype'] = def_int_dtype
         header_vars['def_real_dtype'] = def_real_dtype
 
-        df, df_sinks = _read_array_blocks(fp, def_int_dtype, def_real_dtype)
+        df, df_sinks = _read_array_blocks(fp, def_int_dtype, def_real_dtype,
+                                          swap_endian)
 
         if ignore_inactive and 'h' in df.columns:
             df = df[df['h'] > 0]
