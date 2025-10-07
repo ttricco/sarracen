@@ -137,7 +137,7 @@ def _read_global_header_block(fp: IO,
         raw_data = _read_fortran_block(fp, dtype().itemsize*nvars)
         data_arr = np.frombuffer(raw_data, count=nvars, dtype=dtype)
         if swap_endian:
-            data_arr.byteswap(inplace=True)
+            data_arr = data_arr.byteswap()
         data = list(data_arr)
 
     return keys, data
@@ -196,7 +196,7 @@ def _read_array_block(fp: IO,
             raw_data = _read_fortran_block(fp, dtype().itemsize * n)
             data: np.ndarray = np.frombuffer(raw_data, dtype=dtype)
             if swap_endian:
-                data.byteswap(inplace=True)
+                data = data.byteswap()
             df[tag] = data
 
     return df
@@ -221,7 +221,7 @@ def _read_array_blocks(fp: IO,
         nums_val = np.frombuffer(fp.read(32), count=8, dtype=np.int32)
         if swap_endian:
             n_val = n_val.byteswap()
-            nums_val.byteswap(inplace=True)
+            nums_val = nums_val.byteswap()
         n.append(n_val)
         nums.append(nums_val)
 
