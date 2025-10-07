@@ -57,9 +57,9 @@ def _read_capture_pattern(fp: IO) -> Tuple[Type[np.generic], Type[np.generic],
                 and i2.byteswap() == def_int_dtype(60878)
                 and r1.byteswap() == def_real_dtype(i2.byteswap())):
             swap_endian = True
-            i1.byteswap(inplace=True)
-            r1.byteswap(inplace=True)
-            i2.byteswap(inplace=True)
+            i1 = i1.byteswap()
+            r1 = r1.byteswap()
+            i2 = i2.byteswap()
             break
         else:  # rewind and try again
             fp.seek(-def_int_dtype().itemsize, 1)
@@ -77,13 +77,13 @@ def _read_capture_pattern(fp: IO) -> Tuple[Type[np.generic], Type[np.generic],
     iversion = fp.read(def_int_dtype().itemsize)
     iversion = np.frombuffer(iversion, count=1, dtype=def_int_dtype)[0]
     if swap_endian:
-        iversion.byteswap(inplace=True)
+        iversion = iversion.byteswap()
 
     # integer 3 == 690706
     i3 = fp.read(def_int_dtype().itemsize)
     i3 = np.frombuffer(i3, count=1, dtype=def_int_dtype)[0]
     if swap_endian:
-        i3.byteswap(inplace=True)
+        i3 = i3.byteswap()
     if i3 != def_int_dtype(690706):
         raise AssertionError("Capture pattern error. i3 mismatch. "
                              "Is this a Phantom data file?")
@@ -124,7 +124,7 @@ def _read_global_header_block(fp: IO,
                               swap_endian: bool) -> Tuple[list, list]:
     nvars = np.frombuffer(_read_fortran_block(fp, 4), dtype=np.int32)[0]
     if swap_endian:
-        nvars.byteswap(inplace=True)
+        nvars = nvars.byteswap()
 
     keys = []
     data = []
@@ -209,7 +209,7 @@ def _read_array_blocks(fp: IO,
     """ Read particle data. Block 2 is always for sink particles?"""
     nblocks = np.frombuffer(_read_fortran_block(fp, 4), dtype=np.int32)[0]
     if swap_endian:
-        nblocks.byteswap(inplace=True)
+        nblocks = nblocks.byteswap()
 
     n: List[int] = []
     nums: List[np.ndarray] = []
@@ -220,7 +220,7 @@ def _read_array_blocks(fp: IO,
         n_val = np.frombuffer(fp.read(8), dtype=np.int64)[0]
         nums_val = np.frombuffer(fp.read(32), count=8, dtype=np.int32)
         if swap_endian:
-            n_val.byteswap(inplace=True)
+            n_val = n_val.byteswap()
             nums_val.byteswap(inplace=True)
         n.append(n_val)
         nums.append(nums_val)
