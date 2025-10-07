@@ -55,7 +55,7 @@ def _read_capture_pattern(fp: IO) -> Tuple[Type[np.generic], Type[np.generic],
             break
         if (i1.byteswap() == def_int_dtype(60769)
                 and i2.byteswap() == def_int_dtype(60878)
-                and r1.byteswap() == def_real_dtype(i2)):
+                and r1.byteswap() == def_real_dtype(i2.byteswap())):
             swap_endian = True
             i1.byteswap(inplace=True)
             r1.byteswap(inplace=True)
