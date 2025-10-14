@@ -11,7 +11,8 @@ from sarracen import SarracenDataFrame
 
 
 def _create_capture_pattern(def_int: Type[np.generic],
-                            def_real: Type[np.generic]) -> bytearray:
+                            def_real: Type[np.generic],
+                            swap_endian: bool = False) -> bytearray:
     """ Construct capture pattern. """
 
     read_tag = np.array([13], dtype='int32')
@@ -20,6 +21,14 @@ def _create_capture_pattern(def_int: Type[np.generic],
     i2: np.ndarray = np.array([60878], dtype=def_int)
     iversion: np.ndarray = np.array([0], dtype=def_int)
     i3: np.ndarray = np.array([690706], dtype=def_int)
+
+    if swap_endian:
+        read_tag = read_tag.byteswap()
+        i1 = i1.byteswap()
+        r2 = r2.byteswap()
+        i2 = i2.byteswap()
+        iversion = iversion.byteswap()
+        i3 = i3.byteswap()
 
     capture_pattern = bytearray(read_tag.tobytes())
     capture_pattern += bytearray(i1.tobytes())
@@ -32,10 +41,12 @@ def _create_capture_pattern(def_int: Type[np.generic],
     return capture_pattern
 
 
-def _create_file_identifier() -> bytearray:
+def _create_file_identifier(swap_endian: bool = False) -> bytearray:
     """ Construct 100-character file identifier. """
 
     read_tag = np.array([13], dtype='int32')
+    if swap_endian:
+        read_tag = read_tag.byteswap()
     file_identifier = "Test of read_phantom".ljust(100)
     file = bytearray(read_tag.tobytes())
     file += bytearray(map(ord, file_identifier))
@@ -46,11 +57,13 @@ def _create_file_identifier() -> bytearray:
 def _create_global_header(massoftype: float = 1e-6,
                           massoftype_7: Union[float, None] = None,
                           def_int: Type[np.generic] = np.int32,
-                          def_real: Type[np.generic
-                                         ] = np.float64) -> bytearray:
+                          def_real: Type[np.generic] = np.float64,
+                          swap_endian: bool = False) -> bytearray:
     """ Construct global variables. Only massoftype in this example. """
 
     read_tag = np.array([13], dtype='int32')
+    if swap_endian:
+        read_tag = read_tag.byteswap()
     file = bytearray()
     for i in range(8):  # loop over 8 dtypes
         file += bytearray(read_tag.tobytes())
@@ -59,6 +72,8 @@ def _create_global_header(massoftype: float = 1e-6,
             nvars_arr = np.array([nvars], dtype='int32')
         else:
             nvars_arr = np.array([0], dtype='int32')
+        if swap_endian:
+            nvars_arr = nvars_arr.byteswap()
         file += bytearray(nvars_arr.tobytes())
         file += bytearray(read_tag.tobytes())
 
