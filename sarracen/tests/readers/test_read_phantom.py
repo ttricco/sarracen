@@ -226,7 +226,7 @@ def test_gas_particles_only_big_endian() -> None:
 
     file = _create_capture_pattern(np.int32, np.float64, True)
     file += _create_file_identifier(True)
-    file += _create_global_header(swap_endian = True)
+    file += _create_global_header(swap_endian=True)
 
     # create 1 block for gas
     read_tag = np.array([13], dtype='int32').byteswap()
