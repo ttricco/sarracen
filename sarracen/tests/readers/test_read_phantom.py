@@ -106,6 +106,8 @@ def _create_particle_array(tag: str,
                            dtype: Type[np.generic] = np.float64,
                            swap_endian: bool = False) -> bytearray:
     read_tag = np.array([13], dtype='int32')
+    if swap_endian:
+        read_tag = read_tag.byteswap()
     file = bytearray(read_tag.tobytes())
     file += bytearray(map(ord, tag.ljust(16)))
     file += bytearray(read_tag.tobytes())
@@ -184,6 +186,73 @@ def test_gas_particles_only() -> None:
     file += _create_particle_array("z", [0, 1, 0, 1, 0, 1, 0, 1])
     file += _create_particle_array("h", [1.1, 1.1, 1.1, 1.1,
                                          1.1, 1.1, 1.1, 1.1])
+
+    with tempfile.NamedTemporaryFile() as fp:
+        fp.write(file)
+        fp.seek(0)
+
+        sdf = sarracen.read_phantom(fp.name, separate_types='all')
+        assert isinstance(sdf, SarracenDataFrame)
+        assert sdf.params is not None
+        assert sdf.params['massoftype'] == 1e-6
+        assert sdf.params['mass'] == 1e-6
+        assert 'mass' not in sdf.columns
+        tm.assert_series_equal(sdf['x'], pd.Series([0, 0, 0, 0, 1, 1, 1, 1]),
+                               check_index=False, check_names=False,
+                               check_dtype=False)
+
+        sdf = sarracen.read_phantom(fp.name, separate_types='sinks')
+        assert isinstance(sdf, SarracenDataFrame)
+        assert sdf.params is not None
+        assert sdf.params['massoftype'] == 1e-6
+        assert sdf.params['mass'] == 1e-6
+        assert 'mass' not in sdf.columns
+        tm.assert_series_equal(sdf['x'], pd.Series([0, 0, 0, 0, 1, 1, 1, 1]),
+                               check_index=False, check_names=False,
+                               check_dtype=False)
+
+        sdf = sarracen.read_phantom(fp.name, separate_types=None)
+        assert isinstance(sdf, SarracenDataFrame)
+        assert sdf.params is not None
+        assert sdf.params['massoftype'] == 1e-6
+        assert sdf.params['mass'] == 1e-6
+        assert 'mass' not in sdf.columns
+        tm.assert_series_equal(sdf['x'], pd.Series([0, 0, 0, 0, 1, 1, 1, 1]),
+                               check_index=False, check_names=False,
+                               check_dtype=False)
+
+
+def test_gas_particles_only_big_endian() -> None:
+
+    file = _create_capture_pattern(np.int32, np.float64, True)
+    file += _create_file_identifier(True)
+    file += _create_global_header(swap_endian = True)
+
+    # create 1 block for gas
+    read_tag = np.array([13], dtype='int32').byteswap()
+    file += bytearray(read_tag.tobytes())
+    nblocks = np.array([1], dtype='int32').byteswap()
+    file += bytearray(nblocks.tobytes())
+    file += bytearray(read_tag.tobytes())
+
+    # 8 particles storing 4 real arrays (x, y, z, h)
+    file += bytearray(read_tag.tobytes())
+    n = np.array([8], dtype='int64').byteswap()
+    nums = np.array([0, 0, 0, 0, 0, 4, 0, 0], dtype='int32').byteswap()
+    file += bytearray(n.tobytes())
+    file += bytearray(nums.tobytes())
+    file += bytearray(read_tag.tobytes())
+
+    # write 4 particle arrays
+    file += _create_particle_array("x", [0, 0, 0, 0, 1, 1, 1, 1],
+                                   swap_endian=True)
+    file += _create_particle_array("y", [0, 0, 1, 1, 0, 0, 1, 1],
+                                   swap_endian=True)
+    file += _create_particle_array("z", [0, 1, 0, 1, 0, 1, 0, 1],
+                                   swap_endian=True)
+    file += _create_particle_array("h", [1.1, 1.1, 1.1, 1.1,
+                                         1.1, 1.1, 1.1, 1.1],
+                                   swap_endian=True)
 
     with tempfile.NamedTemporaryFile() as fp:
         fp.write(file)
