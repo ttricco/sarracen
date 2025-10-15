@@ -88,9 +88,13 @@ def _create_global_header(massoftype: float = 1e-6,
         if i == 5:
             file += bytearray(read_tag.tobytes())
             massoftype_arr = np.array([massoftype], dtype=def_real)
+            if swap_endian:
+                massoftype_arr = massoftype_arr.byteswap()
             file += bytearray(massoftype_arr)
             if massoftype_7 is not None:
                 massoftype_7_arr = np.array([massoftype_7], dtype=def_real)
+                if swap_endian:
+                    massoftype_7_arr = massoftype_7_arr.byteswap()
                 file += bytearray(massoftype_7_arr)
             file += bytearray(read_tag.tobytes())
 
@@ -99,13 +103,16 @@ def _create_global_header(massoftype: float = 1e-6,
 
 def _create_particle_array(tag: str,
                            data: list,
-                           dtype: Type[np.generic] = np.float64) -> bytearray:
+                           dtype: Type[np.generic] = np.float64,
+                           swap_endian: bool = False) -> bytearray:
     read_tag = np.array([13], dtype='int32')
     file = bytearray(read_tag.tobytes())
     file += bytearray(map(ord, tag.ljust(16)))
     file += bytearray(read_tag.tobytes())
     file += bytearray(read_tag.tobytes())
     data_arr = np.array(data, dtype=dtype)
+    if swap_endian:
+        data_arr = data_arr.byteswap()
     file += bytearray(data_arr.tobytes())
     file += bytearray(read_tag.tobytes())
     return file
