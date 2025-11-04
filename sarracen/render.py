@@ -191,6 +191,7 @@ def _set_pixels(x_pixels: Union[int, None],
     """
     Utility function to determine the number of pixels to interpolate over in
     2D interpolation.
+
     Parameters
     ----------
     x_pixels, y_pixels: int
@@ -199,6 +200,7 @@ def _set_pixels(x_pixels: Union[int, None],
     xlim, ylim: tuple of float
         The minimum and maximum values to use in interpolation, in particle
         data space.
+
     Returns
     -------
     x_pixels, y_pixels: int
@@ -279,15 +281,15 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
         True if a colorbar should be drawn.
     cbar_kws: dict, optional
         Keyword arguments to pass to matplotlib.figure.Figure.colorbar().
-    cbar_ax: Axes
+    cbar_ax: Axes, optional
         Axes to draw the colorbar in, if not provided then space will be taken
         from the main Axes.
-    ax: Axes
+    ax: Axes, optional
         The main axes in which to draw the rendered image.
-    exact: bool
+    exact: bool, optional
         Whether to use exact interpolation of the data. For cross-sections this
         is ignored. Defaults to False.
-    backend: ['cpu', 'gpu']
+    backend: ['cpu', 'gpu'], optional
         The computation backend to use when interpolating this data. Defaults
         to 'gpu' if CUDA is enabled, otherwise 'cpu' is used. A manually
         specified backend in `data` will override the default.
@@ -304,9 +306,9 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
         which the data is rotated. If 'com', then data is rotated around the
         centre of mass. If 'midpoint', then data is rotated around the
         midpoint, that is, min + max / 2. Defaults to the midpoint.
-    log_scale: bool
+    log_scale: bool, optional
         Whether to use a logarithmic scale for color coding.
-    symlog_scale: bool
+    symlog_scale: bool, optional
         Whether to use a symmetrical logarithmic scale for color coding (i.e.,
         allows positive and negative values). Optionally add "linthresh" and
         "linscale" to kwargs to set the linear region and the scaling of linear
@@ -323,7 +325,7 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
         cell / pixel. Defaults to False (this may change in a future verison).
     corotation: list, optional
         Moves particles to the co-rotating frame of two location. corotation
-        contains two lists which correspond to the two x, y, z coordinates
+        contains two lists which correspond to the two x, y, z coordinates.
     kwargs: other keyword arguments
         Keyword arguments to pass to ax.imshow.
 
@@ -495,13 +497,13 @@ def lineplot(data: 'SarracenDataFrame',  # noqa: F821
         Number of samples taken across the x axis in the final plot.
     xlim, ylim, zlim: tuple of float, optional
         Coordinates of the two points that make up the cross-sectional line.
-    ax: Axes
+    ax: Axes, optional
         The main axes in which to draw the final plot.
-    backend: ['cpu', 'gpu']
+    backend: ['cpu', 'gpu'], optional
         The computation backend to use when interpolating this data. Defaults
         to 'gpu' if CUDA is enabled, otherwise 'cpu' is used. A manually
         specified backend in `data` will override the default.
-    log_scale: bool
+    log_scale: bool, optional
         Whether to use a logarithmic scale for color coding.
     dens_weight: bool, optional
         If True, will plot the target mutliplied by the density. Defaults to
@@ -625,12 +627,12 @@ def streamlines(data: 'SarracenDataFrame',  # noqa: F821
     target: str tuple of shape (2) or (3).
         Column label of the target vector. Shape must match the # of dimensions
         in `data`.
-    xsec: float, optional
-        The z to take a cross-section at. If none, column interpolation is
-        performed.
     x, y, z: str, optional
         Column label of the x, y & z directional axes. Defaults to the columns
         detected in `data`.
+    xsec: float, optional
+        The z to take a cross-section at. If none, column interpolation is
+        performed.
     kernel: BaseKernel, optional
         Kernel to use for smoothing the target data. Defaults to the kernel
         specified in `data`.
@@ -652,12 +654,12 @@ def streamlines(data: 'SarracenDataFrame',  # noqa: F821
     xlim, ylim: float, optional
         The minimum and maximum values to use in interpolation, in particle
         data space. Defaults to the minimum and maximum values of `x` and `y`.
-    ax: Axes
+    ax: Axes, optional
         The main axes in which to draw the rendered image.
     exact: bool, optional
         Whether to use exact interpolation of the data. For cross-sections
         this is ignored. Defaults to False.
-    backend: ['cpu', 'gpu']
+    backend: ['cpu', 'gpu'], optional
         The computation backend to use when interpolating this data. Defaults
         to 'gpu' if CUDA is enabled, otherwise 'cpu' is used. A manually
         specified backend in `data` will override the default.
@@ -788,12 +790,12 @@ def arrowplot(data: 'SarracenDataFrame',  # noqa: F821
     target: str tuple of shape (2) or (3).
         Column label of the target vector. Shape must match the # of dimensions
         in `data`.
-    xsec: float
-        The z to take a cross-section at. If none, column interpolation is
-        performed.
     x, y, z: str, optional
         Column label of the x, y & z directional axes. Defaults to the columns
         detected in `data`.
+    xsec: float, optional
+        The z to take a cross-section at. If none, column interpolation is
+        performed.
     kernel: BaseKernel, optional
         Kernel to use for smoothing the target data. Defaults to the kernel
         specified in `data`.
@@ -815,16 +817,16 @@ def arrowplot(data: 'SarracenDataFrame',  # noqa: F821
     xlim, ylim: tuple of float, optional
         The minimum and maximum values to use in interpolation, in particle
         data space. Defaults to the minimum and maximum values of `x` and `y`.
-    ax: Axes
+    ax: Axes, optional
         The main axes in which to draw the rendered image.
-    qkey: bool
+    qkey: bool, optional
         Whether to include a quiver key on the final plot.
-    qkey_kws: dict
+    qkey_kws: dict, optional
         Keywords to pass through to ax.quiver.
-    exact: bool
+    exact: bool, optional
         Whether to use exact interpolation of the data. For cross-sections this
         is ignored. Defaults to False.
-    backend: ['cpu', 'gpu']
+    backend: ['cpu', 'gpu'], optional
         The computation backend to use when interpolating this data. Defaults
         to 'gpu' if CUDA is enabled, otherwise 'cpu' is used. A manually
         specified backend in `data` will override the default.
