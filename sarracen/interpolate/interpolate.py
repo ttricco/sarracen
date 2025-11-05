@@ -1601,8 +1601,7 @@ def interpolate_3d_grid(data: 'SarracenDataFrame',  # noqa: F821
 
     w_data = _get_weight(data, target, dens_weight)
 
-    x_data, y_data, z_data = _rotate_xyz(data, x, y, data.zcol,
-                                         rotation, rot_origin)
+    x_data, y_data, z_data = _rotate_xyz(data, x, y, z, rotation, rot_origin)
     if not xlim:
         xlim = (None, None)
     if not ylim:
