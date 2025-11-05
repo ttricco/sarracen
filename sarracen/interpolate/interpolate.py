@@ -119,17 +119,10 @@ def _default_bounds(data: 'SarracenDataFrame',  # noqa: F821
     x_max = xlim[1] if xlim is not None and xlim[1] is not None else None
     y_max = ylim[1] if ylim is not None and ylim[1] is not None else None
 
-    x_data_lim = x_data if x == data.xcol else \
-        y_data if x == data.ycol else \
-        z_data if (x == data.zcol and z_data is not None) else x_data
-    y_data_lim = x_data if y == data.xcol else \
-        y_data if y == data.ycol else \
-        z_data if (y == data.zcol and z_data is not None) else y_data
-
-    x_min = x_data_lim.min() if x_min is None else x_min
-    y_min = y_data_lim.min() if y_min is None else y_min
-    x_max = x_data_lim.max() if x_max is None else x_max
-    y_max = y_data_lim.max() if y_max is None else y_max
+    x_min = x_data.min() if x_min is None else x_min
+    y_min = y_data.min() if y_min is None else y_min
+    x_max = x_data.max() if x_max is None else x_max
+    y_max = y_data.max() if y_max is None else y_max
 
     return (x_min, x_max), (y_min, y_max)
 
@@ -1608,9 +1601,6 @@ def interpolate_3d_grid(data: 'SarracenDataFrame',  # noqa: F821
 
     w_data = _get_weight(data, target, dens_weight)
 
-    kernel = kernel if kernel is not None else data.kernel
-    backend = backend if backend is not None else data.backend
-
     x_data, y_data, z_data = _rotate_xyz(data, x, y, data.zcol,
                                          rotation, rot_origin)
     if not xlim:
@@ -1632,6 +1622,9 @@ def interpolate_3d_grid(data: 'SarracenDataFrame',  # noqa: F821
         raise ValueError("`z_max` must be greater than `z_min`!")
     if z_pixels <= 0:
         raise ValueError("`z_pixels` must be greater than zero!")
+
+    kernel = kernel if kernel is not None else data.kernel
+    backend = backend if backend is not None else data.backend
 
     h_data = _get_smoothing_lengths(data, hmin, x_pixels, y_pixels,
                                     xlim, ylim)
