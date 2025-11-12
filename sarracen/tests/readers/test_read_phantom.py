@@ -1,3 +1,5 @@
+from typing import Type, Union
+
 import pandas as pd
 import numpy as np
 from pandas import testing as tm
@@ -5,16 +7,19 @@ import sarracen
 import pytest
 import tempfile
 
+from sarracen import SarracenDataFrame
 
-def _create_capture_pattern(def_int, def_real):
+
+def _create_capture_pattern(def_int: Type[np.generic],
+                            def_real: Type[np.generic]) -> bytearray:
     """ Construct capture pattern. """
 
     read_tag = np.array([13], dtype='int32')
-    i1 = np.array([60769], dtype=def_int)
-    r2 = np.array([60878], dtype=def_real)
-    i2 = np.array([60878], dtype=def_int)
-    iversion = np.array([0], dtype=def_int)
-    i3 = np.array([690706], dtype=def_int)
+    i1: np.ndarray = np.array([60769], dtype=def_int)
+    r2: np.ndarray = np.array([60878], dtype=def_real)
+    i2: np.ndarray = np.array([60878], dtype=def_int)
+    iversion: np.ndarray = np.array([0], dtype=def_int)
+    i3: np.ndarray = np.array([690706], dtype=def_int)
 
     capture_pattern = bytearray(read_tag.tobytes())
     capture_pattern += bytearray(i1.tobytes())
@@ -27,7 +32,7 @@ def _create_capture_pattern(def_int, def_real):
     return capture_pattern
 
 
-def _create_file_identifier():
+def _create_file_identifier() -> bytearray:
     """ Construct 100-character file identifier. """
 
     read_tag = np.array([13], dtype='int32')
@@ -38,8 +43,11 @@ def _create_file_identifier():
     return file
 
 
-def _create_global_header(massoftype=1e-6, massoftype_7=None,
-                          def_int=np.int32, def_real=np.float64):
+def _create_global_header(massoftype: float = 1e-6,
+                          massoftype_7: Union[float, None] = None,
+                          def_int: Type[np.generic] = np.int32,
+                          def_real: Type[np.generic
+                                         ] = np.float64) -> bytearray:
     """ Construct global variables. Only massoftype in this example. """
 
     read_tag = np.array([13], dtype='int32')
@@ -48,10 +56,10 @@ def _create_global_header(massoftype=1e-6, massoftype_7=None,
         file += bytearray(read_tag.tobytes())
         nvars = (i == 5) + (massoftype_7 is not None)
         if i == 5:  # default real
-            nvars = np.array([nvars], dtype='int32')
+            nvars_arr = np.array([nvars], dtype='int32')
         else:
-            nvars = np.array([0], dtype='int32')
-        file += bytearray(nvars.tobytes())
+            nvars_arr = np.array([0], dtype='int32')
+        file += bytearray(nvars_arr.tobytes())
         file += bytearray(read_tag.tobytes())
 
         if i == 5:  # default real
@@ -71,7 +79,9 @@ def _create_global_header(massoftype=1e-6, massoftype_7=None,
     return file
 
 
-def _create_particle_array(tag, data, dtype=np.float64):
+def _create_particle_array(tag: str,
+                           data: list,
+                           dtype: Type[np.generic] = np.float64) -> bytearray:
     read_tag = np.array([13], dtype='int32')
     file = bytearray(read_tag.tobytes())
     file += bytearray(map(ord, tag.ljust(16)))
@@ -85,7 +95,8 @@ def _create_particle_array(tag, data, dtype=np.float64):
 @pytest.mark.parametrize("def_int, def_real",
                          [(np.int32, np.float64), (np.int32, np.float32),
                           (np.int64, np.float64), (np.int64, np.float32)])
-def test_determine_default_precision2(def_int, def_real):
+def test_determine_default_precision2(def_int: Type[np.generic],
+                                      def_real: Type[np.generic]) -> None:
     """ Test if default int / real precision can be determined. """
 
     file = _create_capture_pattern(def_int, def_real)
@@ -115,12 +126,12 @@ def test_determine_default_precision2(def_int, def_real):
         fp.write(file)
         fp.seek(0)
 
-        sdf = sarracen.read_phantom(fp.name)
+        sdf = sarracen.read_phantom(fp.name, separate_types=None)
 
         assert list(sdf.dtypes) == [def_int, def_real]
 
 
-def test_gas_particles_only():
+def test_gas_particles_only() -> None:
 
     file = _create_capture_pattern(np.int32, np.float64)
     file += _create_file_identifier()
@@ -153,6 +164,8 @@ def test_gas_particles_only():
         fp.seek(0)
 
         sdf = sarracen.read_phantom(fp.name, separate_types='all')
+        assert isinstance(sdf, SarracenDataFrame)
+        assert sdf.params is not None
         assert sdf.params['massoftype'] == 1e-6
         assert sdf.params['mass'] == 1e-6
         assert 'mass' not in sdf.columns
@@ -161,6 +174,8 @@ def test_gas_particles_only():
                                check_dtype=False)
 
         sdf = sarracen.read_phantom(fp.name, separate_types='sinks')
+        assert isinstance(sdf, SarracenDataFrame)
+        assert sdf.params is not None
         assert sdf.params['massoftype'] == 1e-6
         assert sdf.params['mass'] == 1e-6
         assert 'mass' not in sdf.columns
@@ -169,6 +184,8 @@ def test_gas_particles_only():
                                check_dtype=False)
 
         sdf = sarracen.read_phantom(fp.name, separate_types=None)
+        assert isinstance(sdf, SarracenDataFrame)
+        assert sdf.params is not None
         assert sdf.params['massoftype'] == 1e-6
         assert sdf.params['mass'] == 1e-6
         assert 'mass' not in sdf.columns
@@ -177,7 +194,7 @@ def test_gas_particles_only():
                                check_dtype=False)
 
 
-def test_gas_dust_particles():
+def test_gas_dust_particles() -> None:
 
     file = _create_capture_pattern(np.int32, np.float64)
     file += _create_file_identifier()
@@ -222,6 +239,10 @@ def test_gas_dust_particles():
         fp.seek(0)
 
         sdf_g, sdf_d = sarracen.read_phantom(fp.name, separate_types='all')
+        assert isinstance(sdf_g, SarracenDataFrame)
+        assert isinstance(sdf_d, SarracenDataFrame)
+        assert sdf_g.params is not None
+        assert sdf_d.params is not None
         assert sdf_g.params['massoftype'] == 1e-6
         assert sdf_g.params['massoftype_7'] == 1e-4
         assert sdf_g.params['mass'] == 1e-6
@@ -241,6 +262,8 @@ def test_gas_dust_particles():
                                check_dtype=False)
 
         sdf = sarracen.read_phantom(fp.name, separate_types='sinks')
+        assert isinstance(sdf, SarracenDataFrame)
+        assert sdf.params is not None
         assert sdf.params['massoftype'] == 1e-6
         assert sdf.params['massoftype_7'] == 1e-4
         assert 'mass' not in sdf.params
@@ -258,6 +281,8 @@ def test_gas_dust_particles():
                                check_dtype=False)
 
         sdf = sarracen.read_phantom(fp.name, separate_types=None)
+        assert isinstance(sdf, SarracenDataFrame)
+        assert sdf.params is not None
         assert sdf.params['massoftype'] == 1e-6
         assert sdf.params['massoftype_7'] == 1e-4
         assert 'mass' not in sdf.params
@@ -275,7 +300,7 @@ def test_gas_dust_particles():
                                check_dtype=False)
 
 
-def test_gas_sink_particles():
+def test_gas_sink_particles() -> None:
 
     file = _create_capture_pattern(np.int32, np.float64)
     file += _create_file_identifier()
@@ -324,6 +349,10 @@ def test_gas_sink_particles():
         fp.seek(0)
 
         sdf, sdf_sinks = sarracen.read_phantom(fp.name, separate_types='all')
+        assert isinstance(sdf, SarracenDataFrame)
+        assert isinstance(sdf_sinks, SarracenDataFrame)
+        assert sdf.params is not None
+        assert sdf_sinks.params is not None
         assert sdf.params['massoftype'] == 1e-6
         assert sdf_sinks.params['massoftype'] == 1e-6
         assert sdf.params['mass'] == 1e-6
@@ -341,6 +370,10 @@ def test_gas_sink_particles():
                                check_dtype=False)
 
         sdf, sdf_sinks = sarracen.read_phantom(fp.name, separate_types='sinks')
+        assert isinstance(sdf, SarracenDataFrame)
+        assert isinstance(sdf_sinks, SarracenDataFrame)
+        assert sdf.params is not None
+        assert sdf_sinks.params is not None
         assert sdf.params['massoftype'] == 1e-6
         assert sdf_sinks.params['massoftype'] == 1e-6
         assert sdf.params['mass'] == 1e-6
@@ -358,6 +391,10 @@ def test_gas_sink_particles():
                                check_dtype=False)
 
         sdf = sarracen.read_phantom(fp.name, separate_types=None)
+        assert isinstance(sdf, SarracenDataFrame)
+        assert isinstance(sdf_sinks, SarracenDataFrame)
+        assert sdf.params is not None
+        assert sdf_sinks.params is not None
         assert sdf.params['massoftype'] == 1e-6
         assert sdf.params['mass'] == 1e-6
         assert 'mass' not in sdf.columns
@@ -373,7 +410,7 @@ def test_gas_sink_particles():
                                check_dtype=False)
 
 
-def test_gas_dust_sink_particles():
+def test_gas_dust_sink_particles() -> None:
 
     file = _create_capture_pattern(np.int32, np.float64)
     file += _create_file_identifier()
@@ -436,6 +473,12 @@ def test_gas_dust_sink_particles():
 
         sdf_g, sdf_d, sdf_sinks = sarracen.read_phantom(fp.name,
                                                         separate_types='all')
+        assert isinstance(sdf_g, SarracenDataFrame)
+        assert isinstance(sdf_d, SarracenDataFrame)
+        assert isinstance(sdf_sinks, SarracenDataFrame)
+        assert sdf_g.params is not None
+        assert sdf_d.params is not None
+        assert sdf_sinks.params is not None
         assert sdf_g.params['massoftype'] == 1e-6
         assert sdf_g.params['massoftype_7'] == 1e-4
         assert sdf_g.params['mass'] == 1e-6
@@ -466,6 +509,10 @@ def test_gas_dust_sink_particles():
 
         sdf, sdf_sinks = sarracen.read_phantom(fp.name,
                                                separate_types='sinks')
+        assert isinstance(sdf, SarracenDataFrame)
+        assert isinstance(sdf_sinks, SarracenDataFrame)
+        assert sdf.params is not None
+        assert sdf_sinks.params is not None
         assert sdf.params['massoftype'] == 1e-6
         assert sdf.params['massoftype_7'] == 1e-4
         assert 'mass' not in sdf.params
@@ -493,6 +540,8 @@ def test_gas_dust_sink_particles():
                                check_dtype=False)
 
         sdf = sarracen.read_phantom(fp.name, separate_types=None)
+        assert isinstance(sdf, SarracenDataFrame)
+        assert sdf.params is not None
         assert sdf.params['massoftype'] == 1e-6
         assert sdf.params['massoftype_7'] == 1e-4
         assert 'mass' not in sdf.params
