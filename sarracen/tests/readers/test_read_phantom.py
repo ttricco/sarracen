@@ -76,6 +76,11 @@ def _create_global_header(massoftype: float = 1e-6,
                 file += bytearray(np.array([massoftype_7], dtype=def_real))
             file += bytearray(read_tag.tobytes())
 
+        # nblocks -- 1 MPI block
+        file += bytearray(read_tag.tobytes())
+        nblocks = np.array([1], dtype='int32')
+        file += bytearray(nblocks.tobytes())
+
     return file
 
 

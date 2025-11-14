@@ -182,37 +182,50 @@ def _read_array_block(fp: IO,
 
 def _read_array_blocks(fp: IO,
                        def_int_dtype: Type[np.generic],
-                       def_real_dtype: Type[np.generic]) -> Tuple[
-                                                                 pd.DataFrame,
-                                                                 pd.DataFrame]:
-    """ Read particle data. Block 2 is always for sink particles?"""
+                       def_real_dtype: Type[np.generic],
+                       mpi_blocks: int) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """ Read particle data.
+
+    Block 2 is always for sink particles. The number of MPI blocks is given by
+    'nblocks' in the global header. The first quantity read in this function is
+    the total number of blocks."""
+
     nblocks = np.frombuffer(_read_fortran_block(fp, 4), dtype=np.int32)[0]
-
-    n: List[int] = []
-    nums: List[np.ndarray] = []
-
-    for i in range(0, nblocks):
-        start_tag = fp.read(4)
-
-        n.append(np.frombuffer(fp.read(8), dtype=np.int64)[0])
-        nums.append(np.frombuffer(fp.read(32), count=8, dtype=np.int32))
-
-        end_tag = fp.read(4)
-        if (start_tag != end_tag):
-            raise AssertionError("Fortran tags mismatch in array blocks.")
 
     df = pd.DataFrame()
     df_sinks = pd.DataFrame()
-    for i in range(0, nblocks):
-        # This assumes the second block is only for sink particles.
-        # I believe this is a valid assumption as this is what splash assumes.
-        # For now we will just append sinks to the end of the data frame.
-        if i == 1:
-            df_sinks = _read_array_block(fp, df_sinks, n[i], nums[i],
-                                         def_int_dtype, def_real_dtype)
-        else:
-            df = _read_array_block(fp, df, n[i], nums[i], def_int_dtype,
-                                   def_real_dtype)
+
+    nblocks = int(nblocks / mpi_blocks)  # number of blocks per MPI process
+
+    for j in range(0, mpi_blocks):
+
+        n: List[int] = []
+        nums: List[np.ndarray] = []
+
+        for i in range(0, nblocks):
+            start_tag = fp.read(4)
+
+            n.append(np.frombuffer(fp.read(8), dtype=np.int64)[0])
+            nums.append(np.frombuffer(fp.read(32), count=8, dtype=np.int32))
+
+            end_tag = fp.read(4)
+            if (start_tag != end_tag):
+                raise AssertionError("Fortran tags mismatch in array blocks.")
+
+        for i in range(0, nblocks):
+            # This assumes the second block is only for sink particles.
+            # This is a valid assumption as this is what splash assumes.
+            # For now we will just append sinks to the end of the data frame.
+
+            # Can we avoid temporary df?
+            if i == 1:
+                df_tmp = _read_array_block(fp, pd.DataFrame(), n[i], nums[i],
+                                           def_int_dtype, def_real_dtype)
+                df_sinks = pd.concat([df_sinks, df_tmp])
+            else:
+                df_tmp = _read_array_block(fp, pd.DataFrame(), n[i], nums[i],
+                                           def_int_dtype, def_real_dtype)
+                df = pd.concat([df, df_tmp])
 
     return df, df_sinks
 
@@ -321,7 +334,9 @@ def read_phantom(filename: str,  # noqa: E302
         header_vars['def_int_dtype'] = def_int_dtype
         header_vars['def_real_dtype'] = def_real_dtype
 
-        df, df_sinks = _read_array_blocks(fp, def_int_dtype, def_real_dtype)
+        mpi_blocks = header_vars['nblocks']
+        df, df_sinks = _read_array_blocks(fp, def_int_dtype, def_real_dtype,
+                                          mpi_blocks)
 
         if ignore_inactive and 'h' in df.columns:
             df = df[df['h'] > 0]
