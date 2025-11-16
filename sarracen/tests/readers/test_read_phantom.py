@@ -61,7 +61,8 @@ def _create_global_header(massoftype: float = 1e-6,
     if massoftype_7 is not None:
         params_def_real['massoftype_7'] = np.array([massoftype_7],
                                                    dtype=def_real)
-    params_def_int['nblocks'] = mpi_blocks
+
+    params_def_int['nblocks'] = np.array([mpi_blocks], dtype=def_int)
 
     lists: List[Tuple[type, dict]] = [(dtype, param)
                                       for dtype, param in zip(dtypes, params)]
@@ -77,13 +78,11 @@ def _create_global_header(massoftype: float = 1e-6,
         if len(params) > 0:
             file += bytearray(read_tag.tobytes())
             for k in params.keys():
-                print(k)
                 file += bytearray(map(ord, k.ljust(16)))
             file += bytearray(read_tag.tobytes())
 
             file += bytearray(read_tag.tobytes())
             for v in params.values():
-                print(v)
                 file += bytearray(np.array([v], dtype=dtype))
             file += bytearray(read_tag.tobytes())
 
@@ -106,8 +105,8 @@ def _create_particle_array(tag: str,
 @pytest.mark.parametrize("def_int, def_real",
                          [(np.int32, np.float64), (np.int32, np.float32),
                           (np.int64, np.float64), (np.int64, np.float32)])
-def test_determine_default_precision2(def_int: Type[np.generic],
-                                      def_real: Type[np.generic]) -> None:
+def test_determine_default_precision(def_int: Type[np.generic],
+                                     def_real: Type[np.generic]) -> None:
     """ Test if default int / real precision can be determined. """
 
     file = _create_capture_pattern(def_int, def_real)
@@ -142,33 +141,42 @@ def test_determine_default_precision2(def_int: Type[np.generic],
         assert list(sdf.dtypes) == [def_int, def_real]
 
 
-def test_gas_particles_only() -> None:
+@pytest.mark.parametrize("mpi_blocks", [1, 2, 4])
+def test_gas_particles_only(mpi_blocks) -> None:
 
     file = _create_capture_pattern(np.int32, np.float64)
     file += _create_file_identifier()
-    file += _create_global_header()
+    file += _create_global_header(mpi_blocks=mpi_blocks)
 
-    # create 1 block for gas
+    # create block for gas (broken into number of mpi_blocks)
     read_tag = np.array([13], dtype='int32')
     file += bytearray(read_tag.tobytes())
-    nblocks = np.array([1], dtype='int32')
+    nblocks = np.array([mpi_blocks], dtype='int32')
     file += bytearray(nblocks.tobytes())
     file += bytearray(read_tag.tobytes())
 
-    # 8 particles storing 4 real arrays (x, y, z, h)
-    file += bytearray(read_tag.tobytes())
-    n = np.array([8], dtype='int64')
-    nums = np.array([0, 0, 0, 0, 0, 4, 0, 0], dtype='int32')
-    file += bytearray(n.tobytes())
-    file += bytearray(nums.tobytes())
-    file += bytearray(read_tag.tobytes())
+    x = [0, 0, 0, 0, 1, 1, 1, 1]
+    y = [0, 0, 1, 1, 0, 0, 1, 1]
+    z = [0, 1, 0, 1, 0, 1, 0, 1]
+    h = [1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1]
 
-    # write 4 particle arrays
-    file += _create_particle_array("x", [0, 0, 0, 0, 1, 1, 1, 1])
-    file += _create_particle_array("y", [0, 0, 1, 1, 0, 0, 1, 1])
-    file += _create_particle_array("z", [0, 1, 0, 1, 0, 1, 0, 1])
-    file += _create_particle_array("h", [1.1, 1.1, 1.1, 1.1,
-                                         1.1, 1.1, 1.1, 1.1])
+    for i in range(mpi_blocks):
+        # block header
+        # 8 particles storing 4 real arrays (x, y, z, h)
+        file += bytearray(read_tag.tobytes())
+        n = np.array([8 / mpi_blocks], dtype='int64')
+        nums = np.array([0, 0, 0, 0, 0, 4, 0, 0], dtype='int32')
+        file += bytearray(n.tobytes())
+        file += bytearray(nums.tobytes())
+        file += bytearray(read_tag.tobytes())
+
+        # block particle arrays
+        # each mpi_block writes a chunk of the array
+        size = len(x) // mpi_blocks
+        file += _create_particle_array("x", x[i*size : (i+1)*size])
+        file += _create_particle_array("y", y[i*size : (i+1)*size])
+        file += _create_particle_array("z", z[i*size : (i+1)*size])
+        file += _create_particle_array("h", h[i*size : (i+1)*size])
 
     with tempfile.NamedTemporaryFile() as fp:
         fp.write(file)
@@ -205,46 +213,51 @@ def test_gas_particles_only() -> None:
                                check_dtype=False)
 
 
-def test_gas_dust_particles() -> None:
+@pytest.mark.parametrize("mpi_blocks", [1, 2, 4])
+def test_gas_dust_particles(mpi_blocks) -> None:
 
     file = _create_capture_pattern(np.int32, np.float64)
     file += _create_file_identifier()
-    file += _create_global_header(massoftype_7=1e-4)
+    file += _create_global_header(massoftype_7=1e-4, mpi_blocks=mpi_blocks)
 
-    # create 1 block for gas
+    # create block for gas & dust particles
     read_tag = np.array([13], dtype='int32')
     file += bytearray(read_tag.tobytes())
-    nblocks = np.array([1], dtype='int32')
+    nblocks = np.array([mpi_blocks], dtype='int32')
     file += bytearray(nblocks.tobytes())
     file += bytearray(read_tag.tobytes())
 
-    # 8 particles storing 4 real arrays (x, y, z, h)
-    file += bytearray(read_tag.tobytes())
-    n = np.array([16], dtype='int64')
-    nums = np.array([0, 1, 0, 0, 0, 4, 0, 0], dtype='int32')
-    file += bytearray(n.tobytes())
-    file += bytearray(nums.tobytes())
-    file += bytearray(read_tag.tobytes())
+    itype = [1, 1, 1, 1, 1, 1, 1, 1,
+             7, 7, 7, 7, 7, 7, 7, 7]
+    x = [0, 0, 0, 0, 1, 1, 1, 1,
+         0.5, 0.5, 0.5, 0.5, 1.5, 1.5, 1.5, 1.5]
+    y = [0, 0, 1, 1, 0, 0, 1, 1,
+         0.5, 0.5, 1.5, 1.5, 0.5, 0.5, 1.5, 1.5]
+    z = [0, 1, 0, 1, 0, 1, 0, 1,
+         0.5, 1.5, 0.5, 1.5, 0.5, 1.5, 0.5, 1.5]
+    h = [1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1,
+         1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1]
 
-    # write 5 gas/dust particle arrays
-    file += _create_particle_array("itype", [1, 1, 1, 1, 1, 1, 1, 1,
-                                             7, 7, 7, 7, 7, 7, 7, 7], np.int8)
-    file += _create_particle_array("x", [0, 0, 0, 0,
-                                         1, 1, 1, 1,
-                                         0.5, 0.5, 0.5, 0.5,
-                                         1.5, 1.5, 1.5, 1.5])
-    file += _create_particle_array("y", [0, 0, 1, 1,
-                                         0, 0, 1, 1,
-                                         0.5, 0.5, 1.5, 1.5,
-                                         0.5, 0.5, 1.5, 1.5])
-    file += _create_particle_array("z", [0, 1, 0, 1,
-                                         0, 1, 0, 1,
-                                         0.5, 1.5, 0.5, 1.5,
-                                         0.5, 1.5, 0.5, 1.5])
-    file += _create_particle_array("h", [1.1, 1.1, 1.1, 1.1,
-                                         1.1, 1.1, 1.1, 1.1,
-                                         1.1, 1.1, 1.1, 1.1,
-                                         1.1, 1.1, 1.1, 1.1])
+    for i in range(mpi_blocks):
+        # block header
+        # 8 particles storing 4 real arrays (x, y, z, h)
+        file += bytearray(read_tag.tobytes())
+        n = np.array([16 / mpi_blocks], dtype='int64')
+        nums = np.array([0, 1, 0, 0, 0, 4, 0, 0], dtype='int32')
+        file += bytearray(n.tobytes())
+        file += bytearray(nums.tobytes())
+        file += bytearray(read_tag.tobytes())
+
+        # block particle arrays
+        # each mpi_block writes a chunk of the array
+        size = len(x) // mpi_blocks
+        file += _create_particle_array("itype", itype[i*size : (i+1)*size],
+                                       np.int8)
+        file += _create_particle_array("x", x[i*size : (i+1)*size])
+        file += _create_particle_array("y", y[i*size : (i+1)*size])
+        file += _create_particle_array("z", z[i*size : (i+1)*size])
+        file += _create_particle_array("h", h[i*size : (i+1)*size])
+
     with tempfile.NamedTemporaryFile() as fp:
         fp.write(file)
         fp.seek(0)
