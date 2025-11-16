@@ -1,4 +1,4 @@
-from typing import Type, Union
+from typing import Type, Union, List, Tuple, Dict
 
 import pandas as pd
 import numpy as np
@@ -52,10 +52,10 @@ def _create_global_header(massoftype: float = 1e-6,
 
     dtypes = [def_int, np.int8, np.int16, np.int32, np.int64,
               def_real, np.float32, np.float64]
-    params = [dict() for dtype in dtypes]
+    param_dicts: List[Dict] = [dict() for _ in dtypes]
 
-    params_def_int = params[0]
-    params_def_real = params[5]
+    params_def_int = param_dicts[0]
+    params_def_real = param_dicts[5]
 
     params_def_real['massoftype'] = np.array([massoftype], dtype=def_real)
     if massoftype_7 is not None:
@@ -64,12 +64,11 @@ def _create_global_header(massoftype: float = 1e-6,
 
     params_def_int['nblocks'] = np.array([mpi_blocks], dtype=def_int)
 
-    lists: List[Tuple[type, dict]] = [(dtype, param)
-                                      for dtype, param in zip(dtypes, params)]
+    dtype_param_pairs: List[Tuple[Type, Dict]] = list(zip(dtypes, param_dicts))
 
     read_tag = np.array([13], dtype='int32')
     file = bytearray()
-    for dtype, params in lists:
+    for dtype, params in dtype_param_pairs:
         nvars = np.array([len(params)], dtype='int32')
         file += bytearray(read_tag.tobytes())
         file += bytearray(nvars.tobytes())
@@ -173,10 +172,12 @@ def test_gas_particles_only(mpi_blocks) -> None:
         # block particle arrays
         # each mpi_block writes a chunk of the array
         size = len(x) // mpi_blocks
-        file += _create_particle_array("x", x[i*size : (i+1)*size])
-        file += _create_particle_array("y", y[i*size : (i+1)*size])
-        file += _create_particle_array("z", z[i*size : (i+1)*size])
-        file += _create_particle_array("h", h[i*size : (i+1)*size])
+        start = i * size
+        end = (i + 1) * size
+        file += _create_particle_array("x", x[start:end])
+        file += _create_particle_array("y", y[start:end])
+        file += _create_particle_array("z", z[start:end])
+        file += _create_particle_array("h", h[start:end])
 
     with tempfile.NamedTemporaryFile() as fp:
         fp.write(file)
@@ -251,12 +252,13 @@ def test_gas_dust_particles(mpi_blocks) -> None:
         # block particle arrays
         # each mpi_block writes a chunk of the array
         size = len(x) // mpi_blocks
-        file += _create_particle_array("itype", itype[i*size : (i+1)*size],
-                                       dtype=np.int8)
-        file += _create_particle_array("x", x[i*size : (i+1)*size])
-        file += _create_particle_array("y", y[i*size : (i+1)*size])
-        file += _create_particle_array("z", z[i*size : (i+1)*size])
-        file += _create_particle_array("h", h[i*size : (i+1)*size])
+        start = i * size
+        end = (i + 1) * size
+        file += _create_particle_array("itype", itype[start:end], np.int8)
+        file += _create_particle_array("x", x[start:end])
+        file += _create_particle_array("y", y[start:end])
+        file += _create_particle_array("z", z[start:end])
+        file += _create_particle_array("h", h[start:end])
 
     with tempfile.NamedTemporaryFile() as fp:
         fp.write(file)
@@ -323,6 +325,7 @@ def test_gas_dust_particles(mpi_blocks) -> None:
                                check_index=False, check_names=False,
                                check_dtype=False)
 
+
 @pytest.mark.parametrize("mpi_blocks", [1, 2, 4])
 def test_gas_sink_particles(mpi_blocks) -> None:
 
@@ -361,10 +364,12 @@ def test_gas_sink_particles(mpi_blocks) -> None:
         # write 4 gas particle arrays in block 1
         # each mpi_block writes a chunk of the array
         size = len(x) // mpi_blocks
-        file += _create_particle_array("x", x[i*size : (i+1)*size])
-        file += _create_particle_array("y", y[i*size : (i+1)*size])
-        file += _create_particle_array("z", z[i*size : (i+1)*size])
-        file += _create_particle_array("h", h[i*size : (i+1)*size])
+        start = i * size
+        end = (i + 1) * size
+        file += _create_particle_array("x", x[start:end])
+        file += _create_particle_array("y", y[start:end])
+        file += _create_particle_array("z", z[start:end])
+        file += _create_particle_array("h", h[start:end])
 
         # write 7 sink particle arrays in block 2
         # each mpi_block writes all sink particles (I believe)
@@ -488,12 +493,13 @@ def test_gas_dust_sink_particles(mpi_blocks) -> None:
         # write gas/dust particle arrays in block 1
         # each mpi_block writes a chunk of the array
         size = len(x) // mpi_blocks
-        file += _create_particle_array("itype", itype[i*size : (i+1)*size],
-                                       dtype=np.int8)
-        file += _create_particle_array("x", x[i*size : (i+1)*size])
-        file += _create_particle_array("y", y[i*size : (i+1)*size])
-        file += _create_particle_array("z", z[i*size : (i+1)*size])
-        file += _create_particle_array("h", h[i*size : (i+1)*size])
+        start = i * size
+        end = (i + 1) * size
+        file += _create_particle_array("itype", itype[start:end], np.int8)
+        file += _create_particle_array("x", x[start:end])
+        file += _create_particle_array("y", y[start:end])
+        file += _create_particle_array("z", z[start:end])
+        file += _create_particle_array("h", h[start:end])
 
         # write 7 sink particle arrays in block 2
         # each mpi_block writes all sink particles (I believe)
