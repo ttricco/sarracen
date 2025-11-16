@@ -46,40 +46,46 @@ def _create_file_identifier() -> bytearray:
 def _create_global_header(massoftype: float = 1e-6,
                           massoftype_7: Union[float, None] = None,
                           def_int: Type[np.generic] = np.int32,
-                          def_real: Type[np.generic
-                                         ] = np.float64) -> bytearray:
+                          def_real: Type[np.generic] = np.float64,
+                          mpi_blocks: int = 1) -> bytearray:
     """ Construct global variables. Only massoftype in this example. """
+
+    dtypes = [def_int, np.int8, np.int16, np.int32, np.int64,
+              def_real, np.float32, np.float64]
+    params = [dict() for dtype in dtypes]
+
+    params_def_int = params[0]
+    params_def_real = params[5]
+
+    params_def_real['massoftype'] = np.array([massoftype], dtype=def_real)
+    if massoftype_7 is not None:
+        params_def_real['massoftype_7'] = np.array([massoftype_7],
+                                                   dtype=def_real)
+    params_def_int['nblocks'] = mpi_blocks
+
+    lists: List[Tuple[type, dict]] = [(dtype, param)
+                                      for dtype, param in zip(dtypes, params)]
 
     read_tag = np.array([13], dtype='int32')
     file = bytearray()
-    for i in range(8):  # loop over 8 dtypes
+    for dtype, params in lists:
+        nvars = np.array([len(params)], dtype='int32')
         file += bytearray(read_tag.tobytes())
-        nvars = (i == 5) + (massoftype_7 is not None)
-        if i == 5:  # default real
-            nvars_arr = np.array([nvars], dtype='int32')
-        else:
-            nvars_arr = np.array([0], dtype='int32')
-        file += bytearray(nvars_arr.tobytes())
+        file += bytearray(nvars.tobytes())
         file += bytearray(read_tag.tobytes())
 
-        if i == 5:  # default real
+        if len(params) > 0:
             file += bytearray(read_tag.tobytes())
-            file += bytearray(map(ord, "massoftype".ljust(16)))
-            if massoftype_7 is not None:
-                file += bytearray(map(ord, "massoftype_7".ljust(16)))
-            file += bytearray(read_tag.tobytes())
-
-        if i == 5:
-            file += bytearray(read_tag.tobytes())
-            file += bytearray(np.array([massoftype], dtype=def_real))
-            if massoftype_7 is not None:
-                file += bytearray(np.array([massoftype_7], dtype=def_real))
+            for k in params.keys():
+                print(k)
+                file += bytearray(map(ord, k.ljust(16)))
             file += bytearray(read_tag.tobytes())
 
-        # nblocks -- 1 MPI block
-        file += bytearray(read_tag.tobytes())
-        nblocks = np.array([1], dtype='int32')
-        file += bytearray(nblocks.tobytes())
+            file += bytearray(read_tag.tobytes())
+            for v in params.values():
+                print(v)
+                file += bytearray(np.array([v], dtype=dtype))
+            file += bytearray(read_tag.tobytes())
 
     return file
 

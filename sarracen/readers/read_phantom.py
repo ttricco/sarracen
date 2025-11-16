@@ -334,7 +334,8 @@ def read_phantom(filename: str,  # noqa: E302
         header_vars['def_int_dtype'] = def_int_dtype
         header_vars['def_real_dtype'] = def_real_dtype
 
-        mpi_blocks = header_vars['nblocks']
+        mpi_blocks = header_vars['nblocks'] if 'nblocks' in header_vars else 1
+
         df, df_sinks = _read_array_blocks(fp, def_int_dtype, def_real_dtype,
                                           mpi_blocks)
 
