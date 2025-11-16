@@ -219,9 +219,10 @@ def _read_array_blocks(fp: IO,
 
             # Can we avoid temporary df?
             if i == 1:
+                # Not sure why, but it seems each MPI block repeats sinks
                 df_tmp = _read_array_block(fp, pd.DataFrame(), n[i], nums[i],
                                            def_int_dtype, def_real_dtype)
-                df_sinks = pd.concat([df_sinks, df_tmp])
+                df_sinks = pd.concat([df_sinks, df_tmp]).drop_duplicates()
             else:
                 df_tmp = _read_array_block(fp, pd.DataFrame(), n[i], nums[i],
                                            def_int_dtype, def_real_dtype)
