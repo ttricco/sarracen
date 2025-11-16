@@ -252,7 +252,7 @@ def test_gas_dust_particles(mpi_blocks) -> None:
         # each mpi_block writes a chunk of the array
         size = len(x) // mpi_blocks
         file += _create_particle_array("itype", itype[i*size : (i+1)*size],
-                                       np.int8)
+                                       dtype=np.int8)
         file += _create_particle_array("x", x[i*size : (i+1)*size])
         file += _create_particle_array("y", y[i*size : (i+1)*size])
         file += _create_particle_array("z", z[i*size : (i+1)*size])
@@ -323,50 +323,58 @@ def test_gas_dust_particles(mpi_blocks) -> None:
                                check_index=False, check_names=False,
                                check_dtype=False)
 
-
-def test_gas_sink_particles() -> None:
+@pytest.mark.parametrize("mpi_blocks", [1, 2, 4])
+def test_gas_sink_particles(mpi_blocks) -> None:
 
     file = _create_capture_pattern(np.int32, np.float64)
     file += _create_file_identifier()
-    file += _create_global_header()
+    file += _create_global_header(mpi_blocks=mpi_blocks)
 
-    # create 1 block for gas
+    # block 1 = gas, block 2 = sinks
     read_tag = np.array([13], dtype='int32')
     file += bytearray(read_tag.tobytes())
-    nblocks = np.array([2], dtype='int32')
+    nblocks = np.array([2 * mpi_blocks], dtype='int32')
     file += bytearray(nblocks.tobytes())
     file += bytearray(read_tag.tobytes())
 
-    # 8 particles storing 4 real arrays (x, y, z, h)
-    file += bytearray(read_tag.tobytes())
-    n = np.array([8], dtype='int64')
-    nums = np.array([0, 0, 0, 0, 0, 4, 0, 0], dtype='int32')
-    file += bytearray(n.tobytes())
-    file += bytearray(nums.tobytes())
-    file += bytearray(read_tag.tobytes())
+    x = [0, 0, 0, 0, 1, 1, 1, 1]
+    y = [0, 0, 1, 1, 0, 0, 1, 1]
+    z = [0, 1, 0, 1, 0, 1, 0, 1]
+    h = [1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1]
 
-    file += bytearray(read_tag.tobytes())
-    n = np.array([1], dtype='int64')
-    nums = np.array([0, 0, 0, 0, 0, 7, 0, 0], dtype='int32')
-    file += bytearray(n.tobytes())
-    file += bytearray(nums.tobytes())
-    file += bytearray(read_tag.tobytes())
+    for i in range(mpi_blocks):
+        # block headers
+        file += bytearray(read_tag.tobytes())
+        n = np.array([8 / mpi_blocks], dtype='int64')
+        nums = np.array([0, 0, 0, 0, 0, 4, 0, 0], dtype='int32')
+        file += bytearray(n.tobytes())
+        file += bytearray(nums.tobytes())
+        file += bytearray(read_tag.tobytes())
 
-    # write 4 gas particle arrays
-    file += _create_particle_array("x", [0, 0, 0, 0, 1, 1, 1, 1])
-    file += _create_particle_array("y", [0, 0, 1, 1, 0, 0, 1, 1])
-    file += _create_particle_array("z", [0, 1, 0, 1, 0, 1, 0, 1])
-    file += _create_particle_array("h", [1.1, 1.1, 1.1, 1.1,
-                                         1.1, 1.1, 1.1, 1.1])
+        file += bytearray(read_tag.tobytes())
+        n = np.array([1], dtype='int64')
+        nums = np.array([0, 0, 0, 0, 0, 7, 0, 0], dtype='int32')
+        file += bytearray(n.tobytes())
+        file += bytearray(nums.tobytes())
+        file += bytearray(read_tag.tobytes())
 
-    # write 7 sink particle arrays
-    file += _create_particle_array("x", [0.000305])
-    file += _create_particle_array("y", [-0.035809])
-    file += _create_particle_array("z", [-0.000035])
-    file += _create_particle_array("h", [1.0])
-    file += _create_particle_array("spinx", [-3.911744e-8])
-    file += _create_particle_array("spiny", [-1.326062e-8])
-    file += _create_particle_array("spinz", [0.00058])
+        # write 4 gas particle arrays in block 1
+        # each mpi_block writes a chunk of the array
+        size = len(x) // mpi_blocks
+        file += _create_particle_array("x", x[i*size : (i+1)*size])
+        file += _create_particle_array("y", y[i*size : (i+1)*size])
+        file += _create_particle_array("z", z[i*size : (i+1)*size])
+        file += _create_particle_array("h", h[i*size : (i+1)*size])
+
+        # write 7 sink particle arrays in block 2
+        # each mpi_block writes all sink particles (I believe)
+        file += _create_particle_array("x", [0.000305])
+        file += _create_particle_array("y", [-0.035809])
+        file += _create_particle_array("z", [-0.000035])
+        file += _create_particle_array("h", [1.0])
+        file += _create_particle_array("spinx", [-3.911744e-8])
+        file += _create_particle_array("spiny", [-1.326062e-8])
+        file += _create_particle_array("spinz", [0.00058])
 
     with tempfile.NamedTemporaryFile() as fp:
         fp.write(file)
@@ -434,62 +442,68 @@ def test_gas_sink_particles() -> None:
                                check_dtype=False)
 
 
-def test_gas_dust_sink_particles() -> None:
+@pytest.mark.parametrize("mpi_blocks", [1, 2, 4])
+def test_gas_dust_sink_particles(mpi_blocks) -> None:
 
     file = _create_capture_pattern(np.int32, np.float64)
     file += _create_file_identifier()
-    file += _create_global_header(massoftype_7=1e-4)
+    file += _create_global_header(massoftype_7=1e-4, mpi_blocks=mpi_blocks)
 
     # create 1 block for gas
     read_tag = np.array([13], dtype='int32')
     file += bytearray(read_tag.tobytes())
-    nblocks = np.array([2], dtype='int32')
+    nblocks = np.array([2 * mpi_blocks], dtype='int32')
     file += bytearray(nblocks.tobytes())
     file += bytearray(read_tag.tobytes())
 
-    # 8 particles storing 4 real arrays (x, y, z, h)
-    file += bytearray(read_tag.tobytes())
-    n = np.array([16], dtype='int64')
-    nums = np.array([0, 1, 0, 0, 0, 4, 0, 0], dtype='int32')
-    file += bytearray(n.tobytes())
-    file += bytearray(nums.tobytes())
-    file += bytearray(read_tag.tobytes())
+    itype = [1, 1, 1, 1, 1, 1, 1, 1,
+             7, 7, 7, 7, 7, 7, 7, 7]
+    x = [0, 0, 0, 0, 1, 1, 1, 1,
+         0.5, 0.5, 0.5, 0.5, 1.5, 1.5, 1.5, 1.5]
+    y = [0, 0, 1, 1, 0, 0, 1, 1,
+         0.5, 0.5, 1.5, 1.5, 0.5, 0.5, 1.5, 1.5]
+    z = [0, 1, 0, 1, 0, 1, 0, 1,
+         0.5, 1.5, 0.5, 1.5, 0.5, 1.5, 0.5, 1.5]
+    h = [1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1,
+         1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1]
 
-    file += bytearray(read_tag.tobytes())
-    n = np.array([1], dtype='int64')
-    nums = np.array([0, 0, 0, 0, 0, 7, 0, 0], dtype='int32')
-    file += bytearray(n.tobytes())
-    file += bytearray(nums.tobytes())
-    file += bytearray(read_tag.tobytes())
+    for i in range(mpi_blocks):
+        # block headers
+        # gas/dust particles in block 1
+        file += bytearray(read_tag.tobytes())
+        n = np.array([16 / mpi_blocks], dtype='int64')
+        nums = np.array([0, 1, 0, 0, 0, 4, 0, 0], dtype='int32')
+        file += bytearray(n.tobytes())
+        file += bytearray(nums.tobytes())
+        file += bytearray(read_tag.tobytes())
 
-    # write 5 gas/dust particle arrays
-    file += _create_particle_array("itype", [1, 1, 1, 1, 1, 1, 1, 1,
-                                             7, 7, 7, 7, 7, 7, 7, 7], np.int8)
-    file += _create_particle_array("x", [0, 0, 0, 0,
-                                         1, 1, 1, 1,
-                                         0.5, 0.5, 0.5, 0.5,
-                                         1.5, 1.5, 1.5, 1.5])
-    file += _create_particle_array("y", [0, 0, 1, 1,
-                                         0, 0, 1, 1,
-                                         0.5, 0.5, 1.5, 1.5,
-                                         0.5, 0.5, 1.5, 1.5])
-    file += _create_particle_array("z", [0, 1, 0, 1,
-                                         0, 1, 0, 1,
-                                         0.5, 1.5, 0.5, 1.5,
-                                         0.5, 1.5, 0.5, 1.5])
-    file += _create_particle_array("h", [1.1, 1.1, 1.1, 1.1,
-                                         1.1, 1.1, 1.1, 1.1,
-                                         1.1, 1.1, 1.1, 1.1,
-                                         1.1, 1.1, 1.1, 1.1])
+        # 1 sink particle in block 2
+        file += bytearray(read_tag.tobytes())
+        n = np.array([1], dtype='int64')
+        nums = np.array([0, 0, 0, 0, 0, 7, 0, 0], dtype='int32')
+        file += bytearray(n.tobytes())
+        file += bytearray(nums.tobytes())
+        file += bytearray(read_tag.tobytes())
 
-    # write 7 sink particle arrays
-    file += _create_particle_array("x", [0.000305])
-    file += _create_particle_array("y", [-0.035809])
-    file += _create_particle_array("z", [-0.000035])
-    file += _create_particle_array("h", [1.0])
-    file += _create_particle_array("spinx", [-3.911744e-8])
-    file += _create_particle_array("spiny", [-1.326062e-8])
-    file += _create_particle_array("spinz", [0.00058])
+        # write gas/dust particle arrays in block 1
+        # each mpi_block writes a chunk of the array
+        size = len(x) // mpi_blocks
+        file += _create_particle_array("itype", itype[i*size : (i+1)*size],
+                                       dtype=np.int8)
+        file += _create_particle_array("x", x[i*size : (i+1)*size])
+        file += _create_particle_array("y", y[i*size : (i+1)*size])
+        file += _create_particle_array("z", z[i*size : (i+1)*size])
+        file += _create_particle_array("h", h[i*size : (i+1)*size])
+
+        # write 7 sink particle arrays in block 2
+        # each mpi_block writes all sink particles (I believe)
+        file += _create_particle_array("x", [0.000305])
+        file += _create_particle_array("y", [-0.035809])
+        file += _create_particle_array("z", [-0.000035])
+        file += _create_particle_array("h", [1.0])
+        file += _create_particle_array("spinx", [-3.911744e-8])
+        file += _create_particle_array("spiny", [-1.326062e-8])
+        file += _create_particle_array("spinz", [0.00058])
 
     with tempfile.NamedTemporaryFile() as fp:
         fp.write(file)
