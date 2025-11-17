@@ -158,7 +158,7 @@ def _calc_angular_momentum(data: 'SarracenDataFrame',
                                                        pd.Series,
                                                        pd.Series]:
     """
-    Utility function to calculate angular momentum of the disc.
+    Utility function to calculate specific angular momentum of the disc.
 
     Parameters
     ----------
@@ -175,10 +175,8 @@ def _calc_angular_momentum(data: 'SarracenDataFrame',
     Returns
     -------
     Lx, Ly, Lz: Series
-        The x, y and z components of the angular momentum per bin.
+        The x, y and z components of the specific angular momentum per bin.
     """
-
-    mass = _get_mass(data)
 
     x_data = data[data.xcol].to_numpy() - origin[0]
     y_data = data[data.ycol].to_numpy() - origin[1]
@@ -188,14 +186,9 @@ def _calc_angular_momentum(data: 'SarracenDataFrame',
     Ly = z_data * data[data.vxcol] - x_data * data[data.vzcol]
     Lz = x_data * data[data.vycol] - y_data * data[data.vxcol]
 
-    if isinstance(mass, float):
-        Lx = (mass * Lx).groupby(rbins).sum()
-        Ly = (mass * Ly).groupby(rbins).sum()
-        Lz = (mass * Lz).groupby(rbins).sum()
-    else:
-        Lx = (data[data.mcol] * Lx).groupby(rbins).sum()
-        Ly = (data[data.mcol] * Ly).groupby(rbins).sum()
-        Lz = (data[data.mcol] * Lz).groupby(rbins).sum()
+    Lx = (Lx).groupby(rbins).mean()
+    Ly = (Ly).groupby(rbins).mean()
+    Lz = (Lz).groupby(rbins).mean()
 
     if unit_vector:
         Lmag = 1.0 / np.sqrt(Lx ** 2 + Ly ** 2 + Lz ** 2)
@@ -218,11 +211,12 @@ def angular_momentum(data: 'SarracenDataFrame',
                      unit_vector: bool = True) -> Union[Tuple[np.ndarray,
                                                               ...]]:
     """
-    Calculates the angular momentum profile of the disc.
+    Calculates the 1D azimuthally-averaged specific angular momentum
+    profile of the disc.
 
     The profile is computed by segmenting the particles into radial bins
-    (rings) and summing the angular momentum of the particles within each
-    bin.
+    (rings) and taking the mean of the specific angular momentum of the 
+    particles within each bin.
 
     Parameters
     ----------
@@ -252,7 +246,8 @@ def angular_momentum(data: 'SarracenDataFrame',
     Returns
     -------
     array
-        A NumPy array of length bins containing the angular momentum profile.
+        A NumPy array of length bins containing the specific angular momentum
+        profile.
     array, optional
         The midpoint values of each bin. Only returned if *retbins=True*.
 
