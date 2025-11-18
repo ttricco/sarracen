@@ -49,6 +49,8 @@ def _write_capture_pattern(def_int: Type[np.generic],
 def _rename_duplicate(tag: str) -> str:
     if len(tag) > 1 and tag[-2] == '_' and tag[-1].isdigit():
         tag = tag[:-2]
+    if len(tag) > 2 and tag[-3] == '_' and tag[-2:].isdigit():
+        tag = tag[:-3]
 
     return tag
 
