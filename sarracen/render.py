@@ -12,6 +12,7 @@ Or, they can be accessed through a `SarracenDataFrame` object, for example:
 from typing import Any, Union, Tuple
 
 import numpy as np
+import pandas as pd
 from scipy.spatial.transform import Rotation
 import seaborn as sns
 from matplotlib import pyplot as plt
@@ -51,13 +52,102 @@ def _default_axes(data: 'SarracenDataFrame',  # noqa: F821
     return x, y
 
 
+def _rotate_data(data: 'SarracenDataFrame',  # noqa: F821
+                 x_data: np.ndarray,
+                 y_data: np.ndarray,
+                 z_data: np.ndarray,
+                 rotation: Union[np.ndarray, list, Rotation, None],
+                 rot_origin: Union[np.ndarray, list, pd.Series,
+                                   str, None]) -> Tuple[np.ndarray,
+                                                        np.ndarray,
+                                                        np.ndarray]:
+    """
+    Rotate vector data in a particle dataset.
+
+    Parameters
+    ----------
+    data: SarracenDataFrame
+        The particle dataset to interpolate over.
+    x_data, y_data, z_data: ndarray
+        The directional vector data.
+    rotation: array_like or SciPy Rotation
+        The rotation to apply to the vector data. If defined as an array, the
+        order of rotations is [z, y, x] in degrees
+    rot_origin: array_like or ['com', 'midpoint']
+        Point of rotation of the data. Only applies to 3D datasets. If
+        array_like, then the [x, y, z] coordinates specify the point around
+        which the data is rotated. If 'com', then data is rotated around the
+        centre of mass. If 'midpoint', then data is rotated around the
+        midpoint, that is, min + max / 2. Defaults to the midpoint.
+
+    Returns
+    -------
+    x_data, y_data, z_data: ndarray
+        The rotated x, y, and z directional data.
+    """
+    vectors = np.array([x_data, y_data, z_data]).transpose()
+    if rotation is not None:
+        if not isinstance(rotation, Rotation):
+            rotation_obj = Rotation.from_euler('zyx',
+                                               rotation,
+                                               degrees=True)
+        else:
+            rotation_obj = rotation
+
+        if rot_origin is None:
+            # rot_origin = [0, 0, 0]
+            rot_origin_arr = (vectors.min(0) + vectors.max(0)) / 2
+        elif rot_origin == 'com':
+            rot_origin_arr = data.centre_of_mass()
+        elif rot_origin == 'midpoint':
+            rot_origin_arr = (vectors.min(0) + vectors.max(0)) / 2
+        elif not isinstance(rot_origin, (list, pd.Series, np.ndarray)):
+            raise ValueError("rot_origin should be an [x, y, z] point or "
+                             "'com' or 'midpoint'")
+        elif len(rot_origin) != 3:
+            raise ValueError("rot_origin should specify [x, y, z] point.")
+        else:
+            rot_origin_arr = rot_origin
+        vectors = vectors - rot_origin_arr
+        vectors = rotation_obj.apply(vectors)
+        vectors = vectors + rot_origin_arr
+
+    return vectors[:, 0], vectors[:, 1], vectors[:, 2]
+
+
+def _default_bounding_box(data: 'SarracenDataFrame',  # noqa: F821
+                          x: str,
+                          y: str,
+                          xlim: Union[Tuple[float, float], None],
+                          ylim: Union[Tuple[float, float], None],
+                          z_slice: Union[float, None] = None) -> np.ndarray:
+    # boundaries of the plot default to the max & min values of the data.
+    x_min = xlim[0] if xlim is not None and xlim[0] is not None else None
+    y_min = ylim[0] if ylim is not None and ylim[0] is not None else None
+    x_max = xlim[1] if xlim is not None and xlim[1] is not None else None
+    y_max = ylim[1] if ylim is not None and ylim[1] is not None else None
+
+    x_min = data.loc[:, x].min() if x_min is None else x_min
+    y_min = data.loc[:, y].min() if y_min is None else y_min
+    x_max = data.loc[:, x].max() if x_max is None else x_max
+    y_max = data.loc[:, y].max() if y_max is None else y_max
+
+    z_slice = 0 if z_slice is None else z_slice
+
+    corners = [[x_min, y_min], [x_min, y_max], [x_max, y_min], [x_max, y_max]]
+    for i in range(len(corners)):
+        corners[i].append(z_slice)
+
+    return np.array(corners).transpose()
+
+
 def _default_bounds(data: 'SarracenDataFrame',  # noqa: F821
-                    x: str,
-                    y: str,
+                    x_data: np.ndarray,
+                    y_data: np.ndarray,
                     xlim: Union[Tuple[float, float], None],
-                    ylim: Union[Tuple[float, float],
-                                None]) -> Tuple[Tuple[float, float],
-                                                Tuple[float, float]]:
+                    ylim: Union[Tuple[float, float], None],
+                    ) -> Tuple[Tuple[float, float],
+                               Tuple[float, float]]:
     """
     Utility function to determine the 2-dimensional boundaries to use in 2D
     rendering.
@@ -85,10 +175,10 @@ def _default_bounds(data: 'SarracenDataFrame',  # noqa: F821
     x_max = xlim[1] if xlim is not None and xlim[1] is not None else None
     y_max = ylim[1] if ylim is not None and ylim[1] is not None else None
 
-    x_min = data.loc[:, x].min() if x_min is None else x_min
-    y_min = data.loc[:, y].min() if y_min is None else y_min
-    x_max = data.loc[:, x].max() if x_max is None else x_max
-    y_max = data.loc[:, y].max() if y_max is None else y_max
+    x_min = min(x_data) if x_min is None else x_min
+    y_min = min(y_data) if y_min is None else y_min
+    x_max = max(x_data) if x_max is None else x_max
+    y_max = max(y_data) if y_max is None else y_max
 
     return (x_min, x_max), (y_min, y_max)
 
@@ -323,7 +413,11 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
         ax = plt.gca()
 
     x, y = _default_axes(data, x, y)
-    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
+    corners = _default_bounding_box(data, x, y, xlim, ylim, xsec)
+    rotated_corners = _rotate_data(data, corners[0], corners[1], corners[2],
+                                   rotation, rot_origin)
+    xlim, ylim = _default_bounds(data, rotated_corners[0], rotated_corners[1],
+                                 xlim, ylim)
 
     kwargs.setdefault("origin", 'lower')
     kwargs.setdefault("extent", [xlim[0], xlim[1], ylim[0], ylim[1]])
@@ -453,7 +547,8 @@ def lineplot(data: 'SarracenDataFrame',  # noqa: F821
         ylim = ylim, ylim
 
     x, y = _default_axes(data, x, y)
-    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
+    xlim, ylim = _default_bounds(data, data.loc[:, x], data.loc[:, y],
+                                 xlim, ylim)
 
     if data.get_dim() == 2:
         upper_lim = np.sqrt((xlim[1] - xlim[0])**2 + (ylim[1] - ylim[0])**2)
@@ -633,7 +728,11 @@ def streamlines(data: 'SarracenDataFrame',  # noqa: F821
         ax = plt.gca()
 
     x, y = _default_axes(data, x, y)
-    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
+    corners = _default_bounding_box(data, x, y, xlim, ylim, xsec)
+    rotated_corners = _rotate_data(data, corners[0], corners[1], corners[2],
+                                   rotation, rot_origin)
+    xlim, ylim = _default_bounds(data, rotated_corners[0], rotated_corners[1],
+                                 xlim, ylim)
 
     kwargs.setdefault("color", 'black')
     ax.streamplot(np.linspace(xlim[0], xlim[1], np.size(img[0], 1)),
@@ -761,7 +860,11 @@ def arrowplot(data: 'SarracenDataFrame',  # noqa: F821
         smoothing length columns do not exist in `data`.
     """
     x, y = _default_axes(data, x, y)
-    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
+    corners = _default_bounding_box(data, x, y, xlim, ylim, xsec)
+    rotated_corners = _rotate_data(data, corners[0], corners[1], corners[2],
+                                   rotation, rot_origin)
+    xlim, ylim = _default_bounds(data, rotated_corners[0], rotated_corners[1],
+                                 xlim, ylim)
     x_arrows, y_arrows = _set_pixels(x_arrows, y_arrows, xlim, ylim, 20)
 
     if data.get_dim() == 2:
