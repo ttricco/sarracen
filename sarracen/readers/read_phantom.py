@@ -136,7 +136,7 @@ def _read_global_header_block(fp: IO,
         keys = [keys_str[i:i+16].strip() for i in range(0, len(keys_str), 16)]
 
         raw_data = _read_fortran_block(fp, dtype().itemsize*nvars)
-        data_np= np.frombuffer(raw_data, count=nvars, dtype=dtype)
+        data_np = np.frombuffer(raw_data, count=nvars, dtype=dtype)
         if swap_endian:
             data_np = data_np.byteswap()
         data = list(data_np)
@@ -231,13 +231,13 @@ def _read_array_blocks(fp: IO,
         for i in range(0, nblocks):
             start_tag = fp.read(4)
 
-        n_val = np.frombuffer(fp.read(8), dtype=np.int64)[0]
-        nums_val = np.frombuffer(fp.read(32), count=8, dtype=np.int32)
-        if swap_endian:
-            n_val = n_val.byteswap()
-            nums_val = nums_val.byteswap()
-        n.append(n_val)
-        nums.append(nums_val)
+            n_val = np.frombuffer(fp.read(8), dtype=np.int64)[0]
+            nums_val = np.frombuffer(fp.read(32), count=8, dtype=np.int32)
+            if swap_endian:
+                n_val = n_val.byteswap()
+                nums_val = nums_val.byteswap()
+            n.append(n_val)
+            nums.append(nums_val)
 
             end_tag = fp.read(4)
             if (start_tag != end_tag):
