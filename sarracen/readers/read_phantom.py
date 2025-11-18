@@ -243,6 +243,9 @@ def _read_array_blocks(fp: IO,
             if (start_tag != end_tag):
                 raise AssertionError("Fortran tags mismatch in array blocks.")
 
+        df_tmp = pd.DataFrame()
+        df_tmp_sinks = pd.DataFrame()
+
         for i in range(0, nblocks):
             # This assumes the second block is only for sink particles.
             # This is a valid assumption as this is what splash assumes.
@@ -251,15 +254,16 @@ def _read_array_blocks(fp: IO,
             # Can we avoid temporary df?
             if i == 1:
                 # Not sure why, but it seems each MPI block repeats sinks
-                df_tmp = _read_array_block(fp, pd.DataFrame(), n[i], nums[i],
-                                           def_int_dtype, def_real_dtype,
-                                           swap_endian)
-                df_sinks = pd.concat([df_sinks, df_tmp]).drop_duplicates()
+                df_tmp_sinks = _read_array_block(fp, df_tmp_sinks, n[i],
+                                                 nums[i], def_int_dtype,
+                                                 def_real_dtype, swap_endian)
             else:
-                df_tmp = _read_array_block(fp, pd.DataFrame(), n[i], nums[i],
+                df_tmp = _read_array_block(fp, df_tmp, n[i], nums[i],
                                            def_int_dtype, def_real_dtype,
                                            swap_endian)
-                df = pd.concat([df, df_tmp])
+
+        df = pd.concat([df, df_tmp])
+        df_sinks = pd.concat([df_sinks, df_tmp_sinks]).drop_duplicates()
 
     return df, df_sinks
 
