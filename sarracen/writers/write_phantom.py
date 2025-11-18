@@ -65,10 +65,68 @@ def _write_global_header_tags_and_values(tags: list,
     return file
 
 
+def _remove_invalid_keys(params: dict) -> dict:
+    """ Remove keys specific to Sarracen."""
+
+    exclude = ['file_identifier', 'mass', 'def_int_dtype',
+               'def_real_dtype', 'iversion']
+    return {k: v for k, v in params.items() if k not in exclude}
+
+
+def _update_particle_counts(sdf: SarracenDataFrame,
+                            params: dict) -> dict:
+    """ Update params particle counts to match actual particle counts."""
+
+    n_gas = len(sdf) if 'itype' not in sdf.columns else len(sdf[sdf.itype == 1])
+    n_dust = 0 if 'itype' not in sdf.columns else len(sdf[sdf.itype == 7])
+    n_total = n_gas + n_dust
+
+    # check total particle counts
+    if 'nparttot' not in params:
+        params['nparttot'] = n_total
+    if params['nparttot'] != n_total:
+        params['nparttot'] = params['nparttot'].dtype.type(n_total)
+
+    # check gas particle counts
+    if 'npartoftype' not in params:
+        params['npartoftype'] = n_gas
+    if params['npartoftype'] != n_gas:
+        params['npartoftype'] = params['npartoftype'].dtype.type(n_gas)
+
+    # check dust particle counts
+    if 'itype' in sdf.columns and len(sdf[sdf.itype == 7]) > 0:
+        if 'npartoftype_7' not in params:
+            params['npartoftype_7'] = n_dust
+        if params['npartoftype_7'] != n_dust:
+            params['npartoftype_7'] = params['npartoftype_7'].dtype.type(n_dust)
+
+    # check for second set of particle counts
+    if 'nparttot_2' in params:
+        if 'ntypes' in params:
+            ntypes = params['ntypes']
+        else:  # guess
+            ntypes = sum(1 for key in params.keys() if key.startswith('npartoftype'))
+            if ntypes % 2 == 1:  # odd
+                raise ValueError("Guessing number of particle types went wrong.")
+            ntypes = ntypes // 2
+
+        if params['nparttot_2'] != n_total:
+            params['nparttot_2'] = params['nparttot_2'].dtype.type(n_total)
+        if params['npartoftype_' + str(ntypes + 1)] != n_gas:
+            params['npartoftype_' + str(ntypes+1)] = params['npartoftype_' + str(ntypes+1)].dtype.type(n_gas)
+        if params['npartoftype_' + str(ntypes + 7)] != n_dust:
+            params['npartoftype_' + str(ntypes+7)] = params['npartoftype_' + str(ntypes+7)].dtype.type(n_dust)
+
+
 def _write_global_header(sdf: SarracenDataFrame,
                          def_int: Type[np.number],
                          def_real: Type[np.number]) -> bytearray:
-    params_dict = _remove_invalid_keys(sdf)
+
+    params_dict = sdf.params.copy()
+
+    _remove_invalid_keys(params_dict)
+    _update_particle_counts(sdf, params_dict)
+
     dtypes = [def_int, np.int8, np.int16, np.int32, np.int64,
               def_real, np.float32, np.float64]
     header_data: List[Tuple[type, list, list]] = [(dtype, [], [])
@@ -94,14 +152,6 @@ def _write_global_header(sdf: SarracenDataFrame,
             file += _write_global_header_tags_and_values(tags, values, dtype)
 
     return file
-
-
-def _remove_invalid_keys(sdf: SarracenDataFrame) -> dict:
-    if sdf.params is None:
-        raise ValueError("Parameters are not set in this SarracenDataFrame.")
-    exclude = ['file_identifier', 'mass', 'def_int_dtype',
-               'def_real_dtype', 'iversion']
-    return {k: v for k, v in sdf.params.items() if k not in exclude}
 
 
 def _get_array_tags(test_sdf: SarracenDataFrame, dt: Type[np.number]) -> list:
