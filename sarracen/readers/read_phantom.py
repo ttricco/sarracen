@@ -24,7 +24,8 @@ def _read_fortran_block(fp: IO, bytesize: int) -> bytes:
     return data
 
 
-def _read_capture_pattern(fp: IO) -> Tuple[Type[np.generic], Type[np.generic],
+def _read_capture_pattern(fp: IO) -> Tuple[Type[np.generic],
+                                           Type[np.generic],
                                            int, bool]:
     """ Phantom dump validation plus default real and int sizes."""
 
@@ -135,10 +136,10 @@ def _read_global_header_block(fp: IO,
         keys = [keys_str[i:i+16].strip() for i in range(0, len(keys_str), 16)]
 
         raw_data = _read_fortran_block(fp, dtype().itemsize*nvars)
-        data_arr = np.frombuffer(raw_data, count=nvars, dtype=dtype)
+        data_np= np.frombuffer(raw_data, count=nvars, dtype=dtype)
         if swap_endian:
-            data_arr = data_arr.byteswap()
-        data = list(data_arr)
+            data_np = data_np.byteswap()
+        data = list(data_np)
 
     return keys, data
 
@@ -205,17 +206,30 @@ def _read_array_block(fp: IO,
 def _read_array_blocks(fp: IO,
                        def_int_dtype: Type[np.generic],
                        def_real_dtype: Type[np.generic],
+                       mpi_blocks: int,
                        swap_endian: bool) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """ Read particle data. Block 2 is always for sink particles?"""
+    """ Read particle data.
+
+    Block 2 is always for sink particles. The number of MPI blocks is given by
+    'nblocks' in the global header. The first quantity read in this function is
+    the total number of blocks."""
+
     nblocks = np.frombuffer(_read_fortran_block(fp, 4), dtype=np.int32)[0]
     if swap_endian:
         nblocks = nblocks.byteswap()
 
-    n: List[int] = []
-    nums: List[np.ndarray] = []
+    df = pd.DataFrame()
+    df_sinks = pd.DataFrame()
 
-    for i in range(0, nblocks):
-        start_tag = fp.read(4)
+    nblocks = int(nblocks / mpi_blocks)  # number of blocks per MPI process
+
+    for j in range(0, mpi_blocks):
+
+        n: List[int] = []
+        nums: List[np.ndarray] = []
+
+        for i in range(0, nblocks):
+            start_tag = fp.read(4)
 
         n_val = np.frombuffer(fp.read(8), dtype=np.int64)[0]
         nums_val = np.frombuffer(fp.read(32), count=8, dtype=np.int32)
@@ -225,23 +239,27 @@ def _read_array_blocks(fp: IO,
         n.append(n_val)
         nums.append(nums_val)
 
-        end_tag = fp.read(4)
-        if (start_tag != end_tag):
-            raise AssertionError("Fortran tags mismatch in array blocks.")
+            end_tag = fp.read(4)
+            if (start_tag != end_tag):
+                raise AssertionError("Fortran tags mismatch in array blocks.")
 
-    df = pd.DataFrame()
-    df_sinks = pd.DataFrame()
-    for i in range(0, nblocks):
-        # This assumes the second block is only for sink particles.
-        # I believe this is a valid assumption as this is what splash assumes.
-        # For now we will just append sinks to the end of the data frame.
-        if i == 1:
-            df_sinks = _read_array_block(fp, df_sinks, n[i], nums[i],
-                                         def_int_dtype, def_real_dtype,
-                                         swap_endian)
-        else:
-            df = _read_array_block(fp, df, n[i], nums[i], def_int_dtype,
-                                   def_real_dtype, swap_endian)
+        for i in range(0, nblocks):
+            # This assumes the second block is only for sink particles.
+            # This is a valid assumption as this is what splash assumes.
+            # For now we will just append sinks to the end of the data frame.
+
+            # Can we avoid temporary df?
+            if i == 1:
+                # Not sure why, but it seems each MPI block repeats sinks
+                df_tmp = _read_array_block(fp, pd.DataFrame(), n[i], nums[i],
+                                           def_int_dtype, def_real_dtype,
+                                           swap_endian)
+                df_sinks = pd.concat([df_sinks, df_tmp]).drop_duplicates()
+            else:
+                df_tmp = _read_array_block(fp, pd.DataFrame(), n[i], nums[i],
+                                           def_int_dtype, def_real_dtype,
+                                           swap_endian)
+                df = pd.concat([df, df_tmp])
 
     return df, df_sinks
 
@@ -352,8 +370,10 @@ def read_phantom(filename: str,  # noqa: E302
         header_vars['def_int_dtype'] = def_int_dtype
         header_vars['def_real_dtype'] = def_real_dtype
 
+        mpi_blocks = header_vars['nblocks'] if 'nblocks' in header_vars else 1
+
         df, df_sinks = _read_array_blocks(fp, def_int_dtype, def_real_dtype,
-                                          swap_endian)
+                                          mpi_blocks, swap_endian)
 
         if ignore_inactive and 'h' in df.columns:
             df = df[df['h'] > 0]
