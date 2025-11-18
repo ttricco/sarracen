@@ -1,3 +1,4 @@
+from typing import Dict
 import numpy as np
 
 from ..sarracen_dataframe import SarracenDataFrame
@@ -73,8 +74,8 @@ def _remove_invalid_keys(params: dict) -> dict:
     return {k: v for k, v in params.items() if k not in exclude}
 
 
-def _update_particle_counts(sdf: SarracenDataFrame,
-                            params: dict) -> dict:
+def _validate_particle_counts(sdf: SarracenDataFrame,
+                              params: dict) -> dict:
     """ Update params particle counts to match actual particle counts."""
 
     n_gas = len(sdf) if 'itype' not in sdf.columns else len(sdf[sdf.itype == 1])
@@ -117,33 +118,70 @@ def _update_particle_counts(sdf: SarracenDataFrame,
         if params['npartoftype_' + str(ntypes + 7)] != n_dust:
             params['npartoftype_' + str(ntypes+7)] = params['npartoftype_' + str(ntypes+7)].dtype.type(n_dust)
 
+    return params
+
+
+def _relocate_special_params(param_dicts: List[Dict]) -> None:
+    """Move certain parameters to their required dtype indices."""
+    # Integer parameters that must be int32
+    for param in ['iexternalforce', 'ieos']:
+        if param in param_dicts[0]:
+            param_dicts[3][param] = param_dicts[0].pop(param)
+
+    # Real parameters that must be float64
+    for param in ['udist', 'umass', 'utime', 'umagfd']:
+        if param in param_dicts[5]:
+            param_dicts[7][param] = param_dicts[5].pop(param)
+
 
 def _write_global_header(sdf: SarracenDataFrame,
                          def_int: Type[np.number],
                          def_real: Type[np.number]) -> bytearray:
 
     params_dict = sdf.params.copy()
-
-    _remove_invalid_keys(params_dict)
-    _update_particle_counts(sdf, params_dict)
+    params_dict = _remove_invalid_keys(params_dict)
+    params_dict = _validate_particle_counts(sdf, params_dict)
 
     dtypes = [def_int, np.int8, np.int16, np.int32, np.int64,
               def_real, np.float32, np.float64]
-    header_data: List[Tuple[type, list, list]] = [(dtype, [], [])
-                                                  for dtype in dtypes]
-    used_keys = set()
 
-    for dtype, tags, values in header_data:
-        for key in params_dict:
-            if key in used_keys:
-                continue
-            if isinstance(params_dict[key], dtype):
-                tags.append(key)
-                values.append(params_dict[key])
-                used_keys.add(key)
+    # create params dict per dtype and populate
+    param_dtype_dicts: List[Dict] = [dict() for _ in dtypes]
+    for k, v in params_dict.items():
+        if isinstance(v, def_int):
+            param_dtype_dicts[0][k] = v
+        elif isinstance(v, np.int8):
+            param_dtype_dicts[1][k] = v
+        elif isinstance(v, np.int16):
+            param_dtype_dicts[2][k] = v
+        elif isinstance(v, np.int32):
+            param_dtype_dicts[3][k] = v
+        elif isinstance(v, np.int64):
+            param_dtype_dicts[4][k] = v
+
+        if isinstance(v, def_real):
+            param_dtype_dicts[5][k] = v
+        elif isinstance(v, np.float32):
+            param_dtype_dicts[6][k] = v
+        elif isinstance(v, np.float64):
+            param_dtype_dicts[7][k] = v
+
+    # some tags live in specific dtypes
+    _relocate_special_params(param_dtype_dicts)
+
+    # create header arrays per dtype
+    header_data: List[Tuple[type, list, list]] = []
+    for i, dtype in enumerate(dtypes):
+        tags = []
+        values = []
+        for k, v in param_dtype_dicts[i].items():
+            tags.append(k)
+            values.append(v)
+        header_data.append((dtype, tags, values))
 
     file = bytearray()
 
+    # write header arrays in dtype sequence
     for dtype, tags, values in header_data:
         nvars = len(tags)
         file += _write_fortran_block([nvars], dtype=np.int32)
