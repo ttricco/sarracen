@@ -79,12 +79,8 @@ def _default_xyz(data: 'SarracenDataFrame',  # noqa: F821
     return x, y, z
 
 
-def _default_bounds(data: 'SarracenDataFrame',  # noqa: F821
-                    x: str,
-                    y: str,
-                    x_data: np.ndarray,
+def _default_bounds(x_data: np.ndarray,
                     y_data: np.ndarray,
-                    z_data: Union[np.ndarray, None],
                     xlim: Union[Tuple[Union[float, None], Union[float, None]],
                                 None],
                     ylim: Union[Tuple[Union[float, None], Union[float, None]],
@@ -568,8 +564,7 @@ def interpolate_2d(data: 'SarracenDataFrame',  # noqa: F821
     x, y = _default_xy(data, x, y)
     _verify_columns(data, x, y)
 
-    xlim, ylim = _default_bounds(data, x, y, data[x], data[y], None,
-                                 xlim, ylim)
+    xlim, ylim = _default_bounds(data[x], data[y], xlim, ylim)
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     _check_boundaries(x_pixels, y_pixels, xlim, ylim)
     w_data = _get_weight(data, target, dens_weight)
@@ -676,8 +671,7 @@ def interpolate_2d_vec(data: 'SarracenDataFrame',  # noqa: F821
     x, y = _default_xy(data, x, y)
     _verify_columns(data, x, y)
 
-    xlim, ylim = _default_bounds(data, x, y, data[x], data[y], None,
-                                 xlim, ylim)
+    xlim, ylim = _default_bounds(data[x], data[y], xlim, ylim)
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     _check_boundaries(x_pixels, y_pixels, xlim, ylim)
 
@@ -787,8 +781,7 @@ def interpolate_2d_line(data: 'SarracenDataFrame',  # noqa: F821
     if isinstance(ylim, float) or isinstance(ylim, int):
         ylim = ylim, ylim
 
-    xlim, ylim = _default_bounds(data, x, y, data[x], data[y], None,
-                                 xlim, ylim)
+    xlim, ylim = _default_bounds(data[x], data[y], xlim, ylim)
     if xlim[0] == xlim[1] and ylim[0] == ylim[1]:
         raise ValueError('Zero length cross section!')
 
@@ -909,8 +902,7 @@ def interpolate_3d_line(data: 'SarracenDataFrame',  # noqa: F821
     z2 = data.loc[:, z].min() if zlim is None or zlim[1] is None else zlim[1]
     zlim = z1, z2
 
-    xlim, ylim = _default_bounds(data, x, y, data[x], data[y], data[z],
-                                 xlim, ylim)
+    xlim, ylim = _default_bounds(data[x], data[y], xlim, ylim)
     if ylim[1] == ylim[0] and xlim[1] == xlim[0] and zlim[1] == zlim[0]:
         raise ValueError('Zero length cross section!')
 
@@ -1058,8 +1050,7 @@ def interpolate_3d_proj(data: 'SarracenDataFrame',  # noqa: F821
 
     x_data, y_data, z_data = _rotate_xyz(data, x, y, z, rotation, rot_origin)
 
-    xlim, ylim = _default_bounds(data, x, y, x_data, y_data, z_data,
-                                 xlim, ylim)
+    xlim, ylim = _default_bounds(x_data, y_data, xlim, ylim)
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     _check_boundaries(x_pixels, y_pixels, xlim, ylim)
 
@@ -1190,8 +1181,7 @@ def interpolate_3d_vec(data: 'SarracenDataFrame',  # noqa: F821
 
     x_data, y_data, z_data = _rotate_xyz(data, x, y, z, rotation, rot_origin)
 
-    xlim, ylim = _default_bounds(data, x, y, x_data, y_data, z_data,
-                                 xlim, ylim)
+    xlim, ylim = _default_bounds(x_data, y_data, xlim, ylim)
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     _check_boundaries(x_pixels, y_pixels, xlim, ylim)
 
@@ -1344,8 +1334,7 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',  # noqa: F821
     x_data, y_data, z_data = _rotate_xyz(data, x, y, z, rotation, rot_origin)
 
     # boundaries of the plot default to the max & min values of the data.
-    xlim, ylim = _default_bounds(data, x, y, x_data, y_data, z_data,
-                                 xlim, ylim)
+    xlim, ylim = _default_bounds(x_data, y_data, xlim, ylim)
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     _check_boundaries(x_pixels, y_pixels, xlim, ylim)
 
@@ -1472,8 +1461,7 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame',  # noqa: F821
     x_data, y_data, z_data = _rotate_xyz(data, x, y, z, rotation, rot_origin)
 
     # boundaries of the plot default to the max & min values of the data.
-    xlim, ylim = _default_bounds(data, x, y, x_data, y_data, z_data,
-                                 xlim, ylim)
+    xlim, ylim = _default_bounds(x_data, y_data, xlim, ylim)
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     _check_boundaries(x_pixels, y_pixels, xlim, ylim)
 
@@ -1606,8 +1594,7 @@ def interpolate_3d_grid(data: 'SarracenDataFrame',  # noqa: F821
         xlim = (None, None)
     if not ylim:
         ylim = (None, None)
-    xlim, ylim = _default_bounds(data, x, y, x_data, y_data, z_data,
-                                 xlim, ylim)
+    xlim, ylim = _default_bounds(x_data, y_data, xlim, ylim)
     zlim = zlim if zlim else (z_data.min(), z_data.max())
 
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
