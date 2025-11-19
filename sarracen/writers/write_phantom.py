@@ -1,13 +1,11 @@
-from typing import Dict
+from typing import Dict, List, Union, Type
 import numpy as np
 
 from ..sarracen_dataframe import SarracenDataFrame
 
-from typing import List, Tuple, Union, Type
 
-
-def _write_fortran_block(value: list,
-                         dtype: type) -> bytearray:
+def _write_fortran_block(value: List[np.generic],
+                         dtype: Type[np.generic]) -> bytearray:
     write_tag = np.array([len(value) * dtype().itemsize], dtype=np.int32)
     file = bytearray(write_tag.tobytes())
     file += bytearray(np.array(value, dtype=dtype).tobytes())
@@ -21,6 +19,7 @@ def _write_file_identifier(sdf: SarracenDataFrame) -> bytearray:
                        "SarracenDataFrame.")
     file_id = sdf.params['file_identifier'].ljust(100)
     file_id = list(map(ord, file_id))
+    file_id = [np.uint8(c) for c in file_id]
     file = _write_fortran_block(file_id, dtype=np.uint8)
     return file
 
@@ -46,29 +45,8 @@ def _write_capture_pattern(def_int: Type[np.generic],
     return capture_pattern
 
 
-def _rename_duplicate(tag: str) -> str:
-    if len(tag) > 1 and tag[-2] == '_' and tag[-1].isdigit():
-        tag = tag[:-2]
-    if len(tag) > 2 and tag[-3] == '_' and tag[-2:].isdigit():
-        tag = tag[:-3]
-
-    return tag
-
-
-def _write_global_header_tags_and_values(tags: list,
-                                         values: list,
-                                         dtype: type) -> bytearray:
-    tags = [_rename_duplicate(tag) for tag in tags]
-    tags = [list(map(ord, tag.ljust(16))) for tag in tags]
-    tags = [c for tag in tags for c in tag]
-
-    file = _write_fortran_block(tags, np.uint8)
-    file += _write_fortran_block(values, dtype)
-
-    return file
-
-
-def _remove_invalid_keys(params: dict) -> dict:
+def _remove_invalid_keys(params: Dict[str, np.generic]) -> Dict[str,
+                                                                np.generic]:
     """ Remove keys specific to Sarracen."""
 
     exclude = ['file_identifier', 'mass', 'def_int_dtype',
@@ -77,53 +55,59 @@ def _remove_invalid_keys(params: dict) -> dict:
 
 
 def _validate_particle_counts(sdf: SarracenDataFrame,
-                              params: dict) -> dict:
+                              params: Dict[str,
+                                           np.generic]) -> Dict[str,
+                                                                np.generic]:
     """ Update params particle counts to match actual particle counts."""
 
-    n_gas = len(sdf) if 'itype' not in sdf.columns else len(sdf[sdf.itype == 1])
-    n_dust = 0 if 'itype' not in sdf.columns else len(sdf[sdf.itype == 7])
+    n_gas = len(sdf[sdf.itype == 1]) if 'itype' in sdf.columns else len(sdf)
+    n_dust = len(sdf[sdf.itype == 7]) if 'itype' in sdf.columns else 0
     n_total = n_gas + n_dust
 
     # check total particle counts
     if 'nparttot' not in params:
-        params['nparttot'] = n_total
+        params['nparttot'] = np.int32(n_total)
     if params['nparttot'] != n_total:
-        params['nparttot'] = params['nparttot'].dtype.type(n_total)
+        params['nparttot'] = type(params['nparttot'])(n_total)
 
     # check gas particle counts
     if 'npartoftype' not in params:
-        params['npartoftype'] = n_gas
+        params['npartoftype'] = np.int32(n_gas)
     if params['npartoftype'] != n_gas:
-        params['npartoftype'] = params['npartoftype'].dtype.type(n_gas)
+        params['npartoftype'] = type(params['npartoftype'])(n_gas)
 
     # check dust particle counts
     if 'itype' in sdf.columns and len(sdf[sdf.itype == 7]) > 0:
         if 'npartoftype_7' not in params:
-            params['npartoftype_7'] = n_dust
+            params['npartoftype_7'] = np.int32(n_dust)
         if params['npartoftype_7'] != n_dust:
-            params['npartoftype_7'] = params['npartoftype_7'].dtype.type(n_dust)
+            params['npartoftype_7'] = type(params['npartoftype_7'])(n_dust)
 
     # check for second set of particle counts
     if 'nparttot_2' in params:
         if 'ntypes' in params:
-            ntypes = params['ntypes']
+            ntypes = int(params['ntypes'])
         else:  # guess
-            ntypes = sum(1 for key in params.keys() if key.startswith('npartoftype'))
+            ntypes = sum(1 for k in params if k.startswith('npartoftype'))
             if ntypes % 2 == 1:  # odd
-                raise ValueError("Guessing number of particle types went wrong.")
+                raise ValueError("Error guessing number of particle types.")
             ntypes = ntypes // 2
 
         if params['nparttot_2'] != n_total:
-            params['nparttot_2'] = params['nparttot_2'].dtype.type(n_total)
-        if params['npartoftype_' + str(ntypes + 1)] != n_gas:
-            params['npartoftype_' + str(ntypes+1)] = params['npartoftype_' + str(ntypes+1)].dtype.type(n_gas)
-        if params['npartoftype_' + str(ntypes + 7)] != n_dust:
-            params['npartoftype_' + str(ntypes+7)] = params['npartoftype_' + str(ntypes+7)].dtype.type(n_dust)
+            params['nparttot_2'] = type(params['nparttot_2'])(n_total)
+
+        key = 'npartoftype_' + str(ntypes + 1)
+        if params[key] != n_gas:
+            params[key] = type(params[key])(n_gas)
+        key = 'npartoftype_' + str(ntypes + 7)
+        if params[key] != n_dust:
+            params[key] = type(params[key])(n_dust)
 
     return params
 
 
-def _relocate_special_params(param_dicts: List[Dict]) -> None:
+def _relocate_special_params(param_dicts: List[Dict[str,
+                                                    np.generic]]) -> None:
     """Move certain parameters to their required dtype indices."""
     # Integer parameters that must be int32
     for param in ['iexternalforce', 'ieos']:
@@ -136,9 +120,31 @@ def _relocate_special_params(param_dicts: List[Dict]) -> None:
             param_dicts[7][param] = param_dicts[5].pop(param)
 
 
+def _rename_duplicate(tag: str) -> str:
+    if len(tag) > 1 and tag[-2] == '_' and tag[-1].isdigit():
+        tag = tag[:-2]
+    if len(tag) > 2 and tag[-3] == '_' and tag[-2:].isdigit():
+        tag = tag[:-3]
+
+    return tag
+
+
+def _write_global_header_array(tags: List[str],
+                               values: List[np.generic],
+                               dtype: Type[np.generic]) -> bytearray:
+    tags = [_rename_duplicate(tag) for tag in tags]
+    tags2: List[List[int]] = [list(map(ord, tag.ljust(16))) for tag in tags]
+    tags3: List[np.uint8] = [np.uint8(c) for tag in tags2 for c in tag]
+
+    file = _write_fortran_block(tags3, np.uint8)
+    file += _write_fortran_block(values, dtype)
+
+    return file
+
+
 def _write_global_header(sdf: SarracenDataFrame,
-                         def_int: Type[np.number],
-                         def_real: Type[np.number]) -> bytearray:
+                         def_int: Type[np.generic],
+                         def_real: Type[np.generic]) -> bytearray:
 
     params_dict = sdf.params.copy()
     params_dict = _remove_invalid_keys(params_dict)
@@ -148,7 +154,7 @@ def _write_global_header(sdf: SarracenDataFrame,
               def_real, np.float32, np.float64]
 
     # create params dict per dtype and populate
-    param_dtype_dicts: List[Dict] = [dict() for _ in dtypes]
+    param_dtype_dicts: List[Dict[str, np.generic]] = [dict() for _ in dtypes]
     for k, v in params_dict.items():
         if isinstance(v, def_int):
             param_dtype_dicts[0][k] = v
@@ -172,7 +178,8 @@ def _write_global_header(sdf: SarracenDataFrame,
     _relocate_special_params(param_dtype_dicts)
 
     # create header arrays per dtype
-    header_data: List[Tuple[type, list, list]] = []
+    header_data = []
+    # header_data: List[Tuple[type, list, list]] = []
     for i, dtype in enumerate(dtypes):
         tags = []
         values = []
@@ -185,26 +192,27 @@ def _write_global_header(sdf: SarracenDataFrame,
 
     # write header arrays in dtype sequence
     for dtype, tags, values in header_data:
-        nvars = len(tags)
+        nvars = np.int32(len(tags))
         file += _write_fortran_block([nvars], dtype=np.int32)
 
         if nvars > 0:
-            file += _write_global_header_tags_and_values(tags, values, dtype)
+            file += _write_global_header_array(tags, values, dtype)
 
     return file
 
 
-def _get_array_tags(test_sdf: SarracenDataFrame, dt: Type[np.number]) -> list:
-    return list(test_sdf.select_dtypes(include=[dt]).columns)
+def _get_array_tags(sdf: SarracenDataFrame,
+                    dtype: Type[np.generic]) -> List[str]:
+    return list(sdf.select_dtypes(include=[dtype]).columns)
 
 
 def _get_last_index(sdf: SarracenDataFrame) -> int:
     return 1 if sdf.index[-1] == 0 else sdf.shape[0]
 
 
-def _write_value_arrays(data: SarracenDataFrame,
-                        def_int: Type[np.number],
-                        def_real: Type[np.number],
+def _write_array_blocks(data: SarracenDataFrame,
+                        def_int: Type[np.generic],
+                        def_real: Type[np.generic],
                         sinks: Union[SarracenDataFrame,
                                      None] = None) -> bytearray:
 
@@ -212,9 +220,9 @@ def _write_value_arrays(data: SarracenDataFrame,
               def_real, np.float32, np.float64]
 
     nblocks = 2 if sinks is not None else 1
-    file = _write_fortran_block([nblocks], np.int32)
+    file = _write_fortran_block([np.int32(nblocks)], np.int32)
 
-    sdf_list = [data, sinks] if sinks is not None else [data]
+    sdf_list = [data] if sinks is None else [data, sinks]
     sdf_dtype_info = []
 
     for sdf in sdf_list:
@@ -266,7 +274,7 @@ def write_phantom(filename: str,
     file = _write_capture_pattern(def_int, def_real)
     file += _write_file_identifier(data)
     file += _write_global_header(data, def_int, def_real)
-    file += _write_value_arrays(data, def_int, def_real, sinks)
+    file += _write_array_blocks(data, def_int, def_real, sinks)
 
     with open(filename, 'wb') as phantom_file:
         phantom_file.write(file)
