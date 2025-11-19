@@ -294,27 +294,28 @@ def _create_aprmass_column(df: pd.DataFrame,
 
     return df
 
+
 def _read_apr_file(apr_file, filename):
     """
     Reads the apr ev file and for a given dumpfile number
     returns the APR info needed.
     """
-    dump = filename.split("_", 1)[1]
+    dump = filename..rsplit("_", 1)[0]
     with open(apr_file, "r") as f:
         for line in f:
             line = line.strip()
-
             parts = line.split()
 
             try:
-                converted_parts = [parts[1] if i == 1 else float(p) for i, p in enumerate(parts)]
+                converted_parts = ([parts[1] if i == 1 else float(p)
+                                     for i, p in enumerate(parts)])
             except ValueError:
                 continue
 
             if converted_parts[1] == dump:
                 df_entry = pd.DataFrame([converted_parts[2:]])
                 return df_entry
-            
+
     return pd.DataFrame()
 
 
@@ -391,7 +392,8 @@ def read_phantom(filename: str,  # noqa: E302
     can be separated into their own data frames by specifying
     ``separate_types='all'``.
 
-    >>> sdf_gas, sdf_dust, sdf_sinks = sarracen.read_phantom('dumpfile_00000', separate_types='all')
+    >>> sdf_gas, sdf_dust, sdf_sinks =
+    >>> sarracen.read_phantom('dumpfile_00000', separate_types='all')
 
     If APR is used, a data frame with the APR zones can also be created.
 
@@ -458,7 +460,7 @@ def read_phantom(filename: str,  # noqa: E302
             df_list = [SarracenDataFrame(pd.concat([df, df_sinks],
                                                    ignore_index=True),
                                          params=header_vars)]
-            
+
         if apr:
             # keep checking for files until there are no more
             df_apr = pd.DataFrame()
@@ -472,13 +474,12 @@ def read_phantom(filename: str,  # noqa: E302
                     i += 1
                 else:
                     break
-            
+
             # adjust the column names here
             df_apr = df_apr.rename(columns={0: "x", 1: "y", 2: "z"})
             for i, col in enumerate(df_apr.columns[3:], start=1):
                 df_apr = df_apr.rename(columns={col: f"radius_{i}"})
 
             df_list.append(df_apr)
-            
 
         return df_list[0] if len(df_list) == 1 else df_list
