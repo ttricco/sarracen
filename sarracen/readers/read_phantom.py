@@ -2,6 +2,7 @@ from typing import IO, Tuple, Type, Union, List, overload, Literal
 
 import numpy as np
 import pandas as pd
+import os
 
 from ..sarracen_dataframe import SarracenDataFrame
 
@@ -293,25 +294,52 @@ def _create_aprmass_column(df: pd.DataFrame,
 
     return df
 
+def _read_apr_file(apr_file, filename):
+    """
+    Reads the apr ev file and for a given dumpfile number
+    returns the APR info needed.
+    """
+    dump = filename.split("_", 1)[1]
+    with open(apr_file, "r") as f:
+        for line in f:
+            line = line.strip()
+
+            parts = line.split()
+
+            try:
+                converted_parts = [parts[1] if i == 1 else float(p) for i, p in enumerate(parts)]
+            except ValueError:
+                continue
+
+            if converted_parts[1] == dump:
+                df_entry = pd.DataFrame([converted_parts[2:]])
+                return df_entry
+            
+    return pd.DataFrame()
+
 
 @overload
 def read_phantom(filename: str,
                  separate_types: None,
+                 apr: bool = False,
                  ignore_inactive: bool = True) -> SarracenDataFrame: ...
 @overload  # noqa: E302
 def read_phantom(filename: str,
                  separate_types: Literal['sinks'] = 'sinks',
+                 apr: bool = False,
                  ignore_inactive: bool = True) -> Union[List[
                                                         SarracenDataFrame],
                                                         SarracenDataFrame]: ...
 @overload  # noqa: E302
 def read_phantom(filename: str,
                  separate_types: Literal['all'],
+                 apr: bool = False,
                  ignore_inactive: bool = True) -> Union[List[
                                                         SarracenDataFrame],
                                                         SarracenDataFrame]: ...
 def read_phantom(filename: str,  # noqa: E302
                  separate_types: Union[str, None] = 'sinks',
+                 apr: bool = False,
                  ignore_inactive: bool = True) -> Union[List[
                                                         SarracenDataFrame],
                                                         SarracenDataFrame]:
@@ -338,6 +366,9 @@ def read_phantom(filename: str,  # noqa: E302
         If True, particles with negative smoothing length will not be read on
         import. These are typically particles that have been accreted onto a
         sink particle or are otherwise inactive.
+    apr: {True, False}, default=False
+        If True, information from the apr*ev file will be extracted and put
+        into its own dataframe for plotting later.
 
     Returns
     -------
@@ -361,6 +392,10 @@ def read_phantom(filename: str,  # noqa: E302
     ``separate_types='all'``.
 
     >>> sdf_gas, sdf_dust, sdf_sinks = sarracen.read_phantom('dumpfile_00000', separate_types='all')
+
+    If APR is used, a data frame with the APR zones can also be created.
+
+     >>> sdf, sdf_apr = sarracen.read_phantom('dumpfile_00000', apr=True)
     """
     with open(filename, 'rb') as fp:
         def_int_dtype, def_real_dtype, iversion, swap_endian = \
@@ -423,5 +458,27 @@ def read_phantom(filename: str,  # noqa: E302
             df_list = [SarracenDataFrame(pd.concat([df, df_sinks],
                                                    ignore_index=True),
                                          params=header_vars)]
+            
+        if apr:
+            # keep checking for files until there are no more
+            df_apr = pd.DataFrame()
+            i = 1
+
+            while True:
+                aprfile = f"apr_{i:03d}.ev"
+                if os.path.exists(aprfile):
+                    df_apr_entry = _read_apr_file(aprfile,filename)
+                    df_apr = pd.concat([df_apr, df_apr_entry],ignore_index=True)
+                    i += 1
+                else:
+                    break
+            
+            # adjust the column names here
+            df_apr = df_apr.rename(columns={0: "x", 1: "y", 2: "z"})
+            for i, col in enumerate(df_apr.columns[3:], start=1):
+                df_apr = df_apr.rename(columns={col: f"radius_{i}"})
+
+            df_list.append(df_apr)
+            
 
         return df_list[0] if len(df_list) == 1 else df_list
