@@ -308,7 +308,7 @@ def _read_apr_file(apr_file, filename):
 
             try:
                 converted_parts = ([parts[1] if i == 1 else float(p)
-                                     for i, p in enumerate(parts)])
+                                   for i, p in enumerate(parts)])
             except ValueError:
                 continue
 
@@ -469,8 +469,9 @@ def read_phantom(filename: str,  # noqa: E302
             while True:
                 aprfile = f"apr_{i:03d}.ev"
                 if os.path.exists(aprfile):
-                    df_apr_entry = _read_apr_file(aprfile,filename)
-                    df_apr = pd.concat([df_apr, df_apr_entry],ignore_index=True)
+                    df_apr_entry = _read_apr_file(aprfile, filename)
+                    df_apr = pd.concat([df_apr, df_apr_entry],
+                                       ignore_index=True)
                     i += 1
                 else:
                     break
