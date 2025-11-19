@@ -300,7 +300,7 @@ def _read_apr_file(apr_file, filename):
     Reads the apr ev file and for a given dumpfile number
     returns the APR info needed.
     """
-    dump = filename..rsplit("_", 1)[0]
+    dump = filename.rsplit("_", 1)[0]
     with open(apr_file, "r") as f:
         for line in f:
             line = line.strip()
