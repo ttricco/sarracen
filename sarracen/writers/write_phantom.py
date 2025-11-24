@@ -152,6 +152,11 @@ def _validate_particle_masses(sdf: SarracenDataFrame,
                 m_gas = sdf[sdf.itype == 1]['mass'].iloc[0]
             else:
                 raise ValueError("Could not find gas mass.")
+        elif sdf.mcol is not None and 'itype' not in sdf.columns:
+            m_gas = sdf[sdf.mcol].iloc[0]
+        elif sdf.mcol is not None and 'itype' in sdf.columns:
+            m_gas = sdf[sdf.itype == 1][sdf.mcol].iloc[0]
+        else:
 
     # set default values for massoftype if not set
     default = {'': m_gas}  # insertion order matters
