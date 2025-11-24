@@ -61,7 +61,7 @@ def _validate_ntypes(sdf: SarracenDataFrame,
 
     if 'ntypes' in params:
         ntypes = int(params['ntypes'])
-    else:
+    elif 'npartoftype' in params:
         # Make a guess for ntypes
         ntypes = 8  # assume base 8 types
         for key in params:
@@ -69,6 +69,10 @@ def _validate_ntypes(sdf: SarracenDataFrame,
                 suffix = key[len('npartoftype_'):]
                 if suffix.isdigit():
                     ntypes = max(ntypes, int(suffix) // 2)
+    elif 'itype' in sdf.columns:
+        ntypes = max(8, sdf['itype'].max())
+    else:
+        ntypes = 8
 
     params['ntypes'] = np.int32(ntypes)
 
@@ -144,19 +148,14 @@ def _validate_particle_masses(sdf: SarracenDataFrame,
 
     if 'mass' in params:
         m_gas = params['mass']
+    elif 'massoftype' in params:
+        m_gas = params['massoftype']
+    elif sdf.mcol is not None and 'itype' not in sdf.columns:
+       m_gas = sdf[sdf.mcol].iloc[0]
+    elif sdf.mcol is not None and 'itype' in sdf.columns:
+        m_gas = sdf[sdf.itype == 1][sdf.mcol].iloc[0]
     else:
-        if 'massoftype' in params:
-            m_gas = params['massoftype']
-        else:
-            if 'mass' in sdf.columns:
-                m_gas = sdf[sdf.itype == 1]['mass'].iloc[0]
-            else:
-                raise ValueError("Could not find gas mass.")
-        elif sdf.mcol is not None and 'itype' not in sdf.columns:
-            m_gas = sdf[sdf.mcol].iloc[0]
-        elif sdf.mcol is not None and 'itype' in sdf.columns:
-            m_gas = sdf[sdf.itype == 1][sdf.mcol].iloc[0]
-        else:
+        raise ValueError("Could not find gas mass.")
 
     # set default values for massoftype if not set
     default = {'': m_gas}  # insertion order matters

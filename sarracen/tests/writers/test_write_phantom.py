@@ -24,18 +24,26 @@ def particles_df() -> pd.DataFrame:
                          'vx': vx, 'vy': vy, 'vz': vz})
 
 
-@pytest.mark.parametrize("dust", [False, True])
-def test_default_npartoftypes(particles_df: pd.DataFrame,
-                              dust: bool) -> None:
+@pytest.mark.parametrize("dust, id_method",
+                         [(False, 'itype'), (False, 'npartoftype'),
+                          (True, 'itype'), (True, 'npartoftype')])
+def test_default_npartoftypes_by_itype(particles_df: pd.DataFrame,
+                                       dust: bool,
+                                       id_method: str) -> None:
     """ Test that number of each particle type is correctly autofilled."""
 
     params = {'massoftype': np.float64(1e-4),
               'file_identifier': 'test of Phantom writing'}
 
-    sdf = sarracen.SarracenDataFrame(particles_df, params)
+    # if npartoftype not present, then it determines based on itype alone
+    if id_method == 'npartoftype':
+        params['npartoftype'] = np.int32(5) if dust else np.int32(8)
+        params['npartoftype_7'] = np.int32(3) if dust else np.int32(0)
 
     if dust:
-        sdf['itype'] = [1, 1, 1, 1, 1, 7, 7, 7]
+        particles_df['itype'] = [1, 1, 1, 1, 1, 7, 7, 7]
+
+    sdf = sarracen.SarracenDataFrame(particles_df, params)
 
     with tempfile.NamedTemporaryFile() as fp:
         sarracen.write_phantom(fp.name, sdf)
