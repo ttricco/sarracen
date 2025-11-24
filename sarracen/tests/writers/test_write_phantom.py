@@ -213,3 +213,86 @@ def test_gas_and_dust_write(particles_df: pd.DataFrame) -> None:
                                check_dtype=False)
 
 
+def test_gas_and_sink_write(particles_df: pd.DataFrame) -> None:
+    """ Test writing of simple gas-only particle dumpfile."""
+
+    params = {'massoftype': np.float64(1e-4),
+              'iexternalforce': np.int32(0),
+              'ieos': np.int32(1),
+              'udist': np.float64(2e-3),
+              'utime': np.float64(2e-5),
+              'umass': np.float64(2e-6),
+              'umagfd': np.float64(2e-2),
+              'file_identifier': 'test of Phantom writing'}
+
+    write_sdf = SarracenDataFrame(particles_df, params)
+
+    sink_x = [0.5, 0.5]
+    sink_y = [0.3, 0.3]
+    sink_z = [0.1, 0.1]
+    sink_m = [0.05, 0.001]
+    sink_spinx = [-0.002, -0.002]
+    sink_spiny = [1e-7, 1e-6]
+    sink_spinz = [0.002, 0.002]
+
+    sink_df = pd.DataFrame({'x': sink_x, 'y': sink_y, 'z': sink_z,
+                            'm': sink_m, 'spinx': sink_spinx,
+                            'spiny': sink_spiny, 'spinz': sink_spinz})
+
+    write_sdf_sinks = SarracenDataFrame(sink_df, params)
+
+    with tempfile.NamedTemporaryFile() as fp:
+        sarracen.write_phantom(fp.name, write_sdf, write_sdf_sinks)
+        sdf, sdf_sinks = sarracen.read_phantom(fp.name)
+
+        assert isinstance(sdf, SarracenDataFrame)
+        assert sdf.params is not None
+        assert sdf.params['massoftype'] == 1e-4
+        assert sdf.params['mass'] == 1e-4
+        assert sdf.params['udist'] == 2e-3
+        assert 'mass' in sdf.params
+        assert 'mass' not in sdf.columns
+        tm.assert_series_equal(sdf['x'], write_sdf['x'],
+                               check_index=False, check_names=False,
+                               check_dtype=False)
+        tm.assert_series_equal(sdf['y'], write_sdf['y'],
+                               check_index=False, check_names=False,
+                               check_dtype=False)
+        tm.assert_series_equal(sdf['z'], write_sdf['z'],
+                               check_index=False, check_names=False,
+                               check_dtype=False)
+        tm.assert_series_equal(sdf['h'], write_sdf['h'],
+                               check_index=False, check_names=False,
+                               check_dtype=False)
+        tm.assert_series_equal(sdf['vx'], write_sdf['vx'],
+                               check_index=False, check_names=False,
+                               check_dtype=False)
+        tm.assert_series_equal(sdf['vy'], write_sdf['vy'],
+                               check_index=False, check_names=False,
+                               check_dtype=False)
+        tm.assert_series_equal(sdf['vz'], write_sdf['vz'],
+                               check_index=False, check_names=False,
+                               check_dtype=False)
+
+        assert isinstance(sdf_sinks, SarracenDataFrame)
+        tm.assert_series_equal(sdf_sinks['x'], write_sdf_sinks['x'],
+                               check_index=False, check_names=False,
+                               check_dtype=False)
+        tm.assert_series_equal(sdf_sinks['y'], write_sdf_sinks['y'],
+                               check_index=False, check_names=False,
+                               check_dtype=False)
+        tm.assert_series_equal(sdf_sinks['z'], write_sdf_sinks['z'],
+                               check_index=False, check_names=False,
+                               check_dtype=False)
+        tm.assert_series_equal(sdf_sinks['m'], write_sdf_sinks['m'],
+                               check_index=False, check_names=False,
+                               check_dtype=False)
+        tm.assert_series_equal(sdf_sinks['spinx'], write_sdf_sinks['spinx'],
+                               check_index=False, check_names=False,
+                               check_dtype=False)
+        tm.assert_series_equal(sdf_sinks['spiny'], write_sdf_sinks['spiny'],
+                               check_index=False, check_names=False,
+                               check_dtype=False)
+        tm.assert_series_equal(sdf_sinks['spinz'], write_sdf_sinks['spinz'],
+                               check_index=False, check_names=False,
+                               check_dtype=False)
