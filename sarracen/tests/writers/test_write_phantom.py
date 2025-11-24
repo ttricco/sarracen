@@ -109,6 +109,64 @@ def test_params_reordering(particles_df: pd.DataFrame) -> None:
         assert sdf.params['npartoftype_15'] == 3
 
 
+@pytest.mark.parametrize("id_method", ('params_mass', 'massoftype', 'mcol'))
+def test_gas_mass_validation(particles_df: pd.DataFrame,
+                         id_method: bool) -> None:
+    """ Test that mass of each particle type is correctly validated."""
+
+    params = {}
+
+    if id_method == 'params_mass':
+        params['mass'] = np.float64(1e-4)
+    elif id_method == 'massoftype':
+        params['massoftype'] = np.float64(1e-4)
+    elif id_method == 'mcol':
+        particles_df['m'] = np.float64(1e-4)
+
+    write_sdf = SarracenDataFrame(particles_df, params)
+
+    with tempfile.NamedTemporaryFile() as fp:
+        sarracen.write_phantom(fp.name, write_sdf)
+        sdf = sarracen.read_phantom(fp.name)
+
+        assert isinstance(sdf, SarracenDataFrame)
+        assert sdf.params is not None
+        assert sdf.params['mass'] == 1e-4
+        assert sdf.params['massoftype'] == 1e-4
+
+
+@pytest.mark.parametrize("id_method", ('massoftype', 'mcol'))
+def test_dust_mass_validation(particles_df: pd.DataFrame,
+                                       id_method: bool) -> None:
+    """ Test that mass of each particle type is correctly validated."""
+
+    params = {}
+
+    m = pd.Series([1e-4] * 5 + [1e-6] * 3)
+
+    if id_method == 'massoftype':
+        params['massoftype'] = np.float64(1e-4)
+        params['massoftype_7'] = np.float64(1e-6)
+    elif id_method == 'mcol':
+        particles_df['m'] = m
+
+    write_sdf = SarracenDataFrame(particles_df, params)
+    write_sdf['itype'] = [1, 1, 1, 1, 1, 7, 7, 7]
+
+    with tempfile.NamedTemporaryFile() as fp:
+        sarracen.write_phantom(fp.name, write_sdf)
+        sdf = sarracen.read_phantom(fp.name)
+
+        assert isinstance(sdf, SarracenDataFrame)
+        assert sdf.params is not None
+        assert 'mass' not in sdf.params
+        assert sdf.params['massoftype'] == 1e-4
+        assert sdf.params['massoftype_7'] == 1e-6
+        tm.assert_series_equal(sdf[sdf.mcol], m,
+                               check_index=False, check_names=False,
+                               check_dtype=False)
+
+
 def test_gas_write(particles_df: pd.DataFrame) -> None:
     """ Test writing of simple gas-only particle dumpfile."""
 

@@ -168,8 +168,8 @@ def _validate_particle_masses(sdf: SarracenDataFrame,
     idust = params['idust'] if 'idust' in params else 7
 
     # update massoftype for dust, if dust is present
-    if 'itype' in sdf.columns and 'mass' in sdf.columns:
-        m_dust_particle = sdf[sdf.itype == idust]['mass'].iloc[0]
+    if 'itype' in sdf.columns and sdf.mcol is not None:
+        m_dust_particle = sdf[sdf.itype == idust][sdf.mcol].iloc[0]
 
         if params[f'massoftype_{idust}'] == 0:
             params[f'massoftype_{idust}'] = m_dust_particle
@@ -237,11 +237,11 @@ def _write_global_header(sdf: SarracenDataFrame,
                          def_real: Type[np.generic]) -> bytearray:
 
     params_dict = sdf.params.copy()
-    params_dict = _remove_invalid_keys(params_dict)
     params_dict = _validate_ntypes(sdf, params_dict)
     params_dict = _validate_particle_counts(sdf, params_dict)
     params_dict = _validate_particle_masses(sdf, params_dict)
     params_dict = _reorder_params(params_dict)
+    params_dict = _remove_invalid_keys(params_dict)
 
     dtypes = [def_int, np.int8, np.int16, np.int32, np.int64,
               def_real, np.float32, np.float64]
