@@ -79,9 +79,8 @@ def _default_xyz(data: 'SarracenDataFrame',  # noqa: F821
     return x, y, z
 
 
-def _default_bounds(data: 'SarracenDataFrame',  # noqa: F821
-                    x: str,
-                    y: str,
+def _default_bounds(x_data: np.ndarray,
+                    y_data: np.ndarray,
                     xlim: Union[Tuple[Union[float, None], Union[float, None]],
                                 None],
                     ylim: Union[Tuple[Union[float, None], Union[float, None]],
@@ -97,6 +96,8 @@ def _default_bounds(data: 'SarracenDataFrame',  # noqa: F821
         The particle dataset to interpolate over.
     x, y: str
         The directional column labels that will be used in interpolation.
+    x_data, y_data, z_data: ndarray
+        The particle coordinate data.
     xlim, ylim: tuple of float
         The minimum and maximum values passed to the interpolation function, in
         particle data space.
@@ -114,10 +115,10 @@ def _default_bounds(data: 'SarracenDataFrame',  # noqa: F821
     x_max = xlim[1] if xlim is not None and xlim[1] is not None else None
     y_max = ylim[1] if ylim is not None and ylim[1] is not None else None
 
-    x_min = data.loc[:, x].min() if x_min is None else x_min
-    y_min = data.loc[:, y].min() if y_min is None else y_min
-    x_max = data.loc[:, x].max() if x_max is None else x_max
-    y_max = data.loc[:, y].max() if y_max is None else y_max
+    x_min = x_data.min() if x_min is None else x_min
+    y_min = y_data.min() if y_min is None else y_min
+    x_max = x_data.max() if x_max is None else x_max
+    y_max = y_data.max() if y_max is None else y_max
 
     return (x_min, x_max), (y_min, y_max)
 
@@ -256,9 +257,9 @@ def _check_dimension(data: 'SarracenDataFrame',  # noqa: F821
 
 
 def _rotate_data(data: 'SarracenDataFrame',  # noqa: F821
-                 x: str,
-                 y: str,
-                 z: str,
+                 x_data: np.ndarray,
+                 y_data: np.ndarray,
+                 z_data: np.ndarray,
                  rotation: Union[np.ndarray, list, Rotation, None],
                  rot_origin: Union[np.ndarray, list, pd.Series,
                                    str, None]) -> Tuple[np.ndarray,
@@ -271,8 +272,8 @@ def _rotate_data(data: 'SarracenDataFrame',  # noqa: F821
     ----------
     data: SarracenDataFrame
         The particle dataset to interpolate over.
-    x, y, z: str
-        Directional column labels containing each dimension of the vector data.
+    x_data, y_data, z_data: ndarray
+        The directional vector data.
     rotation: array_like or SciPy Rotation
         The rotation to apply to the vector data. If defined as an array, the
         order of rotations is [z, y, x] in degrees.
@@ -288,9 +289,7 @@ def _rotate_data(data: 'SarracenDataFrame',  # noqa: F821
     x_data, y_data, z_data: ndarray
         The rotated x, y, and z directional data.
     """
-    x_data = data[x].to_numpy()
-    y_data = data[y].to_numpy()
-    z_data = data[z].to_numpy()
+    vectors = np.array([x_data, y_data, z_data]).transpose()
     if rotation is not None:
         if not isinstance(rotation, Rotation):
             rotation_obj = Rotation.from_euler('zyx',
@@ -298,8 +297,6 @@ def _rotate_data(data: 'SarracenDataFrame',  # noqa: F821
                                                degrees=True)
         else:
             rotation_obj = rotation
-
-        vectors = data[[x, y, z]].to_numpy()
 
         # warn whenever rotation is applied
         msg = ("The default rotation point is currently the midpoint of the "
@@ -325,11 +322,7 @@ def _rotate_data(data: 'SarracenDataFrame',  # noqa: F821
         vectors = rotation_obj.apply(vectors)
         vectors = vectors + rot_origin_arr
 
-        x_data = vectors[:, 0]
-        y_data = vectors[:, 1]
-        z_data = vectors[:, 2]
-
-    return x_data, y_data, z_data
+    return vectors[:, 0], vectors[:, 1], vectors[:, 2]
 
 
 def _rotate_xyz(data: 'SarracenDataFrame',  # noqa: F821
@@ -370,8 +363,9 @@ def _rotate_xyz(data: 'SarracenDataFrame',  # noqa: F821
     x_data, y_data, z_data: ndarray
         The rotated x, y, and z directional data.
     """
-    rotated_x, rotated_y, rotated_z = _rotate_data(data, data.xcol, data.ycol,
-                                                   data.zcol, rotation,
+    rotated_x, rotated_y, rotated_z = _rotate_data(data, data[data.xcol],
+                                                   data[data.ycol],
+                                                   data[data.zcol], rotation,
                                                    rot_origin)
     x_data = rotated_x if x == data.xcol else \
         rotated_y if x == data.ycol else \
@@ -570,7 +564,7 @@ def interpolate_2d(data: 'SarracenDataFrame',  # noqa: F821
     x, y = _default_xy(data, x, y)
     _verify_columns(data, x, y)
 
-    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
+    xlim, ylim = _default_bounds(data[x], data[y], xlim, ylim)
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     _check_boundaries(x_pixels, y_pixels, xlim, ylim)
     w_data = _get_weight(data, target, dens_weight)
@@ -677,7 +671,7 @@ def interpolate_2d_vec(data: 'SarracenDataFrame',  # noqa: F821
     x, y = _default_xy(data, x, y)
     _verify_columns(data, x, y)
 
-    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
+    xlim, ylim = _default_bounds(data[x], data[y], xlim, ylim)
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     _check_boundaries(x_pixels, y_pixels, xlim, ylim)
 
@@ -787,7 +781,7 @@ def interpolate_2d_line(data: 'SarracenDataFrame',  # noqa: F821
     if isinstance(ylim, float) or isinstance(ylim, int):
         ylim = ylim, ylim
 
-    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
+    xlim, ylim = _default_bounds(data[x], data[y], xlim, ylim)
     if xlim[0] == xlim[1] and ylim[0] == ylim[1]:
         raise ValueError('Zero length cross section!')
 
@@ -908,7 +902,7 @@ def interpolate_3d_line(data: 'SarracenDataFrame',  # noqa: F821
     z2 = data.loc[:, z].min() if zlim is None or zlim[1] is None else zlim[1]
     zlim = z1, z2
 
-    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
+    xlim, ylim = _default_bounds(data[x], data[y], xlim, ylim)
     if ylim[1] == ylim[0] and xlim[1] == xlim[0] and zlim[1] == zlim[0]:
         raise ValueError('Zero length cross section!')
 
@@ -1051,14 +1045,15 @@ def interpolate_3d_proj(data: 'SarracenDataFrame',  # noqa: F821
 
     w_data = _get_weight(data, target, dens_weight)
 
-    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
-    x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
-    _check_boundaries(x_pixels, y_pixels, xlim, ylim)
-
     if corotation is not None:
         rotation, rot_origin = _corotate(corotation, rotation)
 
     x_data, y_data, z_data = _rotate_xyz(data, x, y, z, rotation, rot_origin)
+
+    xlim, ylim = _default_bounds(x_data, y_data, xlim, ylim)
+    x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
+    _check_boundaries(x_pixels, y_pixels, xlim, ylim)
+
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
 
@@ -1184,16 +1179,18 @@ def interpolate_3d_vec(data: 'SarracenDataFrame',  # noqa: F821
     x, y, z = _default_xyz(data, x, y, None)
     _verify_columns(data, x, y)
 
-    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
+    x_data, y_data, z_data = _rotate_xyz(data, x, y, z, rotation, rot_origin)
+
+    xlim, ylim = _default_bounds(x_data, y_data, xlim, ylim)
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     _check_boundaries(x_pixels, y_pixels, xlim, ylim)
 
-    x_data, y_data, _ = _rotate_xyz(data, x, y, z, rotation, rot_origin)
     if target_z not in data.columns:
         raise KeyError(f"z-directional target column '{target_z}' does not "
                        f"exist in the provided dataset.")
-    target_x_data, target_y_data, _ = _rotate_data(data, target_x, target_y,
-                                                   target_z, rotation,
+    target_x_data, target_y_data, _ = _rotate_data(data, data[target_x],
+                                                   data[target_y],
+                                                   data[target_z], rotation,
                                                    rot_origin)
 
     wx_data = _get_weight(data, target_x_data, dens_weight)
@@ -1328,11 +1325,6 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',  # noqa: F821
 
     w_data = _get_weight(data, target, dens_weight)
 
-    # boundaries of the plot default to the max & min values of the data.
-    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
-    x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
-    _check_boundaries(x_pixels, y_pixels, xlim, ylim)
-
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
 
@@ -1340,6 +1332,12 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',  # noqa: F821
         rotation, rot_origin = _corotate(corotation, rotation)
 
     x_data, y_data, z_data = _rotate_xyz(data, x, y, z, rotation, rot_origin)
+
+    # boundaries of the plot default to the max & min values of the data.
+    xlim, ylim = _default_bounds(x_data, y_data, xlim, ylim)
+    x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
+    _check_boundaries(x_pixels, y_pixels, xlim, ylim)
+
     h_data = _get_smoothing_lengths(data, hmin, x_pixels, y_pixels, xlim, ylim)
 
     grid = get_backend(backend) \
@@ -1460,14 +1458,16 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame',  # noqa: F821
     if z_slice is None:
         z_slice = data.loc[:, z].mean()
 
+    x_data, y_data, z_data = _rotate_xyz(data, x, y, z, rotation, rot_origin)
+
     # boundaries of the plot default to the max & min values of the data.
-    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
+    xlim, ylim = _default_bounds(x_data, y_data, xlim, ylim)
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     _check_boundaries(x_pixels, y_pixels, xlim, ylim)
 
-    x_data, y_data, z_data = _rotate_xyz(data, x, y, z, rotation, rot_origin)
-    target_x_data, target_y_data, _ = _rotate_data(data, target_x, target_y,
-                                                   target_z, rotation,
+    target_x_data, target_y_data, _ = _rotate_data(data, data[target_x],
+                                                   data[target_y],
+                                                   data[target_z], rotation,
                                                    rot_origin)
 
     wx_data = _get_weight(data, target_x_data, dens_weight)
@@ -1589,12 +1589,13 @@ def interpolate_3d_grid(data: 'SarracenDataFrame',  # noqa: F821
 
     w_data = _get_weight(data, target, dens_weight)
 
+    x_data, y_data, z_data = _rotate_xyz(data, x, y, z, rotation, rot_origin)
     if not xlim:
         xlim = (None, None)
     if not ylim:
         ylim = (None, None)
-    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
-    zlim = zlim if zlim else (data.loc[:, z].min(), data.loc[:, z].max())
+    xlim, ylim = _default_bounds(x_data, y_data, xlim, ylim)
+    zlim = zlim if zlim else (z_data.min(), z_data.max())
 
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     if z_pixels is None:
@@ -1611,8 +1612,6 @@ def interpolate_3d_grid(data: 'SarracenDataFrame',  # noqa: F821
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
 
-    x_data, y_data, z_data = _rotate_xyz(data, x, y, data.zcol,
-                                         rotation, rot_origin)
     h_data = _get_smoothing_lengths(data, hmin, x_pixels, y_pixels,
                                     xlim, ylim)
 
