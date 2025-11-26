@@ -46,8 +46,8 @@ def _write_capture_pattern(def_int: Type[np.generic],
     return capture_pattern
 
 
-def _remove_invalid_keys(params: Dict[str, np.number]) -> Dict[str,
-                                                                np.number]:
+def _remove_invalid_keys(params: Dict[str, np.generic]) -> Dict[str,
+                                                                np.generic]:
     """ Remove keys specific to Sarracen internal use."""
 
     exclude = ['file_identifier', 'mass', 'def_int_dtype',
@@ -55,8 +55,20 @@ def _remove_invalid_keys(params: Dict[str, np.number]) -> Dict[str,
     return {k: v for k, v in params.items() if k not in exclude}
 
 
+def _standardize_dtypes(params: Dict[str, np.generic]) -> Dict[str, np.generic]:
+    """ Convert all params to numpy dtypes."""
+
+    for k, v in params.items():
+        if isinstance(v, int):
+            params[k] = np.int32(v)
+        if isinstance(v, float):
+            params[k] = np.float64(v)
+
+    return params
+
+
 def _validate_ntypes(sdf: SarracenDataFrame,
-                     params: Dict[str, np.number]) -> Dict[str, np.number]:
+                     params: Dict[str, np.generic]) -> Dict[str, np.generic]:
     """ Update params ntypes to reflect particle data."""
 
     if 'ntypes' in params:
@@ -81,8 +93,8 @@ def _validate_ntypes(sdf: SarracenDataFrame,
 
 def _validate_particle_counts(sdf: SarracenDataFrame,
                               params: Dict[str,
-                                           np.number]) -> Dict[str,
-                                                                np.number]:
+                                           np.generic]) -> Dict[str,
+                                                                np.generic]:
     """ Update params particle counts to match actual particle counts."""
 
     n_gas = len(sdf[sdf.itype == 1]) if 'itype' in sdf.columns else len(sdf)
@@ -90,7 +102,7 @@ def _validate_particle_counts(sdf: SarracenDataFrame,
     n_total = len(sdf)
 
     idust = params['idust'] if 'idust' in params else 7
-    ntypes = params['ntypes']
+    ntypes = int(params['ntypes'])
 
     # check total particle count
     if 'nparttot' not in params:
@@ -142,8 +154,8 @@ def _validate_particle_counts(sdf: SarracenDataFrame,
 
 def _validate_particle_masses(sdf: SarracenDataFrame,
                               params: Dict[str,
-                                           np.number]) -> Dict[str,
-                                                                np.number]:
+                                           np.generic]) -> Dict[str,
+                                                                np.generic]:
     """ Update params particle masses to match actual particle masses."""
 
     if 'mass' in params:
@@ -159,7 +171,7 @@ def _validate_particle_masses(sdf: SarracenDataFrame,
 
     # set default values for massoftype if not set
     default = {'': m_gas}  # insertion order matters
-    default.update({f'_{i}': 0 for i in range(2, params['ntypes'] + 1)})
+    default.update({f'_{i}': 0 for i in range(2, int(params['ntypes']) + 1)})
     for i, value in default.items():
         key = f'massoftype{i}'
         if key not in params:
@@ -228,7 +240,7 @@ def sort_key(k):
     return (base, num)
 
 
-def _reorder_params(params: Dict[str, np.number]) -> Dict[str, np.number]:
+def _reorder_params(params: Dict[str, np.generic]) -> Dict[str, np.generic]:
     return dict(sorted(params.items(), key=lambda item: sort_key(item[0])))
 
 
@@ -237,6 +249,7 @@ def _write_global_header(sdf: SarracenDataFrame,
                          def_real: Type[np.generic]) -> bytearray:
 
     params_dict = sdf.params.copy()
+    params_dict = _standardize_dtypes(params_dict)
     params_dict = _validate_ntypes(sdf, params_dict)
     params_dict = _validate_particle_counts(sdf, params_dict)
     params_dict = _validate_particle_masses(sdf, params_dict)

@@ -9,6 +9,8 @@ from pandas import testing as tm
 
 from sarracen import SarracenDataFrame
 
+from sarracen.writers.write_phantom import _standardize_dtypes
+
 
 @pytest.fixture
 def particles_df() -> pd.DataFrame:
@@ -22,6 +24,24 @@ def particles_df() -> pd.DataFrame:
 
     return pd.DataFrame({'x': x, 'y': y, 'z': z, 'h': h,
                          'vx': vx, 'vy': vy, 'vz': vz})
+
+
+def test_params_dtype_standardization(particles_df: pd.DataFrame) -> None:
+    """ Test that params dtype is correctly standardized."""
+
+    params = {'massoftype': 1e-4,
+              'ntypes': 8,
+              'nparttot': 8,
+              'massoftype_7': 1e-6,
+              'file_identifier': 'test of Phantom writing'}
+
+    params = _standardize_dtypes(params)
+
+    assert isinstance(params['massoftype'], np.float64)
+    assert isinstance(params['massoftype_7'], np.float64)
+    assert isinstance(params['ntypes'], np.int32)
+    assert isinstance(params['nparttot'], np.int32)
+    assert isinstance(params['file_identifier'], str)
 
 
 @pytest.mark.parametrize("dust, id_method",
