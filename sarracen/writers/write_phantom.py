@@ -73,16 +73,41 @@ def _validate_ntypes(sdf: SarracenDataFrame,
 
     if 'ntypes' in params:
         ntypes = int(params['ntypes'])
+
+    elif 'itype' in sdf.columns:
+        # guess using number of itypes
+        ntypes = max(8, sdf['itype'].max())
+
+    elif 'massoftype' in params:
+        # guess using number of massoftype
+        ntypes = 8
+        for key in params:
+            if key.startswith('massoftype_'):
+                suffix = key[len('massoftype_'):]
+                if suffix.isdigit():
+                    ntypes = max(ntypes, int(suffix))
+
     elif 'npartoftype' in params:
-        # Make a guess for ntypes
-        ntypes = 8  # assume base 8 types
+        # guess using number of npartoftype
+        # more difficult because npartoftype is stored as both int32 and int64
+        # find max suffix for both, then divide the larger by 2
+        max_int32 = 8
+        max_int64 = 8
         for key in params:
             if key.startswith('npartoftype_'):
                 suffix = key[len('npartoftype_'):]
                 if suffix.isdigit():
-                    ntypes = max(ntypes, int(suffix) // 2)
-    elif 'itype' in sdf.columns:
-        ntypes = max(8, sdf['itype'].max())
+                    if isinstance(params[key], np.int64):
+                        max_int64 = max(int(suffix), max_int64)
+                    else:
+                        max_int32 = max(int(suffix), max_int32)
+        # hack
+        if max_int32 > max_int64:
+            max_int32 = max_int32 // 2
+        else:
+            max_int64 = max_int64 // 2
+        ntypes = max(8, max(max_int64, max_int32))
+
     else:
         ntypes = 8
 
@@ -95,7 +120,14 @@ def _validate_particle_counts(sdf: SarracenDataFrame,
                               params: Dict[str,
                                            np.generic]) -> Dict[str,
                                                                 np.generic]:
-    """ Update params particle counts to match actual particle counts."""
+    """
+    Update params particle counts to match actual particle counts.
+
+    This will count the number of gas and dust particles based on itype. It
+    assumes that if itype is not present, then all particles are gas.
+
+    This will populate nparttot and npartoftype accordingly.
+    """
 
     n_gas = len(sdf[sdf.itype == 1]) if 'itype' in sdf.columns else len(sdf)
     n_dust = len(sdf[sdf.itype == 7]) if 'itype' in sdf.columns else 0

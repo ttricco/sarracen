@@ -9,7 +9,11 @@ from pandas import testing as tm
 
 from sarracen import SarracenDataFrame
 
-from sarracen.writers.write_phantom import _standardize_dtypes
+from sarracen.writers.write_phantom import (_standardize_dtypes,
+                                            _validate_ntypes,
+                                            _reorder_params,
+                                            _validate_particle_counts,
+                                            _validate_particle_masses)
 
 
 @pytest.fixture
@@ -44,15 +48,75 @@ def test_params_dtype_standardization(particles_df: pd.DataFrame) -> None:
     assert isinstance(params['file_identifier'], str)
 
 
+@pytest.mark.parametrize("id_method", ('ntypes', 'massoftype',
+                                       'npartoftype', 'itype'))
+def test_validate_ntypes_12(particles_df: pd.DataFrame,
+                            id_method: str) -> None:
+    """ Test that number of particle types is correctly validated."""
+
+    params = {}
+
+    if id_method == 'ntypes':
+        params['ntypes'] = np.int32(12)
+    elif id_method == 'massoftype':
+        params['massoftype'] = np.float64(1e-4)
+        params['massoftype_7'] = np.float64(1e-6)
+        params['massoftype_12'] = np.float64(1e-7)
+    elif id_method == 'npartoftype':
+        params['npartoftype'] = np.int32(10)
+        params['npartoftype_7'] = np.int32(2)
+        params['npartoftype_12'] = np.int32(6)
+        params['npartoftype_13'] = np.int64(10)
+        params['npartoftype_20'] = np.int64(2)
+        params['npartoftype_24'] = np.int64(6)
+    elif id_method == 'itype':
+        particles_df['itype'] = [1, 1, 1, 1, 1, 7, 7, 12]
+
+    sdf = sarracen.SarracenDataFrame(particles_df, params)
+
+    params = _validate_ntypes(sdf, params)
+
+    assert params['ntypes'] == 12
+
+
+@pytest.mark.parametrize("id_method", ('base', 'ntypes', 'massoftype',
+                                       'npartoftype', 'itype'))
+def test_validate_ntypes_8(particles_df: pd.DataFrame,
+                        id_method: str) -> None:
+    """ Test that number of particle types is correctly validated."""
+
+    params = {}
+
+    if id_method == 'ntypes':
+        params['ntypes'] = np.int32(8)
+    elif id_method == 'massoftype':
+        params['massoftype'] = np.float64(1e-4)
+        params['massoftype_7'] = np.float64(1e-6)
+    elif id_method == 'npartoftype':
+        params['npartoftype'] = np.int32(10)
+        params['npartoftype_7'] = np.int32(2)
+        params['npartoftype_12'] = np.int64(6)
+        params['npartoftype_13'] = np.int64(10)
+    elif id_method == 'itype':
+        particles_df['itype'] = [1, 1, 1, 1, 1, 7, 7, 7]
+
+    sdf = sarracen.SarracenDataFrame(particles_df, params)
+
+    params = _validate_ntypes(sdf, params)
+
+    assert params['ntypes'] == 8
+
+
 @pytest.mark.parametrize("dust, id_method",
                          [(False, 'itype'), (False, 'npartoftype'),
                           (True, 'itype'), (True, 'npartoftype')])
-def test_default_npartoftypes_by_itype(particles_df: pd.DataFrame,
-                                       dust: bool,
-                                       id_method: str) -> None:
+def test_validate_particle_counts(particles_df: pd.DataFrame,
+                                  dust: bool,
+                                  id_method: str) -> None:
     """ Test that number of each particle type is correctly autofilled."""
 
     params = {'massoftype': np.float64(1e-4),
+              'ntypes': np.int32(8),
               'file_identifier': 'test of Phantom writing'}
 
     # if npartoftype not present, then it determines based on itype alone
@@ -65,30 +129,26 @@ def test_default_npartoftypes_by_itype(particles_df: pd.DataFrame,
 
     sdf = sarracen.SarracenDataFrame(particles_df, params)
 
-    with tempfile.NamedTemporaryFile() as fp:
-        sarracen.write_phantom(fp.name, sdf)
-        sdf = sarracen.read_phantom(fp.name)
+    params = _validate_particle_counts(sdf, params)
 
-        assert isinstance(sdf, SarracenDataFrame)
-        assert sdf.params is not None
-        assert sdf.params['nparttot'] == 8
-        assert sdf.params['npartoftype'] == 5 if dust else 8
-        assert sdf.params['npartoftype_2'] == 0
-        assert sdf.params['npartoftype_3'] == 0
-        assert sdf.params['npartoftype_4'] == 0
-        assert sdf.params['npartoftype_5'] == 0
-        assert sdf.params['npartoftype_6'] == 0
-        assert sdf.params['npartoftype_7'] == 3 if dust else 8
-        assert sdf.params['npartoftype_8'] == 0
-        assert sdf.params['nparttot_2'] == 8
-        assert sdf.params['npartoftype_9'] == 5 if dust else 8
-        assert sdf.params['npartoftype_10'] == 0
-        assert sdf.params['npartoftype_11'] == 0
-        assert sdf.params['npartoftype_12'] == 0
-        assert sdf.params['npartoftype_13'] == 0
-        assert sdf.params['npartoftype_14'] == 0
-        assert sdf.params['npartoftype_15'] == 3 if dust else 8
-        assert sdf.params['npartoftype_16'] == 0
+    assert params['nparttot'] == 8
+    assert params['npartoftype'] == 5 if dust else 8
+    assert params['npartoftype_2'] == 0
+    assert params['npartoftype_3'] == 0
+    assert params['npartoftype_4'] == 0
+    assert params['npartoftype_5'] == 0
+    assert params['npartoftype_6'] == 0
+    assert params['npartoftype_7'] == 3 if dust else 8
+    assert params['npartoftype_8'] == 0
+    assert params['nparttot_2'] == 8
+    assert params['npartoftype_9'] == 5 if dust else 8
+    assert params['npartoftype_10'] == 0
+    assert params['npartoftype_11'] == 0
+    assert params['npartoftype_12'] == 0
+    assert params['npartoftype_13'] == 0
+    assert params['npartoftype_14'] == 0
+    assert params['npartoftype_15'] == 3 if dust else 8
+    assert params['npartoftype_16'] == 0
 
 
 def test_params_reordering(particles_df: pd.DataFrame) -> None:
@@ -107,34 +167,38 @@ def test_params_reordering(particles_df: pd.DataFrame) -> None:
               'npartoftype_9': np.int64(1),
               'file_identifier': 'test of Phantom writing'}
 
-    write_sdf = SarracenDataFrame(particles_df, params)
-    write_sdf['itype'] = [1, 3, 3, 3, 3, 7, 7, 7]
+    params = _reorder_params(params)
 
-    with tempfile.NamedTemporaryFile() as fp:
-        sarracen.write_phantom(fp.name, write_sdf)
-        sdf = sarracen.read_phantom(fp.name)
+    keys = list(params.keys())
 
-        assert isinstance(sdf, SarracenDataFrame)
-        assert sdf.params is not None
-        assert sdf.params['massoftype'] == 1e-4
-        assert sdf.params['massoftype_3'] == 1e-3
-        assert sdf.params['massoftype_7'] == 1e-6
-        assert sdf.params['nparttot'] == 8
-        assert sdf.params['nparttot_2'] == 8
-        assert sdf.params['npartoftype'] == 1
-        assert sdf.params['npartoftype_3'] == 4
-        assert sdf.params['npartoftype_7'] == 3
-        assert sdf.params['npartoftype_9'] == 1
-        assert sdf.params['npartoftype_11'] == 4
-        assert sdf.params['npartoftype_15'] == 3
+    assert keys.index('massoftype') < keys.index('massoftype_3')
+    assert keys.index('massoftype_3') < keys.index('massoftype_7')
+    assert keys.index('nparttot') < keys.index('nparttot_2')
+    assert keys.index('npartoftype') < keys.index('npartoftype_3')
+    assert keys.index('npartoftype_3') < keys.index('npartoftype_7')
+    assert keys.index('npartoftype_7') < keys.index('npartoftype_9')
+    assert keys.index('npartoftype_9') < keys.index('npartoftype_11')
+    assert keys.index('npartoftype_11') < keys.index('npartoftype_15')
+
+    assert params['massoftype'] == 1e-4
+    assert params['massoftype_3'] == 1e-3
+    assert params['massoftype_7'] == 1e-6
+    assert params['nparttot'] == 8
+    assert params['nparttot_2'] == 8
+    assert params['npartoftype'] == 1
+    assert params['npartoftype_3'] == 4
+    assert params['npartoftype_7'] == 3
+    assert params['npartoftype_9'] == 1
+    assert params['npartoftype_11'] == 4
+    assert params['npartoftype_15'] == 3
 
 
 @pytest.mark.parametrize("id_method", ('params_mass', 'massoftype', 'mcol'))
-def test_gas_mass_validation(particles_df: pd.DataFrame,
-                         id_method: bool) -> None:
+def test_validate_particle_mass_gas(particles_df: pd.DataFrame,
+                                    id_method: bool) -> None:
     """ Test that mass of each particle type is correctly validated."""
 
-    params = {}
+    params = {'ntypes': np.int32(8)}
 
     if id_method == 'params_mass':
         params['mass'] = np.float64(1e-4)
@@ -143,51 +207,58 @@ def test_gas_mass_validation(particles_df: pd.DataFrame,
     elif id_method == 'mcol':
         particles_df['m'] = np.float64(1e-4)
 
-    write_sdf = SarracenDataFrame(particles_df, params)
+    sdf = SarracenDataFrame(particles_df, params)
 
-    with tempfile.NamedTemporaryFile() as fp:
-        sarracen.write_phantom(fp.name, write_sdf)
-        sdf = sarracen.read_phantom(fp.name)
+    params = _validate_particle_masses(sdf, params)
 
-        assert isinstance(sdf, SarracenDataFrame)
-        assert sdf.params is not None
-        assert sdf.params['mass'] == 1e-4
-        assert sdf.params['massoftype'] == 1e-4
+    assert params['massoftype'] == 1e-4
+    assert params['massoftype_2'] == 0
+    assert params['massoftype_3'] == 0
+    assert params['massoftype_4'] == 0
+    assert params['massoftype_5'] == 0
+    assert params['massoftype_6'] == 0
+    assert params['massoftype_7'] == 0
+    assert params['massoftype_8'] == 0
+
+    # with tempfile.NamedTemporaryFile() as fp:
+    #     sarracen.write_phantom(fp.name, write_sdf)
+    #     sdf = sarracen.read_phantom(fp.name)
+    #
+    #     assert isinstance(sdf, SarracenDataFrame)
+    #     assert sdf.params is not None
+    #     assert sdf.params['mass'] == 1e-4
+    #     assert sdf.params['massoftype'] == 1e-4
 
 
 @pytest.mark.parametrize("id_method", ('massoftype', 'mcol'))
-def test_dust_mass_validation(particles_df: pd.DataFrame,
-                                       id_method: bool) -> None:
+def test_validate_particle_mass_dust(particles_df: pd.DataFrame,
+                                     id_method: bool) -> None:
     """ Test that mass of each particle type is correctly validated."""
 
-    params = {}
-
-    m = pd.Series([1e-4] * 5 + [1e-6] * 3)
+    params = {'ntypes': np.int32(8)}
 
     if id_method == 'massoftype':
         params['massoftype'] = np.float64(1e-4)
         params['massoftype_7'] = np.float64(1e-6)
     elif id_method == 'mcol':
-        particles_df['m'] = m
+        particles_df['m'] = [1e-4] * 5 + [1e-6] * 3
 
-    write_sdf = SarracenDataFrame(particles_df, params)
-    write_sdf['itype'] = [1, 1, 1, 1, 1, 7, 7, 7]
+    sdf = SarracenDataFrame(particles_df, params)
+    sdf['itype'] = [1, 1, 1, 1, 1, 7, 7, 7]
 
-    with tempfile.NamedTemporaryFile() as fp:
-        sarracen.write_phantom(fp.name, write_sdf)
-        sdf = sarracen.read_phantom(fp.name)
+    params = _validate_particle_masses(sdf, params)
 
-        assert isinstance(sdf, SarracenDataFrame)
-        assert sdf.params is not None
-        assert 'mass' not in sdf.params
-        assert sdf.params['massoftype'] == 1e-4
-        assert sdf.params['massoftype_7'] == 1e-6
-        tm.assert_series_equal(sdf[sdf.mcol], m,
-                               check_index=False, check_names=False,
-                               check_dtype=False)
+    assert params['massoftype'] == 1e-4
+    assert params['massoftype_2'] == 0
+    assert params['massoftype_3'] == 0
+    assert params['massoftype_4'] == 0
+    assert params['massoftype_5'] == 0
+    assert params['massoftype_6'] == 0
+    assert params['massoftype_7'] == 1e-6
+    assert params['massoftype_8'] == 0
 
 
-def test_gas_write(particles_df: pd.DataFrame) -> None:
+def test_write_gas(particles_df: pd.DataFrame) -> None:
     """ Test writing of simple gas-only particle dumpfile."""
 
     params = {'massoftype': np.float64(1e-4),
@@ -235,7 +306,7 @@ def test_gas_write(particles_df: pd.DataFrame) -> None:
                                check_dtype=False)
 
 
-def test_gas_and_dust_write(particles_df: pd.DataFrame) -> None:
+def test_write_gas_and_dust(particles_df: pd.DataFrame) -> None:
     """ Test writing of simple gas and dust-only dumpfile."""
 
     params = {'massoftype': np.float64(1e-4),
@@ -299,7 +370,7 @@ def test_gas_and_dust_write(particles_df: pd.DataFrame) -> None:
                                check_dtype=False)
 
 
-def test_gas_and_sink_write(particles_df: pd.DataFrame) -> None:
+def test_write_gas_and_sink(particles_df: pd.DataFrame) -> None:
     """ Test writing of simple gas-only particle dumpfile."""
 
     params = {'massoftype': np.float64(1e-4),
