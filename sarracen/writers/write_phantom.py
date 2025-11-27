@@ -15,9 +15,21 @@ def _write_fortran_block(value: List[np.generic],
 
 
 def _write_file_identifier(sdf: SarracenDataFrame) -> bytearray:
-    if sdf.params is None or 'file_identifier' not in sdf.params:
-        raise KeyError("'file_identifier' missing from params in this "
-                       "SarracenDataFrame.")
+    """ Write the file identifier.
+
+    The file identifier is a 100 character string that encodes the various
+    options that were used.
+
+    First character is either 'F' or 'S', corresponding to Full or Small dump.
+    Second character is 'T', for a tagged dump file.
+
+    'Phantom' should appear in the name to declare it as a Phantom dump, not
+    an sphNG dump file.
+    """
+
+    if 'file_identifier' not in sdf.params:
+        fileid = "FT:Phantom:Sarracen"
+        sdf.params['file_identifier'] = fileid
     file_id = sdf.params['file_identifier'].ljust(100)
     file_id = list(map(ord, file_id))
     file_id = [np.uint8(c) for c in file_id]

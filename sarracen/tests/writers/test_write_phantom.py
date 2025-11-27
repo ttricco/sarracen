@@ -314,7 +314,6 @@ def test_write_gas_and_dust(particles_df: pd.DataFrame) -> None:
               'massoftype_3': np.float64(0),
               'massoftype_4': np.float64(0),
               'massoftype_5': np.float64(0),
-              'massoftype_6': np.float64(0),
               'massoftype_7': np.float64(1e-6),
               'iexternalforce': np.int32(0),
               'ieos': np.int32(1),
