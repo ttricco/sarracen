@@ -4,7 +4,7 @@ from scipy.interpolate import griddata
 from sklearn.neighbors import KDTree
 from ..sarracen_dataframe import SarracenDataFrame
 
-from typing import Union
+from typing import Union, Tuple, Literal
 
 
 # BRANCH CODE BELOW
@@ -43,7 +43,67 @@ def calc_stokes(self,c_s,G=1):
 #---------------------------------------------------------------------------------------------------------------
 # PR CODE BELOW
 
-def _default_vxyz(data, vx, vy, vz):
+def _check_dimension(data: 'SarracenDataFrame',  # noqa: F821
+                     dim: Literal[2, 3]) -> None:
+    """
+    Verify that a given dataset describes data with a required number of
+    dimensions.
+
+    Parameters
+    ----------
+    data: SarracenDataFrame
+        The particle dataset to interpolate over.
+    dim: [2, 3]
+        The number of required dimensions.
+
+    Raises
+    ------
+    ValueError
+        If the dataset is not `dim`-dimensional or `dim` is not 2 or 3.
+    """
+    if dim not in [2, 3]:
+        raise ValueError("`dim` must be 2 or 3.")
+    if data.get_dim() != dim:
+        raise ValueError(f"Dataset is not {dim}-dimensional.")
+
+def _default_xyz(data: 'SarracenDataFrame',  # noqa: F821
+                 x: Union[str, None],
+                 y: Union[str, None],
+                 z: Union[str, None]) -> Tuple[str, str, str]:
+    """
+    Utility function to determine the x, y and z columns to use during 3-D
+    interpolation.
+
+    Parameters
+    ----------
+    data: SarracenDataFrame
+        The particle dataset to interpolate over.
+    x, y, z: str
+        The x, y and z directional column labels passed to the interpolation
+        function.
+
+    Returns
+    -------
+    x, y, z: str
+        The directional column labels to use in interpolation.
+    """
+    xcol = data.xcol
+    ycol = data.ycol
+    zcol = data.zcol
+
+    if x is None:
+        x = xcol if not y == xcol and not z == xcol else \
+            ycol if not y == ycol and not z == ycol else zcol
+    if y is None:
+        y = ycol if not x == ycol and not z == ycol else \
+            xcol if not x == xcol and not z == xcol else zcol
+    if z is None:
+        z = zcol if not x == zcol and not y == zcol else \
+            ycol if not x == ycol and not y == ycol else xcol
+
+    return x, y, z
+
+def _default_vxyz(data, vx, vy, vz) -> Tuple[str, str, str]:
     """
     Utility function to determine the vx, vy, and vz columns to use.
     Parameters
@@ -57,17 +117,60 @@ def _default_vxyz(data, vx, vy, vz):
     vx, vy, vz: str
         The directional column labels to use.
     """
+    vxcol = data.vxcol
+    vycol = data.vycol
+    vzcol = data.vzcol
+
     if vx is None:
-        vx = data.vxcol if not vy == data.vxcol and not vz == data.vxcol else \
-             data.vycol if not vy == data.vycol and not vz == data.vycol else data.vzcol
+        vx = vxcol if not vy == vxcol and not vz == vxcol else \
+             vycol if not vy == vycol and not vz == vycol else vzcol
     if vy is None:
-        vy = data.vycol if not vx == data.vycol and not vz == data.vycol else \
-             data.vxcol if not vx == data.vxcol and not vz == data.vxcol else data.vzcol
+        vy = vycol if not vx == vycol and not vz == vycol else \
+             vxcol if not vx == vxcol and not vz == vxcol else vzcol
     if vz is None:
-        vz = data.vzcol if not vx == data.vzcol and not vy == data.vzcol else \
-             data.vycol if not vx == data.vycol and not vy == data.vycol else data.vxcol
+        vz = vzcol if not vx == vzcol and not vy == vzcol else \
+             vycol if not vx == vycol and not vy == vycol else vxcol
 
     return vx, vy, vz
+
+def _verify_columns(data: 'SarracenDataFrame',  # noqa: F821
+                    columns: list) -> None:
+    """
+    Verify that the given columns exist in `data`.
+
+    Parameters
+    ----------
+    data: SarracenDataFrame
+        The particle dataset to interpolate over.
+    columns: list
+        The column labels.
+
+    Raises
+    ------
+    KeyError
+        If `target`, `x`, `y`, or smoothing length columns do
+        not exist in `data`.
+    """
+    for column_label in columns:
+        if column_label not in data.columns:
+            raise KeyError(f"'{column_label}' column does not exist in the "
+                           f"provided dataset")
+        
+def _get_mass(data: 'SarracenDataFrame') -> Union[np.ndarray,  # noqa: F821
+                                                  float]:
+    if data.mcol is None:
+        return data.params['mass']
+
+    return data[data.mcol].to_numpy()
+
+
+def _get_density(data: 'SarracenDataFrame') -> np.ndarray:  # noqa: F821
+    if data.rhocol is None:
+        hfact = data.params['hfact']
+        mass = _get_mass(data)
+        return ((hfact / data[data.hcol])**(data.get_dim()) * mass).to_numpy()
+
+    return data[data.rhocol].to_numpy()
 
 def stoppingtime(rho_dust, rho_gas, v_gas, v_dust, rho_grain, sgrain, gamma, c_s):
     return np.sqrt(np.pi * gamma * 0.125) * rho_grain * sgrain / (rho_dust + rho_gas) / np.sqrt(1 + 0.0703125 * np.pi * (np.linalg.norm(v_gas - v_dust))**2 / c_s**2)
@@ -89,8 +192,7 @@ def Stokes_number(data_dust: 'SarracenDataFrame',
                   z_gas: str = None,
                   vx_gas: str = None,
                   vy_gas: str = None,
-                  vz_gas: str = None,
-                  backend: str = None):
+                  vz_gas: str = None):
 
     _check_dimension(data_dust, 3)
     _check_dimension(data_gas, 3)
@@ -118,7 +220,6 @@ def Stokes_number(data_dust: 'SarracenDataFrame',
     gas_positions = data_gas[[x_gas, y_gas, z_gas]].values
     dust_positions = data_dust[[x_dust, y_dust, z_dust]].values
 
-    gas_velocity = data_gas[[vx_gas,vy_gas,vz_gas]].values
     dust_velocity = data_dust[[vx_dust, vy_dust, vz_dust]].values
 
     tree = KDTree(gas_positions, leaf_size=10)
