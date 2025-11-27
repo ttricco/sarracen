@@ -274,3 +274,19 @@ def Stokes_number(data_dust: 'SarracenDataFrame',
     stokes_number = tstop * c_s * rhog_on_dust * (1/3) / data_gas.params['hfact'] * data_gas.params['mass']**(1/3)
 
     return stokes_number
+
+def calc_stokes_number(data_gas,
+                       rho_dust_data,
+                       rhog_on_dust, 
+                       gas_velocity_on_dust,
+                       dust_velocity,
+                       rho_grain,
+                       sgrain,
+                       gamma,
+                       c_s):
+    tstop = stoppingtime(rho_dust_data, rhog_on_dust, gas_velocity_on_dust,
+                         dust_velocity, rho_grain, sgrain, gamma, c_s)
+    stokes_number = tstop * c_s * rhog_on_dust * (1/3) / \
+                    data_gas.params['hfact'] * data_gas.params['mass']**(1/3)
+
+    return stokes_number
