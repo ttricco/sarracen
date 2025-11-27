@@ -193,9 +193,9 @@ def Stokes_number(data_dust: 'SarracenDataFrame',
                   vx_gas: str = None,
                   vy_gas: str = None,
                   vz_gas: str = None):
-
-    _check_dimension(data_dust, 3)
-    _check_dimension(data_gas, 3)
+    dim = 3
+    _check_dimension(data_dust, dim)
+    _check_dimension(data_gas, dim)
 
     x_dust, y_dust, z_dust = _default_xyz(data_dust, x_dust, y_dust, z_dust)
     x_gas, y_gas, z_gas = _default_xyz(data_gas, x_gas, y_gas, z_gas)
@@ -206,8 +206,6 @@ def Stokes_number(data_dust: 'SarracenDataFrame',
     _verify_columns(data_gas, [x_gas, y_gas, z_gas, 'h', vx_gas, vy_gas, vz_gas])
 
     x_dust_data = data_dust[x_dust].values
-    y_dust_data = data_dust[y_dust].values
-    z_dust_data = data_dust[z_dust].values
     rho_dust_data = _get_density(data_dust)
 
     h_gas_data = data_gas['h'].values
@@ -236,7 +234,6 @@ def Stokes_number(data_dust: 'SarracenDataFrame',
             dust_neighbours[dust_neighbour] = np.append(dust_neighbours[dust_neighbour], gas_particle)
 
     dust_number = len(x_dust_data)
-    dim = 3
     rhog_on_dust = np.zeros(dust_number)
     vx_on_dust = np.zeros(dust_number)
     vy_on_dust = np.zeros(dust_number)
