@@ -74,7 +74,7 @@ def stoppingtime(rho_dust, rho_gas, v_gas, v_dust, rho_grain, sgrain, gamma, c_s
 
 def Stokes_number(data_dust: 'SarracenDataFrame',
                   data_gas: 'SarracenDataFrame',
-                  rho_grid: float,
+                  rho_grain: float,
                   sgrain: float,
                   c_s: float,
                   kernel: BaseKernel = None,
@@ -106,15 +106,8 @@ def Stokes_number(data_dust: 'SarracenDataFrame',
     x_dust_data = data_dust[x_dust].values
     y_dust_data = data_dust[y_dust].values
     z_dust_data = data_dust[z_dust].values
-    h_dust_data = data_dust['h'].values
-    vx_dust_data = data_dust[vx_dust].values
-    vy_dust_data = data_dust[vy_dust].values
-    vz_dust_data = data_dust[vz_dust].values
     rho_dust_data = _get_density(data_dust)
 
-    x_gas_data = data_gas[x_gas].values
-    y_gas_data = data_gas[y_gas].values
-    z_gas_data = data_gas[z_gas].values
     h_gas_data = data_gas['h'].values
     vx_gas_data = data_gas[vx_gas].values
     vy_gas_data = data_gas[vy_gas].values
@@ -122,11 +115,11 @@ def Stokes_number(data_dust: 'SarracenDataFrame',
     rho_gas_data = _get_density(data_gas)
 
     # Combine coordinates
-    gas_positions = np.vstack((x_gas_data, y_gas_data, z_gas_data)).T
-    dust_positions = np.vstack((x_dust_data, y_dust_data, z_dust_data)).T
+    gas_positions = data_gas[[x_gas, y_gas, z_gas]].values
+    dust_positions = data_dust[[x_dust, y_dust, z_dust]].values
 
-    gas_velocity = np.vstack((vx_gas_data, vy_gas_data, vz_gas_data)).T
-    dust_velocity = np.vstack((vx_dust_data, vy_dust_data, vz_dust_data)).T
+    gas_velocity = data_gas[[vx_gas,vy_gas,vz_gas]].values
+    dust_velocity = data_dust[[vx_dust, vy_dust, vz_dust]].values
 
     tree = KDTree(gas_positions, leaf_size=10)
 
@@ -154,9 +147,7 @@ def Stokes_number(data_dust: 'SarracenDataFrame',
         vz_neighb = 0    
         neighbor_rho = 0
 
-        rho_dust = rho_dust_data[ind]
         r_dust = dust_positions[ind]
-        v_dust = dust_velocity[ind]
 
         for j in array:
             rho_gas = rho_gas_data[j]
