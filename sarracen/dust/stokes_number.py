@@ -172,8 +172,11 @@ def _get_density(data: 'SarracenDataFrame') -> np.ndarray:  # noqa: F821
 
     return data[data.rhocol].to_numpy()
 
-def stoppingtime(rho_dust, rho_gas, v_gas, v_dust, rho_grain, grain_size, gamma, c_s):
-    return np.sqrt(np.pi * gamma * 0.125) * rho_grain * grain_size / (rho_dust + rho_gas) / np.sqrt(1 + 0.0703125 * np.pi * (np.linalg.norm(v_gas - v_dust))**2 / c_s**2)
+def stoppingtime(rho_dust, rho_gas, v_gas, v_dust,
+                 rho_grain, grain_size, gamma, c_s):
+    return np.sqrt(np.pi * gamma * 0.125) * rho_grain * grain_size / \
+           (rho_dust + rho_gas) / np.sqrt(1 + 0.0703125 * np.pi * 
+           (np.linalg.norm(v_gas - v_dust))**2 / c_s**2)
 
 def Stokes_number(data_dust: 'SarracenDataFrame',
                   data_gas: 'SarracenDataFrame',
@@ -208,7 +211,6 @@ def Stokes_number(data_dust: 'SarracenDataFrame',
     _verify_columns(data_gas, [x_gas, y_gas, z_gas, 'h',
                                vx_gas, vy_gas, vz_gas])
 
-    x_dust_data = data_dust[x_dust].values
     rho_dust_data = _get_density(data_dust)
 
     h_gas_data = data_gas['h'].values
@@ -229,14 +231,16 @@ def Stokes_number(data_dust: 'SarracenDataFrame',
     neighbours = tree.query_radius(dust_positions, r=2 * h_gas_data)
 
     # Initialize structure to hold gas neighbours of each dust particle
-    dust_neighbours = [np.array([], dtype=np.int64) for _ in range(len(dust_positions))]
+    dust_neighbours = [np.array([], dtype=np.int64) 
+                       for _ in range(len(dust_positions))]
 
     # Loop over each gas-dust neighbour pair
     for gas_particle, gas_neighbours in enumerate(neighbours):
         for dust_neighbour in gas_neighbours:
-            dust_neighbours[dust_neighbour] = np.append(dust_neighbours[dust_neighbour], gas_particle)
+            dust_neighbours[dust_neighbour] = np.append(
+                dust_neighbours[dust_neighbour], gas_particle)
 
-    dust_number = len(x_dust_data)
+    dust_number = len(data_dust)
     rhog_on_dust = np.zeros(dust_number)
     vx_on_dust = np.zeros(dust_number)
     vy_on_dust = np.zeros(dust_number)
@@ -273,8 +277,10 @@ def Stokes_number(data_dust: 'SarracenDataFrame',
 
     gas_velocity_on_dust = np.vstack((vx_on_dust, vy_on_dust, vz_on_dust)).T
 
-    tstop = stoppingtime(rho_dust_data, rhog_on_dust, gas_velocity_on_dust, dust_velocity, rho_grain, grain_size, gamma, c_s)
-    stokes_number = tstop * c_s * rhog_on_dust * (1/3) / data_gas.params['hfact'] * data_gas.params['mass']**(1/3)
+    tstop = stoppingtime(rho_dust_data, rhog_on_dust, gas_velocity_on_dust,
+                         dust_velocity, rho_grain, grain_size, gamma, c_s)
+    stokes_number = tstop * c_s * rhog_on_dust * (1/3) / \
+        data_gas.params['hfact'] * data_gas.params['mass']**(1/3)
 
     return stokes_number
 
