@@ -199,11 +199,14 @@ def Stokes_number(data_dust: 'SarracenDataFrame',
 
     x_dust, y_dust, z_dust = _default_xyz(data_dust, x_dust, y_dust, z_dust)
     x_gas, y_gas, z_gas = _default_xyz(data_gas, x_gas, y_gas, z_gas)
-    vx_dust, vy_dust, vz_dust = _default_vxyz(data_dust, vx_dust, vy_dust, vz_dust)
+    vx_dust, vy_dust, vz_dust = _default_vxyz(data_dust, vx_dust,
+                                              vy_dust, vz_dust)
     vx_gas, vy_gas, vz_gas = _default_vxyz(data_gas, vx_gas, vy_gas, vz_gas)
 
-    _verify_columns(data_dust, [x_dust, y_dust, z_dust, 'h', vx_dust, vy_dust, vz_dust])
-    _verify_columns(data_gas, [x_gas, y_gas, z_gas, 'h', vx_gas, vy_gas, vz_gas])
+    _verify_columns(data_dust, [x_dust, y_dust, z_dust, 'h',
+                                vx_dust, vy_dust, vz_dust])
+    _verify_columns(data_gas, [x_gas, y_gas, z_gas, 'h',
+                               vx_gas, vy_gas, vz_gas])
 
     x_dust_data = data_dust[x_dust].values
     rho_dust_data = _get_density(data_dust)
