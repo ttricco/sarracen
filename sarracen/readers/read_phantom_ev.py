@@ -97,4 +97,3 @@ def read_phantom_ev(filename: str) -> pd.DataFrame:
             data.append(line)
 
     return pd.DataFrame(data, columns=labels)
-py
