@@ -148,8 +148,7 @@ def _verify_columns(data: 'SarracenDataFrame',  # noqa: F821
     Raises
     ------
     KeyError
-        If `target`, `x`, `y`, or smoothing length columns do
-        not exist in `data`.
+        If a label in columns does not exist in `data`.
     """
     for column_label in columns:
         if column_label not in data.columns:
@@ -200,17 +199,20 @@ def Stokes_number(data_dust: 'SarracenDataFrame',
     _check_dimension(data_dust, dim)
     _check_dimension(data_gas, dim)
 
+    # Getting default values
     x_dust, y_dust, z_dust = _default_xyz(data_dust, x_dust, y_dust, z_dust)
     x_gas, y_gas, z_gas = _default_xyz(data_gas, x_gas, y_gas, z_gas)
     vx_dust, vy_dust, vz_dust = _default_vxyz(data_dust, vx_dust,
                                               vy_dust, vz_dust)
     vx_gas, vy_gas, vz_gas = _default_vxyz(data_gas, vx_gas, vy_gas, vz_gas)
 
+    # Ensuring all required columns exist in their respective dataframes
     _verify_columns(data_dust, [x_dust, y_dust, z_dust, 'h',
                                 vx_dust, vy_dust, vz_dust])
     _verify_columns(data_gas, [x_gas, y_gas, z_gas, 'h',
                                vx_gas, vy_gas, vz_gas])
 
+    # Getting specific dataframe columns as lists
     rho_dust_data = _get_density(data_dust)
 
     h_gas_data = data_gas['h'].values
@@ -219,26 +221,32 @@ def Stokes_number(data_dust: 'SarracenDataFrame',
     vz_gas_data = data_gas[vz_gas].values
     rho_gas_data = _get_density(data_gas)
 
-    # Combine coordinates
+    # Getting gas and dust coordinates
     gas_positions = data_gas[[x_gas, y_gas, z_gas]].values
     dust_positions = data_dust[[x_dust, y_dust, z_dust]].values
 
-    dust_velocity = data_dust[[vx_dust, vy_dust, vz_dust]].values
+    # Getting dust velocities
+    dust_velocities = data_dust[[vx_dust, vy_dust, vz_dust]].values
 
-    tree = KDTree(gas_positions, leaf_size=10)
+    # Creating a tree for gas positions
+    gas_tree = KDTree(gas_positions, leaf_size=10)
 
-    # Search using gas particle positions and smoothing lengths
-    neighbours = tree.query_radius(dust_positions, r=2 * h_gas_data)
+    # Search for dust particles that are neighbours of each gas particle.
+    # "all_gas_neighbours" is an ndarray of size len(gas_positions).
+    # Each element of "all_gas_neighbours" is an integer array of indices of 
+    # "dust_positions" that are neighbours of the corresponding gas particle.
+    all_gas_neighbours = gas_tree.query_radius(dust_positions, r=2*h_gas_data)
 
-    # Initialize structure to hold gas neighbours of each dust particle
-    dust_neighbours = [np.array([], dtype=np.int64) 
-                       for _ in range(len(dust_positions))]
+    # Initialize structure to hold the list of gas particles that 
+    # each dust particle is a neighbour of
+    all_dust_neighbours = [np.array([], dtype=np.int64) 
+                           for _ in range(len(dust_positions))]
 
     # Loop over each gas-dust neighbour pair
-    for gas_particle, gas_neighbours in enumerate(neighbours):
-        for dust_neighbour in gas_neighbours:
-            dust_neighbours[dust_neighbour] = np.append(
-                dust_neighbours[dust_neighbour], gas_particle)
+    for gas_particle, gas_particle_neighbours in enumerate(all_gas_neighbours):
+        for dust_particle in gas_particle_neighbours:
+            all_dust_neighbours[dust_particle] = np.append(
+                all_dust_neighbours[dust_particle], gas_particle)
 
     dust_number = len(data_dust)
     rhog_on_dust = np.zeros(dust_number)
@@ -246,7 +254,7 @@ def Stokes_number(data_dust: 'SarracenDataFrame',
     vy_on_dust = np.zeros(dust_number)
     vz_on_dust = np.zeros(dust_number)
 
-    for ind, array in enumerate(dust_neighbours):
+    for ind, array in enumerate(all_dust_neighbours):
         vx_neighb = 0
         vy_neighb = 0
         vz_neighb = 0    
@@ -278,7 +286,7 @@ def Stokes_number(data_dust: 'SarracenDataFrame',
     gas_velocity_on_dust = np.vstack((vx_on_dust, vy_on_dust, vz_on_dust)).T
 
     tstop = stoppingtime(rho_dust_data, rhog_on_dust, gas_velocity_on_dust,
-                         dust_velocity, rho_grain, grain_size, gamma, c_s)
+                         dust_velocities, rho_grain, grain_size, gamma, c_s)
     stokes_number = tstop * c_s * rhog_on_dust * (1/3) / \
         data_gas.params['hfact'] * data_gas.params['mass']**(1/3)
 
@@ -288,13 +296,13 @@ def calc_stokes_number(data_gas,
                        rho_dust_data,
                        rhog_on_dust, 
                        gas_velocity_on_dust,
-                       dust_velocity,
+                       dust_velocities,
                        rho_grain,
                        grain_size,
                        gamma,
                        c_s):
     tstop = stoppingtime(rho_dust_data, rhog_on_dust, gas_velocity_on_dust,
-                         dust_velocity, rho_grain, grain_size, gamma, c_s)
+                         dust_velocities, rho_grain, grain_size, gamma, c_s)
     stokes_number = tstop * c_s * rhog_on_dust * (1/3) / \
                     data_gas.params['hfact'] * data_gas.params['mass']**(1/3)
 
