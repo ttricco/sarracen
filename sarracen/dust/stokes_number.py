@@ -255,33 +255,16 @@ def Stokes_number(data_dust: 'SarracenDataFrame',
     vz_on_dust = np.zeros(dust_number)
 
     for ind, array in enumerate(all_dust_neighbours):
-        vx_neighb = 0
-        vy_neighb = 0
-        vz_neighb = 0    
-        neighbor_rho = 0
-
         r_dust = dust_positions[ind]
 
         for j in array:
-            rho_gas = rho_gas_data[j]
-            r_gas = gas_positions[j]
-            h_gas = h_gas_data[j]
-            vx_gas = vx_gas_data[j]
-            vy_gas = vy_gas_data[j]
-            vz_gas = vz_gas_data[j]
-
-            q = np.linalg.norm(r_gas - r_dust) / h_gas
+            q = np.linalg.norm(gas_positions[j] - r_dust) / h_gas_data[j]
             normalized_weight = kernel.w(q, dim)
 
-            neighbor_rho += rho_gas * normalized_weight
-            vx_neighb += vx_gas * normalized_weight
-            vy_neighb += vy_gas * normalized_weight
-            vz_neighb += vz_gas * normalized_weight
-
-        rhog_on_dust[ind] = neighbor_rho 
-        vx_on_dust[ind] = vx_neighb
-        vy_on_dust[ind] = vy_neighb
-        vz_on_dust[ind] = vz_neighb
+            rhog_on_dust[ind] += rho_gas_data[j] * normalized_weight
+            vx_on_dust[ind] += vx_gas_data[j] * normalized_weight
+            vy_on_dust[ind] += vy_gas_data[j] * normalized_weight
+            vz_on_dust[ind] += vz_gas_data[j] * normalized_weight
 
     gas_velocity_on_dust = np.vstack((vx_on_dust, vy_on_dust, vz_on_dust)).T
 
