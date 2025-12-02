@@ -255,6 +255,7 @@ def Stokes_number(data_dust: 'SarracenDataFrame',
     vy_on_dust = np.zeros(dust_number)
     vz_on_dust = np.zeros(dust_number)
 
+    # Calculating the density and velocity from gas particles on dust particles
     for dust_particle_index, dust_particle_neighbours in enumerate(all_dust_neighbours):
         r_dust = dust_positions[dust_particle_index]
 
@@ -264,13 +265,13 @@ def Stokes_number(data_dust: 'SarracenDataFrame',
             normalized_weight = kernel.w(q, dim)
 
             rho_gas_on_dust[dust_particle_index] += \
-                (rho_gas_data[gas_particle_index] * normalized_weight)
+                rho_gas_data[gas_particle_index] * normalized_weight
             vx_on_dust[dust_particle_index] += \
-                (vx_gas_data[gas_particle_index] * normalized_weight)
+                vx_gas_data[gas_particle_index] * normalized_weight
             vy_on_dust[dust_particle_index] += \
-                (vy_gas_data[gas_particle_index] * normalized_weight)
+                vy_gas_data[gas_particle_index] * normalized_weight
             vz_on_dust[dust_particle_index] += \
-                (vz_gas_data[gas_particle_index] * normalized_weight)
+                vz_gas_data[gas_particle_index] * normalized_weight
 
     gas_velocity_on_dust = np.vstack((vx_on_dust, vy_on_dust, vz_on_dust)).T
 
@@ -278,21 +279,5 @@ def Stokes_number(data_dust: 'SarracenDataFrame',
                          dust_velocities, rho_grain, grain_size, gamma, c_s)
     stokes_number = tstop * c_s * rho_gas_on_dust * (1/3) / \
         data_gas.params['hfact'] * data_gas.params['mass']**(1/3)
-
-    return stokes_number
-
-def calc_stokes_number(data_gas,
-                       rho_dust_data,
-                       rho_gas_on_dust, 
-                       gas_velocity_on_dust,
-                       dust_velocities,
-                       rho_grain,
-                       grain_size,
-                       gamma,
-                       c_s):
-    tstop = stoppingtime(rho_dust_data, rho_gas_on_dust, gas_velocity_on_dust,
-                         dust_velocities, rho_grain, grain_size, gamma, c_s)
-    stokes_number = tstop * c_s * rho_gas_on_dust * (1/3) / \
-                    data_gas.params['hfact'] * data_gas.params['mass']**(1/3)
 
     return stokes_number
