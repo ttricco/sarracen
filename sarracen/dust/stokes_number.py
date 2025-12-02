@@ -243,10 +243,10 @@ def Stokes_number(data_dust: 'SarracenDataFrame',
                            for _ in range(len(dust_positions))]
 
     # Loop over each gas-dust neighbour pair
-    for gas_particle, gas_particle_neighbours in enumerate(all_gas_neighbours):
-        for dust_particle in gas_particle_neighbours:
-            all_dust_neighbours[dust_particle] = np.append(
-                all_dust_neighbours[dust_particle], gas_particle)
+    for gas_particle_index, gas_particle_neighbours in enumerate(all_gas_neighbours):
+        for dust_particle_index in gas_particle_neighbours:
+            all_dust_neighbours[dust_particle_index] = np.append(
+                all_dust_neighbours[dust_particle_index], gas_particle_index)
 
     dust_number = len(data_dust)
     rhog_on_dust = np.zeros(dust_number)
@@ -254,17 +254,17 @@ def Stokes_number(data_dust: 'SarracenDataFrame',
     vy_on_dust = np.zeros(dust_number)
     vz_on_dust = np.zeros(dust_number)
 
-    for ind, array in enumerate(all_dust_neighbours):
-        r_dust = dust_positions[ind]
+    for dust_particle_index, array in enumerate(all_dust_neighbours):
+        r_dust = dust_positions[dust_particle_index]
 
         for j in array:
             q = np.linalg.norm(gas_positions[j] - r_dust) / h_gas_data[j]
             normalized_weight = kernel.w(q, dim)
 
-            rhog_on_dust[ind] += rho_gas_data[j] * normalized_weight
-            vx_on_dust[ind] += vx_gas_data[j] * normalized_weight
-            vy_on_dust[ind] += vy_gas_data[j] * normalized_weight
-            vz_on_dust[ind] += vz_gas_data[j] * normalized_weight
+            rhog_on_dust[dust_particle_index] += rho_gas_data[j] * normalized_weight
+            vx_on_dust[dust_particle_index] += vx_gas_data[j] * normalized_weight
+            vy_on_dust[dust_particle_index] += vy_gas_data[j] * normalized_weight
+            vz_on_dust[dust_particle_index] += vz_gas_data[j] * normalized_weight
 
     gas_velocity_on_dust = np.vstack((vx_on_dust, vy_on_dust, vz_on_dust)).T
 
