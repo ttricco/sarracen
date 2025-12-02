@@ -377,7 +377,7 @@ def _write_array_blocks(data: SarracenDataFrame,
     for sdf in sdf_list:
         nvars = np.array([_get_last_index(sdf)], dtype=np.int64)
         dtype_tags = []
-        used = set()
+        used = set()  # avoid def_int, def_real duplicates
 
         for dtype in dtypes:
             tags = _get_array_tags(sdf, dtype) if dtype not in used else []
@@ -390,18 +390,21 @@ def _write_array_blocks(data: SarracenDataFrame,
                               + len(counts) * counts.dtype.itemsize],
                              dtype=np.int32)
 
-        file += (write_tag.tobytes() + nvars.tobytes() + counts.tobytes()
-                 + write_tag.tobytes())
+        # A mix of int64 and int32, so custom write
+        file += write_tag.tobytes()
+        file += nvars.tobytes()
+        file += counts.tobytes()
+        file += write_tag.tobytes()
 
         sdf_dtype_info.append((sdf, dtype_tags))
 
     for sdf, dtype_tags in sdf_dtype_info:
         for dtype, tags in dtype_tags:
-            if tags:
-                for tag in tags:
-                    file += _write_fortran_block(list(map(ord, tag.ljust(16))),
-                                                 dtype=np.uint8)
-                    file += _write_fortran_block(list(sdf[tag]), dtype)
+            for tag in tags:
+                base_tag = _rename_duplicate(tag).ljust(16)
+                file += _write_fortran_block(list(map(ord, base_tag)),
+                                             dtype=np.uint8)
+                file +=  _write_fortran_block(list(sdf[tag]), dtype)
     return file
 
 
