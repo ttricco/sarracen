@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from scipy.interpolate import griddata
 from sklearn.neighbors import KDTree
+from ..kernels.base_kernel import BaseKernel
 from ..sarracen_dataframe import SarracenDataFrame
 
 from typing import Union, Tuple, Literal
@@ -249,44 +250,49 @@ def Stokes_number(data_dust: 'SarracenDataFrame',
                 all_dust_neighbours[dust_particle_index], gas_particle_index)
 
     dust_number = len(data_dust)
-    rhog_on_dust = np.zeros(dust_number)
+    rho_gas_on_dust = np.zeros(dust_number)
     vx_on_dust = np.zeros(dust_number)
     vy_on_dust = np.zeros(dust_number)
     vz_on_dust = np.zeros(dust_number)
 
-    for dust_particle_index, array in enumerate(all_dust_neighbours):
+    for dust_particle_index, dust_particle_neighbours in enumerate(all_dust_neighbours):
         r_dust = dust_positions[dust_particle_index]
 
-        for j in array:
-            q = np.linalg.norm(gas_positions[j] - r_dust) / h_gas_data[j]
+        for gas_particle_index in dust_particle_neighbours:
+            q = (np.linalg.norm(gas_positions[gas_particle_index] - r_dust) / 
+                 h_gas_data[gas_particle_index])
             normalized_weight = kernel.w(q, dim)
 
-            rhog_on_dust[dust_particle_index] += rho_gas_data[j] * normalized_weight
-            vx_on_dust[dust_particle_index] += vx_gas_data[j] * normalized_weight
-            vy_on_dust[dust_particle_index] += vy_gas_data[j] * normalized_weight
-            vz_on_dust[dust_particle_index] += vz_gas_data[j] * normalized_weight
+            rho_gas_on_dust[dust_particle_index] += \
+                (rho_gas_data[gas_particle_index] * normalized_weight)
+            vx_on_dust[dust_particle_index] += \
+                (vx_gas_data[gas_particle_index] * normalized_weight)
+            vy_on_dust[dust_particle_index] += \
+                (vy_gas_data[gas_particle_index] * normalized_weight)
+            vz_on_dust[dust_particle_index] += \
+                (vz_gas_data[gas_particle_index] * normalized_weight)
 
     gas_velocity_on_dust = np.vstack((vx_on_dust, vy_on_dust, vz_on_dust)).T
 
-    tstop = stoppingtime(rho_dust_data, rhog_on_dust, gas_velocity_on_dust,
+    tstop = stoppingtime(rho_dust_data, rho_gas_on_dust, gas_velocity_on_dust,
                          dust_velocities, rho_grain, grain_size, gamma, c_s)
-    stokes_number = tstop * c_s * rhog_on_dust * (1/3) / \
+    stokes_number = tstop * c_s * rho_gas_on_dust * (1/3) / \
         data_gas.params['hfact'] * data_gas.params['mass']**(1/3)
 
     return stokes_number
 
 def calc_stokes_number(data_gas,
                        rho_dust_data,
-                       rhog_on_dust, 
+                       rho_gas_on_dust, 
                        gas_velocity_on_dust,
                        dust_velocities,
                        rho_grain,
                        grain_size,
                        gamma,
                        c_s):
-    tstop = stoppingtime(rho_dust_data, rhog_on_dust, gas_velocity_on_dust,
+    tstop = stoppingtime(rho_dust_data, rho_gas_on_dust, gas_velocity_on_dust,
                          dust_velocities, rho_grain, grain_size, gamma, c_s)
-    stokes_number = tstop * c_s * rhog_on_dust * (1/3) / \
+    stokes_number = tstop * c_s * rho_gas_on_dust * (1/3) / \
                     data_gas.params['hfact'] * data_gas.params['mass']**(1/3)
 
     return stokes_number
