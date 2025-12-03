@@ -172,6 +172,11 @@ def _get_density(data: 'SarracenDataFrame') -> np.ndarray:  # noqa: F821
 
     return data[data.rhocol].to_numpy()
 
+def getting_gas_neighbours(gas_positions, dust_positions, h_gas_data):
+    gas_tree = KDTree(gas_positions, leaf_size=10)
+    all_gas_neighbours = gas_tree.query_radius(dust_positions, r=2*h_gas_data)
+    return all_gas_neighbours
+
 def stoppingtime(rho_dust, rho_gas, v_gas, v_dust,
                  rho_grain, grain_size, gamma, c_s):
     return np.sqrt(np.pi * gamma * 0.125) * rho_grain * grain_size / \
