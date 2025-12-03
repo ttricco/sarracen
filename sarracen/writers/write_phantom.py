@@ -124,6 +124,7 @@ def _validate_ntypes(sdf: SarracenDataFrame,
         ntypes = 8
 
     params['ntypes'] = np.int32(ntypes)
+    params['ntypes_2'] = np.int64(ntypes)
 
     return params
 
@@ -401,8 +402,17 @@ def _write_array_blocks(data: SarracenDataFrame,
     for sdf, dtype_tags in sdf_dtype_info:
         for dtype, tags in dtype_tags:
             for tag in tags:
-                base_tag = _rename_duplicate(tag).ljust(16)
-                file += _write_fortran_block(list(map(ord, base_tag)),
+                write_tag = tag
+                if write_tag == sdf.xcol:
+                    write_tag = 'x'
+                if write_tag == sdf.ycol:
+                    write_tag = 'y'
+                if write_tag == sdf.zcol:
+                    write_tag = 'z'
+                if write_tag == sdf.hcol:
+                    write_tag = 'h'
+                write_tag = _rename_duplicate(write_tag).ljust(16)
+                file += _write_fortran_block(list(map(ord, write_tag)),
                                              dtype=np.uint8)
                 file +=  _write_fortran_block(list(sdf[tag]), dtype)
     return file
