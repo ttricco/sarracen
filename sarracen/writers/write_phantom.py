@@ -1,6 +1,7 @@
 from typing import Dict, List, Union, Type
 import numpy as np
 import re
+import warnings
 
 from ..sarracen_dataframe import SarracenDataFrame
 
@@ -56,6 +57,46 @@ def _write_capture_pattern(def_int: Type[np.generic],
     capture_pattern += bytearray(write_tag.tobytes())
 
     return capture_pattern
+
+
+def _check_for_essential_data(sdf: SarracenDataFrame) -> None:
+    """ Check for missing essential columns or params."""
+
+    if sdf.xcol is None:
+        raise ValueError("No x positions found in particle data.")
+    if sdf.ycol is None:
+        raise ValueError("No y positions found in particle data.")
+    if sdf.zcol is None:
+        raise ValueError("No z positions found in particle data.")
+    if sdf.hcol is None:
+        raise ValueError("No smoothing lengths found in particle data.")
+
+    units = ['udist', 'umass', 'utime', 'umagfd']
+    if any(key not in sdf.params for key in units):
+        msg = ("params is missing 'udist', 'umass', 'utime' and/or 'umagfd'. "
+               "Phantom will assume default units.")
+        warnings.warn(msg, UserWarning, stacklevel=3)
+
+    ieos = sdf.params.get('ieos')
+
+    if ieos == 1:
+        if 'RK2' not in sdf.params:
+            raise ValueError("'RK2' is required in params for 'ieos'==1")
+
+    if ieos == 2:
+        if 'gamma' not in sdf.params:
+            raise ValueError("'gamma' is required in params for 'ieos'==2")
+
+    if ieos == 3:
+        # Phantom seems to run ok with this, but then assumes cs_min=0
+        if 'cs_min' not in sdf.params:
+            msg = ("'cs_min' not set in params even though 'ieos'==3.")
+            warnings.warn(msg, UserWarning, stacklevel=3)
+        # essential keys
+        keys = ['RK2', 'qfacdisc']
+        if any(key not in sdf.params for key in keys):
+            msg = ("'RK2' and 'qfacdisc' are required in params for 'ieos'=3")
+            raise ValueError(msg)
 
 
 def _remove_invalid_keys(params: Dict[str, np.generic]) -> Dict[str,
@@ -402,15 +443,11 @@ def _write_array_blocks(data: SarracenDataFrame,
     for sdf, dtype_tags in sdf_dtype_info:
         for dtype, tags in dtype_tags:
             for tag in tags:
-                write_tag = tag
-                if write_tag == sdf.xcol:
-                    write_tag = 'x'
-                if write_tag == sdf.ycol:
-                    write_tag = 'y'
-                if write_tag == sdf.zcol:
-                    write_tag = 'z'
-                if write_tag == sdf.hcol:
-                    write_tag = 'h'
+                # Phantom needs specifically 'x', 'y', etc tags
+                # irregardless of what the xcol, ycol, etc are set to
+                mapping = {sdf.xcol: 'x', sdf.ycol: 'y',
+                           sdf.zcol: 'z', sdf.hcol: 'h'}
+                write_tag = mapping.get(tag, tag)
                 write_tag = _rename_duplicate(write_tag).ljust(16)
                 file += _write_fortran_block(list(map(ord, write_tag)),
                                              dtype=np.uint8)
@@ -429,6 +466,8 @@ def write_phantom(filename: str,
 
     if data.params is None:
         raise ValueError("Parameters are not set in this SarracenDataFrame.")
+
+    _check_for_essential_data(data)
 
     def_int = data.params.get('def_int_dtype', np.int32)
     def_real = data.params.get('def_real_dtype', np.float64)
