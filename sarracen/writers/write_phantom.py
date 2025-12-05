@@ -1,4 +1,4 @@
-from typing import Dict, List, Union, Type
+from typing import Dict, List, Union, Type, Tuple
 import numpy as np
 import re
 import warnings
@@ -18,7 +18,7 @@ def _write_fortran_block(value: List[np.generic],
 def _write_file_identifier(sdf: SarracenDataFrame) -> bytearray:
     """ Write the file identifier.
 
-    The file identifier is a 100 character string that encodes the various
+    The file identifier is a 100-character string that encodes the various
     options that were used.
 
     First character is either 'F' or 'S', corresponding to Full or Small dump.
@@ -62,14 +62,19 @@ def _write_capture_pattern(def_int: Type[np.generic],
 def _check_for_essential_data(sdf: SarracenDataFrame) -> None:
     """ Check for missing essential columns or params."""
 
-    if sdf.xcol is None:
-        raise ValueError("No x positions found in particle data.")
-    if sdf.ycol is None:
-        raise ValueError("No y positions found in particle data.")
-    if sdf.zcol is None:
-        raise ValueError("No z positions found in particle data.")
-    if sdf.hcol is None:
-        raise ValueError("No smoothing lengths found in particle data.")
+    required_cols = [sdf.xcol, sdf.ycol, sdf.zcol, sdf.hcol]
+    if any(col is None for col in required_cols):
+        missing: List[str] = []
+        if sdf.xcol is None:
+            missing.append("x")
+        if sdf.ycol is None:
+            missing.append("y")
+        if sdf.zcol is None:
+            missing.append("z")
+        if sdf.hcol is None:
+            missing.append("h")
+
+        raise ValueError(f"Missing required columns: {', '.join(missing)}")
 
     units = ['udist', 'umass', 'utime', 'umagfd']
     if any(key not in sdf.params for key in units):
@@ -108,7 +113,8 @@ def _remove_invalid_keys(params: Dict[str, np.generic]) -> Dict[str,
     return {k: v for k, v in params.items() if k not in exclude}
 
 
-def _standardize_dtypes(params: Dict[str, np.generic]) -> Dict[str, np.generic]:
+def _standardize_dtypes(params: Dict[str, np.generic]) -> Dict[str,
+                                                               np.generic]:
     """ Convert all params to numpy dtypes."""
 
     for k, v in params.items():
@@ -214,7 +220,7 @@ def _validate_particle_counts(sdf: SarracenDataFrame,
     # set default values for int64 npartoftypes if not set
     default = {f'_{i}': 0 for i in range(ntypes + 1, 2 * ntypes + 1)}
     default[f'_{ntypes + 1}'] = n_gas
-    default[f'_{ntypes + idust}'] = n_dust
+    default[f'_{ntypes + int(idust)}'] = n_dust
     for i, value in default.items():
         key = f'npartoftype{i}'
         if key not in params:
@@ -231,7 +237,7 @@ def _validate_particle_counts(sdf: SarracenDataFrame,
     key = 'npartoftype_' + str(ntypes + 1)
     if params[key] != n_gas:
         params[key] = type(params[key])(n_gas)
-    key = 'npartoftype_' + str(ntypes + idust)
+    key = 'npartoftype_' + str(ntypes + int(idust))
     if params[key] != n_dust:
         params[key] = type(params[key])(n_dust)
 
@@ -249,7 +255,7 @@ def _validate_particle_masses(sdf: SarracenDataFrame,
     elif 'massoftype' in params:
         m_gas = params['massoftype']
     elif sdf.mcol is not None and 'itype' not in sdf.columns:
-       m_gas = sdf[sdf.mcol].iloc[0]
+        m_gas = sdf[sdf.mcol].iloc[0]
     elif sdf.mcol is not None and 'itype' in sdf.columns:
         m_gas = sdf[sdf.itype == 1][sdf.mcol].iloc[0]
     else:
@@ -314,13 +320,16 @@ def _write_global_header_array(tags: List[str],
     return file
 
 
-def sort_key(k):
+def sort_key(k: str) -> Tuple[str, int]:
     """
     Returns (basename, number) where basename is the part before any
     numeric suffix, and number is an integer used for sorting.
     Keys without numeric suffix get number = 0.
     """
     m = re.match(r"^(.*?)(?:_(\d+))?$", k)
+    if m is None:
+        raise ValueError(f"Invalid key format: {k!r}")
+
     base = m.group(1)
     num = int(m.group(2)) if m.group(2) else 0
     return (base, num)
@@ -401,7 +410,7 @@ def _get_last_index(sdf: SarracenDataFrame) -> int:
     return 1 if sdf.index[-1] == 0 else sdf.shape[0]
 
 
-def _write_array_blocks(data: SarracenDataFrame,
+def _write_array_blocks(sdf: SarracenDataFrame,
                         def_int: Type[np.generic],
                         def_real: Type[np.generic],
                         sinks: Union[SarracenDataFrame,
@@ -413,7 +422,7 @@ def _write_array_blocks(data: SarracenDataFrame,
     nblocks = 2 if sinks is not None else 1
     file = _write_fortran_block([np.int32(nblocks)], np.int32)
 
-    sdf_list = [data] if sinks is None else [data, sinks]
+    sdf_list = [sdf] if sinks is None else [sdf, sinks]
     sdf_dtype_info = []
 
     for sdf in sdf_list:
@@ -451,31 +460,124 @@ def _write_array_blocks(data: SarracenDataFrame,
                 write_tag = _rename_duplicate(write_tag).ljust(16)
                 file += _write_fortran_block(list(map(ord, write_tag)),
                                              dtype=np.uint8)
-                file +=  _write_fortran_block(list(sdf[tag]), dtype)
+                file += _write_fortran_block(list(sdf[tag]), dtype)
     return file
 
 
 def write_phantom(filename: str,
-                  data: SarracenDataFrame,
+                  sdf: SarracenDataFrame,
                   sinks: Union[SarracenDataFrame, None] = None) -> None:
-    if data.isnull().values.any():
+    """
+    Write a Phantom dump file from a SarracenDataFrame.
+
+    Both particle data and global header parameters stored in the sdf.params
+    dict are written. If required Phantom parameters are missing, then Sarracen
+    will automatically infer and set critical parameters such as the number of
+    particles per particle type and the mass of each particle type.
+
+    All entries in the sdf.params dict are written to the dump file. Phantom
+    ignores parameters it does not recognise, so this is ok.
+
+    By design, Sarracen does not invent values for parameters that are absent.
+    Phantom typically warns about missing parameters and then chooses default
+    values. For example, Sarracen does not require a *'time'* entry in
+    sdf.params even though it sets the simulation time. If absent, then Phantom
+    assumes t=0.
+
+    Many parameters stored in the global header of the dump file are also
+    specified in the Phantom .in file. The equation of state is one example.
+    Phantom stores this in both the .in file and the header of the dump file
+    via *'ieos'* (which can be set through the sdf.params dict).
+
+    Parameters
+    ----------
+    filename : str
+        Path to output file.
+    sdf : SarracenDataFrame
+        The particle data to write. Must contain positions (x, y, z) and
+        smoothing lengths. Must have params dictionary set with required
+        parameters.
+    sinks : SarracenDataFrame, optional
+        Sink particle data to write. Default is None.
+
+    Raises
+    ------
+    ValueError
+        If sdf contains NaN values.
+        If sinks contains NaN values.
+        If params is not set in sdf.
+        If sdf is missing x, y, or z positions or smoothing lengths.
+        If essential params are missing for the equation of state.
+
+    Notes
+    -----
+    If *'ieos'* is set, then Sarracen checks for additional parameters required
+    for *'ieos'* = [1, 2, 3], corresponding to the isothermal, adiabatic, and
+    locally isothermal equations of state.
+
+    For periodic boundary conditions, set the domain limits using *{'xmin',
+    'xmax', 'ymin', 'ymax', 'zmin', 'zmax'}*. If absent, then Phantom assumes a
+    default periodic domain of x, y, z = [0, 1].
+
+    To set physical units, set *{'udist', 'utime', 'umass', 'umagfd'}*.
+    Otherwise, Phantom will assume default units.
+
+    Examples
+    --------
+    Sarracen works well as a utility to modify existing Phantom dumps
+    (moddump). This example shows how to use Sarracen to add a new sink
+    particle to an existing Phantom dump.
+
+    >>> import sarracen
+    >>> sdf, sdf_sinks = sarracen.read_phantom('disc_00000')
+
+    There is one existing sink particle at (0, 0, 0) with unit mass.
+
+    >>> sdf_sinks
+         x    y    z    m    h  ...   vx   vy   vz
+    0  0.0  0.0  0.0  1.0  1.0  ...  0.0  0.0  0.0
+
+    Create new sink properties and add to sinks SarracenDataFrame. Columns
+    that were not specified will be NaN, which are set to 0 using fillna()
+    in this example.
+
+    >>> new = {'x': -1, 'y': 0, 'z': 0, 'm': 9.54e-4, 'h': 0.17, 'vy': -0.316}
+    >>> sdf_sinks.loc[1] = new
+    >>> sdf_sinks.fillna(0, inplace=True)
+    >>> sdf_sinks
+         x    y    z         m     h  ...   vx     vy   vz
+    0  0.0  0.0  0.0  1.000000  1.00  ...  0.0  0.000  0.0
+    1 -1.0  0.0  0.0  0.000954  0.17  ...  0.0 -0.316  0.0
+
+    Then write the new Phantom dump file with the added sink particle.
+
+    >>> sarracen.write_phantom('my_new_disc_00000', sdf, sdf_sinks)
+
+    Note that this will copy all entries in the sdf.params dict to the new dump
+    file. This is often useful when modifying existing dump files.
+
+    See Also
+    --------
+    read_phantom : Read Phantom dump files.
+    """
+    if sdf.isnull().values.any():
         raise ValueError("particle DataFrame contains NaNs or missing values.")
 
     if sinks is not None and sinks.isnull().values.any():
         raise ValueError("sinks DataFrame contains NaNs or missing values.")
 
-    if data.params is None:
+    if sdf.params is None:
         raise ValueError("Parameters are not set in this SarracenDataFrame.")
 
-    _check_for_essential_data(data)
+    _check_for_essential_data(sdf)
 
-    def_int = data.params.get('def_int_dtype', np.int32)
-    def_real = data.params.get('def_real_dtype', np.float64)
+    def_int = sdf.params.get('def_int_dtype', np.int32)
+    def_real = sdf.params.get('def_real_dtype', np.float64)
 
     file = _write_capture_pattern(def_int, def_real)
-    file += _write_file_identifier(data)
-    file += _write_global_header(data, def_int, def_real)
-    file += _write_array_blocks(data, def_int, def_real, sinks)
+    file += _write_file_identifier(sdf)
+    file += _write_global_header(sdf, def_int, def_real)
+    file += _write_array_blocks(sdf, def_int, def_real, sinks)
 
     with open(filename, 'wb') as phantom_file:
         phantom_file.write(file)

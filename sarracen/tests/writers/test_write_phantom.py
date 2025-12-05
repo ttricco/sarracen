@@ -1,22 +1,21 @@
-from typing import Type, Union
-
 import pandas as pd
 import numpy as np
 import sarracen
 import tempfile
-import pytest
+from pytest import fixture, mark, raises
 from pandas import testing as tm
 
 from sarracen import SarracenDataFrame
 
-from sarracen.writers.write_phantom import (_standardize_dtypes,
+from sarracen.writers.write_phantom import (_check_for_essential_data,
+                                            _standardize_dtypes,
                                             _validate_ntypes,
                                             _reorder_params,
                                             _validate_particle_counts,
                                             _validate_particle_masses)
 
 
-@pytest.fixture
+@fixture
 def particles_df() -> pd.DataFrame:
     x = [0, 0, 0, 0, 1, 1, 1, 1]
     y = [0, 0, 1, 1, 0, 0, 1, 1]
@@ -28,6 +27,20 @@ def particles_df() -> pd.DataFrame:
 
     return pd.DataFrame({'x': x, 'y': y, 'z': z, 'h': h,
                          'vx': vx, 'vy': vy, 'vz': vz})
+
+
+def test_check_for_essential_data(particles_df: pd.DataFrame) -> None:
+    """ Test that essential data is present in the dataframe."""
+
+    sdf = SarracenDataFrame(particles_df)
+    sdf = sdf.drop(columns=['h'])
+    with raises(ValueError, match='columns'):
+        _check_for_essential_data(sdf)
+
+    sdf = SarracenDataFrame(particles_df)
+    sdf = sdf.drop(columns=['z'])
+    with raises(ValueError, match='columns'):
+        _check_for_essential_data(sdf)
 
 
 def test_params_dtype_standardization(particles_df: pd.DataFrame) -> None:
@@ -48,8 +61,8 @@ def test_params_dtype_standardization(particles_df: pd.DataFrame) -> None:
     assert isinstance(params['file_identifier'], str)
 
 
-@pytest.mark.parametrize("id_method", ('ntypes', 'massoftype',
-                                       'npartoftype', 'itype'))
+@mark.parametrize("id_method", ('ntypes', 'massoftype',
+                                'npartoftype', 'itype'))
 def test_validate_ntypes_12(particles_df: pd.DataFrame,
                             id_method: str) -> None:
     """ Test that number of particle types is correctly validated."""
@@ -79,10 +92,10 @@ def test_validate_ntypes_12(particles_df: pd.DataFrame,
     assert params['ntypes'] == 12
 
 
-@pytest.mark.parametrize("id_method", ('base', 'ntypes', 'massoftype',
-                                       'npartoftype', 'itype'))
+@mark.parametrize("id_method", ('base', 'ntypes', 'massoftype',
+                                'npartoftype', 'itype'))
 def test_validate_ntypes_8(particles_df: pd.DataFrame,
-                        id_method: str) -> None:
+                           id_method: str) -> None:
     """ Test that number of particle types is correctly validated."""
 
     params = {}
@@ -107,9 +120,9 @@ def test_validate_ntypes_8(particles_df: pd.DataFrame,
     assert params['ntypes'] == 8
 
 
-@pytest.mark.parametrize("dust, id_method",
-                         [(False, 'itype'), (False, 'npartoftype'),
-                          (True, 'itype'), (True, 'npartoftype')])
+@mark.parametrize("dust, id_method",
+                  [(False, 'itype'), (False, 'npartoftype'),
+                   (True, 'itype'), (True, 'npartoftype')])
 def test_validate_particle_counts(particles_df: pd.DataFrame,
                                   dust: bool,
                                   id_method: str) -> None:
@@ -193,7 +206,7 @@ def test_params_reordering(particles_df: pd.DataFrame) -> None:
     assert params['npartoftype_15'] == 3
 
 
-@pytest.mark.parametrize("id_method", ('params_mass', 'massoftype', 'mcol'))
+@mark.parametrize("id_method", ('params_mass', 'massoftype', 'mcol'))
 def test_validate_particle_mass_gas(particles_df: pd.DataFrame,
                                     id_method: bool) -> None:
     """ Test that mass of each particle type is correctly validated."""
@@ -230,7 +243,7 @@ def test_validate_particle_mass_gas(particles_df: pd.DataFrame,
     #     assert sdf.params['massoftype'] == 1e-4
 
 
-@pytest.mark.parametrize("id_method", ('massoftype', 'mcol'))
+@mark.parametrize("id_method", ('massoftype', 'mcol'))
 def test_validate_particle_mass_dust(particles_df: pd.DataFrame,
                                      id_method: bool) -> None:
     """ Test that mass of each particle type is correctly validated."""
@@ -263,7 +276,6 @@ def test_write_gas(particles_df: pd.DataFrame) -> None:
 
     params = {'massoftype': np.float64(1e-4),
               'iexternalforce': np.int32(0),
-              'ieos': np.int32(1),
               'udist': np.float64(2e-3),
               'utime': np.float64(2e-5),
               'umass': np.float64(2e-6),
@@ -316,7 +328,6 @@ def test_write_gas_and_dust(particles_df: pd.DataFrame) -> None:
               'massoftype_5': np.float64(0),
               'massoftype_7': np.float64(1e-6),
               'iexternalforce': np.int32(0),
-              'ieos': np.int32(1),
               'udist': np.float64(2e-3),
               'utime': np.float64(2e-5),
               'umass': np.float64(2e-6),
@@ -374,7 +385,6 @@ def test_write_gas_and_sink(particles_df: pd.DataFrame) -> None:
 
     params = {'massoftype': np.float64(1e-4),
               'iexternalforce': np.int32(0),
-              'ieos': np.int32(1),
               'udist': np.float64(2e-3),
               'utime': np.float64(2e-5),
               'umass': np.float64(2e-6),
