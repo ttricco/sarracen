@@ -2,6 +2,7 @@ from typing import Dict, List, Union, Type, Tuple
 import numpy as np
 import re
 import warnings
+from datetime import datetime
 
 from ..sarracen_dataframe import SarracenDataFrame
 
@@ -29,8 +30,12 @@ def _write_file_identifier(sdf: SarracenDataFrame) -> bytearray:
     """
 
     if 'file_identifier' not in sdf.params:
-        fileid = "FT:Phantom:Sarracen"
+        now = datetime.now()
+        frac = now.microsecond // 100000
+        timestamp = f"{now:%d/%m/%Y %H:%M:%S}.{frac}"
+        fileid = f"FT:Phantom:Sarracen: {timestamp}"
         sdf.params['file_identifier'] = fileid
+
     file_id = sdf.params['file_identifier'].ljust(100)
     file_id = list(map(ord, file_id))
     file_id = [np.uint8(c) for c in file_id]
