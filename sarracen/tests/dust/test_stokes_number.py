@@ -56,7 +56,7 @@ def test_getting_dust_locations_diff_size():
     assert len(dust_locations2[0]) == 0
     assert len(dust_locations2[1]) == 1
     assert len(dust_locations2[2]) == 1
-    assert len(dust_locations1[3]) == 0
+    assert len(dust_locations2[3]) == 0
     assert dust_locations2[1][0] == 0
     assert dust_locations2[2][0] == 1
 
