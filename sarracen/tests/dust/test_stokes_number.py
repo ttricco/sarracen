@@ -48,8 +48,8 @@ def test_getting_dust_locations_diff_size():
     assert len(dust_locations1[1]) == 1
     assert len(dust_locations1[2]) == 2
     assert dust_locations1[1][0] == 2
-    assert dust_locations1[2][0][0] == 0
-    assert dust_locations1[2][0][1] == 3
+    assert dust_locations1[2][0] == 0
+    assert dust_locations1[2][1] == 3
 
     dust_locations2 = getting_dust_locations(gas_positions, dust_positions, h_dust_data)
     assert len(dust_locations2) == len(sdfd)
