@@ -173,9 +173,29 @@ def _get_density(data: 'SarracenDataFrame') -> np.ndarray:  # noqa: F821
     return data[data.rhocol].to_numpy()
 
 def getting_gas_neighbours(gas_positions, dust_positions, h_gas_data):
+    # Creating a tree for gas positions
     gas_tree = KDTree(gas_positions, leaf_size=10)
+
+    # Search for dust particles that are neighbours of each gas particle.
+    # "all_gas_neighbours" is an ndarray of size len(gas_positions).
+    # Each element of "all_gas_neighbours" is an integer array of indices of 
+    # "dust_positions" that are neighbours of the corresponding gas particle.
     all_gas_neighbours = gas_tree.query_radius(dust_positions, r=2*h_gas_data)
     return all_gas_neighbours
+
+def getting_inverse_of_gas_neighbours(dust_positions, all_gas_neighbours):
+    # Initialize structure to hold the list of gas particles that 
+    # each dust particle is a neighbour of
+    all_dust_neighbours = [np.array([], dtype=np.int64) 
+                           for _ in range(len(dust_positions))]
+
+    # Loop over each gas-dust neighbour pair
+    for gas_particle_index, gas_particle_neighbours in enumerate(all_gas_neighbours):
+        for dust_particle_index in gas_particle_neighbours:
+            all_dust_neighbours[dust_particle_index] = np.append(
+                all_dust_neighbours[dust_particle_index], gas_particle_index)
+            
+    return all_dust_neighbours
 
 def stoppingtime(rho_dust, rho_gas, v_gas, v_dust,
                  rho_grain, grain_size, gamma, c_s):
@@ -200,7 +220,8 @@ def Stokes_number(data_dust: 'SarracenDataFrame',
                   z_gas: str = None,
                   vx_gas: str = None,
                   vy_gas: str = None,
-                  vz_gas: str = None):
+                  vz_gas: str = None,
+                  gamma: float = 1):
     dim = 3
     _check_dimension(data_dust, dim)
     _check_dimension(data_gas, dim)
@@ -234,25 +255,13 @@ def Stokes_number(data_dust: 'SarracenDataFrame',
     # Getting dust velocities
     dust_velocities = data_dust[[vx_dust, vy_dust, vz_dust]].values
 
-    # Creating a tree for gas positions
-    gas_tree = KDTree(gas_positions, leaf_size=10)
+    # Getting dust particles neighbouring gas particles
+    all_gas_neighbours = getting_gas_neighbours(gas_positions, dust_positions,
+                                                h_gas_data)
 
-    # Search for dust particles that are neighbours of each gas particle.
-    # "all_gas_neighbours" is an ndarray of size len(gas_positions).
-    # Each element of "all_gas_neighbours" is an integer array of indices of 
-    # "dust_positions" that are neighbours of the corresponding gas particle.
-    all_gas_neighbours = gas_tree.query_radius(dust_positions, r=2*h_gas_data)
-
-    # Initialize structure to hold the list of gas particles that 
-    # each dust particle is a neighbour of
-    all_dust_neighbours = [np.array([], dtype=np.int64) 
-                           for _ in range(len(dust_positions))]
-
-    # Loop over each gas-dust neighbour pair
-    for gas_particle_index, gas_particle_neighbours in enumerate(all_gas_neighbours):
-        for dust_particle_index in gas_particle_neighbours:
-            all_dust_neighbours[dust_particle_index] = np.append(
-                all_dust_neighbours[dust_particle_index], gas_particle_index)
+    # Getting gas particles that each dust particle is a neighbour of
+    all_dust_neighbours = getting_inverse_of_gas_neighbours(dust_positions,
+                                                            all_gas_neighbours)
 
     dust_number = len(data_dust)
     rho_gas_on_dust = np.zeros(dust_number)
