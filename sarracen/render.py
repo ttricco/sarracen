@@ -385,6 +385,18 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
             A_{pixel} = \\sum_b \\frac{m_b}{\\rho_b} A_b \\int W_{ab}(h_b) dz ,
 
     which uses the integral of the kernel along the chosen line of sight.
+
+    Exact rendering calculates the volume integral of the kernel through each
+    pixel using the method of Petkova et al (2018) [1]_. It only works for the
+    cubic spline kernel.
+
+    References
+    ----------
+    .. [1] M. A. Petkova, G. Laibe & I. A. Bonnell, "Fast and accurate Voronoi
+       density gridding from Lagrangian hydrodynamics data," J. Comput. Phys.,
+       353, 15, 300-315 (2018). `doi:10.1016/j.jcp.2017.10.024
+       <https://doi.org/10.1016/j.jcp.2017.10.024>`_
+
     """
     if data.get_dim() == 2:
         if dens_weight is None:

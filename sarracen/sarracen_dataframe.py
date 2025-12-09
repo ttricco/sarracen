@@ -79,7 +79,7 @@ class SarracenDataFrame(DataFrame):
         >>> particles = {'x': [1.0, 2.0, 3.0], 'y': [2.0, 2.0, 2.0], 'h': [3.0, 3.5, 4.0]}
         >>> sdf = sarracen.SarracenDataFrame(particles)
         >>> sdf
-            x     y     h
+              x     y     h
         0   1.0   2.0   3.0
         1   2.0   2.0   3.5
         2   3.0   2.0   4.0
@@ -89,7 +89,7 @@ class SarracenDataFrame(DataFrame):
         >>> particles = np.array([[1.0, 2.0, 3.0], [2.0, 2.0, 3.5], [3.0, 2.0, 4.0]])
         >>> sdf = sarracen.SarracenDataFrame(particles, columns=['x', 'y', 'h'])
         >>> sdf
-            x     y     h
+              x     y     h
         0   1.0   2.0   3.0
         1   2.0   2.0   3.5
         2   3.0   2.0   4.0

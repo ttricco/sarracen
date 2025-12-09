@@ -1,10 +1,11 @@
-from .readers.read_marisa import read_marisa
 from .readers.read_csv import read_csv
+from .readers.read_gasoline import read_gasoline
+from .readers.read_gradsph import read_gradsph
+from .readers.read_marisa import read_marisa
 from .readers.read_phantom import read_phantom
 from .readers.read_phantom_ev import read_phantom_ev
-from .readers.read_gradsph import read_gradsph
 from .readers.read_shamrock import read_shamrock
-from .readers.read_gasoline import read_gasoline
+from .readers.read_shamrock_vtk import read_shamrock_vtk
 
 from .writers.write_phantom import write_phantom
 
