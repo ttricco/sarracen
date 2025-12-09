@@ -306,7 +306,7 @@ def read_phantom(filename: str,
                                                         SarracenDataFrame]: ...
 @overload  # noqa: E302
 def read_phantom(filename: str,
-                 separate_types: Literal['all'],
+                 separate_types: Literal['all'] = 'all',
                  ignore_inactive: bool = True) -> Union[List[
                                                         SarracenDataFrame],
                                                         SarracenDataFrame]: ...
@@ -343,6 +343,10 @@ def read_phantom(filename: str,  # noqa: E302
     -------
     SarracenDataFrame or list of SarracenDataFrame
 
+    See Also
+    --------
+    :func:`SarracenDataFrame` : A pandas DataFrame with support for SPH data.
+
     Notes
     -----
     See the `Phantom documentation
@@ -354,13 +358,32 @@ def read_phantom(filename: str,  # noqa: E302
     By default, SPH particles are grouped into one data frame and sink
     particles into a second data frame.
 
+    >>> import sarracen
     >>> sdf, sdf_sinks = sarracen.read_phantom('dumpfile_00000')
 
     A dump file containing multiple particle types, say gas + dust + sinks,
     can be separated into their own data frames by specifying
     ``separate_types='all'``.
 
-    >>> sdf_gas, sdf_dust, sdf_sinks = sarracen.read_phantom('dumpfile_00000', separate_types='all')
+    >>> sdf_g, sdf_d, sdf_sinks = sarracen.read_phantom('dumpfile_00000',
+    ...                                                 separate_types='all')
+
+    Global values are stored in the ``params`` dictionary.
+
+    >>> sdf_g.params
+    {'nparttot': np.int32(100000),
+     'ntypes': np.int32(8),
+     'npartoftype': np.int32(100000),
+     'massoftype': np.float64(5.05e-7)
+     'time': np.float64(0.05),
+     'grainsize': np.float64(6.684491978609626e-14),
+     'graindens': np.float64(5049628.378663718),
+     'udist': np.float64(14960000000000.0)
+     'umass': np.float64(1.9891e+33),
+     'utime': np.float64(5022728.790082334),
+     ...
+    }
+
     """
     with open(filename, 'rb') as fp:
         def_int_dtype, def_real_dtype, iversion, swap_endian = \

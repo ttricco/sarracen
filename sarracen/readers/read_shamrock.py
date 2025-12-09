@@ -267,7 +267,7 @@ class ShamrockDumpReader:
 
 def read_shamrock(filename: str) -> SarracenDataFrame:
     """
-    Read a Shamrock native binary format dump file.
+    Read data from a Shamrock native binary format dump file.
 
     Parameters
     ----------

@@ -514,6 +514,10 @@ def write_phantom(filename: str,
         If sdf is missing x, y, or z positions or smoothing lengths.
         If essential params are missing for the equation of state.
 
+    See Also
+    --------
+    read_phantom : Read Phantom dump files.
+
     Notes
     -----
     If *'ieos'* is set, then Sarracen checks for additional parameters required
@@ -561,9 +565,6 @@ def write_phantom(filename: str,
     Note that this will copy all entries in the sdf.params dict to the new dump
     file. This is often useful when modifying existing dump files.
 
-    See Also
-    --------
-    read_phantom : Read Phantom dump files.
     """
     if sdf.isnull().values.any():
         raise ValueError("particle DataFrame contains NaNs or missing values.")

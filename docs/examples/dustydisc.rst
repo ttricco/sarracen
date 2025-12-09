@@ -11,6 +11,9 @@ The host star is 1 solar mass. It has two orbiting Jupiter mass planets at 10 an
 
 The star and planets are modeled using sink particles. The gas and dust modeled using two species of particles. The analysis below is after 25 orbits of the outer planet.
 
+Reading the Data
+----------------
+
 In a Jupyter notebook, or other interactive Python environment,
 
 >>> # A sample analysis of the Orszag-Tang vortex at t=0.5.
@@ -41,6 +44,9 @@ In Phantom, gas particles are ``itype=1`` and dust particles ``itype=7``. There 
 
 Sarracen supports pandas style slicing. For example, to get a SarracenDataFrame of just the gas particles, one could use ``sdf[sdf.itype==1]``.
 
+Visualization
+-------------
+
 Cross-sectional renderings of the gas and dust components of the disc are below.
 
 >>> sdf[sdf.itype == 1].render('rho', xlim=(-40, 40), ylim=(-40, 40), log_scale=True, xsec=0.0)
@@ -52,8 +58,8 @@ Cross-sectional renderings of the gas and dust components of the disc are below.
 
 .. image:: dustydisc/dustydisc-dust.png
     :width: 400
-
 Rendering sink particles can use Matplotlib's ``scatter()``, where sink particles are plotted as a scatterplot over the rendered image. Seaborn's ``scatterplot()`` is another good option.
+
 
 Sarracen's render function returns a Matplotlib Axes object (and can accept one too).
 
@@ -62,3 +68,25 @@ Sarracen's render function returns a Matplotlib Axes object (and can accept one 
 
 .. image:: dustydisc/dustydisc-gas-sinks.png
     :width: 400
+
+
+Analysis
+--------
+
+Sarracen can calculate the surface density profile of the disc.
+
+>>> import seaborn as sns
+>>>
+>>> sigma, bins = sarracen.disc.surface_density(sdf, r_out=80, retbins=True)
+>>>
+>>> ax = sns.lineplot(x=bins, y=sigma)
+>>> ax.set_yscale('log')
+
+.. image:: dustydisc/dustydisc-surface-density.png
+    :width: 450
+
+Notice the two dips at the locations at the planets.
+
+There are several more useful analysis routines in the ``disc`` module of
+Sarracen.
+
