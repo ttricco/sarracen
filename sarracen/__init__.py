@@ -19,8 +19,9 @@ from . import disc
 
 __version__ = "1.2.3"
 
-__all__ = ["read_marisa", "read_csv", "read_phantom", "read_gradsph",
-           "read_shamrock", "read_gasoline", "write_phantom",
+__all__ = ["read_csv", "read_gasoline", "read_gradsph", "read_marisa",
+           "read_phantom", "read_phantom_ev", "read_shamrock",
+           "read_shamrock_vtk", "write_phantom",
            "SarracenDataFrame", "disc",
            "interpolate_2d", "interpolate_2d_line", "interpolate_3d_proj",
            "interpolate_3d_cross", "render", "streamlines", "arrowplot"]
