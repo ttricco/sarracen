@@ -16,12 +16,13 @@ from .interpolate import interpolate_2d, interpolate_2d_line, \
 from .render import render, streamlines, arrowplot
 
 from . import disc
+from . import ptmass
 
 __version__ = "1.2.3"
 
 __all__ = ["read_csv", "read_gasoline", "read_gradsph", "read_marisa",
            "read_phantom", "read_phantom_ev", "read_shamrock",
            "read_shamrock_vtk", "write_phantom",
-           "SarracenDataFrame", "disc",
+           "SarracenDataFrame", "disc", "ptmass",
            "interpolate_2d", "interpolate_2d_line", "interpolate_3d_proj",
            "interpolate_3d_cross", "render", "streamlines", "arrowplot"]
