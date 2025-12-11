@@ -1,4 +1,4 @@
-from typing import Any, Type, Union, Callable, Tuple, Optional, Dict
+from typing import Any, Type, Union, Callable, Tuple, Optional, Dict, List
 
 from matplotlib.axes import Axes
 from matplotlib.colors import Colormap
@@ -149,7 +149,7 @@ class SarracenDataFrame(DataFrame):
         elif 'rx' in self.columns:
             self.xcol = 'rx'
         elif len(self.columns) > 0:
-            self.xcol = self.columns[0]
+            self.xcol = str(self.columns[0])
 
         # First look for 'y', then 'ry', and then default to the second column.
         if 'y' in self.columns:
@@ -157,7 +157,7 @@ class SarracenDataFrame(DataFrame):
         elif 'ry' in self.columns:
             self.ycol = 'ry'
         elif len(self.columns) > 1:
-            self.ycol = self.columns[1]
+            self.ycol = str(self.columns[1])
 
         # First look for 'z', then 'rz', and then assume data is 2-dimensional.
         if 'z' in self.columns:
@@ -191,26 +191,8 @@ class SarracenDataFrame(DataFrame):
 
         # Look for the keyword 'dustfrac' in the data.
         for column in self.columns:
-            if column.startswith('dustfrac'):
+            if isinstance(column, str) and column.startswith('dustfrac'):
                 self.dustfracscol.append(column)
-
-    def create_mass_column(self) -> None:
-        """
-        Create a new column 'm', copied from the 'massoftype' parameter.
-
-        Intended for use with Phantom data dumps.
-
-        Raises
-        ------
-        KeyError
-            If the 'massoftype' column does not exist in `params`.
-        """
-        if self.params is None or 'mass' not in self.params:
-            raise KeyError("'mass' value does not exist in this "
-                           "SarracenDataFrame.")
-
-        self['m'] = self.params['mass']
-        self.mcol = 'm'
 
     def calc_density(self) -> None:
         """
@@ -232,22 +214,31 @@ class SarracenDataFrame(DataFrame):
         Raises
         ------
         KeyError
-            If the `hcol` column does not exist, there is no `mcol` column or
-            `mass` in params, or if `hfact` does not exist in `params`.
+            If the `hcol` column does not exist or if 'hfact' is not in
+            'params'.
+        ValueError
+            If there is no particle mass data.
+
+        Notes
+        -----
+        For one-fluid dump files, this will calculate the total density (gas +
+        dust) of the particle.
         """
-        if not {self.hcol}.issubset(self.columns):
+        if self.hcol not in self.columns:
             raise KeyError('Missing smoothing length data in this '
                            'SarracenDataFrame')
+
         if self.params is None or 'hfact' not in self.params:
             raise KeyError('hfact missing from params in this '
                            'SarracenDataFrame.')
+
         if self.mcol not in self.columns and (self.params is None or
                                               'mass' not in self.params):
-            raise KeyError('Missing particle mass data in this '
-                           'SarracenDataFrame.')
+            raise ValueError('Missing particle mass data in this '
+                             'SarracenDataFrame.')
 
         # prioritize using mass per particle, if present
-        if {self.mcol}.issubset(self.columns):
+        if self.mcol in self.columns:
             mass = self[self.mcol]
         else:
             mass = self.params['mass']
@@ -265,41 +256,43 @@ class SarracenDataFrame(DataFrame):
         Raises
         -------
         KeyError
-            If the `dustfrac` column does not exist.
+            If `dustfrac` columns do not exist.
         ValueError
-            If `ndustsmall` is zero or `ndustlarge` is non zero.
+            If `ndustsmall` is zero or `ndustlarge` is non-zero.
         """
-        if not {self.dustfracscol[0]}.issubset(self.columns):
+        if self.dustfracscol[0] not in self.columns:
             raise KeyError('Missing dust fraction data in this '
                            'SarracenDataFrame')
-        # use self[self.dustfrac], check if columns exist
-        if not {self.rhocol}.issubset(self.columns):
+
+        if self.params['ndustsmall'] == 0 or self.params['ndustlarge'] != 0:
+            raise ValueError('Not a one-fluid-only dump.')
+
+        if self.rhocol not in self.columns:
             self.calc_density()
 
-        if (int(self.params['ndustsmall']) == 0 or
-                int(self.params['ndustlarge']) != 0):
-            raise ValueError('Not a one-fluid-only dump.')
+        if self.params['ndustsmall'] == 1:
+            self['rho_g'] = self['rho'] * self['dustfrac']
+            self['rho_d'] = self['rho'] * (1 - self['dustfrac'])
+            self['dtg'] = self['rho_d'] / self['rho_g']
         else:
-            if int(self.params['ndustsmall']) == 1:
-                self['rho_g'] = self['rho'] * self['dustfrac']
-                self['rho_d'] = self['rho'] * (1 - self['dustfrac'])
-                self['dtg'] = self['rho_d'] / self['rho_g']
-            else:
-                self['dustfrac_total'] = self[self.dustfracscol].sum(axis=1)
-                self['rho_g'] = self['rho'] * (1 - self['dustfrac_total'])
-                self['rho_d_total'] = self['rho'] * self['dustfrac_total']
-                self['rho_d'] = self['rho'] * self[self.dustfracscol[0]]
-                for i in range(1, int(self.params['ndustsmall'])):
-                    self[f'rho_d_{i+1}'] = self['rho'] * \
-                                                    self[self.dustfracscol[i]]
-                self['dtg'] = self['dustfrac_total'] / (1 -
-                                                        self['dustfrac_total'])
+            self['dustfrac_total'] = self[self.dustfracscol].sum(axis=1)
+            self['rho_g'] = self['rho'] * (1 - self['dustfrac_total'])
+            self['rho_d_total'] = self['rho'] * self['dustfrac_total']
+            self['rho_d'] = self['rho'] * self[self.dustfracscol[0]]
+            for i in range(1, int(self.params['ndustsmall'])):
+                self[f'rho_d_{i+1}'] = self['rho'] * self[self.dustfracscol[i]]
+            self['dtg'] = self['dustfrac_total'] / (1 - self['dustfrac_total'])
 
     def centre_of_mass(self) -> list:
         """
         Returns the centre of mass of the data.
+
+        Returns
+        -------
+        list
+            A list with the centre of mass of the data.
         """
-        if {self.mcol}.issubset(self.columns):
+        if self.mcol in self.columns:
             mass = self[self.mcol]
         else:
             mass = self.params['mass']
@@ -314,48 +307,6 @@ class SarracenDataFrame(DataFrame):
             inv_mass = 1.0 / (len(self) * mass)
 
         return [com_x * inv_mass, com_y * inv_mass, com_z * inv_mass]
-
-    def classify_sink(self, sdf_sinks: Type) -> None:
-        """
-        Creates column calculating the energy of particles
-        relative to each sink.
-        Creates a new column 'sink' that classifies particles by the sink they
-        are bound to, or -1 if they are not bound to any sink.
-        """
-        # calculate the energy of particles relative to each sink
-        v = np.array([self[self.vxcol], self[self.vycol], self[self.vzcol]]).T
-        for index, sink in sdf_sinks.iterrows():
-
-            # kinetic energy
-            v_sink = np.array([sink[sdf_sinks.vxcol],
-                               sink[sdf_sinks.vycol],
-                               sink[sdf_sinks.vzcol]])
-            v_rel = np.linalg.norm(v-v_sink, axis=1)
-            if {self.mcol}.issubset(self.columns):
-                mass = self[self.mcol]
-            else:
-                if self.params is None or 'mass' not in self.params:
-                    raise KeyError("'mass' value does not exist in this "
-                                   "SarracenDataFrame.")
-                mass = self.params['mass']
-            E_k = 0.5 * mass * v_rel**2
-
-            # potential energy
-            rel_pos = self[[self.xcol, self.ycol, self.zcol]] - sdf_sinks[
-                [sdf_sinks.xcol, sdf_sinks.ycol, sdf_sinks.zcol]].loc[index]
-            r = np.linalg.norm(rel_pos, axis=1)
-            E_pot = -sink[sdf_sinks.mcol] * mass / r
-
-            self[f"E_{index}"] = E_k + E_pot
-
-        # classify particles by sink they are bound to
-        energies = np.array([[self[f"E_{index}"]]
-                            for index in sdf_sinks.index])
-        self["sink"] = np.argmin(energies, axis=0)[0, :]
-
-        # identify particles not bound to any sink
-        unbound = pd.Series((energies.min(axis=0) > 0)[0, :], index=self.index)
-        self.loc[unbound[unbound].index, "sink"] = -1
 
     @_copy_doc(render)
     def render(self,
@@ -559,6 +510,23 @@ class SarracenDataFrame(DataFrame):
         KeyError
             If `target`, `x`, `y`, `z`, mass, density, or smoothing length
             columns do not exist in `data`.
+
+        Examples
+        --------
+
+        Interpolate SPH particles to a uniform grid.
+
+        >>> sdf, sdf_sinks = sarracen.read_phantom('dustydisc_00250')
+        >>> grid = sdf.sph_interpolate('rho')
+
+        The grid is a NumPy array in order of [z, y, x].
+
+        The default dimensions of the grid are scaled to keep a similar aspect
+        ratio. In this example, the z-direction is shorter because of the
+        geometry of the data (accretion disc).
+
+        >>> grid.shape
+        (165,  526, 512)
         """
         if self.get_dim() == 2:
             if xlim is None:
@@ -741,11 +709,11 @@ class SarracenDataFrame(DataFrame):
             self._vzcol = new_col
 
     @property
-    def dustfracscol(self):
+    def dustfracscol(self) -> List[str]:
         return self._dustfracscol
 
     @dustfracscol.setter
-    def dustfracscol(self, new_col: str) -> None:
+    def dustfracscol(self, new_col: List[str]) -> None:
         if new_col in self or new_col is None:
             self._dustfracscol = new_col
 

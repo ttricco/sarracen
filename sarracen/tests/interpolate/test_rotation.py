@@ -331,8 +331,8 @@ def test_rotation_stability(backend: str) -> None:
     """
     Rotation should not change values at the rotation origin.
     """
-    data = {'x': [1, 3], 'y': [1, -1], 'z': [1, -0.5],
-            'A': [4, 3], 'B': [3, 2], 'C': [1, 1.5],
+    data = {'x': [1.0, 3.0], 'y': [1.0, -1.0], 'z': [1.0, -0.5],
+            'A': [4.0, 3.0], 'B': [3.0, 2.0], 'C': [1.0, 1.5],
             'h': [0.9, 1.4], 'rho': [0.4, 0.6], 'm': [0.03, 0.06]}
     sdf = SarracenDataFrame(data, params=dict())
     kernel = CubicSplineKernel()

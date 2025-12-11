@@ -37,7 +37,7 @@ Sarracen. For details on specific functions, consult the :ref:`API reference
    render
    examples
    api
-   contributing/index
+   contributing
 
 
 Indices and tables

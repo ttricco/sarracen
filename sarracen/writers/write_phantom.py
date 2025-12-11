@@ -1,10 +1,13 @@
-from typing import Dict, List, Union, Type, Tuple
+from typing import Dict, List, Union, Type, Tuple, Any
 import numpy as np
 import re
 import warnings
 from datetime import datetime
 
 from ..sarracen_dataframe import SarracenDataFrame
+
+
+params_dict_type = Dict[str, Union[np.generic, str]]
 
 
 def _write_fortran_block(value: List[np.generic],
@@ -109,8 +112,7 @@ def _check_for_essential_data(sdf: SarracenDataFrame) -> None:
             raise ValueError(msg)
 
 
-def _remove_invalid_keys(params: Dict[str, np.generic]) -> Dict[str,
-                                                                np.generic]:
+def _remove_invalid_keys(params: params_dict_type) -> params_dict_type:
     """ Remove keys specific to Sarracen internal use."""
 
     exclude = ['file_identifier', 'mass', 'def_int_dtype',
@@ -118,8 +120,7 @@ def _remove_invalid_keys(params: Dict[str, np.generic]) -> Dict[str,
     return {k: v for k, v in params.items() if k not in exclude}
 
 
-def _standardize_dtypes(params: Dict[str, np.generic]) -> Dict[str,
-                                                               np.generic]:
+def _standardize_dtypes(params: Dict[str, Any]) -> params_dict_type:
     """ Convert all params to numpy dtypes."""
 
     for k, v in params.items():
@@ -132,7 +133,7 @@ def _standardize_dtypes(params: Dict[str, np.generic]) -> Dict[str,
 
 
 def _validate_ntypes(sdf: SarracenDataFrame,
-                     params: Dict[str, np.generic]) -> Dict[str, np.generic]:
+                     params: params_dict_type) -> params_dict_type:
     """ Update params ntypes to reflect particle data."""
 
     if 'ntypes' in params:
@@ -182,9 +183,7 @@ def _validate_ntypes(sdf: SarracenDataFrame,
 
 
 def _validate_particle_counts(sdf: SarracenDataFrame,
-                              params: Dict[str,
-                                           np.generic]) -> Dict[str,
-                                                                np.generic]:
+                              params: params_dict_type) -> params_dict_type:
     """
     Update params particle counts to match actual particle counts.
 
@@ -250,9 +249,7 @@ def _validate_particle_counts(sdf: SarracenDataFrame,
 
 
 def _validate_particle_masses(sdf: SarracenDataFrame,
-                              params: Dict[str,
-                                           np.generic]) -> Dict[str,
-                                                                np.generic]:
+                              params: params_dict_type) -> params_dict_type:
     """ Update params particle masses to match actual particle masses."""
 
     if 'mass' in params:
@@ -268,7 +265,8 @@ def _validate_particle_masses(sdf: SarracenDataFrame,
 
     # set default values for massoftype if not set
     default = {'': m_gas}  # insertion order matters
-    default.update({f'_{i}': 0 for i in range(2, int(params['ntypes']) + 1)})
+    tmp = {f'_{i}': np.float64(0) for i in range(2, int(params['ntypes']) + 1)}
+    default.update(tmp)
     for i, value in default.items():
         key = f'massoftype{i}'
         if key not in params:
@@ -289,8 +287,7 @@ def _validate_particle_masses(sdf: SarracenDataFrame,
     return params
 
 
-def _relocate_special_params(param_dicts: List[Dict[str,
-                                                    np.generic]]) -> None:
+def _relocate_special_params(param_dicts: List[params_dict_type]) -> None:
     """Move certain parameters to their required dtype indices."""
     # Integer parameters that must be int32
     for param in ['iexternalforce', 'ieos']:
@@ -340,7 +337,7 @@ def sort_key(k: str) -> Tuple[str, int]:
     return (base, num)
 
 
-def _reorder_params(params: Dict[str, np.generic]) -> Dict[str, np.generic]:
+def _reorder_params(params: params_dict_type) -> params_dict_type:
     return dict(sorted(params.items(), key=lambda item: sort_key(item[0])))
 
 
@@ -360,7 +357,7 @@ def _write_global_header(sdf: SarracenDataFrame,
               def_real, np.float32, np.float64]
 
     # create params dict per dtype and populate
-    param_dtype_dicts: List[Dict[str, np.generic]] = [dict() for _ in dtypes]
+    param_dtype_dicts: List[params_dict_type] = [dict() for _ in dtypes]
     for k, v in params_dict.items():
         if isinstance(v, def_int):
             param_dtype_dicts[0][k] = v
@@ -389,6 +386,8 @@ def _write_global_header(sdf: SarracenDataFrame,
         tags = []
         values = []
         for k, v in param_dtype_dicts[i].items():
+            if not isinstance(v, np.generic):
+                raise ValueError(f"Invalid value type: {v!r}")
             tags.append(k)
             values.append(v)
         header_data.append((dtype, tags, values))
