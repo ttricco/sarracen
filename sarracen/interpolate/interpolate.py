@@ -10,7 +10,6 @@ from ..interpolate import BaseBackend, CPUBackend, GPUBackend
 from ..kernels import BaseKernel
 
 from typing import Tuple, Union, Optional, Type, Literal
-import warnings
 
 
 def _default_xy(data: 'SarracenDataFrame',  # noqa: F821
