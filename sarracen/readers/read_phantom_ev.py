@@ -27,6 +27,9 @@ def _determine_column_labels(file: IO) -> List[str]:
             file.seek(pos)
             break
 
+    if last_line is None:
+        raise ValueError("No header line found in file.")
+
     # Get header labels
     # Assumes labels are exactly 3 spaces apart.
     # Assumes labels start with 2 digits (which we discard).
@@ -92,8 +95,8 @@ def read_phantom_ev(filename: str) -> pd.DataFrame:
 
         # Read data
         for line in file:
-            line = line.strip().split()
-            line = [_infer_type(x) for x in line]
-            data.append(line)
+            parts = line.strip().split()
+            row = [_infer_type(x) for x in parts]
+            data.append(row)
 
     return pd.DataFrame(data, columns=labels)
