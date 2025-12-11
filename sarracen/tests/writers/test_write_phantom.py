@@ -1,3 +1,5 @@
+from typing import Dict, Union, Any
+
 import pandas as pd
 import numpy as np
 import sarracen
@@ -46,11 +48,11 @@ def test_check_for_essential_data(particles_df: pd.DataFrame) -> None:
 def test_params_dtype_standardization(particles_df: pd.DataFrame) -> None:
     """ Test that params dtype is correctly standardized."""
 
-    params = {'massoftype': 1e-4,
-              'ntypes': 8,
-              'nparttot': 8,
-              'massoftype_7': 1e-6,
-              'file_identifier': 'test of Phantom writing'}
+    params: Dict[str, Any] = {'massoftype': 1e-4,
+                              'ntypes': 8,
+                              'nparttot': 8,
+                              'massoftype_7': 1e-6,
+                              'file_identifier': 'test Phantom write'}
 
     params = _standardize_dtypes(params)
 
@@ -67,7 +69,7 @@ def test_validate_ntypes_12(particles_df: pd.DataFrame,
                             id_method: str) -> None:
     """ Test that number of particle types is correctly validated."""
 
-    params = {}
+    params: Dict[str, Union[np.generic, str]] = {}
 
     if id_method == 'ntypes':
         params['ntypes'] = np.int32(12)
@@ -98,7 +100,7 @@ def test_validate_ntypes_8(particles_df: pd.DataFrame,
                            id_method: str) -> None:
     """ Test that number of particle types is correctly validated."""
 
-    params = {}
+    params: Dict[str, Union[np.generic, str]] = {}
 
     if id_method == 'ntypes':
         params['ntypes'] = np.int32(8)
@@ -128,9 +130,11 @@ def test_validate_particle_counts(particles_df: pd.DataFrame,
                                   id_method: str) -> None:
     """ Test that number of each particle type is correctly autofilled."""
 
-    params = {'massoftype': np.float64(1e-4),
-              'ntypes': np.int32(8),
-              'file_identifier': 'test of Phantom writing'}
+    params: Dict[str,
+                 Union[np.generic,
+                       str]] = {'massoftype': np.float64(1e-4),
+                                'ntypes': np.int32(8),
+                                'file_identifier': 'test Phantom write'}
 
     # if npartoftype not present, then it determines based on itype alone
     if id_method == 'npartoftype':
@@ -167,18 +171,19 @@ def test_validate_particle_counts(particles_df: pd.DataFrame,
 def test_params_reordering(particles_df: pd.DataFrame) -> None:
     """ Test that disordered params keyes are written correctly."""
 
-    params = {'massoftype': np.float64(1e-4),
-              'massoftype_7': np.float64(1e-6),
-              'massoftype_3': np.float64(1e-3),
-              'nparttot': np.int64(8),
-              'nparttot_2': np.int32(8),
-              'npartoftype_15': np.int64(3),
-              'npartoftype_3': np.int32(4),
-              'npartoftype': np.int32(1),
-              'npartoftype_7': np.int32(3),
-              'npartoftype_11': np.int64(4),
-              'npartoftype_9': np.int64(1),
-              'file_identifier': 'test of Phantom writing'}
+    params: Dict[str, Union[np.generic,
+                            str]] = {'massoftype': np.float64(1e-4),
+                                     'massoftype_7': np.float64(1e-6),
+                                     'massoftype_3': np.float64(1e-3),
+                                     'nparttot': np.int64(8),
+                                     'nparttot_2': np.int32(8),
+                                     'npartoftype_15': np.int64(3),
+                                     'npartoftype_3': np.int32(4),
+                                     'npartoftype': np.int32(1),
+                                     'npartoftype_7': np.int32(3),
+                                     'npartoftype_11': np.int64(4),
+                                     'npartoftype_9': np.int64(1),
+                                     'file_identifier': 'test Phantom write'}
 
     params = _reorder_params(params)
 
@@ -211,7 +216,7 @@ def test_validate_particle_mass_gas(particles_df: pd.DataFrame,
                                     id_method: bool) -> None:
     """ Test that mass of each particle type is correctly validated."""
 
-    params = {'ntypes': np.int32(8)}
+    params: Dict[str, Union[np.generic, str]] = {'ntypes': np.int32(8)}
 
     if id_method == 'params_mass':
         params['mass'] = np.float64(1e-4)
@@ -248,7 +253,7 @@ def test_validate_particle_mass_dust(particles_df: pd.DataFrame,
                                      id_method: bool) -> None:
     """ Test that mass of each particle type is correctly validated."""
 
-    params = {'ntypes': np.int32(8)}
+    params: Dict[str, Union[np.generic, str]] = {'ntypes': np.int32(8)}
 
     if id_method == 'massoftype':
         params['massoftype'] = np.float64(1e-4)
