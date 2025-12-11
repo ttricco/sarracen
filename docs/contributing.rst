@@ -114,4 +114,4 @@ no blank lines after class or function declaration, and that there was no
 newline at the end of the file. Yes, we do care about having a newline at the
 end of the file.
 
-.. image:: flake8.png
+.. image:: contributing/flake8.png

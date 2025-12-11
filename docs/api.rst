@@ -70,6 +70,7 @@ Extra Quantities
    :nosignatures:
 
    SarracenDataFrame.calc_density
+   SarracenDataFrame.calc_one_fluid_quantities
    SarracenDataFrame.centre_of_mass
 
 Rendering
@@ -92,11 +93,11 @@ Interpolation
    SarracenDataFrame.sph_interpolate
 
 
-Kernels
--------
+sarracen.kernels
+----------------
 
 The default smoothing kernel is the cubic spline. Additional smoothing kernels
-are included within Sarracen.
+are included within the kernels module.
 
 .. autosummary::
    :toctree: api/
@@ -106,8 +107,8 @@ are included within Sarracen.
    kernels.QuinticSplineKernel
 
 
-Disc
-----
+sarracen.disc
+-------------
 
 Accretion disc analysis routines are in the disc module.
 
@@ -119,3 +120,15 @@ Accretion disc analysis routines are in the disc module.
    disc.angular_momentum
    disc.scale_height
    disc.honH
+
+
+sarracen.ptmass
+---------------
+
+Analysis routines related to point masses and sink particles are in the ptmass
+module.
+
+.. autosummary::
+   :toctree: api/
+
+   ptmass.classify_bound_particles

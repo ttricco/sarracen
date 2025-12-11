@@ -58,8 +58,8 @@ Cross-sectional renderings of the gas and dust components of the disc are below.
 
 .. image:: dustydisc/dustydisc-dust.png
     :width: 400
-Rendering sink particles can use Matplotlib's ``scatter()``, where sink particles are plotted as a scatterplot over the rendered image. Seaborn's ``scatterplot()`` is another good option.
 
+Rendering sink particles can use Matplotlib's ``scatter()``, where sink particles are plotted as a scatterplot over the rendered image. Seaborn's ``scatterplot()`` is another good option.
 
 Sarracen's render function returns a Matplotlib Axes object (and can accept one too).
 

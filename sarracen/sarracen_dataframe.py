@@ -514,10 +514,9 @@ class SarracenDataFrame(DataFrame):
         Examples
         --------
 
+        Interpolate SPH particles to a uniform grid.
+
         >>> sdf, sdf_sinks = sarracen.read_phantom('dustydisc_00250')
-
-        Interpolate the SPH particles to a uniform grid.
-
         >>> grid = sdf.sph_interpolate('rho')
 
         The grid is a NumPy array in order of [z, y, x].
