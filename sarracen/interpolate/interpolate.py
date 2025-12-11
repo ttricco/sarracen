@@ -298,26 +298,31 @@ def _rotate_data(data: 'SarracenDataFrame',  # noqa: F821
         else:
             rotation_obj = rotation
 
-        # warn whenever rotation is applied
-        msg = ("The default rotation point is currently the midpoint of the "
-               "x/y/z bounds, but will change to [x, y, z] = [0, 0, 0] in "
-               "Sarracen version 1.3.0.")
-        warnings.warn(msg, DeprecationWarning, stacklevel=6)
-
+        # default
         if rot_origin is None:
-            # rot_origin = [0, 0, 0]
-            rot_origin_arr = (vectors.min(0) + vectors.max(0)) / 2
-        elif rot_origin == 'com':
-            rot_origin_arr = data.centre_of_mass()
-        elif rot_origin == 'midpoint':
-            rot_origin_arr = (vectors.min(0) + vectors.max(0)) / 2
-        elif not isinstance(rot_origin, (list, pd.Series, np.ndarray)):
+            rot_origin_arr = np.array([0, 0, 0], dtype=x_data.dtype)
+
+        # built-in point
+        elif isinstance(rot_origin, str):
+            if rot_origin == 'com':
+                rot_origin_arr = np.asarray(data.centre_of_mass(),
+                                            dtype=x_data.dtype)
+            elif rot_origin == 'midpoint':
+                rot_origin_arr = (vectors.min(0) + vectors.max(0)) / 2
+            else:
+                raise ValueError("rot_origin should be an [x, y, z] point or "
+                                 "'com' or 'midpoint'")
+
+        # user specified point
+        elif isinstance(rot_origin, (list, pd.Series, np.ndarray)):
+            if len(rot_origin) != 3:
+                raise ValueError("rot_origin should specify [x, y, z] point.")
+            rot_origin_arr = np.asarray(rot_origin, dtype=x_data.dtype)
+
+        else:
             raise ValueError("rot_origin should be an [x, y, z] point or "
                              "'com' or 'midpoint'")
-        elif len(rot_origin) != 3:
-            raise ValueError("rot_origin should specify [x, y, z] point.")
-        else:
-            rot_origin_arr = rot_origin
+
         vectors = vectors - rot_origin_arr
         vectors = rotation_obj.apply(vectors)
         vectors = vectors + rot_origin_arr
