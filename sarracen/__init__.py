@@ -18,7 +18,7 @@ from .render import render, streamlines, arrowplot
 from . import disc
 from . import ptmass
 
-__version__ = "1.2.3"
+__version__ = "1.3.0"
 
 __all__ = ["read_csv", "read_gasoline", "read_gradsph", "read_marisa",
            "read_phantom", "read_phantom_ev", "read_shamrock",
