@@ -301,6 +301,12 @@ def read_shamrock(filename: str) -> SarracenDataFrame:
             hfact = 1.2
         elif kernel[:2] == "M6":
             hfact = 1.0
+        elif kernel[:2] == "C2":
+            hfact = 1.4
+        elif kernel[:2] == "C4":
+            hfact = 1.6
+        elif kernel[:2] == "C6":
+            hfact = 2.2
         else:
             raise KeyError("Unrecognised kernel.")
         metadata["hfact"] = hfact
