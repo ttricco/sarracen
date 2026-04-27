@@ -289,7 +289,7 @@ def _create_aprmass_column(df: pd.DataFrame,
     multiple refinement levels.
     """
     df['mass'] = header_vars['massoftype']
-    df['mass'] = df['mass']/(2**(df['apr_level'] - 1))
+    df['mass'] = df['mass']/(np.float64(2)**(df['apr_level'] - 1))
 
     return df
 
