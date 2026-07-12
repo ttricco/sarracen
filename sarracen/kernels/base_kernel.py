@@ -1,8 +1,8 @@
+from collections.abc import Callable
 import math
 
 import numpy as np
 from numba import njit, prange
-from typing import Callable
 
 
 class BaseKernel:

@@ -1,7 +1,6 @@
 import math
 
 from numba import njit
-from typing import Tuple
 
 
 @njit
@@ -457,7 +456,7 @@ def _full_integral_3d(d: float, r0: float, r1: float, h: float) -> float:
 @njit
 def get_I_terms(cosp: float,
                 a2: float,
-                a: float) -> Tuple[float, float, float, float, float, float]:
+                a: float) -> tuple[float, float, float, float, float, float]:
     """Calculate I constants for calculations in _full_integral_3d"""
     cosp2 = cosp * cosp
     p = math.acos(cosp)

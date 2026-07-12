@@ -1,4 +1,4 @@
-from typing import Tuple, Union
+from typing import Literal, TypeAlias, overload
 
 import numpy as np
 import pandas as pd
@@ -8,12 +8,26 @@ import struct
 from ..sarracen_dataframe import SarracenDataFrame
 
 
+GasolineFrames: TypeAlias = tuple[SarracenDataFrame, SarracenDataFrame,
+                                  SarracenDataFrame]
+GasolineDicts: TypeAlias = tuple[dict, dict, dict, dict]
+
+
+@overload
 def read_gasoline(filename: str,
-                  outtype: str = "sarracen") -> Union[Tuple[SarracenDataFrame,
-                                                            SarracenDataFrame,
-                                                            SarracenDataFrame],
-                                                      Tuple[dict, dict,
-                                                            dict, dict], int]:
+                  outtype: Literal["sarracen"] = "sarracen"
+                  ) -> GasolineFrames | int: ...
+@overload
+def read_gasoline(filename: str,
+                  outtype: Literal["dic", "dict", "dictionary"]
+                  ) -> GasolineDicts | int: ...
+@overload
+def read_gasoline(filename: str,
+                  outtype: str
+                  ) -> GasolineFrames | GasolineDicts | int: ...
+def read_gasoline(filename: str,
+                  outtype: str = "sarracen"
+                  ) -> GasolineFrames | GasolineDicts | int:
     """
     Read data from a Gasoline tipsy file.
 

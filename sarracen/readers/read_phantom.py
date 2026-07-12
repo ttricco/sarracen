@@ -1,9 +1,12 @@
-from typing import IO, Tuple, Type, Union, List, overload, Literal
+from typing import IO, Literal, TypeAlias, overload
 
 import numpy as np
 import pandas as pd
 
 from ..sarracen_dataframe import SarracenDataFrame
+
+
+PhantomFrames: TypeAlias = list[SarracenDataFrame] | SarracenDataFrame
 
 
 def _read_fortran_block(fp: IO, bytesize: int) -> bytes:
@@ -24,15 +27,15 @@ def _read_fortran_block(fp: IO, bytesize: int) -> bytes:
     return data
 
 
-def _read_capture_pattern(fp: IO) -> Tuple[Type[np.generic],
-                                           Type[np.generic],
+def _read_capture_pattern(fp: IO) -> tuple[type[np.generic],
+                                           type[np.generic],
                                            int, bool]:
     """ Phantom dump validation plus default real and int sizes."""
 
     start_tag = fp.read(4)  # 4-byte Fortran tag
 
-    def_types: List[Tuple[Type[np.generic],
-                          Type[np.generic]]] = [(np.int32, np.float64),
+    def_types: list[tuple[type[np.generic],
+                          type[np.generic]]] = [(np.int32, np.float64),
                                                 (np.int32, np.float32),
                                                 (np.int64, np.float64),
                                                 (np.int64, np.float32)]
@@ -121,8 +124,8 @@ def _rename_duplicates(keys: list) -> list:
 
 
 def _read_global_header_block(fp: IO,
-                              dtype: Type[np.generic],
-                              swap_endian: bool) -> Tuple[list, list]:
+                              dtype: type[np.generic],
+                              swap_endian: bool) -> tuple[list, list]:
     nvars = np.frombuffer(_read_fortran_block(fp, 4), dtype=np.int32)[0]
     if swap_endian:
         nvars = nvars.byteswap()
@@ -145,8 +148,8 @@ def _read_global_header_block(fp: IO,
 
 
 def _read_global_header(fp: IO,
-                        def_int_dtype: Type[np.generic],
-                        def_real_dtype: Type[np.generic],
+                        def_int_dtype: type[np.generic],
+                        def_real_dtype: type[np.generic],
                         swap_endian: bool) -> dict:
     """ Read global variables. """
 
@@ -174,8 +177,8 @@ def _read_array_block(fp: IO,
                       df: pd.DataFrame,
                       n: int,
                       nums: np.ndarray,
-                      def_int_dtype: Type[np.generic],
-                      def_real_dtype: Type[np.generic],
+                      def_int_dtype: type[np.generic],
+                      def_real_dtype: type[np.generic],
                       swap_endian: bool) -> pd.DataFrame:
 
     dtypes = [def_int_dtype, np.int8, np.int16, np.int32, np.int64,
@@ -204,10 +207,10 @@ def _read_array_block(fp: IO,
 
 
 def _read_array_blocks(fp: IO,
-                       def_int_dtype: Type[np.generic],
-                       def_real_dtype: Type[np.generic],
+                       def_int_dtype: type[np.generic],
+                       def_real_dtype: type[np.generic],
                        mpi_blocks: int,
-                       swap_endian: bool) -> Tuple[pd.DataFrame, pd.DataFrame]:
+                       swap_endian: bool) -> tuple[pd.DataFrame, pd.DataFrame]:
     """ Read particle data.
 
     Block 2 is always for sink particles. The number of MPI blocks is given by
@@ -225,8 +228,8 @@ def _read_array_blocks(fp: IO,
 
     for j in range(0, mpi_blocks):
 
-        n: List[int] = []
-        nums: List[np.ndarray] = []
+        n: list[int] = []
+        nums: list[np.ndarray] = []
 
         for i in range(0, nblocks):
             start_tag = fp.read(4)
@@ -301,20 +304,14 @@ def read_phantom(filename: str,
 @overload  # noqa: E302
 def read_phantom(filename: str,
                  separate_types: Literal['sinks'] = 'sinks',
-                 ignore_inactive: bool = True) -> Union[List[
-                                                        SarracenDataFrame],
-                                                        SarracenDataFrame]: ...
+                 ignore_inactive: bool = True) -> PhantomFrames: ...
 @overload  # noqa: E302
 def read_phantom(filename: str,
                  separate_types: Literal['all'] = 'all',
-                 ignore_inactive: bool = True) -> Union[List[
-                                                        SarracenDataFrame],
-                                                        SarracenDataFrame]: ...
+                 ignore_inactive: bool = True) -> PhantomFrames: ...
 def read_phantom(filename: str,  # noqa: E302
-                 separate_types: Union[str, None] = 'sinks',
-                 ignore_inactive: bool = True) -> Union[List[
-                                                        SarracenDataFrame],
-                                                        SarracenDataFrame]:
+                 separate_types: str | None = 'sinks',
+                 ignore_inactive: bool = True) -> PhantomFrames:
     """
     Read data from a Phantom dump file.
 

@@ -1,11 +1,12 @@
 import numpy as np
 import pandas as pd
 import sys
+from typing import TypeAlias
+
 from ..sarracen_dataframe import SarracenDataFrame
-from typing import Tuple, Union
 
 
-def _get_mass(data: 'SarracenDataFrame') -> Union[float, pd.Series]:
+def _get_mass(data: 'SarracenDataFrame') -> float | pd.Series:
     if data.mcol is None:
         if 'mass' not in data.params:
             raise KeyError("'mass' column does not exist in this "
@@ -15,20 +16,22 @@ def _get_mass(data: 'SarracenDataFrame') -> Union[float, pd.Series]:
     return data[data.mcol]
 
 
-def _get_origin(origin: Union[list, None]) -> list:
+def _get_origin(origin: list[float] | None) -> list[float]:
     if origin is None:
         return [0.0, 0.0, 0.0]
     else:
-        return origin
+        return list(origin)
 
 
 def _bin_particles_by_radius(data: 'SarracenDataFrame',
-                             r_in: Union[float, None],
-                             r_out: Union[float, None],
+                             r_in: float | None,
+                             r_out: float | None,
                              bins: int,
                              log: bool,
                              geometry: str,
-                             origin: list) -> Tuple[pd.Series, np.ndarray]:
+                             origin: list[float]) -> tuple[pd.Series,
+                                                                np.ndarray]:
+
     """
     Utility function to bin particles in discrete intervals by radius.
 

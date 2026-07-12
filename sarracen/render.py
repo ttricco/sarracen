@@ -9,7 +9,7 @@ Or, they can be accessed through a `SarracenDataFrame` object, for example:
     data.render_2d(target)
 """
 
-from typing import Any, Union, Tuple
+from typing import Any, TypeAlias
 
 import numpy as np
 import pandas as pd
@@ -25,9 +25,14 @@ from .interpolate import interpolate_2d_line, interpolate_2d, \
 from .kernels import BaseKernel
 
 
+Bounds: TypeAlias = tuple[float | None, float | None]
+VectorLike: TypeAlias = np.ndarray | list | tuple
+OriginLike: TypeAlias = VectorLike | pd.Series | str | None
+
+
 def _default_axes(data: 'SarracenDataFrame',  # noqa: F821
-                  x: Union[str, None],
-                  y: Union[str, None]) -> Tuple[str, str]:
+                  x: str | None,
+                  y: str | None) -> tuple[str, str]:
     """
     Utility function to determine the x & y columns to use for rendering.
 
@@ -56,11 +61,9 @@ def _rotate_data(data: 'SarracenDataFrame',  # noqa: F821
                  x_data: np.ndarray,
                  y_data: np.ndarray,
                  z_data: np.ndarray,
-                 rotation: Union[np.ndarray, list, Rotation, None],
-                 rot_origin: Union[np.ndarray, list, pd.Series,
-                                   str, None]) -> Tuple[np.ndarray,
-                                                        np.ndarray,
-                                                        np.ndarray]:
+                 rotation: VectorLike | Rotation | None,
+                 rot_origin: OriginLike) -> tuple[np.ndarray, np.ndarray,
+                                                  np.ndarray]:
     """
     Rotate vector data in a particle dataset.
 
@@ -101,7 +104,7 @@ def _rotate_data(data: 'SarracenDataFrame',  # noqa: F821
             rot_origin_arr = data.centre_of_mass()
         elif rot_origin == 'midpoint':
             rot_origin_arr = (vectors.min(0) + vectors.max(0)) / 2
-        elif not isinstance(rot_origin, (list, pd.Series, np.ndarray)):
+        elif not isinstance(rot_origin, (list, tuple, pd.Series, np.ndarray)):
             raise ValueError("rot_origin should be an [x, y, z] point or "
                              "'com' or 'midpoint'")
         elif len(rot_origin) != 3:
@@ -118,9 +121,9 @@ def _rotate_data(data: 'SarracenDataFrame',  # noqa: F821
 def _default_bounding_box(data: 'SarracenDataFrame',  # noqa: F821
                           x: str,
                           y: str,
-                          xlim: Union[Tuple[float, float], None],
-                          ylim: Union[Tuple[float, float], None],
-                          z_slice: Union[float, None] = None) -> np.ndarray:
+                          xlim: Bounds | None,
+                          ylim: Bounds | None,
+                          z_slice: float | None = None) -> np.ndarray:
     # boundaries of the plot default to the max & min values of the data.
     x_min = xlim[0] if xlim is not None and xlim[0] is not None else None
     y_min = ylim[0] if ylim is not None and ylim[0] is not None else None
@@ -144,10 +147,8 @@ def _default_bounding_box(data: 'SarracenDataFrame',  # noqa: F821
 def _default_bounds(data: 'SarracenDataFrame',  # noqa: F821
                     x_data: np.ndarray,
                     y_data: np.ndarray,
-                    xlim: Union[Tuple[float, float], None],
-                    ylim: Union[Tuple[float, float], None],
-                    ) -> Tuple[Tuple[float, float],
-                               Tuple[float, float]]:
+                    xlim: Bounds | None,
+                    ylim: Bounds | None) -> tuple[Bounds, Bounds]:
     """
     Utility function to determine the 2-dimensional boundaries to use in 2D
     rendering.
@@ -183,11 +184,11 @@ def _default_bounds(data: 'SarracenDataFrame',  # noqa: F821
     return (x_min, x_max), (y_min, y_max)
 
 
-def _set_pixels(x_pixels: Union[int, None],
-                y_pixels: Union[int, None],
-                xlim: Tuple[float, float],
-                ylim: Tuple[float, float],
-                default: int) -> Tuple[int, int]:
+def _set_pixels(x_pixels: int | None,
+                y_pixels: int | None,
+                xlim: Bounds,
+                ylim: Bounds,
+                default: int) -> tuple[int, int]:
     """
     Utility function to determine the number of pixels to interpolate over in
     2D interpolation.
@@ -225,31 +226,31 @@ def _set_pixels(x_pixels: Union[int, None],
 
 def render(data: 'SarracenDataFrame',  # noqa: F821
            target: str,
-           x: Union[str, None] = None,
-           y: Union[str, None] = None,
-           z: Union[str, None] = None,
-           xsec: Union[float, None] = None,
-           kernel: Union[BaseKernel, None] = None,
-           x_pixels: Union[int, None] = None,
-           y_pixels: Union[int, None] = None,
-           xlim: Union[Tuple[float, float], None] = None,
-           ylim: Union[Tuple[float, float], None] = None,
-           cmap: Union[str, Colormap] = 'gist_heat',
+           x: str | None = None,
+           y: str | None = None,
+           z: str | None = None,
+           xsec: float | None = None,
+           kernel: BaseKernel | None = None,
+           x_pixels: int | None = None,
+           y_pixels: int | None = None,
+           xlim: Bounds | None = None,
+           ylim: Bounds | None = None,
+           cmap: str | Colormap = 'gist_heat',
            cbar: bool = True,
            cbar_kws: dict = {},
-           cbar_ax: Union[Axes, None] = None,
-           ax: Union[Axes, None] = None,
+           cbar_ax: Axes | None = None,
+           ax: Axes | None = None,
            exact: bool = False,
-           backend: Union[str, None] = None,
+           backend: str | None = None,
            integral_samples: int = 1000,
-           rotation: Union[np.ndarray, list, Rotation, None] = None,
-           rot_origin: Union[np.ndarray, list, str, None] = None,
+           rotation: VectorLike | Rotation | None = None,
+           rot_origin: OriginLike = None,
            log_scale: bool = False,
            symlog_scale: bool = False,
-           dens_weight: Union[bool, None] = None,
+           dens_weight: bool | None = None,
            normalize: bool = True,
            hmin: bool = False,
-           corotation: Union[np.ndarray, list, None] = None,
+           corotation: VectorLike | None = None,
            **kwargs: Any) -> Axes:
     """
     Render a scalar SPH target variable to a grid plot.
@@ -475,16 +476,16 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
 
 def lineplot(data: 'SarracenDataFrame',  # noqa: F821
              target: str,
-             x: Union[str, None] = None,
-             y: Union[str, None] = None,
-             z: Union[str, None] = None,
-             kernel: Union[BaseKernel, None] = None,
+             x: str | None = None,
+             y: str | None = None,
+             z: str | None = None,
+             kernel: BaseKernel | None = None,
              pixels: int = 512,
-             xlim: Union[Tuple[float, float], None] = None,
-             ylim: Union[Tuple[float, float], None] = None,
-             zlim: Union[Tuple[float, float], None] = None,
-             ax: Union[Axes, None] = None,
-             backend: Union[str, None] = None,
+             xlim: Bounds | float | int | None = None,
+             ylim: Bounds | float | int | None = None,
+             zlim: Bounds | float | int | None = None,
+             ax: Axes | None = None,
+             backend: str | None = None,
              log_scale: bool = False,
              dens_weight: bool = False,
              normalize: bool = True,
@@ -603,23 +604,23 @@ def lineplot(data: 'SarracenDataFrame',  # noqa: F821
 
 
 def streamlines(data: 'SarracenDataFrame',  # noqa: F821
-                target: Union[Tuple[str, str], Tuple[str, str, str]],
-                x: Union[str, None] = None,
-                y: Union[str, None] = None,
-                z: Union[str, None] = None,
-                xsec: Union[float, None] = None,
-                kernel: Union[BaseKernel, None] = None,
+                target: tuple[str, str] | tuple[str, str, str],
+                x: str | None = None,
+                y: str | None = None,
+                z: str | None = None,
+                xsec: float | None = None,
+                kernel: BaseKernel | None = None,
                 integral_samples: int = 1000,
-                rotation: Union[np.ndarray, list, Rotation, None] = None,
-                rot_origin: Union[np.ndarray, list, str, None] = None,
-                x_pixels: Union[int, None] = None,
-                y_pixels: Union[int, None] = None,
-                xlim: Union[Tuple[float, float], None] = None,
-                ylim: Union[Tuple[float, float], None] = None,
-                ax: Union[Axes, None] = None,
+                rotation: VectorLike | Rotation | None = None,
+                rot_origin: OriginLike = None,
+                x_pixels: int | None = None,
+                y_pixels: int | None = None,
+                xlim: Bounds | None = None,
+                ylim: Bounds | None = None,
+                ax: Axes | None = None,
                 exact: bool = False,
-                backend: Union[str, None] = None,
-                dens_weight: Union[bool, None] = None,
+                backend: str | None = None,
+                dens_weight: bool | None = None,
                 normalize: bool = True,
                 hmin: bool = False,
                 **kwargs: Any) -> Axes:
@@ -764,25 +765,25 @@ def streamlines(data: 'SarracenDataFrame',  # noqa: F821
 
 
 def arrowplot(data: 'SarracenDataFrame',  # noqa: F821
-              target: Union[Tuple[str, str], Tuple[str, str, str]],
-              x: Union[str, None] = None,
-              y: Union[str, None] = None,
-              z: Union[str, None] = None,
-              xsec: Union[float, None] = None,
-              kernel: Union[BaseKernel, None] = None,
+              target: tuple[str, str] | tuple[str, str, str],
+              x: str | None = None,
+              y: str | None = None,
+              z: str | None = None,
+              xsec: float | None = None,
+              kernel: BaseKernel | None = None,
               integral_samples: int = 1000,
-              rotation: Union[np.ndarray, list, Rotation, None] = None,
-              rot_origin: Union[np.ndarray, list, str, None] = None,
-              x_arrows: Union[int, None] = None,
-              y_arrows: Union[int, None] = None,
-              xlim: Union[Tuple[float, float], None] = None,
-              ylim: Union[Tuple[float, float], None] = None,
-              ax: Union[Axes, None] = None,
+              rotation: VectorLike | Rotation | None = None,
+              rot_origin: OriginLike = None,
+              x_arrows: int | None = None,
+              y_arrows: int | None = None,
+              xlim: Bounds | None = None,
+              ylim: Bounds | None = None,
+              ax: Axes | None = None,
               qkey: bool = True,
-              qkey_kws: Union[dict, None] = None,
+              qkey_kws: dict | None = None,
               exact: bool = False,
-              backend: Union[str, None] = None,
-              dens_weight: Union[bool, None] = None,
+              backend: str | None = None,
+              dens_weight: bool | None = None,
               normalize: bool = True,
               hmin: bool = False,
               **kwargs: Any) -> Axes:

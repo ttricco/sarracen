@@ -1,4 +1,4 @@
-from typing import IO, List, Dict, Any
+from typing import IO, Any
 
 import struct
 import json
@@ -95,7 +95,7 @@ class FileReader:
         return data
 
 
-def decode_bytes_to_doubles(byte_data: bytes) -> List[float]:
+def decode_bytes_to_doubles(byte_data: bytes) -> list[float]:
     """
     Decodes a byte array into a list of double precision floats.
 
@@ -106,7 +106,7 @@ def decode_bytes_to_doubles(byte_data: bytes) -> List[float]:
 
     Returns
     -------
-    List[float]
+    list[float]
         A list of double-precision floating-point numbers decoded from
         the byte array.
 
@@ -136,7 +136,7 @@ def get_head_inc(off: int) -> int:
     return off
 
 
-def decode_patchdata(pdat: bytes, pdat_layout: List[Dict[str, Any]]) -> dict:
+def decode_patchdata(pdat: bytes, pdat_layout: list[dict[str, Any]]) -> dict:
     """
     Decode a patchdata bytearray into a dictionary of numpy arrays.
 
