@@ -73,6 +73,124 @@ def azimuthal_average(data: 'SarracenDataFrame',
     else:
         return result
 
+def surface_density_one_fluid(data: 'SarracenDataFrame',
+                    r_in: Union[float, None] = None,
+                    r_out: Union[float, None] = None,
+                    bins: int = 300,
+                    log: bool = False,
+                    geometry: str = 'cylindrical',
+                    origin: Union[list, None] = None,
+                    retbins: bool = False) -> Union[np.ndarray,
+                                                    Tuple[np.ndarray,
+                                                          np.ndarray]]:
+    """
+    Calculates the 1D azimuthally-averaged surface density profile for dust and gas
+    for dust as mixture.
+
+    The surface density profile is computed by segmenting the particles into
+    radial bins (rings) and dividing the total mass contained within each bin
+    by the area of its respective ring.
+
+    Parameters
+    ----------
+    data : SarracenDataFrame
+        Particle data, in a SarracenDataFrame.
+    r_in : float, optional
+        Inner radius of the disc. Defaults to the minimum r value.
+    r_out : float, optional
+        Outer radius of the disc. Defaults to the maximum r value.
+    bins : int, optional
+        Defines the number of equal-width bins in the range [r_in, r_out].
+        Default is 300.
+    log : bool, optional
+        Whether to bin in log scale or not. Defaults to False.
+    geometry : str, optional
+        Coordinate system to use to calculate the particle radii. Can be
+        either *spherical* or *cylindrical*. Defaults to *cylindrical*.
+    origin : array-like, optional
+        The x, y and z centre point around which to compute radii. Defaults to
+        [0, 0, 0].
+    retbins : bool, optional
+        Whether to return the midpoints of the bins or not. Defaults to False.
+
+    Returns
+    -------
+    array
+        A NumPy array of length bins containing the surface density profile.
+    array, optional
+        The midpoint values of each bin. Only returned if *retbins=True*.
+
+    Raises
+    ------
+    ValueError
+        If the *geometry* is not *cylindrical* or *spherical*.
+        If the dump is 'dust-as-particles' or
+        'dust-as-mixture' AND 'dust-as-particles', for now.
+
+    Notes
+    -----
+    The surface density averaging procedure for SPH is described in section
+    3.2.6 of Lodato & Price (2010) [1]_.
+
+    References
+    ----------
+    .. [1] G. Lodato & D. J. Price, "On the diffusive propagation of warps in
+       thin accretion discs," MNRAS, 405, 2, 1212-1226 (2010).
+       `doi:10.1111/j.1365-2966.2010.16526.x
+       <https://doi.org/10.1111/j.1365-2966.2010.16526.x>`_
+
+    """
+
+    origin = _get_origin(origin)
+    rbins, bin_edges = _bin_particles_by_radius(data, r_in, r_out, bins, log,
+                                                geometry, origin)
+
+    areas = np.pi * (bin_edges[1:] ** 2 - bin_edges[:-1] ** 2)
+
+    mass = _get_mass(data)
+                                                            
+    if (int(data.params['ndustsmall']) == 0 and int(data.params['ndustlarge']) == 0):  # gas-only dump
+        if isinstance(mass, pd.Series):
+            sigma = mass.groupby(rbins).sum()
+        else:
+            sigma = data.groupby(rbins).count().iloc[:, 0] * mass
+        sigma = (sigma / areas).to_numpy()
+        if retbins:
+            return sigma, _get_bin_midpoints(bin_edges, log)
+        else:
+            return sigma
+    elif (int(data.params['ndustsmall']) != 0 and
+            int(data.params['ndustlarge']) == 0):  # 'dust-as-mixture' dump
+        if int(data.params['ndustsmall']) == 1:  # only one grain size
+            mass_gas = mass * (1. - data['dustfrac'])
+            sigma_gas = (mass_gas.groupby(rbins).sum() / areas).to_numpy()
+            mass_dust = mass * data['dustfrac']
+            sigma_dust = (mass_dust.groupby(rbins).sum() / areas).to_numpy()
+            if retbins:
+                return sigma_gas, sigma_dust, \
+                        _get_bin_midpoints(bin_edges, log)
+            else:
+                return sigma_gas, sigma_dust
+        else:  # multiple grain sizes
+            if 'dustfrac_total' not in data.columns:
+                data.calc_one_fluid_quantities()
+            mass_gas = mass * (1. - data['dustfrac_total'])
+            sigma_gas = (mass_gas.groupby(rbins).sum() / areas).to_numpy()
+            mass_dust_total = mass * data['dustfrac_total']
+            sigma_dust_total = (mass_dust_total.groupby(rbins).sum() /
+                                areas).to_numpy()
+            sigma_dust = np.empty([int(data.params['ndustsmall']), bins])
+            for i in range(int(data.params['ndustsmall'])):
+                sigma_dust[i] = ((mass * data[data.dustfracscol[i]]).
+                                 groupby(rbins).sum() / areas).to_numpy()
+            if retbins:
+                return sigma_gas, sigma_dust_total, sigma_dust, \
+                        _get_bin_midpoints(bin_edges, log)
+            else:
+                return sigma_gas, sigma_dust_total, sigma_dust
+    else:
+        raise ValueError("'dust-as-mixture' AND 'dust-as-particles' dump or" +
+                         "'dust-as-particles' dump: not available yet.")
 
 def surface_density(data: 'SarracenDataFrame',
                     r_in: Union[float, None] = None,
