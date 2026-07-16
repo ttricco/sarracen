@@ -271,8 +271,8 @@ class SarracenDataFrame(DataFrame):
             self.calc_density()
 
         if self.params['ndustsmall'] == 1:
-            self['rho_g'] = self['rho'] * self['dustfrac']
-            self['rho_d'] = self['rho'] * (1 - self['dustfrac'])
+            self['rho_g'] = self['rho'] * (1 - self['dustfrac'])
+            self['rho_d'] = self['rho'] * self['dustfrac']
             self['dtg'] = self['rho_d'] / self['rho_g']
         else:
             self['dustfrac_total'] = self[self.dustfracscol].sum(axis=1)
