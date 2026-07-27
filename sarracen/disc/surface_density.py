@@ -147,9 +147,11 @@ def surface_density(data: 'SarracenDataFrame',
 
     mass = _get_mass(data)
     if isinstance(mass, pd.Series):
-        sigma = mass.groupby(rbins).sum()
+        sigma = mass.groupby(rbins, observed=False).sum()
     else:
-        sigma = data.groupby(rbins).count().iloc[:, 0] * mass
+        sigma = data.groupby(rbins, observed=False).size() * mass
+
+    sigma = sigma.reindex(rbins.cat.categories, fill_value=0)
 
     if retbins:
         return (sigma / areas).to_numpy(), _get_bin_midpoints(bin_edges, log)
