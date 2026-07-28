@@ -112,6 +112,6 @@ class BaseKernel:
             q_z = np.linspace(0, bounds, samples)
             q = np.sqrt(q_xy ** 2 + q_z ** 2)
             y = wfunc(q, 3)
-            result[i] = 2 * float(np.trapz(y, x=q_z))
+            result[i] = 2 * float(np.trapezoid(y, x=q_z))
 
         return result
