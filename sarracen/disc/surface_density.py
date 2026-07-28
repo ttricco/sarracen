@@ -145,22 +145,25 @@ def surface_density(data: 'SarracenDataFrame',
 
     areas = np.pi * (bin_edges[1:] ** 2 - bin_edges[:-1] ** 2)
 
+    ndustsmall = data.params.get('ndustsmall', 0)
+    ndustlarge = data.params.get('ndustlarge', 0)
+
     mass = _get_mass(data)
-    if (int(data.params['ndustsmall']) == 0 and
-            int(data.params['ndustlarge']) == 0):  # gas-only dump
+    if ndustsmall == 0 and ndustlarge == 0:  # gas-only dump
         if isinstance(mass, pd.Series):
             sigma = mass.groupby(rbins, observed=False).sum()
         else:
-            sigma = data.groupby(rbins, observed=False).count().iloc[:, 0] * mass
+            sigma = data.groupby(rbins, observed=False).size() * mass
         sigma = sigma.reindex(rbins.cat.categories, fill_value=0)
         sigma = (sigma / areas).to_numpy()
+
         if retbins:
             return sigma, _get_bin_midpoints(bin_edges, log)
         else:
             return sigma
-    elif (int(data.params['ndustsmall']) != 0 and
-            int(data.params['ndustlarge']) == 0):  # 'dust-as-mixture' dump
-        if int(data.params['ndustsmall']) == 1:  # only one grain size
+
+    elif ndustsmall > 0 and ndustlarge == 0:  # 'dust-as-mixture' dump
+        if ndustsmall == 1:  # only one grain size
             mass_gas = mass * (1. - data['dustfrac'])
             sigma_gas = mass_gas.groupby(rbins, observed=False).sum()
             sigma_gas = sigma_gas.reindex(rbins.cat.categories, fill_value=0)
@@ -189,8 +192,8 @@ def surface_density(data: 'SarracenDataFrame',
             sigma_dtot = sigma_dtot.reindex(rbins.cat.categories, fill_value=0)
             sigma_dtot = (sigma_dtot / areas).to_numpy()
 
-            sigma_d = np.empty([int(data.params['ndustsmall']), bins])
-            for i in range(int(data.params['ndustsmall'])):
+            sigma_d = np.empty([ndustsmall, bins])
+            for i in range(ndustsmall):
                 sigma_d[i] = mass * data[data.dustfracscol[i]].groupby(rbins, observed=False).sum()
                 sigma_d[i] = sigma_d[i].reindex(rbins.cat.categories, fill_value=0)
                 sigma_d[i] = (sigma_d[i] / areas).to_numpy()
