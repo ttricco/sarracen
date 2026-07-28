@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import warnings
 from ..sarracen_dataframe import SarracenDataFrame
 from .utils import _get_mass, _get_origin
 from .utils import _bin_particles_by_radius, _get_bin_midpoints
@@ -140,8 +141,9 @@ def surface_density(data: 'SarracenDataFrame',
     """
 
     if 'itype' in data.columns and data['itype'].nunique() > 1:
-            raise UserWarning('Surface density being calculated from multiple '
-                              'particle types. This is not recommended.')
+        msg = ('Surface density being calculated from multiple particle types. '
+               'This is not recommended.')
+        warnings.warn(msg, UserWarning, stacklevel=2)
 
     origin = _get_origin(origin)
     rbins, bin_edges = _bin_particles_by_radius(data, r_in, r_out, bins, log,
