@@ -1,5 +1,6 @@
 """pytest unit tests for sarracen_dataframe.py functionality."""
 import numpy as np
+from numpy.testing import assert_allclose
 from matplotlib import pyplot as plt
 
 from sarracen import SarracenDataFrame, render
@@ -200,3 +201,79 @@ def test_centre_of_mass() -> None:
                             params={'mass': 3.2e-4})
 
     assert sdf.centre_of_mass() == [0.0, 0.0, 0.0]
+
+
+def test_calc_one_fluid_quantities() -> None:
+    """ Test calculation of one fluid quantity. """
+
+    x = [0, 0, 0, 0, 1, 1, 1, 1]
+    y = [0, 0, 1, 1, 0, 0, 1, 1]
+    z = [0, 1, 0, 1, 0, 1, 0, 1]
+    h = [1.0, 0.9, 1.2, 1.22, 1.14, 1.05, 1.42, 1.87]
+    dustfracs = [0.01, 0.02, 0.035, 0.05, 0.032, 0.001, 0.0001, 0.00001]
+
+    params = {'mass': 89.3452, 'hfact': 1.2, 'ndustsmall': 1}
+
+    sdf = SarracenDataFrame(data={'x': x, 'y': y, 'z': z, 'h': h,
+                                  'dustfrac': dustfracs},
+                            params=params)
+
+    sdf.calc_one_fluid_quantities()
+
+    rho = sdf.params['mass'] * (sdf.params['hfact'] / sdf['h'])**3
+    rho_g = rho * (1.0 - np.array(dustfracs))
+    rho_d = rho * dustfracs
+    dtg = np.array(dustfracs) / (1.0 - np.array(dustfracs))
+
+    assert 'rho_g' in sdf.columns
+    assert 'rho_d' in sdf.columns
+    assert 'dtg' in sdf.columns
+    assert_allclose(sdf['rho_g'], rho_g)
+    assert_allclose(sdf['rho_d'], rho_d)
+    assert_allclose(sdf['dtg'], dtg)
+
+
+def test_calc_one_fluid_quantities_multigrain() -> None:
+    """ Test calculation of one fluid quantity. """
+
+    x = [0, 0, 0, 0, 1, 1, 1, 1]
+    y = [0, 0, 1, 1, 0, 0, 1, 1]
+    z = [0, 1, 0, 1, 0, 1, 0, 1]
+    h = [1.0, 0.9, 1.2, 1.22, 1.14, 1.05, 1.42, 1.87]
+    dustfrac1 = [0.01, 0.02, 0.035, 0.05, 0.032, 0.001, 0.0001, 0.00001]
+    dustfrac2 = [0.001, 0.002, 0.0035, 0.005, 0.0032, 0.005, 0.0002, 0.00002]
+    dustfrac3 = [0.003, 0.03, 0.02, 0.067, 0.038, 0.009, 0.1, 0.00003]
+    dustfrac4 = [0.02, 0.04, 0.045, 0.005, 0.036, 0.0005, 0.01, 0.00004]
+
+    params = {'mass': 89.3452, 'hfact': 1.2, 'ndustsmall': 4}
+
+    sdf = SarracenDataFrame(data={'x': x, 'y': y, 'z': z, 'h': h,
+                                  'dustfrac1': dustfrac1,
+                                  'dustfrac2': dustfrac2,
+                                  'dustfrac3': dustfrac3,
+                                  'dustfrac4': dustfrac4},
+                            params=params)
+
+    sdf.calc_one_fluid_quantities()
+
+    dustfrac_total = (np.array(dustfrac1) + np.array(dustfrac2)
+                      + np.array(dustfrac3) + np.array(dustfrac4))
+    rho = sdf.params['mass'] * (sdf.params['hfact'] / sdf['h'])**3
+    rho_g = rho * (1.0 - dustfrac_total)
+    rho_d_total = rho * dustfrac_total
+    dtg = dustfrac_total / (1.0 - dustfrac_total)
+
+    assert 'rho_g' in sdf.columns
+    assert 'rho_d_total' in sdf.columns
+    assert 'dtg' in sdf.columns
+    assert_allclose(sdf['rho_g'], rho_g)
+    assert_allclose(sdf['rho_d_total'], rho_d_total)
+    assert_allclose(sdf['dtg'], dtg)
+
+    dustfracs = [dustfrac1, dustfrac2, dustfrac3, dustfrac4]
+    labels = ['rho_d', 'rho_d_2', 'rho_d_3', 'rho_d_4']
+
+    for label, dustfrac in zip(labels, dustfracs):
+        rho_d = rho * dustfrac
+        assert label in sdf.columns
+        assert_allclose(sdf[label], rho_d)
