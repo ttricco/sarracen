@@ -1,32 +1,34 @@
 """pytest unit tests for kernel functionality."""
+from typing import Callable
 from pytest import approx, mark
 from scipy.integrate import quad, dblquad, tplquad
 import numpy as np
 
+from sarracen.kernels import BaseKernel
 from sarracen.kernels import CubicSplineKernel
 from sarracen.kernels import QuarticSplineKernel
 from sarracen.kernels import QuinticSplineKernel
 
 
-def single_kernel(x, kernel):
+def single_kernel(x: float, kernel: BaseKernel) -> float:
     return kernel.w(np.abs(x), 1)
 
 
-def double_kernel(y, x, kernel):
+def double_kernel(y: float, x: float, kernel: BaseKernel) -> float:
     # Utility function for double integrals in test_normalization
     return kernel.w(np.sqrt(x ** 2 + y ** 2), 2)
 
 
-def triple_kernel(z, y, x, kernel):
+def triple_kernel(z: float, y: float, x: float, kernel: BaseKernel) -> float:
     # Utility function for triple integrals in test_normalization
     return kernel.w(np.sqrt(x ** 2 + y ** 2 + z ** 2), 3)
 
 
-def double_column(y, x, column_func):
+def double_column(y: float, x: float, column_func: Callable) -> float:
     return column_func(np.sqrt(x ** 2 + y ** 2), 0)
 
 
-def test_cubicspline():
+def test_cubicspline() -> None:
     kernel = CubicSplineKernel()
 
     # testing kernel values at q = 0
@@ -45,7 +47,7 @@ def test_cubicspline():
     assert kernel.w(10, 3) == 0
 
 
-def test_quarticspline():
+def test_quarticspline() -> None:
     kernel = QuarticSplineKernel()
 
     # unlike the cubic spline, these will NOT
@@ -68,7 +70,7 @@ def test_quarticspline():
     assert kernel.w(10, 3) == 0
 
 
-def test_quinticspline():
+def test_quinticspline() -> None:
     kernel = QuinticSplineKernel()
 
     # again, unlike the cubic spline, these will NOT
@@ -95,7 +97,7 @@ def test_quinticspline():
                   [CubicSplineKernel(),
                    QuarticSplineKernel(),
                    QuinticSplineKernel()])
-def test_normalization(kernel):
+def test_normalization(kernel: BaseKernel) -> None:
 
     # Since the three integrals below are only performed in positive space,
     # the resulting normalized values will not be equal to 1, rather 1/(2^dim).
@@ -103,22 +105,22 @@ def test_normalization(kernel):
     # that has all positive coordinates.
 
     norm = quad(single_kernel, -kernel.get_radius(),
-                kernel.get_radius(), kernel)[0]
+                kernel.get_radius(), tuple([kernel]))[0]
     assert approx(norm) == 1
 
     norm = dblquad(double_kernel, -kernel.get_radius(),
                    kernel.get_radius(), -kernel.get_radius(),
-                   kernel.get_radius(), [kernel])[0]
+                   kernel.get_radius(), tuple([kernel]))[0]
     assert approx(norm) == 1
 
     norm = tplquad(triple_kernel, -kernel.get_radius(),
                    kernel.get_radius(), -kernel.get_radius(),
                    kernel.get_radius(), -kernel.get_radius(),
-                   kernel.get_radius(), [kernel])[0]
+                   kernel.get_radius(), tuple([kernel]))[0]
     assert approx(norm) == 1
 
 
-def test_cubic_column():
+def test_cubic_column() -> None:
     kernel = CubicSplineKernel()
     column_kernel = kernel.get_column_kernel(10000)
     pts = np.linspace(0, kernel.get_radius(), 10000)
@@ -132,7 +134,7 @@ def test_cubic_column():
     assert np.interp(5, pts, column_kernel) == 0
 
 
-def test_quartic_column():
+def test_quartic_column() -> None:
     kernel = QuarticSplineKernel()
     column_kernel = kernel.get_column_kernel(10000)
     pts = np.linspace(0, kernel.get_radius(), 10000)
@@ -148,7 +150,7 @@ def test_quartic_column():
     assert np.interp(5, pts, column_kernel) == 0
 
 
-def test_quintic_column():
+def test_quintic_column() -> None:
     kernel = QuinticSplineKernel()
     column_kernel = kernel.get_column_kernel(10000)
     pts = np.linspace(0, kernel.get_radius(), 10000)
@@ -170,10 +172,10 @@ def test_quintic_column():
                   [CubicSplineKernel(),
                    QuarticSplineKernel(),
                    QuinticSplineKernel()])
-def test_normalized_column(kernel):
+def test_normalized_column(kernel: BaseKernel) -> None:
     norm = dblquad(double_column, -kernel.get_radius(), kernel.get_radius(),
                    -kernel.get_radius(), kernel.get_radius(),
-                   [kernel.get_column_kernel_func(10000)])[0]
+                   tuple([kernel.get_column_kernel_func(10000)]))[0]
     assert approx(norm) == 1
 
 
@@ -181,7 +183,7 @@ def test_normalized_column(kernel):
                   [CubicSplineKernel(),
                    QuarticSplineKernel(),
                    QuinticSplineKernel()])
-def test_oob(kernel):
+def test_oob(kernel: BaseKernel) -> None:
     for dimensions in range(1, 3):
         assert kernel.w(-1, dimensions) == 0
         assert kernel.w(kernel.get_radius() + 1, dimensions) == 0

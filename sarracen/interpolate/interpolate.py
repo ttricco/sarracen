@@ -9,8 +9,7 @@ from scipy.spatial.transform import Rotation
 from ..interpolate import BaseBackend, CPUBackend, GPUBackend
 from ..kernels import BaseKernel
 
-from typing import Tuple, Union, Optional
-import warnings
+from typing import Tuple, Union, Optional, Type, Literal
 
 
 def _default_xy(data: 'SarracenDataFrame',  # noqa: F821
@@ -79,9 +78,8 @@ def _default_xyz(data: 'SarracenDataFrame',  # noqa: F821
     return x, y, z
 
 
-def _default_bounds(data: 'SarracenDataFrame',  # noqa: F821
-                    x: str,
-                    y: str,
+def _default_bounds(x_data: np.ndarray,
+                    y_data: np.ndarray,
                     xlim: Union[Tuple[Union[float, None], Union[float, None]],
                                 None],
                     ylim: Union[Tuple[Union[float, None], Union[float, None]],
@@ -97,6 +95,8 @@ def _default_bounds(data: 'SarracenDataFrame',  # noqa: F821
         The particle dataset to interpolate over.
     x, y: str
         The directional column labels that will be used in interpolation.
+    x_data, y_data, z_data: ndarray
+        The particle coordinate data.
     xlim, ylim: tuple of float
         The minimum and maximum values passed to the interpolation function, in
         particle data space.
@@ -114,10 +114,10 @@ def _default_bounds(data: 'SarracenDataFrame',  # noqa: F821
     x_max = xlim[1] if xlim is not None and xlim[1] is not None else None
     y_max = ylim[1] if ylim is not None and ylim[1] is not None else None
 
-    x_min = data.loc[:, x].min() if x_min is None else x_min
-    y_min = data.loc[:, y].min() if y_min is None else y_min
-    x_max = data.loc[:, x].max() if x_max is None else x_max
-    y_max = data.loc[:, y].max() if y_max is None else y_max
+    x_min = x_data.min() if x_min is None else x_min
+    y_min = y_data.min() if y_min is None else y_min
+    x_max = x_data.max() if x_max is None else x_max
+    y_max = y_data.max() if y_max is None else y_max
 
     return (x_min, x_max), (y_min, y_max)
 
@@ -171,13 +171,11 @@ def _verify_columns(data: 'SarracenDataFrame',  # noqa: F821
     ----------
     data: SarracenDataFrame
         The particle dataset to interpolate over.
-    target:
-        Column label of the target variable to interpolate over.
     x, y: str
         The directional column labels that will be used in interpolation.
 
     Raises
-    -------
+    ------
     KeyError
         If `target`, `x`, `y`, mass, density, or smoothing length columns do
         not exist in `data`.
@@ -191,6 +189,12 @@ def _verify_columns(data: 'SarracenDataFrame',  # noqa: F821
     if data.hcol is None:
         raise KeyError("Smoothing length column does not exist in the "
                        "provided dataset.")
+    if data.mcol is None and 'mass' not in data.params:
+        raise KeyError("Missing particle mass data in this "
+                       "SarracenDataFrame.")
+    if data.rhocol is None and 'hfact' not in data.params:
+        raise KeyError("Density cannot be derived from the columns in "
+                       "this SarracenDataFrame.")
 
 
 def _check_boundaries(x_pixels: int,
@@ -228,7 +232,7 @@ def _check_boundaries(x_pixels: int,
 
 
 def _check_dimension(data: 'SarracenDataFrame',  # noqa: F821
-                     dim: int) -> None:
+                     dim: Literal[2, 3]) -> None:
     """
     Verify that a given dataset describes data with a required number of
     dimensions.
@@ -240,21 +244,23 @@ def _check_dimension(data: 'SarracenDataFrame',  # noqa: F821
     dim: [2, 3]
         The number of required dimensions.
 
-    Returns
-    -------
+    Raises
+    ------
     ValueError
-        If the dataset is not `dim`-dimensional.
+        If the dataset is not `dim`-dimensional or `dim` is not 2 or 3.
     """
+    if dim not in [2, 3]:
+        raise ValueError("`dim` must be 2 or 3.")
     if data.get_dim() != dim:
-        raise TypeError(f"Dataset is not {dim}-dimensional.")
+        raise ValueError(f"Dataset is not {dim}-dimensional.")
 
 
 def _rotate_data(data: 'SarracenDataFrame',  # noqa: F821
-                 x: str,
-                 y: str,
-                 z: str,
-                 given_rotation: Union[np.ndarray, list, Rotation, None],
-                 rot_origin: Union[np.ndarray, list,
+                 x_data: np.ndarray,
+                 y_data: np.ndarray,
+                 z_data: np.ndarray,
+                 rotation: Union[np.ndarray, list, Rotation, None],
+                 rot_origin: Union[np.ndarray, list, pd.Series,
                                    str, None]) -> Tuple[np.ndarray,
                                                         np.ndarray,
                                                         np.ndarray]:
@@ -265,12 +271,12 @@ def _rotate_data(data: 'SarracenDataFrame',  # noqa: F821
     ----------
     data: SarracenDataFrame
         The particle dataset to interpolate over.
-    x, y, z: str
-        Directional column labels containing each dimension of the vector data.
-    rotation: array_like or SciPy Rotation, optional
+    x_data, y_data, z_data: ndarray
+        The directional vector data.
+    rotation: array_like or SciPy Rotation
         The rotation to apply to the vector data. If defined as an array, the
-        order of rotations is [z, y, x] in degrees
-    rot_origin: array_like or ['com', 'midpoint'], optional
+        order of rotations is [z, y, x] in degrees.
+    rot_origin: array_like or ['com', 'midpoint']
         Point of rotation of the data. Only applies to 3D datasets. If
         array_like, then the [x, y, z] coordinates specify the point around
         which the data is rotated. If 'com', then data is rotated around the
@@ -282,45 +288,45 @@ def _rotate_data(data: 'SarracenDataFrame',  # noqa: F821
     x_data, y_data, z_data: ndarray
         The rotated x, y, and z directional data.
     """
-    x_data = data[x].to_numpy()
-    y_data = data[y].to_numpy()
-    z_data = data[z].to_numpy()
-    if given_rotation is not None:
-        if not isinstance(given_rotation, Rotation):
-            rotation = Rotation.from_euler('zyx',
-                                           given_rotation,
-                                           degrees=True)
+    vectors = np.array([x_data, y_data, z_data]).transpose()
+    if rotation is not None:
+        if not isinstance(rotation, Rotation):
+            rotation_obj = Rotation.from_euler('zyx',
+                                               rotation,
+                                               degrees=True)
+        else:
+            rotation_obj = rotation
 
-        vectors = data[[x, y, z]].to_numpy()
-
-        # warn whenever rotation is applied
-        msg = ("The default rotation point is currently the midpoint of the "
-               "x/y/z bounds, but will change to [x, y, z] = [0, 0, 0] in "
-               "Sarracen version 1.3.0.")
-        warnings.warn(msg, DeprecationWarning, stacklevel=6)
-
+        # default
         if rot_origin is None:
-            # rot_origin = [0, 0, 0]
-            rot_origin = (vectors.min(0) + vectors.max(0)) / 2
-        elif rot_origin == 'com':
-            rot_origin = data.centre_of_mass()
-        elif rot_origin == 'midpoint':
-            rot_origin = (vectors.min(0) + vectors.max(0)) / 2
-        elif not isinstance(rot_origin, (list, pd.Series, np.ndarray)):
+            rot_origin_arr = np.array([0, 0, 0], dtype=x_data.dtype)
+
+        # built-in point
+        elif isinstance(rot_origin, str):
+            if rot_origin == 'com':
+                rot_origin_arr = np.asarray(data.centre_of_mass(),
+                                            dtype=x_data.dtype)
+            elif rot_origin == 'midpoint':
+                rot_origin_arr = (vectors.min(0) + vectors.max(0)) / 2
+            else:
+                raise ValueError("rot_origin should be an [x, y, z] point or "
+                                 "'com' or 'midpoint'")
+
+        # user specified point
+        elif isinstance(rot_origin, (list, pd.Series, np.ndarray)):
+            if len(rot_origin) != 3:
+                raise ValueError("rot_origin should specify [x, y, z] point.")
+            rot_origin_arr = np.asarray(rot_origin, dtype=x_data.dtype)
+
+        else:
             raise ValueError("rot_origin should be an [x, y, z] point or "
                              "'com' or 'midpoint'")
-        elif len(rot_origin) != 3:
-            raise ValueError("rot_origin should specify [x, y, z] point.")
 
-        vectors = vectors - rot_origin
-        vectors = rotation.apply(vectors)
-        vectors = vectors + rot_origin
+        vectors = vectors - rot_origin_arr
+        vectors = rotation_obj.apply(vectors)
+        vectors = vectors + rot_origin_arr
 
-        x_data = vectors[:, 0]
-        y_data = vectors[:, 1]
-        z_data = vectors[:, 2]
-
-    return x_data, y_data, z_data
+    return vectors[:, 0], vectors[:, 1], vectors[:, 2]
 
 
 def _rotate_xyz(data: 'SarracenDataFrame',  # noqa: F821
@@ -345,10 +351,10 @@ def _rotate_xyz(data: 'SarracenDataFrame',  # noqa: F821
     data: SarracenDataFrame
         The particle dataset to interpolate over.
     x, y, z: str
-        Directional column labels containing the positional column labels
+        Directional column labels containing the positional column labels.
     rotation: array_like or SciPy Rotation, optional
         The rotation to apply to the data. If defined as an array, the
-        order of rotations is [z, y, x] in degrees
+        order of rotations is [z, y, x] in degrees.
     rot_origin: array_like or ['com', 'midpoint'], optional
         Point of rotation of the data. Only applies to 3D datasets. If
         array_like, then the [x, y, z] coordinates specify the point around
@@ -361,8 +367,9 @@ def _rotate_xyz(data: 'SarracenDataFrame',  # noqa: F821
     x_data, y_data, z_data: ndarray
         The rotated x, y, and z directional data.
     """
-    rotated_x, rotated_y, rotated_z = _rotate_data(data, data.xcol, data.ycol,
-                                                   data.zcol, rotation,
+    rotated_x, rotated_y, rotated_z = _rotate_data(data, data[data.xcol],
+                                                   data[data.ycol],
+                                                   data[data.zcol], rotation,
                                                    rot_origin)
     x_data = rotated_x if x == data.xcol else \
         rotated_y if x == data.ycol else \
@@ -392,7 +399,7 @@ def _corotate(corotation: Union[np.ndarray, list],
     corotation: array_like
         The x, y, z coordinates of two locations which determines the
         corotating frame. Each coordinate is also array_like.
-    rotation: array_like or SciPy Rotation, optional
+    rotation: array_like or SciPy Rotation
         An additional rotation to apply to the corotating frame.
 
     Returns
@@ -401,7 +408,6 @@ def _corotate(corotation: Union[np.ndarray, list],
         The rotation to apply to the data before interpolation.
     rot_origin: array_like
         Point of rotation of the data.
-
     """
     corotation[1][0] -= corotation[0][0]
     corotation[1][1] -= corotation[0][1]
@@ -425,9 +431,6 @@ def _corotate(corotation: Union[np.ndarray, list],
 def _get_mass(data: 'SarracenDataFrame') -> Union[np.ndarray,  # noqa: F821
                                                   float]:
     if data.mcol is None:
-        if 'mass' not in data.params:
-            raise KeyError("'mass' column does not exist in this "
-                           "SarracenDataFrame.")
         return data.params['mass']
 
     return data[data.mcol].to_numpy()
@@ -435,10 +438,6 @@ def _get_mass(data: 'SarracenDataFrame') -> Union[np.ndarray,  # noqa: F821
 
 def _get_density(data: 'SarracenDataFrame') -> np.ndarray:  # noqa: F821
     if data.rhocol is None:
-        if data.hcol not in data.columns or 'hfact' not in data.params:
-            raise KeyError('Density cannot be derived from the columns in '
-                           'this SarracenDataFrame.')
-
         hfact = data.params['hfact']
         mass = _get_mass(data)
         return ((hfact / data[data.hcol])**(data.get_dim()) * mass).to_numpy()
@@ -533,9 +532,9 @@ def interpolate_2d(data: 'SarracenDataFrame',  # noqa: F821
     xlim, ylim: tuple of float, optional
         The minimum and maximum values to use in interpolation, in particle
         data space. Defaults to the minimum and maximum values of `x` and `y`.
-    exact: bool
+    exact: bool, optional
         Whether to use exact interpolation of the data.
-    backend: ['cpu', 'gpu']
+    backend: ['cpu', 'gpu'], optional
         The computation backend to use when interpolating this data. Defaults
         to 'gpu' if CUDA is enabled, otherwise 'cpu' is used. A manually
         specified backend in `data` will override the default.
@@ -556,7 +555,7 @@ def interpolate_2d(data: 'SarracenDataFrame',  # noqa: F821
         Dimensions are structured in reverse order, where (x, y) -> [y, x].
 
     Raises
-    -------
+    ------
     ValueError
         If `x_pixels` or `y_pixels` are less than or equal to zero, or if the
         specified `x` and `y` minimum and maximum values result in an invalid
@@ -569,7 +568,7 @@ def interpolate_2d(data: 'SarracenDataFrame',  # noqa: F821
     x, y = _default_xy(data, x, y)
     _verify_columns(data, x, y)
 
-    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
+    xlim, ylim = _default_bounds(data[x], data[y], xlim, ylim)
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     _check_boundaries(x_pixels, y_pixels, xlim, ylim)
     w_data = _get_weight(data, target, dens_weight)
@@ -640,9 +639,9 @@ def interpolate_2d_vec(data: 'SarracenDataFrame',  # noqa: F821
     xlim, ylim: tuple of float, optional
         The minimum and maximum values to use in interpolation, in particle
         data space. Defaults to the minimum and maximum values of `x` and `y`.
-    exact: bool
+    exact: bool, optional
         Whether to use exact interpolation of the data.
-    backend: ['cpu', 'gpu']
+    backend: ['cpu', 'gpu'], optional
         The computation backend to use when interpolating this data. Defaults
         to 'gpu' if CUDA is enabled, otherwise 'cpu' is used. A manually
         specified backend in `data` will override the default.
@@ -663,7 +662,7 @@ def interpolate_2d_vec(data: 'SarracenDataFrame',  # noqa: F821
         Dimensions are structured in reverse order, where (x, y) -> [y, x].
 
     Raises
-    -------
+    ------
     ValueError
         If `x_pixels` or `y_pixels` are less than or equal to zero, or if the
         specified `x` and `y` minimum and maximum values result in an invalid
@@ -676,7 +675,7 @@ def interpolate_2d_vec(data: 'SarracenDataFrame',  # noqa: F821
     x, y = _default_xy(data, x, y)
     _verify_columns(data, x, y)
 
-    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
+    xlim, ylim = _default_bounds(data[x], data[y], xlim, ylim)
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     _check_boundaries(x_pixels, y_pixels, xlim, ylim)
 
@@ -747,15 +746,14 @@ def interpolate_2d_line(data: 'SarracenDataFrame',  # noqa: F821
     xlim, ylim: tuple of float, optional
         Starting and ending coordinates of the cross-section line (in particle
         data space). Defaults to the minimum and maximum values of `x` and `y`.
-    backend: ['cpu', 'gpu']
+    backend: ['cpu', 'gpu'], optional
         The computation backend to use when interpolating this data. Defaults
         to 'gpu' if CUDA is enabled, otherwise 'cpu' is used. A manually
         specified backend in `data` will override the default.
     dens_weight: bool, optional
         If True, the target will be multiplied by density. Defaults to False.
     normalize: bool, optional
-        If True, will normalize the interpolation. Defaults to False (this may
-        change in future versions).
+        If True, will normalize the interpolation. Defaults to True.
     hmin: bool, optional
         If True, a minimum smoothing length of 0.5 * pixel size will be
         imposed. This ensures each particle contributes to at least one grid
@@ -767,7 +765,7 @@ def interpolate_2d_line(data: 'SarracenDataFrame',  # noqa: F821
         The resulting interpolated output.
 
     Raises
-    -------
+    ------
     ValueError
         If `x_pixels` or `y_pixels` are less than or equal to zero, or if the
         specified `xlim` and `ylim` values are all the same (indicating a
@@ -787,7 +785,7 @@ def interpolate_2d_line(data: 'SarracenDataFrame',  # noqa: F821
     if isinstance(ylim, float) or isinstance(ylim, int):
         ylim = ylim, ylim
 
-    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
+    xlim, ylim = _default_bounds(data[x], data[y], xlim, ylim)
     if xlim[0] == xlim[1] and ylim[0] == ylim[1]:
         raise ValueError('Zero length cross section!')
 
@@ -863,15 +861,14 @@ def interpolate_3d_line(data: 'SarracenDataFrame',  # noqa: F821
         Starting and ending coordinates of the cross-section line (in particle
         data space). Defaults to the minimum and maximum values of `x`, `y`,
         and `z`.
-    backend: ['cpu', 'gpu']
+    backend: ['cpu', 'gpu'], optional
         The computation backend to use when interpolating this data. Defaults
         to 'gpu' if CUDA is enabled, otherwise 'cpu' is used. A manually
         specified backend in `data` will override the default.
     dens_weight: bool, optional
        If True, the target will be multiplied by density. Defaults to False.
     normalize: bool, optional
-        If True, will normalize the interpolation. Defaults to False (this may
-        change in future versions).
+        If True, will normalize the interpolation. Defaults to True.
     hmin: bool, optional
         If True, a minimum smoothing length of 0.5 * pixel size will be
         imposed. This ensures each particle contributes to at least one grid
@@ -883,7 +880,7 @@ def interpolate_3d_line(data: 'SarracenDataFrame',  # noqa: F821
         The interpolated output line.
 
     Raises
-    -------
+    ------
     ValueError
         If `pixels` are less than or equal to zero, or if the specified `x`,
         `y`, and `z` minimum and maximum values result in a zero area
@@ -909,7 +906,7 @@ def interpolate_3d_line(data: 'SarracenDataFrame',  # noqa: F821
     z2 = data.loc[:, z].min() if zlim is None or zlim[1] is None else zlim[1]
     zlim = z1, z2
 
-    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
+    xlim, ylim = _default_bounds(data[x], data[y], xlim, ylim)
     if ylim[1] == ylim[0] and xlim[1] == xlim[0] and zlim[1] == zlim[0]:
         raise ValueError('Zero length cross section!')
 
@@ -987,7 +984,7 @@ def interpolate_3d_proj(data: 'SarracenDataFrame',  # noqa: F821
     integral_samples: int, optional
         Number of sample points to take when approximating the 2D column
         kernel.
-    corotation: array_like
+    corotation: array_like, optional
         The x, y, z coordinates of two locations which determines the
         corotating frame.
     rotation: array_like or SciPy Rotation, optional
@@ -1005,9 +1002,9 @@ def interpolate_3d_proj(data: 'SarracenDataFrame',  # noqa: F821
     xlim, ylim: tuple of float, optional
         The minimum and maximum values to use in interpolation, in particle
         data space. Defaults to the minimum and maximum values of `x` and `y`.
-    exact: bool
+    exact: bool, optional
         Whether to use exact interpolation of the data.
-    backend: ['cpu', 'gpu']
+    backend: ['cpu', 'gpu'], optional
         The computation backend to use when interpolating this data. Defaults
         to 'gpu' if CUDA is enabled, otherwise 'cpu' is used. A manually
         specified backend in `data` will override the default.
@@ -1016,8 +1013,7 @@ def interpolate_3d_proj(data: 'SarracenDataFrame',  # noqa: F821
         column-integrated views, when the target is not density, and False for
         everything else.
     normalize: bool, optional
-        If True, will normalize the interpolation. Defaults to False (this may
-        change in future versions).
+        If True, will normalize the interpolation. Defaults to True.
     hmin: bool, optional
         If True, a minimum smoothing length of 0.5 * pixel size will be
         imposed. This ensures each particle contributes to at least one grid
@@ -1030,7 +1026,7 @@ def interpolate_3d_proj(data: 'SarracenDataFrame',  # noqa: F821
         Dimensions are structured in reverse order, where (x, y) -> [y, x].
 
     Raises
-    -------
+    ------
     ValueError
         If `x_pixels` or `y_pixels` are less than or equal to zero, or if the
         specified `x` and `y` minimum and maximums result in an invalid region,
@@ -1053,14 +1049,15 @@ def interpolate_3d_proj(data: 'SarracenDataFrame',  # noqa: F821
 
     w_data = _get_weight(data, target, dens_weight)
 
-    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
-    x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
-    _check_boundaries(x_pixels, y_pixels, xlim, ylim)
-
     if corotation is not None:
         rotation, rot_origin = _corotate(corotation, rotation)
 
     x_data, y_data, z_data = _rotate_xyz(data, x, y, z, rotation, rot_origin)
+
+    xlim, ylim = _default_bounds(x_data, y_data, xlim, ylim)
+    x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
+    _check_boundaries(x_pixels, y_pixels, xlim, ylim)
+
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
 
@@ -1069,7 +1066,7 @@ def interpolate_3d_proj(data: 'SarracenDataFrame',  # noqa: F821
     h_data = _get_smoothing_lengths(data, hmin, x_pixels, y_pixels, xlim, ylim)
 
     grid = get_backend(backend) \
-        .interpolate_3d_projection(x_data, y_data, z_data, w_data, h_data,
+        .interpolate_3d_projection(x_data, y_data, w_data, h_data,
                                    weight_function, kernel.get_radius(),
                                    x_pixels, y_pixels,
                                    xlim[0], xlim[1], ylim[0], ylim[1], exact)
@@ -1077,7 +1074,7 @@ def interpolate_3d_proj(data: 'SarracenDataFrame',  # noqa: F821
     if normalize:
         w_norm = _get_weight(data, np.array([1] * len(w_data)), dens_weight)
         norm_grid = get_backend(backend) \
-            .interpolate_3d_projection(x_data, y_data, z_data, w_norm, h_data,
+            .interpolate_3d_projection(x_data, y_data, w_norm, h_data,
                                        weight_function, kernel.get_radius(),
                                        x_pixels, y_pixels, xlim[0], xlim[1],
                                        ylim[0], ylim[1], exact)
@@ -1145,17 +1142,16 @@ def interpolate_3d_vec(data: 'SarracenDataFrame',  # noqa: F821
     xlim, ylim: tuple of float, optional
         The minimum and maximum values to use in interpolation, in particle
         data space. Defaults to the minimum and maximum values of `x` and `y`.
-    exact: bool
+    exact: bool, optional
         Whether to use exact interpolation of the data.
-    backend: ['cpu', 'gpu']
+    backend: ['cpu', 'gpu'], optional
         The computation backend to use when interpolating this data. Defaults
         to 'gpu' if CUDA is enabled, otherwise 'cpu' is used. A manually
         specified backend in `data` will override the default.
     dens_weight: bool, optional
         If True, the target will be multiplied by density. Defaults to False.
     normalize: bool, optional
-        If True, will normalize the interpolation. Defaults to False (this may
-        change in future versions).
+        If True, will normalize the interpolation. Defaults to True.
     hmin: bool, optional
         If True, a minimum smoothing length of 0.5 * pixel size will be
         imposed. This ensures each particle contributes to at least one grid
@@ -1168,7 +1164,7 @@ def interpolate_3d_vec(data: 'SarracenDataFrame',  # noqa: F821
         order, where (x, y) -> [y, x].
 
     Raises
-    -------
+    ------
     ValueError
         If `x_pixels` or `y_pixels` are less than or equal to zero, or if the
         specified `x` and `y` minimum and maximums result in an invalid region,
@@ -1187,16 +1183,18 @@ def interpolate_3d_vec(data: 'SarracenDataFrame',  # noqa: F821
     x, y, z = _default_xyz(data, x, y, None)
     _verify_columns(data, x, y)
 
-    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
+    x_data, y_data, z_data = _rotate_xyz(data, x, y, z, rotation, rot_origin)
+
+    xlim, ylim = _default_bounds(x_data, y_data, xlim, ylim)
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     _check_boundaries(x_pixels, y_pixels, xlim, ylim)
 
-    x_data, y_data, _ = _rotate_xyz(data, x, y, z, rotation, rot_origin)
     if target_z not in data.columns:
         raise KeyError(f"z-directional target column '{target_z}' does not "
                        f"exist in the provided dataset.")
-    target_x_data, target_y_data, _ = _rotate_data(data, target_x, target_y,
-                                                   target_z, rotation,
+    target_x_data, target_y_data, _ = _rotate_data(data, data[target_x],
+                                                   data[target_y],
+                                                   data[target_z], rotation,
                                                    rot_origin)
 
     wx_data = _get_weight(data, target_x_data, dens_weight)
@@ -1261,17 +1259,17 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',  # noqa: F821
         The particle data to interpolate over.
     target: str
         The column label of the target smoothing data.
-    z_slice: float
-        The z-axis value to take the cross-section at. Defaults to the midpoint
-        of the z-directional data.
     x, y, z: str, optional
         The column labels of the directional data to interpolate over. Defaults
         to the x, y, and z columns
         detected in `data`.
-    kernel: BaseKernel
+    z_slice: float, optional
+        The z-axis value to take the cross-section at. Defaults to the midpoint
+        of the z-directional data.
+    kernel: BaseKernel, optional
         The kernel to use for smoothing the target data. Defaults to the kernel
         specified in `data`.
-    corotation: array_like
+    corotation: array_like, optional
         The x, y, z coordinates of two locations which determines the
         corotating frame.
     rotation: array_like or SciPy Rotation, optional
@@ -1289,15 +1287,14 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',  # noqa: F821
     xlim, ylim: tuple of float, optional
         The minimum and maximum values to use in interpolation, in particle
         data space. Defaults to the minimum and maximum values of `x` and `y`.
-    backend: ['cpu', 'gpu']
+    backend: ['cpu', 'gpu'], optional
         The computation backend to use when interpolating this data. Defaults
         to 'gpu' if CUDA is enabled, otherwise 'cpu' is used. A manually
         specified backend in `data` will override the default.
     dens_weight: bool, optional
         If True, the target will be multiplied by density. Defaults to False.
     normalize: bool, optional
-        If True, will normalize the interpolation. Defaults to False (this may
-        change in future versions).
+        If True, will normalize the interpolation. Defaults to True.
     hmin: bool, optional
         If True, a minimum smoothing length of 0.5 * pixel size will be
         imposed. This ensures each particle contributes to at least one grid
@@ -1310,7 +1307,7 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',  # noqa: F821
         Dimensions are structured in reverse order, where (x, y) -> [y, x].
 
     Raises
-    -------
+    ------
     ValueError
         If `pixwidthx`, `pixwidthy`, `pixcountx`, or `pixcounty` are less than
         or equal to zero, or if the specified `x` and `y` minimum and maximums
@@ -1332,11 +1329,6 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',  # noqa: F821
 
     w_data = _get_weight(data, target, dens_weight)
 
-    # boundaries of the plot default to the max & min values of the data.
-    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
-    x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
-    _check_boundaries(x_pixels, y_pixels, xlim, ylim)
-
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
 
@@ -1344,6 +1336,12 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',  # noqa: F821
         rotation, rot_origin = _corotate(corotation, rotation)
 
     x_data, y_data, z_data = _rotate_xyz(data, x, y, z, rotation, rot_origin)
+
+    # boundaries of the plot default to the max & min values of the data.
+    xlim, ylim = _default_bounds(x_data, y_data, xlim, ylim)
+    x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
+    _check_boundaries(x_pixels, y_pixels, xlim, ylim)
+
     h_data = _get_smoothing_lengths(data, hmin, x_pixels, y_pixels, xlim, ylim)
 
     grid = get_backend(backend) \
@@ -1401,13 +1399,13 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame',  # noqa: F821
         The particle data to interpolate over.
     target_x, target_y, target_z: str
         The column labels of the target vector.
-    z_slice: float
+    z_slice: float, optional
         The z-axis value to take the cross-section at. Defaults to the midpoint
         of the z-directional data.
     x, y, z: str, optional
         The column labels of the directional data to interpolate over. Defaults
         to the x, y, and z columns detected in `data`.
-    kernel: BaseKernel
+    kernel: BaseKernel, optional
         The kernel to use for smoothing the target data. Defaults to the kernel
         specified in `data`.
     rotation: array_like or SciPy Rotation, optional
@@ -1425,15 +1423,14 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame',  # noqa: F821
     xlim, ylim: float, optional
         The minimum and maximum values to use in interpolation, in particle
         data space. Defaults to the minimum and maximum values of `x` and `y`.
-    backend: ['cpu', 'gpu']
+    backend: ['cpu', 'gpu'], optional
         The computation backend to use when interpolating this data. Defaults
         to 'gpu' if CUDA is enabled, otherwise 'cpu' is used. A manually
         specified backend in `data` will override the default.
     dens_weight: bool, optional
         If True, the target will be multiplied by density. Defaults to False.
     normalize: bool, optional
-        If True, will normalize the interpolation. Defaults to False (this may
-        change in future versions).
+        If True, will normalize the interpolation. Defaults to True.
     hmin: bool, optional
         If True, a minimum smoothing length of 0.5 * pixel size will be
         imposed. This ensures each particle contributes to at least one grid
@@ -1446,7 +1443,7 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame',  # noqa: F821
         order, where (x, y) -> [y, x].
 
     Raises
-    -------
+    ------
     ValueError
         If `pixwidthx`, `pixwidthy`, `pixcountx`, or `pixcounty` are less than
         or equal to zero, or if the specified `x` and `y` minimum and maximums
@@ -1465,14 +1462,16 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame',  # noqa: F821
     if z_slice is None:
         z_slice = data.loc[:, z].mean()
 
+    x_data, y_data, z_data = _rotate_xyz(data, x, y, z, rotation, rot_origin)
+
     # boundaries of the plot default to the max & min values of the data.
-    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
+    xlim, ylim = _default_bounds(x_data, y_data, xlim, ylim)
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     _check_boundaries(x_pixels, y_pixels, xlim, ylim)
 
-    x_data, y_data, z_data = _rotate_xyz(data, x, y, z, rotation, rot_origin)
-    target_x_data, target_y_data, _ = _rotate_data(data, target_x, target_y,
-                                                   target_z, rotation,
+    target_x_data, target_y_data, _ = _rotate_data(data, data[target_x],
+                                                   data[target_y],
+                                                   data[target_z], rotation,
                                                    rot_origin)
 
     wx_data = _get_weight(data, target_x_data, dens_weight)
@@ -1539,7 +1538,7 @@ def interpolate_3d_grid(data: 'SarracenDataFrame',  # noqa: F821
     x, y, z: str, optional
         The column labels of the directional data to interpolate over. Defaults
         to the x, y, and z columns detected in `data`.
-    kernel: BaseKernel
+    kernel: BaseKernel, optional
         The kernel to use for smoothing the target data. Defaults to the kernel
         specified in `data`.
     rotation: array_like or SciPy Rotation, optional
@@ -1558,15 +1557,14 @@ def interpolate_3d_grid(data: 'SarracenDataFrame',  # noqa: F821
         The minimum and maximum values to use in interpolation, in particle
         data space. Defaults to the minimum and maximum values of `x`, `y`
         and `z`.
-    backend: ['cpu', 'gpu']
+    backend: ['cpu', 'gpu'], optional
         The computation backend to use when interpolating this data. Defaults
         to 'gpu' if CUDA is enabled, otherwise 'cpu' is used. A manually
         specified backend in `data` will override the default.
     dens_weight: bool, optional
         If True, the target will be multiplied by density. Defaults to False.
     normalize: bool, optional
-        If True, will normalize the interpolation. Defaults to False (this may
-        change in future versions).
+        If True, will normalize the interpolation. Defaults to True.
     hmin: bool, optional
         If True, a minimum smoothing length of 0.5 * pixel size will be
         imposed. This ensures each particle contributes to at least one grid
@@ -1580,7 +1578,7 @@ def interpolate_3d_grid(data: 'SarracenDataFrame',  # noqa: F821
         [z, y, x].
 
     Raises
-    -------
+    ------
     ValueError
         If `x_pixels`, `y_pixels` or `z_pixels` are less than or equal to zero,
         or if the specified `x`, `y` and `z` minimum and maximum values result
@@ -1595,12 +1593,13 @@ def interpolate_3d_grid(data: 'SarracenDataFrame',  # noqa: F821
 
     w_data = _get_weight(data, target, dens_weight)
 
+    x_data, y_data, z_data = _rotate_xyz(data, x, y, z, rotation, rot_origin)
     if not xlim:
         xlim = (None, None)
     if not ylim:
         ylim = (None, None)
-    xlim, ylim = _default_bounds(data, x, y, xlim, ylim)
-    zlim = zlim if zlim else (data.loc[:, z].min(), data.loc[:, z].max())
+    xlim, ylim = _default_bounds(x_data, y_data, xlim, ylim)
+    zlim = zlim if zlim else (z_data.min(), z_data.max())
 
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     if z_pixels is None:
@@ -1617,8 +1616,6 @@ def interpolate_3d_grid(data: 'SarracenDataFrame',  # noqa: F821
     kernel = kernel if kernel is not None else data.kernel
     backend = backend if backend is not None else data.backend
 
-    x_data, y_data, z_data = _rotate_xyz(data, x, y, data.zcol,
-                                         rotation, rot_origin)
     h_data = _get_smoothing_lengths(data, hmin, x_pixels, y_pixels,
                                     xlim, ylim)
 
@@ -1640,7 +1637,7 @@ def interpolate_3d_grid(data: 'SarracenDataFrame',  # noqa: F821
     return grid
 
 
-def get_backend(code: str) -> type[BaseBackend]:
+def get_backend(code: str) -> Type[BaseBackend]:
     """
     Get the interpolation backend associated with a string code.
 
@@ -1652,7 +1649,7 @@ def get_backend(code: str) -> type[BaseBackend]:
 
     Returns
     -------
-    CPUBackend: The backend to use for interpolation.
+    BaseBackend: The backend to use for interpolation.
     """
     if code == 'cpu':
         return CPUBackend

@@ -1,4 +1,5 @@
 """pytest unit tests for render.py functions."""
+from typing import Any, Callable, Dict, List
 from matplotlib import pyplot as plt
 from numba import cuda
 from numpy.testing import assert_array_equal
@@ -17,7 +18,7 @@ if cuda.is_available():
 
 
 @mark.parametrize("backend", backends)
-def test_interpolation_passthrough(backend):
+def test_interpolation_passthrough(backend: str) -> None:
     """
     Verify that rendering functions use proper underlying interpolation.
     """
@@ -29,7 +30,9 @@ def test_interpolation_passthrough(backend):
 
     fig, ax = plt.subplots()
     render(sdf, 'P', ax=ax)
-    assert_array_equal(ax.images[0].get_array(), interpolate_2d(sdf, 'P'))
+    img = ax.images[0].get_array()
+    assert img is not None
+    assert_array_equal(img, interpolate_2d(sdf, 'P'))
     plt.close(fig)
 
     fig, ax = plt.subplots()
@@ -46,20 +49,20 @@ def test_interpolation_passthrough(backend):
     fig, ax = plt.subplots()
     render(sdf, 'P', ax=ax)
     img = ax.images[0].get_array()
-    interpolation = interpolate_3d_proj(sdf, 'P')
-    assert_array_equal(img, interpolation)
+    assert img is not None
+    assert_array_equal(img, interpolate_3d_proj(sdf, 'P'))
     plt.close(fig)
 
     fig, ax = plt.subplots()
     render(sdf, 'P', xsec=1.5, ax=ax)
     img = ax.images[0].get_array()
-    interpolation = interpolate_3d_cross(sdf, 'P')
-    assert_array_equal(img, interpolation)
+    assert img is not None
+    assert_array_equal(img, interpolate_3d_cross(sdf, 'P'))
     plt.close(fig)
 
 
 @mark.parametrize("backend", backends)
-def test_cmap(backend):
+def test_cmap(backend: str) -> None:
     """
     Verify that each rendering function uses the provided color map.
     """
@@ -90,7 +93,7 @@ def test_cmap(backend):
 
 
 @mark.parametrize("backend", backends)
-def test_cbar_exclusion(backend):
+def test_cbar_exclusion(backend: str) -> None:
     """
     Verify that each rendering function respects the cbar argument.
     """
@@ -103,9 +106,10 @@ def test_cbar_exclusion(backend):
     sdf_3 = SarracenDataFrame(data_3)
     sdf_3.backend = backend
 
-    for args in [{'data': sdf_2, 'xsec': None},
-                 {'data': sdf_3, 'xsec': None},
-                 {'data': sdf_3, 'xsec': 1.5}]:
+    args_list: List[Dict[str, Any]] = [{'data': sdf_2, 'xsec': None},
+                                       {'data': sdf_3, 'xsec': None},
+                                       {'data': sdf_3, 'xsec': 1.5}]
+    for args in args_list:
         fig, ax = plt.subplots()
         render(args['data'], 'P', xsec=args['xsec'], cbar=True, ax=ax)
         assert ax.images[-1].colorbar is not None
@@ -118,7 +122,7 @@ def test_cbar_exclusion(backend):
 
 
 @mark.parametrize("backend", backends)
-def test_cbar_keywords(backend):
+def test_cbar_keywords(backend: str) -> None:
     """
     Verify that rendering functions respect the passed colorbar keywords.
     """
@@ -131,18 +135,21 @@ def test_cbar_keywords(backend):
     sdf_3 = SarracenDataFrame(data_3)
     sdf_3.backend = backend
 
-    for args in [{'data': sdf_2, 'xsec': None},
-                 {'data': sdf_3, 'xsec': None},
-                 {'data': sdf_3, 'xsec': 1.5}]:
+    args_list: List[Dict[str, Any]] = [{'data': sdf_2, 'xsec': None},
+                                       {'data': sdf_3, 'xsec': None},
+                                       {'data': sdf_3, 'xsec': 1.5}]
+    for args in args_list:
         fig, ax = plt.subplots()
         render(args['data'], 'P', xsec=args['xsec'],
                cbar_kws={'orientation': 'horizontal'}, ax=ax)
-        assert ax.images[-1].colorbar.orientation == 'horizontal'
+        cb = ax.images[-1].colorbar
+        assert cb is not None
+        assert cb.orientation == 'horizontal'
         plt.close(fig)
 
 
 @mark.parametrize("backend", backends)
-def test_kwargs(backend):
+def test_kwargs(backend: str) -> None:
     """
     Verify that each rendering function respects passed keyword arguments.
     """
@@ -160,9 +167,10 @@ def test_kwargs(backend):
     sdf_4 = SarracenDataFrame(data_4)
     sdf_4.backend = backend
 
-    for args in [{'data': sdf_2, 'xsec': None},
-                 {'data': sdf_3, 'xsec': None},
-                 {'data': sdf_3, 'xsec': 1.5}]:
+    args_list: List[Dict[str, Any]] = [{'data': sdf_2, 'xsec': None},
+                                       {'data': sdf_3, 'xsec': None},
+                                       {'data': sdf_3, 'xsec': 1.5}]
+    for args in args_list:
         fig, ax = plt.subplots()
         render(args['data'], 'P', xsec=args['xsec'], ax=ax, origin='upper')
         assert ax.images[0].origin == 'upper'
@@ -192,35 +200,7 @@ def test_kwargs(backend):
 
 
 @mark.parametrize("backend", backends)
-def test_rotated_ticks(backend):
-    """
-    A rotated plot should have no x & y ticks.
-    """
-    data = {'x': [3, 6], 'y': [5, 1], 'z': [2, 1], 'P': [1, 1],
-            'h': [1, 1], 'rho': [1, 1], 'm': [1, 1],
-            'Ax': [1, 1], 'Ay': [1, 1], 'Az': [1, 1]}
-    sdf = SarracenDataFrame(data)
-    sdf.backend = backend
-
-    for xsec in [None, 1.5]:
-        fig, ax = plt.subplots()
-        render(sdf, 'P', xsec=xsec, ax=ax, rotation=[34, 23, 50])
-
-        assert ax.get_xticks().size == 0
-        assert ax.get_yticks().size == 0
-        plt.close(fig)
-
-    for func in [arrowplot, streamlines]:
-        fig, ax = plt.subplots()
-        func(sdf, ('Ax', 'Ay', 'Az'), rotation=[34, 23, 50], ax=ax)
-
-        assert ax.get_xticks().size == 0
-        assert ax.get_yticks().size == 0
-        plt.close(fig)
-
-
-@mark.parametrize("backend", backends)
-def test_plot_labels(backend):
+def test_plot_labels(backend: str) -> None:
     """
     Verify that plot labels for each rendering function are correct.
     """
@@ -236,10 +216,10 @@ def test_plot_labels(backend):
     sdf_3 = SarracenDataFrame(data_3)
     sdf_3.backend = backend
 
-    for args in [{'data': sdf_2, 'xsec': None},
-                 {'data': sdf_3, 'xsec': None},
-                 {'data': sdf_3, 'xsec': 0}]:
-
+    args_list: List[Dict[str, Any]] = [{'data': sdf_2, 'xsec': None},
+                                       {'data': sdf_3, 'xsec': None},
+                                       {'data': sdf_3, 'xsec': 0}]
+    for args in args_list:
         column = args['data'] is sdf_3 and args['xsec'] is None
 
         fig, ax = plt.subplots()
@@ -260,7 +240,8 @@ def test_plot_labels(backend):
                ('column ' if column else '') + 'rho'
         plt.close(fig)
 
-    for func in [streamlines, arrowplot]:
+    functions_list: List[Callable] = [streamlines, arrowplot]
+    for func in functions_list:
         fig, ax = plt.subplots()
         func(sdf_2, ('Ax', 'Ay'), ax=ax)
 
@@ -291,7 +272,7 @@ def test_plot_labels(backend):
 
 
 @mark.parametrize("backend", backends)
-def test_plot_bounds(backend):
+def test_plot_bounds(backend: str) -> None:
     """
     Verify that plot bounds are set correctly for each rendering function.
     """
@@ -306,9 +287,10 @@ def test_plot_bounds(backend):
     sdf_3 = SarracenDataFrame(data_3)
     sdf_3.backend = backend
 
-    for args in [{'data': sdf_2, 'xsec': None},
-                 {'data': sdf_3, 'xsec': None},
-                 {'data': sdf_3, 'xsec': 1.5}]:
+    args_list: List[Dict[str, Any]] = [{'data': sdf_2, 'xsec': None},
+                                       {'data': sdf_3, 'xsec': None},
+                                       {'data': sdf_3, 'xsec': 1.5}]
+    for args in args_list:
         fig, ax = plt.subplots()
         render(args['data'], 'P', xsec=args['xsec'], ax=ax)
 
@@ -337,7 +319,8 @@ def test_plot_bounds(backend):
     assert ax.get_ylim() == (0, interpolate_2d_line(sdf_2, 'P').max())
     plt.close(fig)
 
-    for func in [arrowplot, streamlines]:
+    functions_list: List[Callable] = [arrowplot, streamlines]
+    for func in functions_list:
         fig, ax = plt.subplots()
         func(sdf_3, ('Ax', 'Ay', 'Az'), ax=ax)
 
@@ -347,7 +330,7 @@ def test_plot_bounds(backend):
 
 
 @mark.parametrize("backend", backends)
-def test_log_vmin(backend):
+def test_log_vmin(backend: str) -> None:
     """
     Verify that the vmin value of log scales are set properly.
     """

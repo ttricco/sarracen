@@ -4,7 +4,7 @@ from sarracen import SarracenDataFrame
 from sarracen.disc import angular_momentum
 
 
-def test_mass_equivalency():
+def test_mass_equivalency() -> None:
     """ Column mass result should equal global params mass result. """
 
     # randomly place particles
@@ -32,7 +32,7 @@ def test_mass_equivalency():
     assert_array_equal(Lz1, Lz2)
 
 
-def test_parts_vs_whole():
+def test_parts_vs_whole() -> None:
     """ Profiles should be the same for matching bins. """
 
     # randomly place particles

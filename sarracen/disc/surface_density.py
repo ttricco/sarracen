@@ -4,16 +4,20 @@ from ..sarracen_dataframe import SarracenDataFrame
 from .utils import _get_mass, _get_origin
 from .utils import _bin_particles_by_radius, _get_bin_midpoints
 
+from typing import Tuple, Union
+
 
 def azimuthal_average(data: 'SarracenDataFrame',
                       target: str,
-                      r_in: float = None,
-                      r_out: float = None,
+                      r_in: Union[float, None] = None,
+                      r_out: Union[float, None] = None,
                       bins: int = 300,
                       log: bool = False,
                       geometry: str = 'cylindrical',
-                      origin: list = None,
-                      retbins: bool = False):
+                      origin: Union[list, None] = None,
+                      retbins: bool = False) -> Union[np.ndarray,
+                                                      Tuple[np.ndarray,
+                                                            np.ndarray]]:
     """
     Calculates the 1D azimuthally-averaged profile for a target quantity.
 
@@ -71,13 +75,15 @@ def azimuthal_average(data: 'SarracenDataFrame',
 
 
 def surface_density(data: 'SarracenDataFrame',
-                    r_in: float = None,
-                    r_out: float = None,
+                    r_in: Union[float, None] = None,
+                    r_out: Union[float, None] = None,
                     bins: int = 300,
                     log: bool = False,
                     geometry: str = 'cylindrical',
-                    origin: list = None,
-                    retbins: bool = False):
+                    origin: Union[list, None] = None,
+                    retbins: bool = False) -> Union[np.ndarray,
+                                                    Tuple[np.ndarray,
+                                                          np.ndarray]]:
     """
     Calculates the 1D azimuthally-averaged surface density profile.
 
@@ -118,15 +124,19 @@ def surface_density(data: 'SarracenDataFrame',
     ------
     ValueError
         If the *geometry* is not *cylindrical* or *spherical*.
-        If the dump is 'dust-as-particles' or
-            'dust-as-mixture' AND 'dust-as-particles', for now.
 
     Notes
     -----
     The surface density averaging procedure for SPH is described in section
-    3.2.6 of Lodato & Price, MNRAS (2010),
-    `doi:10.1111/j.1365-2966.2010.16526.x
-    <https://doi.org/10.1111/j.1365-2966.2010.16526.x>`_.
+    3.2.6 of Lodato & Price (2010) [1]_.
+
+    References
+    ----------
+    .. [1] G. Lodato & D. J. Price, "On the diffusive propagation of warps in
+       thin accretion discs," MNRAS, 405, 2, 1212-1226 (2010).
+       `doi:10.1111/j.1365-2966.2010.16526.x
+       <https://doi.org/10.1111/j.1365-2966.2010.16526.x>`_
+
     """
 
     origin = _get_origin(origin)
@@ -139,9 +149,10 @@ def surface_density(data: 'SarracenDataFrame',
     if (int(data.params['ndustsmall']) == 0 and
             int(data.params['ndustlarge']) == 0):  # gas-only dump
         if isinstance(mass, pd.Series):
-            sigma = mass.groupby(rbins).sum()
+            sigma = mass.groupby(rbins, observed=False).sum()
         else:
-            sigma = data.groupby(rbins).count().iloc[:, 0] * mass
+            sigma = data.groupby(rbins, observed=False).count().iloc[:, 0] * mass
+        sigma = sigma.reindex(rbins.cat.categories, fill_value=0)
         sigma = (sigma / areas).to_numpy()
         if retbins:
             return sigma, _get_bin_midpoints(bin_edges, log)
@@ -151,9 +162,15 @@ def surface_density(data: 'SarracenDataFrame',
             int(data.params['ndustlarge']) == 0):  # 'dust-as-mixture' dump
         if int(data.params['ndustsmall']) == 1:  # only one grain size
             mass_gas = mass * (1. - data['dustfrac'])
-            sigma_gas = (mass_gas.groupby(rbins).sum() / areas).to_numpy()
+            sigma_gas = mass_gas.groupby(rbins, observed=False).sum()
+            sigma_gas = sigma_gas.reindex(rbins.cat.categories, fill_value=0)
+            sigma_gas = (sigma_gas / areas).to_numpy()
+
             mass_dust = mass * data['dustfrac']
-            sigma_dust = (mass_dust.groupby(rbins).sum() / areas).to_numpy()
+            sigma_dust = mass_dust.groupby(rbins, observed=False).sum()
+            sigma_dust = sigma_dust.reindex(rbins.cat.categories, fill_value=0)
+            sigma_dust = (sigma_dust / areas).to_numpy()
+
             if retbins:
                 return sigma_gas, sigma_dust, \
                         _get_bin_midpoints(bin_edges, log)
@@ -163,19 +180,25 @@ def surface_density(data: 'SarracenDataFrame',
             if 'dustfrac_total' not in data.columns:
                 data.calc_one_fluid_quantities()
             mass_gas = mass * (1. - data['dustfrac_total'])
-            sigma_gas = (mass_gas.groupby(rbins).sum() / areas).to_numpy()
-            mass_dust_total = mass * data['dustfrac_total']
-            sigma_dust_total = (mass_dust_total.groupby(rbins).sum() /
-                                areas).to_numpy()
-            sigma_dust = np.empty([int(data.params['ndustsmall']), bins])
+            sigma_gas = mass_gas.groupby(rbins, observed=False).sum()
+            sigma_gas = sigma_gas.reindex(rbins.cat.categories, fill_value=0)
+            sigma_gas = (sigma_gas / areas).to_numpy()
+
+            mass_dtot = mass * data['dustfrac_total']
+            sigma_dtot = mass_dtot.groupby(rbins, observed=False).sum()
+            sigma_dtot = sigma_dtot.reindex(rbins.cat.categories, fill_value=0)
+            sigma_dtot = (sigma_dtot / areas).to_numpy()
+
+            sigma_d = np.empty([int(data.params['ndustsmall']), bins])
             for i in range(int(data.params['ndustsmall'])):
-                sigma_dust[i] = ((mass * data[data.dustfracscol[i]]).
-                                 groupby(rbins).sum() / areas).to_numpy()
+                sigma_d[i] = mass * data[data.dustfracscol[i]].groupby(rbins, observed=False).sum()
+                sigma_d[i] = sigma_d[i].reindex(rbins.cat.categories, fill_value=0)
+                sigma_d[i] = (sigma_d[i] / areas).to_numpy()
             if retbins:
-                return sigma_gas, sigma_dust_total, sigma_dust, \
+                return sigma_gas, sigma_dtot, sigma_d, \
                         _get_bin_midpoints(bin_edges, log)
             else:
-                return sigma_gas, sigma_dust_total, sigma_dust
+                return sigma_gas, sigma_dtot, sigma_d
     else:
         raise ValueError("'dust-as-mixture' AND 'dust-as-particles' dump or" +
                          "'dust-as-particles' dump: not available yet.")
@@ -184,7 +207,9 @@ def surface_density(data: 'SarracenDataFrame',
 def _calc_angular_momentum(data: 'SarracenDataFrame',
                            rbins: pd.Series,
                            origin: list,
-                           unit_vector: bool):
+                           unit_vector: bool) -> Tuple[pd.Series,
+                                                       pd.Series,
+                                                       pd.Series]:
     """
     Utility function to calculate angular momentum of the disc.
 
@@ -236,14 +261,15 @@ def _calc_angular_momentum(data: 'SarracenDataFrame',
 
 
 def angular_momentum(data: 'SarracenDataFrame',
-                     r_in: float = None,
-                     r_out: float = None,
+                     r_in: Union[float, None] = None,
+                     r_out: Union[float, None] = None,
                      bins: int = 300,
                      log: bool = False,
                      geometry: str = 'cylindrical',
-                     origin: list = None,
+                     origin: Union[list, None] = None,
                      retbins: bool = False,
-                     unit_vector: bool = True):
+                     unit_vector: bool = True) -> Union[Tuple[np.ndarray,
+                                                              ...]]:
     """
     Calculates the angular momentum profile of the disc.
 
@@ -272,6 +298,9 @@ def angular_momentum(data: 'SarracenDataFrame',
         [0, 0, 0].
     retbins : bool, optional
         Whether to return the midpoints of the bins or not. Defaults to False.
+    unit_vector: bool, optional
+        Whether to convert the angular momentum to unit vectors.
+        Default is True.
 
     Returns
     -------
@@ -290,8 +319,13 @@ def angular_momentum(data: 'SarracenDataFrame',
     rbins, bin_edges = _bin_particles_by_radius(data, r_in, r_out, bins, log,
                                                 geometry, origin)
 
-    Lx, Ly, Lz = _calc_angular_momentum(data, rbins, origin, unit_vector)
-    Lx, Ly, Lz = Lx.to_numpy(), Ly.to_numpy(), Lz.to_numpy()
+    Lx_series, Ly_series, Lz_series = _calc_angular_momentum(data,
+                                                             rbins,
+                                                             origin,
+                                                             unit_vector)
+    Lx = Lx_series.to_numpy()
+    Ly = Ly_series.to_numpy()
+    Lz = Lz_series.to_numpy()
 
     if retbins:
         return Lx, Ly, Lz, _get_bin_midpoints(bin_edges, log)
@@ -301,7 +335,7 @@ def angular_momentum(data: 'SarracenDataFrame',
 
 def _calc_scale_height(data: 'SarracenDataFrame',
                        rbins: pd.Series,
-                       origin: list = None):
+                       origin: list) -> pd.Series:
     """
     Utility function to calculate the scale height of the disc.
 
@@ -317,9 +351,10 @@ def _calc_scale_height(data: 'SarracenDataFrame',
 
     Returns
     -------
-    H: Series
+    Series
         The scale height of the disc.
     """
+
     Lx, Ly, Lz = _calc_angular_momentum(data, rbins, origin, unit_vector=True)
 
     zdash = rbins.map(Lx).to_numpy() * data[data.xcol] \
@@ -330,13 +365,15 @@ def _calc_scale_height(data: 'SarracenDataFrame',
 
 
 def scale_height(data: 'SarracenDataFrame',
-                 r_in: float = None,
-                 r_out: float = None,
+                 r_in: Union[float, None] = None,
+                 r_out: Union[float, None] = None,
                  bins: int = 300,
                  log: bool = False,
                  geometry: str = 'cylindrical',
-                 origin: list = None,
-                 retbins: bool = False):
+                 origin: Union[list, None] = None,
+                 retbins: bool = False) -> Union[np.ndarray,
+                                                 Tuple[np.ndarray,
+                                                       np.ndarray]]:
     """
     Calculates the scale height, H/R, of the disc.
 
@@ -400,13 +437,14 @@ def scale_height(data: 'SarracenDataFrame',
 
 
 def honH(data: 'SarracenDataFrame',
-         r_in: float = None,
-         r_out: float = None,
+         r_in: Union[float, None] = None,
+         r_out: Union[float, None] = None,
          bins: int = 300,
          log: bool = False,
          geometry: str = 'cylindrical',
-         origin: list = None,
-         retbins: bool = False):
+         origin: Union[list, None] = None,
+         retbins: bool = False) -> Union[np.ndarray, Tuple[np.ndarray,
+                                                           np.ndarray]]:
     """
     Calculates <h>/H, the averaged smoothing length divided by the scale
     height.

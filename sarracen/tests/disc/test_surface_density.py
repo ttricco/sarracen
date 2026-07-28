@@ -5,7 +5,7 @@ from sarracen.disc import surface_density
 import pytest
 
 
-def test_mass_equivalency():
+def test_mass_equivalency() -> None:
     """ Column mass result should equal global params mass result. """
 
     # randomly place particles
@@ -26,7 +26,7 @@ def test_mass_equivalency():
 
 
 @pytest.mark.parametrize("geometry", ['cylindrical', 'spherical'])
-def test_origin(geometry):
+def test_origin(geometry: str) -> None:
     """ Expect same profile regardless of origin. """
 
     rng = np.random.default_rng(seed=5)
@@ -57,7 +57,7 @@ def test_origin(geometry):
     assert_allclose(sigma_zero, sigma_large, atol=2e-8, rtol=0.0)
 
 
-def test_parts_vs_whole():
+def test_parts_vs_whole() -> None:
     """ Profiles should be the same for matching bins. """
 
     # randomly place particles

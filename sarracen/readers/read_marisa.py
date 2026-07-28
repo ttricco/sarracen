@@ -1,3 +1,5 @@
+from typing import Tuple, IO, Type
+
 import numpy as np
 import pandas as pd
 from enum import IntEnum
@@ -112,7 +114,7 @@ class MARISAIO_TAGS(IntEnum):
 # 2: sets the reference point at the end of the file
 
 
-def _marisa_read_capture_pattern(fp):
+def _marisa_read_capture_pattern(fp: IO) -> Tuple[int, int]:
     if fp.read(7) != b"marisa\x00":
         raise AssertionError("Capture pattern not present. "
                              "Is this a valid data file?")
@@ -121,18 +123,18 @@ def _marisa_read_capture_pattern(fp):
     return version_major, version_minor
 
 
-def _marisa_read_tag(fp):
+def _marisa_read_tag(fp: IO) -> int:
     tag = int.from_bytes(fp.read(4), byteorder='little')
     return tag
 
 
-def _marisa_read_data(fp, dtype):
+def _marisa_read_data(fp: IO, dtype: Type[np.number]) -> np.ndarray:
     size = int.from_bytes(fp.read(4), byteorder='little')
     data = fp.read(size)
     return np.frombuffer(data, dtype=dtype)
 
 
-def _marisa_parse_tags(fp):
+def _marisa_parse_tags(fp: IO) -> Tuple[np.ndarray, np.ndarray]:
     currentpos = fp.tell()
 
     fp.seek(0, 2)
@@ -142,9 +144,8 @@ def _marisa_parse_tags(fp):
 
     _marisa_read_capture_pattern(fp)
 
-    tags = []
-    offsets = []
-    sizes = []
+    tags_list = []
+    offsets_list = []
 
     while (fp.tell() < endpos):
         tag = _marisa_read_tag(fp)
@@ -152,20 +153,18 @@ def _marisa_parse_tags(fp):
         size = int.from_bytes(fp.read(4), byteorder='little')
         fp.seek(size, 1)
 
-        tags.append(tag)
-        sizes.append(size)
-        offsets.append(offset)
+        tags_list.append(tag)
+        offsets_list.append(offset)
 
-    tags = np.array(tags)
-    offsets = np.array(offsets)
-    sizes = np.array(sizes)
+    tags = np.array(tags_list)
+    offsets = np.array(offsets_list)
 
     fp.seek(currentpos, 0)
 
     return tags, offsets
 
 
-def _marisa_count_slices(fp, tags):
+def _marisa_count_slices(fp: IO, tags: np.ndarray) -> int:
     Ns = 0
     for tag in tags:
         if tag == MARISAIO_TAGS.startslice:
@@ -233,7 +232,7 @@ def read_marisa(filename: str,
     df = pd.DataFrame()
     params = dict()
     while not done:
-        fp.seek(offsets[i], 0)
+        fp.seek(int(offsets[i]), 0)
 
         tag = tags[i]
 

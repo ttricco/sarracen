@@ -1,4 +1,4 @@
-from typing import Union, Callable, Tuple, Optional
+from typing import Any, Type, Union, Callable, Tuple, Optional, Dict, List
 
 from matplotlib.axes import Axes
 from matplotlib.colors import Colormap
@@ -79,7 +79,7 @@ class SarracenDataFrame(DataFrame):
         >>> particles = {'x': [1.0, 2.0, 3.0], 'y': [2.0, 2.0, 2.0], 'h': [3.0, 3.5, 4.0]}
         >>> sdf = sarracen.SarracenDataFrame(particles)
         >>> sdf
-            x     y     h
+              x     y     h
         0   1.0   2.0   3.0
         1   2.0   2.0   3.5
         2   3.0   2.0   4.0
@@ -89,7 +89,7 @@ class SarracenDataFrame(DataFrame):
         >>> particles = np.array([[1.0, 2.0, 3.0], [2.0, 2.0, 3.5], [3.0, 2.0, 4.0]])
         >>> sdf = sarracen.SarracenDataFrame(particles, columns=['x', 'y', 'h'])
         >>> sdf
-            x     y     h
+              x     y     h
         0   1.0   2.0   3.0
         1   2.0   2.0   3.5
         2   3.0   2.0   4.0
@@ -108,10 +108,7 @@ class SarracenDataFrame(DataFrame):
         # call pandas DataFrame constructor
         super().__init__(data, *args, **kwargs)
 
-        if params is None:
-            params = dict()
-        self._params = None
-        self.params = params
+        self._params = dict(params or {})
 
         self._units = None
         self.units = Series([np.nan for _ in range(len(self.columns))])
@@ -127,10 +124,10 @@ class SarracenDataFrame(DataFrame):
         self._backend = 'gpu' if cuda.is_available() else 'cpu'
 
     @property
-    def _constructor(self):
+    def _constructor(self) -> Type:
         return SarracenDataFrame
 
-    def _identify_special_columns(self):
+    def _identify_special_columns(self) -> None:
         """
         Identify special columns commonly used in analysis functions.
 
@@ -152,7 +149,7 @@ class SarracenDataFrame(DataFrame):
         elif 'rx' in self.columns:
             self.xcol = 'rx'
         elif len(self.columns) > 0:
-            self.xcol = self.columns[0]
+            self.xcol = str(self.columns[0])
 
         # First look for 'y', then 'ry', and then default to the second column.
         if 'y' in self.columns:
@@ -160,7 +157,7 @@ class SarracenDataFrame(DataFrame):
         elif 'ry' in self.columns:
             self.ycol = 'ry'
         elif len(self.columns) > 1:
-            self.ycol = self.columns[1]
+            self.ycol = str(self.columns[1])
 
         # First look for 'z', then 'rz', and then assume data is 2-dimensional.
         if 'z' in self.columns:
@@ -194,28 +191,10 @@ class SarracenDataFrame(DataFrame):
 
         # Look for the keyword 'dustfrac' in the data.
         for column in self.columns:
-            if column.startswith('dustfrac'):
+            if isinstance(column, str) and column.startswith('dustfrac'):
                 self.dustfracscol.append(column)
 
-    def create_mass_column(self):
-        """
-        Create a new column 'm', copied from the 'massoftype' parameter.
-
-        Intended for use with Phantom data dumps.
-
-        Raises
-        ------
-        KeyError
-            If the 'massoftype' column does not exist in `params`.
-        """
-        if 'mass' not in self.params:
-            raise KeyError("'mass' value does not exist in this "
-                           "SarracenDataFrame.")
-
-        self['m'] = self.params['mass']
-        self.mcol = 'm'
-
-    def calc_density(self):
+    def calc_density(self) -> None:
         """
         Create a new column 'rho' that contains particle densities.
 
@@ -235,21 +214,31 @@ class SarracenDataFrame(DataFrame):
         Raises
         ------
         KeyError
-            If the `hcol` column does not exist, there is no `mcol` column or
-            `mass` in params, or if `hfact` does not exist in `params`.
+            If the `hcol` column does not exist or if 'hfact' is not in
+            'params'.
+        ValueError
+            If there is no particle mass data.
+
+        Notes
+        -----
+        For one-fluid dump files, this will calculate the total density (gas +
+        dust) of the particle.
         """
-        if not {self.hcol}.issubset(self.columns):
+        if self.hcol not in self.columns:
             raise KeyError('Missing smoothing length data in this '
                            'SarracenDataFrame')
-        if 'hfact' not in self.params:
+
+        if self.params is None or 'hfact' not in self.params:
             raise KeyError('hfact missing from params in this '
                            'SarracenDataFrame.')
-        if self.mcol not in self.columns and 'mass' not in self.params:
-            raise KeyError('Missing particle mass data in this '
-                           'SarracenDataFrame.')
+
+        if self.mcol not in self.columns and (self.params is None or
+                                              'mass' not in self.params):
+            raise ValueError('Missing particle mass data in this '
+                             'SarracenDataFrame.')
 
         # prioritize using mass per particle, if present
-        if {self.mcol}.issubset(self.columns):
+        if self.mcol in self.columns:
             mass = self[self.mcol]
         else:
             mass = self.params['mass']
@@ -258,7 +247,7 @@ class SarracenDataFrame(DataFrame):
         self['rho'] = mass * (hfact / self[self.hcol])**self.get_dim()
         self.rhocol = 'rho'
 
-    def calc_one_fluid_quantities(self):
+    def calc_one_fluid_quantities(self) -> None:
         """
         Create new columns that contain the densities of gas, dust (total),
         each dust grain size and the dust-to gas ratio in one-fluid
@@ -267,41 +256,43 @@ class SarracenDataFrame(DataFrame):
         Raises
         -------
         KeyError
-            If the `dustfrac` column does not exist.
+            If `dustfrac` columns do not exist.
         ValueError
-            If `ndustsmall` is zero or `ndustlarge` is non zero.
+            If `ndustsmall` is zero or `ndustlarge` is non-zero.
         """
-        if not {self.dustfracscol[0]}.issubset(self.columns):
+        if self.dustfracscol[0] not in self.columns:
             raise KeyError('Missing dust fraction data in this '
                            'SarracenDataFrame')
-        # use self[self.dustfrac], check if columns exist
-        if not {self.rhocol}.issubset(self.columns):
+
+        if self.params['ndustsmall'] == 0 or self.params['ndustlarge'] != 0:
+            raise ValueError('Not a one-fluid-only dump.')
+
+        if self.rhocol not in self.columns:
             self.calc_density()
 
-        if (int(self.params['ndustsmall']) == 0 or
-                int(self.params['ndustlarge']) != 0):
-            raise ValueError('Not a one-fluid-only dump.')
+        if self.params['ndustsmall'] == 1:
+            self['rho_g'] = self['rho'] * self['dustfrac']
+            self['rho_d'] = self['rho'] * (1 - self['dustfrac'])
+            self['dtg'] = self['rho_d'] / self['rho_g']
         else:
-            if int(self.params['ndustsmall']) == 1:
-                self['rho_g'] = self['rho'] * self['dustfrac']
-                self['rho_d'] = self['rho'] * (1 - self['dustfrac'])
-                self['dtg'] = self['rho_d'] / self['rho_g']
-            else:
-                self['dustfrac_total'] = self[self.dustfracscol].sum(axis=1)
-                self['rho_g'] = self['rho'] * (1 - self['dustfrac_total'])
-                self['rho_d_total'] = self['rho'] * self['dustfrac_total']
-                self['rho_d'] = self['rho'] * self[self.dustfracscol[0]]
-                for i in range(1, int(self.params['ndustsmall'])):
-                    self[f'rho_d_{i+1}'] = self['rho'] * \
-                                                    self[self.dustfracscol[i]]
-                self['dtg'] = self['dustfrac_total'] / (1 -
-                                                        self['dustfrac_total'])
+            self['dustfrac_total'] = self[self.dustfracscol].sum(axis=1)
+            self['rho_g'] = self['rho'] * (1 - self['dustfrac_total'])
+            self['rho_d_total'] = self['rho'] * self['dustfrac_total']
+            self['rho_d'] = self['rho'] * self[self.dustfracscol[0]]
+            for i in range(1, int(self.params['ndustsmall'])):
+                self[f'rho_d_{i+1}'] = self['rho'] * self[self.dustfracscol[i]]
+            self['dtg'] = self['dustfrac_total'] / (1 - self['dustfrac_total'])
 
-    def centre_of_mass(self):
+    def centre_of_mass(self) -> list:
         """
         Returns the centre of mass of the data.
+
+        Returns
+        -------
+        list
+            A list with the centre of mass of the data.
         """
-        if {self.mcol}.issubset(self.columns):
+        if self.mcol in self.columns:
             mass = self[self.mcol]
         else:
             mass = self.params['mass']
@@ -311,11 +302,11 @@ class SarracenDataFrame(DataFrame):
         com_z = (self[self.zcol] * mass).sum()
 
         if isinstance(mass, pd.Series):
-            mass = 1.0 / mass.sum()
+            inv_mass = 1.0 / mass.sum()
         else:
-            mass = 1.0 / (len(self) * mass)
+            inv_mass = 1.0 / (len(self) * mass)
 
-        return [com_x * mass, com_y * mass, com_z * mass]
+        return [com_x * inv_mass, com_y * inv_mass, com_z * inv_mass]
 
     @_copy_doc(render)
     def render(self,
@@ -344,7 +335,7 @@ class SarracenDataFrame(DataFrame):
                dens_weight: Union[bool, None] = None,
                normalize: bool = False,
                hmin: bool = False,
-               **kwargs) -> Axes:
+               **kwargs: Any) -> Axes:
         return render(self, target, x, y, z, xsec, kernel, x_pixels, y_pixels,
                       xlim, ylim, cmap, cbar, cbar_kws, cbar_ax, ax, exact,
                       backend, integral_samples, rotation, rot_origin,
@@ -368,7 +359,7 @@ class SarracenDataFrame(DataFrame):
                  dens_weight: bool = False,
                  normalize: bool = False,
                  hmin: bool = False,
-                 **kwargs):
+                 **kwargs: Any) -> Axes:
         return lineplot(self, target, x, y, z, kernel, pixels, xlim, ylim,
                         zlim,  ax, backend, log_scale, dens_weight, normalize,
                         hmin, **kwargs)
@@ -394,7 +385,7 @@ class SarracenDataFrame(DataFrame):
                     dens_weight: bool = False,
                     normalize: bool = False,
                     hmin: bool = False,
-                    **kwargs) -> Axes:
+                    **kwargs: Any) -> Axes:
         return streamlines(self, target, x, y, z, xsec, kernel,
                            integral_samples, rotation, rot_origin, x_pixels,
                            y_pixels, xlim, ylim, ax, exact, backend,
@@ -423,7 +414,7 @@ class SarracenDataFrame(DataFrame):
                   dens_weight: Union[bool, None] = None,
                   normalize: bool = False,
                   hmin: bool = False,
-                  **kwargs) -> Axes:
+                  **kwargs: Any) -> Axes:
         return arrowplot(self, target, x, y, z, xsec, kernel, integral_samples,
                          rotation, rot_origin, x_arrows, y_arrows, xlim, ylim,
                          ax, qkey, qkey_kws, exact, backend, dens_weight,
@@ -519,6 +510,23 @@ class SarracenDataFrame(DataFrame):
         KeyError
             If `target`, `x`, `y`, `z`, mass, density, or smoothing length
             columns do not exist in `data`.
+
+        Examples
+        --------
+
+        Interpolate SPH particles to a uniform grid.
+
+        >>> sdf, sdf_sinks = sarracen.read_phantom('dustydisc_00250')
+        >>> grid = sdf.sph_interpolate('rho')
+
+        The grid is a NumPy array in order of [z, y, x].
+
+        The default dimensions of the grid are scaled to keep a similar aspect
+        ratio. In this example, the z-direction is shorter because of the
+        geometry of the data (accretion disc).
+
+        >>> grid.shape
+        (165,  526, 512)
         """
         if self.get_dim() == 2:
             if xlim is None:
@@ -536,7 +544,7 @@ class SarracenDataFrame(DataFrame):
         raise ValueError('Invalid number of dimensions.')
 
     @property
-    def params(self):
+    def params(self) -> Dict[str, Any]:
         """
         dict: Miscellaneous dataset-level parameters.
 
@@ -548,25 +556,22 @@ class SarracenDataFrame(DataFrame):
         return self._params
 
     @params.setter
-    def params(self, new_params):
-        if new_params is None:
-            self._params = None
-            return
-        if not type(new_params) is dict:
+    def params(self, new_params: Union[Dict[str, Any], None]) -> None:
+        if new_params is not None and not isinstance(new_params, dict):
             raise TypeError("Parameters not a dictionary")
-        self._params = new_params
+        self._params = dict(new_params or {})
 
     @property
-    def units(self):
+    def units(self) -> Series:
         """Series: Units for each column of this dataset."""
         return self._units
 
     @units.setter
-    def units(self, new_units: Series):
+    def units(self, new_units: Series) -> None:
         self._units = new_units
 
     @property
-    def xcol(self):
+    def xcol(self) -> str:
         """
         str : Label of the column which contains x-positional data.
 
@@ -576,12 +581,12 @@ class SarracenDataFrame(DataFrame):
         return self._xcol
 
     @xcol.setter
-    def xcol(self, new_col: str):
+    def xcol(self, new_col: Union[str, None]) -> None:
         if new_col in self or new_col is None:
             self._xcol = new_col
 
     @property
-    def ycol(self):
+    def ycol(self) -> str:
         """
         str : Label of the column which contains y-positional data.
 
@@ -591,12 +596,12 @@ class SarracenDataFrame(DataFrame):
         return self._ycol
 
     @ycol.setter
-    def ycol(self, new_col: str):
+    def ycol(self, new_col: Union[str, None]) -> None:
         if new_col in self or new_col is None:
             self._ycol = new_col
 
     @property
-    def zcol(self):
+    def zcol(self) -> str:
         """
         str : Label of the column which contains z-positional data.
 
@@ -606,12 +611,12 @@ class SarracenDataFrame(DataFrame):
         return self._zcol
 
     @zcol.setter
-    def zcol(self, new_col: str):
+    def zcol(self, new_col: Union[str, None]) -> None:
         if new_col in self or new_col is None:
             self._zcol = new_col
 
     @property
-    def hcol(self):
+    def hcol(self) -> str:
         """
         str : Label of the column which contains smoothing length data.
 
@@ -621,12 +626,12 @@ class SarracenDataFrame(DataFrame):
         return self._hcol
 
     @hcol.setter
-    def hcol(self, new_col: str):
+    def hcol(self, new_col: Union[str, None]) -> None:
         if new_col in self or new_col is None:
             self._hcol = new_col
 
     @property
-    def mcol(self):
+    def mcol(self) -> str:
         """
         str : Label of the column which contains particle mass data.
 
@@ -636,12 +641,12 @@ class SarracenDataFrame(DataFrame):
         return self._mcol
 
     @mcol.setter
-    def mcol(self, new_col: str):
+    def mcol(self, new_col: Union[str, None]) -> None:
         if new_col in self or new_col is None:
             self._mcol = new_col
 
     @property
-    def rhocol(self):
+    def rhocol(self) -> str:
         """
         str : Label of the column which contains particle density data.
 
@@ -651,12 +656,12 @@ class SarracenDataFrame(DataFrame):
         return self._rhocol
 
     @rhocol.setter
-    def rhocol(self, new_col: str):
+    def rhocol(self, new_col: Union[str, None]) -> None:
         if new_col in self or new_col is None:
             self._rhocol = new_col
 
     @property
-    def vxcol(self):
+    def vxcol(self) -> str:
         """
         str : Label of the column which contains the x-component of the
         velocity.
@@ -667,12 +672,12 @@ class SarracenDataFrame(DataFrame):
         return self._vxcol
 
     @vxcol.setter
-    def vxcol(self, new_col: str):
+    def vxcol(self, new_col: Union[str, None]) -> None:
         if new_col in self or new_col is None:
             self._vxcol = new_col
 
     @property
-    def vycol(self):
+    def vycol(self) -> str:
         """
         str : Label of the column which contains the y-component of the
         velocity.
@@ -683,12 +688,12 @@ class SarracenDataFrame(DataFrame):
         return self._vycol
 
     @vycol.setter
-    def vycol(self, new_col: str):
+    def vycol(self, new_col: Union[str, None]) -> None:
         if new_col in self or new_col is None:
             self._vycol = new_col
 
     @property
-    def vzcol(self):
+    def vzcol(self) -> str:
         """
         str : Label of the column which contains the z-component of the
         velocity.
@@ -699,21 +704,21 @@ class SarracenDataFrame(DataFrame):
         return self._vzcol
 
     @vzcol.setter
-    def vzcol(self, new_col: str):
+    def vzcol(self, new_col: Union[str, None]) -> None:
         if new_col in self or new_col is None:
             self._vzcol = new_col
 
     @property
-    def dustfracscol(self):
+    def dustfracscol(self) -> List[str]:
         return self._dustfracscol
 
     @dustfracscol.setter
-    def dustfracscol(self, new_col: str):
+    def dustfracscol(self, new_col: List[str]) -> None:
         if new_col in self or new_col is None:
             self._dustfracscol = new_col
 
     @property
-    def kernel(self):
+    def kernel(self) -> BaseKernel:
         """
         BaseKernel : The default kernel to use for interpolation operations
         with this dataset.
@@ -724,12 +729,12 @@ class SarracenDataFrame(DataFrame):
         return self._kernel
 
     @kernel.setter
-    def kernel(self, new_kernel: BaseKernel):
+    def kernel(self, new_kernel: BaseKernel) -> None:
         if isinstance(new_kernel, BaseKernel):
             self._kernel = new_kernel
 
     @property
-    def backend(self):
+    def backend(self) -> str:
         """
         ['cpu', 'gpu'] : The default backend to use for interpolation
         operations with this dataset.
@@ -740,10 +745,10 @@ class SarracenDataFrame(DataFrame):
         return self._backend
 
     @backend.setter
-    def backend(self, new_backend: str):
+    def backend(self, new_backend: str) -> None:
         self._backend = new_backend
 
-    def get_dim(self):
+    def get_dim(self) -> int:
         """
         Get the dimensionality of the data in this dataframe.
 
