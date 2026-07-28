@@ -139,6 +139,10 @@ def surface_density(data: 'SarracenDataFrame',
 
     """
 
+    if 'itype' in data.columns and data['itype'].nunique() > 1:
+            raise UserWarning('Surface density being calculated from multiple '
+                              'particle types. This is not recommended.')
+
     origin = _get_origin(origin)
     rbins, bin_edges = _bin_particles_by_radius(data, r_in, r_out, bins, log,
                                                 geometry, origin)
@@ -146,10 +150,9 @@ def surface_density(data: 'SarracenDataFrame',
     areas = np.pi * (bin_edges[1:] ** 2 - bin_edges[:-1] ** 2)
 
     ndustsmall = data.params.get('ndustsmall', 0)
-    ndustlarge = data.params.get('ndustlarge', 0)
 
     mass = _get_mass(data)
-    if ndustsmall == 0 and ndustlarge == 0:  # gas-only dump
+    if ndustsmall == 0:  # gas-only dump
         if isinstance(mass, pd.Series):
             sigma = mass.groupby(rbins, observed=False).sum()
         else:
@@ -162,49 +165,47 @@ def surface_density(data: 'SarracenDataFrame',
         else:
             return sigma
 
-    elif ndustsmall > 0 and ndustlarge == 0:  # 'dust-as-mixture' dump
-        if ndustsmall == 1:  # only one grain size
-            mass_gas = mass * (1. - data['dustfrac'])
-            sigma_gas = mass_gas.groupby(rbins, observed=False).sum()
-            sigma_gas = sigma_gas.reindex(rbins.cat.categories, fill_value=0)
-            sigma_gas = (sigma_gas / areas).to_numpy()
+    elif ndustsmall == 1:  # 'dust-as-mixture' dump
+        mass_gas = mass * (1. - data['dustfrac'])
+        sigma_gas = mass_gas.groupby(rbins, observed=False).sum()
+        sigma_gas = sigma_gas.reindex(rbins.cat.categories, fill_value=0)
+        sigma_gas = (sigma_gas / areas).to_numpy()
 
-            mass_dust = mass * data['dustfrac']
-            sigma_dust = mass_dust.groupby(rbins, observed=False).sum()
-            sigma_dust = sigma_dust.reindex(rbins.cat.categories, fill_value=0)
-            sigma_dust = (sigma_dust / areas).to_numpy()
+        mass_dust = mass * data['dustfrac']
+        sigma_dust = mass_dust.groupby(rbins, observed=False).sum()
+        sigma_dust = sigma_dust.reindex(rbins.cat.categories, fill_value=0)
+        sigma_dust = (sigma_dust / areas).to_numpy()
 
-            if retbins:
-                return sigma_gas, sigma_dust, \
-                        _get_bin_midpoints(bin_edges, log)
-            else:
-                return sigma_gas, sigma_dust
-        else:  # multiple grain sizes
-            if 'dustfrac_total' not in data.columns:
-                data.calc_one_fluid_quantities()
-            mass_gas = mass * (1. - data['dustfrac_total'])
-            sigma_gas = mass_gas.groupby(rbins, observed=False).sum()
-            sigma_gas = sigma_gas.reindex(rbins.cat.categories, fill_value=0)
-            sigma_gas = (sigma_gas / areas).to_numpy()
+        if retbins:
+            return sigma_gas, sigma_dust, \
+                    _get_bin_midpoints(bin_edges, log)
+        else:
+            return sigma_gas, sigma_dust
 
-            mass_dtot = mass * data['dustfrac_total']
-            sigma_dtot = mass_dtot.groupby(rbins, observed=False).sum()
-            sigma_dtot = sigma_dtot.reindex(rbins.cat.categories, fill_value=0)
-            sigma_dtot = (sigma_dtot / areas).to_numpy()
+    elif ndustsmall > 1:  # multiple grain sizes
+        if 'dustfrac_total' not in data.columns:
+            data.calc_one_fluid_quantities()
+        mass_gas = mass * (1. - data['dustfrac_total'])
+        sigma_gas = mass_gas.groupby(rbins, observed=False).sum()
+        sigma_gas = sigma_gas.reindex(rbins.cat.categories, fill_value=0)
+        sigma_gas = (sigma_gas / areas).to_numpy()
 
-            sigma_d = np.empty([ndustsmall, bins])
-            for i in range(ndustsmall):
-                sigma_d[i] = mass * data[data.dustfracscol[i]].groupby(rbins, observed=False).sum()
-                sigma_d[i] = sigma_d[i].reindex(rbins.cat.categories, fill_value=0)
-                sigma_d[i] = (sigma_d[i] / areas).to_numpy()
-            if retbins:
-                return sigma_gas, sigma_dtot, sigma_d, \
-                        _get_bin_midpoints(bin_edges, log)
-            else:
-                return sigma_gas, sigma_dtot, sigma_d
-    else:
-        raise ValueError("'dust-as-mixture' AND 'dust-as-particles' dump or" +
-                         "'dust-as-particles' dump: not available yet.")
+        mass_dtot = mass * data['dustfrac_total']
+        sigma_dtot = mass_dtot.groupby(rbins, observed=False).sum()
+        sigma_dtot = sigma_dtot.reindex(rbins.cat.categories, fill_value=0)
+        sigma_dtot = (sigma_dtot / areas).to_numpy()
+
+        sigma_d = np.empty([ndustsmall, bins])
+        for i in range(ndustsmall):
+            mass_d = mass * data[data.dustfracscol[i]]
+            sigma_d[i] = mass_d.groupby(rbins, observed=False).sum()
+            sigma_d[i] = sigma_d[i].reindex(rbins.cat.categories, fill_value=0)
+            sigma_d[i] = (sigma_d[i] / areas).to_numpy()
+        if retbins:
+            return sigma_gas, sigma_dtot, sigma_d, \
+                    _get_bin_midpoints(bin_edges, log)
+        else:
+            return sigma_gas, sigma_dtot, sigma_d
 
 
 def _calc_angular_momentum(data: 'SarracenDataFrame',
