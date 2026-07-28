@@ -81,9 +81,7 @@ def test_parts_vs_whole() -> None:
     assert_allclose(sigma_out, sigma_all[100:], atol=1e-15, rtol=0.0)
 
 
-@pytest.mark.filterwarnings(
-    'ignore:Surface density being calculated*:UserWarning'
-)
+@pytest.mark.filterwarnings('ignore:Surface density being*:UserWarning')
 def test_itype_combining() -> None:
     """ Adding profiles from different itypes should equal the total. """
 
@@ -106,3 +104,82 @@ def test_itype_combining() -> None:
     sigma_total = surface_density(sdf, r_in=0, r_out=1, bins=30)
 
     assert_allclose(sigma_1 + sigma_7, sigma_total, atol=1e-15, rtol=0.0)
+
+
+def test_one_fluid_single_grain() -> None:
+    """ Parts vs whole test for single-grain one-fluid dust. """
+
+    # randomly place particles
+    rng = np.random.default_rng(seed=5)
+    x = rng.random(100)
+    y = rng.random(100)
+    z = rng.random(100)
+    vx = rng.random(100)
+    vy = rng.random(100)
+    vz = rng.random(100)
+    dustfrac = rng.random(100)
+    mass = [3.2e-4] * 100
+
+    sdf = SarracenDataFrame(data={'x': x, 'y': y, 'z': z,
+                                  'vx': vx, 'vy': vy, 'vz': vz,
+                                  'dustfrac': dustfrac, 'mass': mass})
+
+    sigma_g_in, sigma_d_in = surface_density(sdf, r_in=0, r_out=0.5, bins=50)
+    sigma_g_out, sigma_d_out = surface_density(sdf, r_in=0.5, r_out=1, bins=50)
+    sigma_g_all, sigma_d_all = surface_density(sdf, r_in=0, r_out=1, bins=100)
+
+    assert_allclose(sigma_g_in, sigma_g_all[:50], atol=1e-15, rtol=0.0)
+    assert_allclose(sigma_g_out, sigma_g_all[50:], atol=1e-15, rtol=0.0)
+
+    assert_allclose(sigma_d_in, sigma_d_all[:50], atol=1e-15, rtol=0.0)
+    assert_allclose(sigma_d_out, sigma_d_all[50:], atol=1e-15, rtol=0.0)
+
+
+def test_one_fluid_multi_grain() -> None:
+    """ Parts vs whole test for multi-grain one-fluid dust. """
+
+    # randomly place particles
+    rng = np.random.default_rng(seed=5)
+    x = rng.random(100)
+    y = rng.random(100)
+    z = rng.random(100)
+    vx = rng.random(100)
+    vy = rng.random(100)
+    vz = rng.random(100)
+    dustfrac_0 = rng.random(100)
+    dustfrac_1 = rng.random(100)
+    dustfrac_2 = rng.random(100)
+    dustfrac_total = dustfrac_0 + dustfrac_1 + dustfrac_2
+    mass = [3.2e-4] * 100
+
+    sdf = SarracenDataFrame(data={'x': x, 'y': y, 'z': z,
+                                  'vx': vx, 'vy': vy, 'vz': vz,
+                                  'dustfrac_0': dustfrac_0,
+                                  'dustfrac_1': dustfrac_1,
+                                  'dustfrac_2': dustfrac_2,
+                                  'dustfrac_total': dustfrac_total,
+                                  'mass': mass})
+
+    sdf.params['ndustsmall'] = 3
+
+    sigmas = surface_density(sdf, r_in=0, r_out=0.5, bins=50)
+    sigma_g_in, sigma_d_tot_in, sigma_d_in = sigmas
+
+    sigmas = surface_density(sdf, r_in=0.5, r_out=1, bins=50)
+    sigma_g_out, sigma_d_tot_out, sigma_d_out = sigmas
+
+    sigmas = surface_density(sdf, r_in=0, r_out=1, bins=100)
+    sigma_g_all, sigma_d_tot_all, sigma_d_all = sigmas
+
+    assert_allclose(sigma_g_in, sigma_g_all[:50], atol=1e-15, rtol=0)
+    assert_allclose(sigma_g_out, sigma_g_all[50:], atol=1e-15, rtol=0)
+
+    assert_allclose(sigma_d_tot_in, sigma_d_tot_all[:50], atol=1e-15, rtol=0)
+    assert_allclose(sigma_d_tot_out, sigma_d_tot_all[50:], atol=1e-15, rtol=0)
+
+    assert_allclose(sigma_d_in[0], sigma_d_all[0][:50], atol=1e-15, rtol=0)
+    assert_allclose(sigma_d_out[0], sigma_d_all[0][50:], atol=1e-15, rtol=0)
+    assert_allclose(sigma_d_in[1], sigma_d_all[1][:50], atol=1e-15, rtol=0)
+    assert_allclose(sigma_d_out[1], sigma_d_all[1][50:], atol=1e-15, rtol=0)
+    assert_allclose(sigma_d_in[2], sigma_d_all[2][:50], atol=1e-15, rtol=0)
+    assert_allclose(sigma_d_out[2], sigma_d_all[2][50:], atol=1e-15, rtol=0)

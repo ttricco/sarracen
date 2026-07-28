@@ -84,6 +84,13 @@ def surface_density(data: 'SarracenDataFrame',
                     origin: Union[list, None] = None,
                     retbins: bool = False) -> Union[np.ndarray,
                                                     Tuple[np.ndarray,
+                                                          np.ndarray],
+                                                    Tuple[np.ndarray,
+                                                          np.ndarray,
+                                                          np.ndarray],
+                                                    Tuple[np.ndarray,
+                                                          np.ndarray,
+                                                          np.ndarray,
                                                           np.ndarray]]:
     """
     Calculates the 1D azimuthally-averaged surface density profile.
@@ -141,8 +148,8 @@ def surface_density(data: 'SarracenDataFrame',
     """
 
     if 'itype' in data.columns and data['itype'].nunique() > 1:
-        msg = ('Surface density being calculated from multiple particle types. '
-               'This is not recommended.')
+        msg = ('Surface density being calculated from multiple particle types.'
+               ' Ensure that this is what you intend.')
         warnings.warn(msg, UserWarning, stacklevel=2)
 
     origin = _get_origin(origin)
@@ -151,14 +158,15 @@ def surface_density(data: 'SarracenDataFrame',
 
     areas = np.pi * (bin_edges[1:] ** 2 - bin_edges[:-1] ** 2)
 
-    ndustsmall = data.params.get('ndustsmall', 0)
+    ndustsmall = data.params.get('ndustsmall') or len(data.dustfracscol)
 
     mass = _get_mass(data)
     if ndustsmall == 0:  # gas-only dump
         if isinstance(mass, pd.Series):
             sigma = mass.groupby(rbins, observed=False).sum()
         else:
-            sigma = data.groupby(rbins, observed=False).size() * mass
+            counts = data.groupby(rbins, observed=False).size().astype(float)
+            sigma = counts * mass
         sigma = sigma.reindex(rbins.cat.categories, fill_value=0)
         sigma = (sigma / areas).to_numpy()
 
@@ -168,25 +176,28 @@ def surface_density(data: 'SarracenDataFrame',
             return sigma
 
     elif ndustsmall == 1:  # 'dust-as-mixture' dump
-        mass_gas = mass * (1. - data['dustfrac'])
+        if data.dustfracscol[0] not in data.columns:
+            raise KeyError('dustfrac not found in data')
+
+        mass_gas = mass * (1. - data[data.dustfracscol[0]])
         sigma_gas = mass_gas.groupby(rbins, observed=False).sum()
         sigma_gas = sigma_gas.reindex(rbins.cat.categories, fill_value=0)
         sigma_gas = (sigma_gas / areas).to_numpy()
 
-        mass_dust = mass * data['dustfrac']
+        mass_dust = mass * data[data.dustfracscol[0]]
         sigma_dust = mass_dust.groupby(rbins, observed=False).sum()
         sigma_dust = sigma_dust.reindex(rbins.cat.categories, fill_value=0)
         sigma_dust = (sigma_dust / areas).to_numpy()
 
         if retbins:
-            return sigma_gas, sigma_dust, \
-                    _get_bin_midpoints(bin_edges, log)
+            return sigma_gas, sigma_dust, _get_bin_midpoints(bin_edges, log)
         else:
             return sigma_gas, sigma_dust
 
     elif ndustsmall > 1:  # multiple grain sizes
         if 'dustfrac_total' not in data.columns:
             data.calc_one_fluid_quantities()
+
         mass_gas = mass * (1. - data['dustfrac_total'])
         sigma_gas = mass_gas.groupby(rbins, observed=False).sum()
         sigma_gas = sigma_gas.reindex(rbins.cat.categories, fill_value=0)
@@ -200,9 +211,7 @@ def surface_density(data: 'SarracenDataFrame',
         sigma_d = np.empty([ndustsmall, bins])
         for i in range(ndustsmall):
             mass_d = mass * data[data.dustfracscol[i]]
-            sigma_d[i] = mass_d.groupby(rbins, observed=False).sum()
-            sigma_d[i] = sigma_d[i].reindex(rbins.cat.categories, fill_value=0)
-            sigma_d[i] = (sigma_d[i] / areas).to_numpy()
+            sigma_d[i] = mass_d.groupby(rbins, observed=False).sum() / areas
         if retbins:
             return sigma_gas, sigma_dtot, sigma_d, \
                     _get_bin_midpoints(bin_edges, log)
