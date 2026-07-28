@@ -277,4 +277,3 @@ def test_calc_one_fluid_quantities_multigrain() -> None:
         rho_d = rho * dustfrac
         assert label in sdf.columns
         assert_allclose(sdf[label], rho_d)
-
