@@ -260,26 +260,32 @@ class SarracenDataFrame(DataFrame):
         ValueError
             If `ndustsmall` is zero or `ndustlarge` is non-zero.
         """
+        if len(self.dustfracscol) == 0:
+            raise KeyError('Missing dust fraction data in this '
+                           'SarracenDataFrame')
         if self.dustfracscol[0] not in self.columns:
             raise KeyError('Missing dust fraction data in this '
                            'SarracenDataFrame')
 
-        if self.params['ndustsmall'] == 0 or self.params['ndustlarge'] != 0:
+        ndustsmall = self.params.get('ndustsmall', 0)
+        ndustlarge = self.params.get('ndustlarge', 0)
+
+        if ndustsmall == 0 or ndustlarge > 0:
             raise ValueError('Not a one-fluid-only dump.')
 
         if self.rhocol not in self.columns:
             self.calc_density()
 
-        if self.params['ndustsmall'] == 1:
-            self['rho_g'] = self['rho'] * self['dustfrac']
-            self['rho_d'] = self['rho'] * (1 - self['dustfrac'])
+        if ndustsmall == 1:
+            self['rho_d'] = self['rho'] * self[self.dustfracscol[0]]
+            self['rho_g'] = self['rho'] * (1 - self[self.dustfracscol[0]])
             self['dtg'] = self['rho_d'] / self['rho_g']
         else:
             self['dustfrac_total'] = self[self.dustfracscol].sum(axis=1)
             self['rho_g'] = self['rho'] * (1 - self['dustfrac_total'])
             self['rho_d_total'] = self['rho'] * self['dustfrac_total']
             self['rho_d'] = self['rho'] * self[self.dustfracscol[0]]
-            for i in range(1, int(self.params['ndustsmall'])):
+            for i in range(1, int(ndustsmall)):
                 self[f'rho_d_{i+1}'] = self['rho'] * self[self.dustfracscol[i]]
             self['dtg'] = self['dustfrac_total'] / (1 - self['dustfrac_total'])
 
