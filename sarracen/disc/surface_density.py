@@ -189,7 +189,7 @@ def surface_density(data: 'SarracenDataFrame',
         else:
             return sigma_gas, sigma_dust
 
-    elif ndustsmall > 1:  # multiple grain sizes
+    else:  # multiple grain sizes
         if 'dustfrac_total' not in data.columns:
             data.calc_one_fluid_quantities()
 

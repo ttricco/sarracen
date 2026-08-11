@@ -900,6 +900,9 @@ def interpolate_3d_line(data: 'SarracenDataFrame',
     z2 = data.loc[:, z].min() if zlim is None or zlim[1] is None else zlim[1]
     zlim = z1, z2
 
+    if zlim is None or zlim[0] is None or zlim[1] is None:
+        raise ValueError('Zero area cross section!')
+
     xlim, ylim = _default_bounds(data[x], data[y], xlim, ylim)
     if ylim[1] == ylim[0] and xlim[1] == xlim[0] and zlim[1] == zlim[0]:
         raise ValueError('Zero length cross section!')

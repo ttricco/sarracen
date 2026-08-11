@@ -583,6 +583,9 @@ def lineplot(data: 'SarracenDataFrame',
         z2 = zmin if zlim is None or zlim[1] is None else zlim[1]
         zlim = z2, z1
 
+        if zlim is None or zlim[0] is None or zlim[1] is None:
+            raise ValueError("z-limits must be specified.")
+
         upper_lim = np.sqrt((xlim[1] - xlim[0])**2
                             + (ylim[1] - ylim[0])**2
                             + (zlim[1] - zlim[0])**2)
