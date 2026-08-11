@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import sys
-from typing import TypeAlias
 
 from ..sarracen_dataframe import SarracenDataFrame
 
@@ -30,7 +29,7 @@ def _bin_particles_by_radius(data: 'SarracenDataFrame',
                              log: bool,
                              geometry: str,
                              origin: list[float]) -> tuple[pd.Series,
-                                                                np.ndarray]:
+                                                           np.ndarray]:
 
     """
     Utility function to bin particles in discrete intervals by radius.

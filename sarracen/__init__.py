@@ -11,7 +11,7 @@ try:
 except ModuleNotFoundError as e:
     # temporary workaround for no VTK in Python 3.8 on Mac ARM
     if e.name == "vtk":
-        def read_shamrock_vtk(*args, **kwargs):
+        def read_shamrock_vtk(filename: str, pmass: float) -> 'SarracenDataFrame':
             raise ImportError("vtk is not installed.")
     else:
         raise

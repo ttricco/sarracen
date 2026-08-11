@@ -1,4 +1,5 @@
 from typing import Any, TypeAlias
+from collections.abc import Sequence
 import numpy as np
 import re
 import warnings
@@ -10,7 +11,7 @@ from ..sarracen_dataframe import SarracenDataFrame
 ParamsDict: TypeAlias = dict[str, np.generic | str]
 
 
-def _write_fortran_block(value: list[np.generic],
+def _write_fortran_block(value: Sequence[int | float | np.generic],
                          dtype: type[np.generic]) -> bytearray:
     write_tag = np.array([len(value) * dtype().itemsize], dtype=np.int32)
     file = bytearray(write_tag.tobytes())
@@ -459,9 +460,9 @@ def _write_array_blocks(sdf: SarracenDataFrame,
                 # irregardless of what the xcol, ycol, etc are set to
                 mapping = {sdf.xcol: 'x', sdf.ycol: 'y',
                            sdf.zcol: 'z', sdf.hcol: 'h'}
-                write_tag = mapping.get(tag, tag)
-                write_tag = _rename_duplicate(write_tag).ljust(16)
-                file += _write_fortran_block(list(map(ord, write_tag)),
+                wtag = mapping.get(tag, tag)
+                wtag = _rename_duplicate(wtag).ljust(16)
+                file += _write_fortran_block(list(map(ord, wtag)),
                                              dtype=np.uint8)
                 file += _write_fortran_block(list(sdf[tag]), dtype)
     return file

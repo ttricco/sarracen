@@ -97,7 +97,7 @@ def _create_global_header(massoftype: float = 1e-6,
 
             file += bytearray(read_tag.tobytes())
             for v in params.values():
-                v_np = np.array([v], dtype=dtype)
+                v_np: np.ndarray = np.array([v], dtype=dtype)
                 if swap_endian:
                     v_np = v_np.byteswap()
                 file += bytearray(v_np)

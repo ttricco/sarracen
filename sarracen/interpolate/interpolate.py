@@ -9,7 +9,10 @@ from scipy.spatial.transform import Rotation
 from ..interpolate import BaseBackend, CPUBackend, GPUBackend
 from ..kernels import BaseKernel
 
-from typing import Literal, TypeAlias
+from typing import TYPE_CHECKING, Literal, TypeAlias
+
+if TYPE_CHECKING:
+    from ..sarracen_dataframe import SarracenDataFrame
 
 
 Bounds: TypeAlias = tuple[float | None, float | None]
@@ -17,7 +20,7 @@ VectorLike: TypeAlias = np.ndarray | list | tuple
 OriginLike: TypeAlias = VectorLike | pd.Series | str | None
 
 
-def _default_xy(data: 'SarracenDataFrame',  # noqa: F821
+def _default_xy(data: 'SarracenDataFrame',
                 x: str | None,
                 y: str | None) -> tuple[str, str]:
     """
@@ -45,7 +48,7 @@ def _default_xy(data: 'SarracenDataFrame',  # noqa: F821
     return x, y
 
 
-def _default_xyz(data: 'SarracenDataFrame',  # noqa: F821
+def _default_xyz(data: 'SarracenDataFrame',
                  x: str | None,
                  y: str | None,
                  z: str | None) -> tuple[str, str, str]:
@@ -164,7 +167,7 @@ def _set_pixels(x_pixels: int | None,
     return x_pixels, y_pixels
 
 
-def _verify_columns(data: 'SarracenDataFrame',  # noqa: F821
+def _verify_columns(data: 'SarracenDataFrame',
                     x: str,
                     y: str) -> None:
     """
@@ -234,7 +237,7 @@ def _check_boundaries(x_pixels: int,
         raise ValueError("`y_pixels` must be greater than zero!")
 
 
-def _check_dimension(data: 'SarracenDataFrame',  # noqa: F821
+def _check_dimension(data: 'SarracenDataFrame',
                      dim: Literal[2, 3]) -> None:
     """
     Verify that a given dataset describes data with a required number of
@@ -258,7 +261,7 @@ def _check_dimension(data: 'SarracenDataFrame',  # noqa: F821
         raise ValueError(f"Dataset is not {dim}-dimensional.")
 
 
-def _rotate_data(data: 'SarracenDataFrame',  # noqa: F821
+def _rotate_data(data: 'SarracenDataFrame',
                  x_data: np.ndarray,
                  y_data: np.ndarray,
                  z_data: np.ndarray,
@@ -330,7 +333,7 @@ def _rotate_data(data: 'SarracenDataFrame',  # noqa: F821
     return vectors[:, 0], vectors[:, 1], vectors[:, 2]
 
 
-def _rotate_xyz(data: 'SarracenDataFrame',  # noqa: F821
+def _rotate_xyz(data: 'SarracenDataFrame',
                 x: str,
                 y: str,
                 z: str,
@@ -424,14 +427,14 @@ def _corotate(corotation: VectorLike,
     return rotation, rot_origin
 
 
-def _get_mass(data: 'SarracenDataFrame') -> np.ndarray | float:  # noqa: F821
+def _get_mass(data: 'SarracenDataFrame') -> np.ndarray | float:
     if data.mcol is None:
         return data.params['mass']
 
     return data[data.mcol].to_numpy()
 
 
-def _get_density(data: 'SarracenDataFrame') -> np.ndarray:  # noqa: F821
+def _get_density(data: 'SarracenDataFrame') -> np.ndarray:
     if data.rhocol is None:
         hfact = data.params['hfact']
         mass = _get_mass(data)
@@ -440,7 +443,7 @@ def _get_density(data: 'SarracenDataFrame') -> np.ndarray:  # noqa: F821
     return data[data.rhocol].to_numpy()
 
 
-def _get_weight(data: 'SarracenDataFrame',  # noqa: F821
+def _get_weight(data: 'SarracenDataFrame',
                 target: str | np.ndarray,
                 dens_weight: bool) -> np.ndarray:
 
@@ -467,7 +470,7 @@ def _get_weight(data: 'SarracenDataFrame',  # noqa: F821
         return target_data * mass_data / rho_data
 
 
-def _get_smoothing_lengths(data: 'SarracenDataFrame',  # noqa: F821
+def _get_smoothing_lengths(data: 'SarracenDataFrame',
                            hmin: bool,
                            x_pixels: int,
                            y_pixels: int,
@@ -485,7 +488,7 @@ def _get_smoothing_lengths(data: 'SarracenDataFrame',  # noqa: F821
     return h_data
 
 
-def interpolate_2d(data: 'SarracenDataFrame',  # noqa: F821
+def interpolate_2d(data: 'SarracenDataFrame',
                    target: str,
                    x: str | None = None,
                    y: str | None = None,
@@ -589,7 +592,7 @@ def interpolate_2d(data: 'SarracenDataFrame',  # noqa: F821
     return grid
 
 
-def interpolate_2d_vec(data: 'SarracenDataFrame',  # noqa: F821
+def interpolate_2d_vec(data: 'SarracenDataFrame',
                        target_x: str,
                        target_y: str,
                        x: str | None = None,
@@ -699,7 +702,7 @@ def interpolate_2d_vec(data: 'SarracenDataFrame',  # noqa: F821
     return (gridx, gridy)
 
 
-def interpolate_2d_line(data: 'SarracenDataFrame',  # noqa: F821
+def interpolate_2d_line(data: 'SarracenDataFrame',
                         target: str,
                         x: str | None = None,
                         y: str | None = None,
@@ -811,7 +814,7 @@ def interpolate_2d_line(data: 'SarracenDataFrame',  # noqa: F821
     return grid
 
 
-def interpolate_3d_line(data: 'SarracenDataFrame',  # noqa: F821
+def interpolate_3d_line(data: 'SarracenDataFrame',
                         target: str,
                         x: str | None = None,
                         y: str | None = None,
@@ -934,7 +937,7 @@ def interpolate_3d_line(data: 'SarracenDataFrame',  # noqa: F821
     return grid
 
 
-def interpolate_3d_proj(data: 'SarracenDataFrame',  # noqa: F821
+def interpolate_3d_proj(data: 'SarracenDataFrame',
                         target: str,
                         x: str | None = None,
                         y: str | None = None,
@@ -945,8 +948,8 @@ def interpolate_3d_proj(data: 'SarracenDataFrame',  # noqa: F821
                         rot_origin: OriginLike = None,
                         x_pixels: int | None = None,
                         y_pixels: int | None = None,
-                        xlim: tuple[float, float] | None = None,
-                        ylim: tuple[float, float] | None = None,
+                        xlim: Bounds | None = None,
+                        ylim: Bounds | None = None,
                         exact: bool = False,
                         backend: str | None = None,
                         dens_weight: bool | None = None,
@@ -1073,7 +1076,7 @@ def interpolate_3d_proj(data: 'SarracenDataFrame',  # noqa: F821
     return grid
 
 
-def interpolate_3d_vec(data: 'SarracenDataFrame',  # noqa: F821
+def interpolate_3d_vec(data: 'SarracenDataFrame',
                        target_x: str,
                        target_y: str,
                        target_z: str,
@@ -1213,7 +1216,7 @@ def interpolate_3d_vec(data: 'SarracenDataFrame',  # noqa: F821
     return (gridx, gridy)
 
 
-def interpolate_3d_cross(data: 'SarracenDataFrame',  # noqa: F821
+def interpolate_3d_cross(data: 'SarracenDataFrame',
                          target: str,
                          x: str | None = None,
                          y: str | None = None,
@@ -1225,8 +1228,8 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',  # noqa: F821
                          rot_origin: OriginLike = None,
                          x_pixels: int | None = None,
                          y_pixels: int | None = None,
-                         xlim: tuple[float, float] | None = None,
-                         ylim: tuple[float, float] | None = None,
+                         xlim: Bounds | None = None,
+                         ylim: Bounds | None = None,
                          backend: str | None = None,
                          dens_weight: bool = False,
                          normalize: bool = True,
@@ -1347,7 +1350,7 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',  # noqa: F821
     return grid
 
 
-def interpolate_3d_cross_vec(data: 'SarracenDataFrame',  # noqa: F821
+def interpolate_3d_cross_vec(data: 'SarracenDataFrame',
                              target_x: str,
                              target_y: str,
                              target_z: str,
@@ -1483,7 +1486,7 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame',  # noqa: F821
     return (gridx, gridy)
 
 
-def interpolate_3d_grid(data: 'SarracenDataFrame',  # noqa: F821
+def interpolate_3d_grid(data: 'SarracenDataFrame',
                         target: str,
                         x: str | None = None,
                         y: str | None = None,

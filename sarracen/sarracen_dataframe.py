@@ -439,7 +439,7 @@ class SarracenDataFrame(DataFrame):
                         z_pixels: int | None = None,
                         xlim: Bounds | None = None,
                         ylim: Bounds | None = None,
-                        zlim: Bounds | None = None,
+                        zlim: tuple[float, float] | None = None,
                         exact: bool = False,
                         backend: str = 'cpu',
                         dens_weight: bool = False,

@@ -1,5 +1,3 @@
-from typing import TypeAlias
-
 import pandas as pd
 
 from ..sarracen_dataframe import SarracenDataFrame

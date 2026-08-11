@@ -9,7 +9,7 @@ Or, they can be accessed through a `SarracenDataFrame` object, for example:
     data.render_2d(target)
 """
 
-from typing import Any, TypeAlias
+from typing import TYPE_CHECKING, Any, TypeAlias
 
 import numpy as np
 import pandas as pd
@@ -18,6 +18,9 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.colors import Colormap, LogNorm, SymLogNorm
+
+if TYPE_CHECKING:
+    from .sarracen_dataframe import SarracenDataFrame
 
 from .interpolate import interpolate_2d_line, interpolate_2d, \
     interpolate_3d_proj, interpolate_3d_cross, interpolate_3d_vec, \
@@ -30,7 +33,7 @@ VectorLike: TypeAlias = np.ndarray | list | tuple
 OriginLike: TypeAlias = VectorLike | pd.Series | str | None
 
 
-def _default_axes(data: 'SarracenDataFrame',  # noqa: F821
+def _default_axes(data: 'SarracenDataFrame',
                   x: str | None,
                   y: str | None) -> tuple[str, str]:
     """
@@ -57,7 +60,7 @@ def _default_axes(data: 'SarracenDataFrame',  # noqa: F821
     return x, y
 
 
-def _rotate_data(data: 'SarracenDataFrame',  # noqa: F821
+def _rotate_data(data: 'SarracenDataFrame',
                  x_data: np.ndarray,
                  y_data: np.ndarray,
                  z_data: np.ndarray,
@@ -118,7 +121,7 @@ def _rotate_data(data: 'SarracenDataFrame',  # noqa: F821
     return vectors[:, 0], vectors[:, 1], vectors[:, 2]
 
 
-def _default_bounding_box(data: 'SarracenDataFrame',  # noqa: F821
+def _default_bounding_box(data: 'SarracenDataFrame',
                           x: str,
                           y: str,
                           xlim: Bounds | None,
@@ -144,11 +147,12 @@ def _default_bounding_box(data: 'SarracenDataFrame',  # noqa: F821
     return np.array(corners).transpose()
 
 
-def _default_bounds(data: 'SarracenDataFrame',  # noqa: F821
+def _default_bounds(data: 'SarracenDataFrame',
                     x_data: np.ndarray,
                     y_data: np.ndarray,
                     xlim: Bounds | None,
-                    ylim: Bounds | None) -> tuple[Bounds, Bounds]:
+                    ylim: Bounds | None) -> tuple[tuple[float, float],
+                                                  tuple[float, float]]:
     """
     Utility function to determine the 2-dimensional boundaries to use in 2D
     rendering.
@@ -186,8 +190,8 @@ def _default_bounds(data: 'SarracenDataFrame',  # noqa: F821
 
 def _set_pixels(x_pixels: int | None,
                 y_pixels: int | None,
-                xlim: Bounds,
-                ylim: Bounds,
+                xlim: tuple[float, float],
+                ylim: tuple[float, float],
                 default: int) -> tuple[int, int]:
     """
     Utility function to determine the number of pixels to interpolate over in
@@ -224,7 +228,7 @@ def _set_pixels(x_pixels: int | None,
     return x_pixels, y_pixels
 
 
-def render(data: 'SarracenDataFrame',  # noqa: F821
+def render(data: 'SarracenDataFrame',
            target: str,
            x: str | None = None,
            y: str | None = None,
@@ -474,7 +478,7 @@ def render(data: 'SarracenDataFrame',  # noqa: F821
     return ax
 
 
-def lineplot(data: 'SarracenDataFrame',  # noqa: F821
+def lineplot(data: 'SarracenDataFrame',
              target: str,
              x: str | None = None,
              y: str | None = None,
@@ -603,7 +607,7 @@ def lineplot(data: 'SarracenDataFrame',  # noqa: F821
     return ax
 
 
-def streamlines(data: 'SarracenDataFrame',  # noqa: F821
+def streamlines(data: 'SarracenDataFrame',
                 target: tuple[str, str] | tuple[str, str, str],
                 x: str | None = None,
                 y: str | None = None,
@@ -764,7 +768,7 @@ def streamlines(data: 'SarracenDataFrame',  # noqa: F821
     return ax
 
 
-def arrowplot(data: 'SarracenDataFrame',  # noqa: F821
+def arrowplot(data: 'SarracenDataFrame',
               target: tuple[str, str] | tuple[str, str, str],
               x: str | None = None,
               y: str | None = None,

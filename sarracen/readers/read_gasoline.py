@@ -17,15 +17,15 @@ GasolineDicts: TypeAlias = tuple[dict, dict, dict, dict]
 def read_gasoline(filename: str,
                   outtype: Literal["sarracen"] = "sarracen"
                   ) -> GasolineFrames | int: ...
-@overload
+@overload  # noqa: E302
 def read_gasoline(filename: str,
                   outtype: Literal["dic", "dict", "dictionary"]
                   ) -> GasolineDicts | int: ...
-@overload
+@overload  # noqa: E302
 def read_gasoline(filename: str,
                   outtype: str
                   ) -> GasolineFrames | GasolineDicts | int: ...
-def read_gasoline(filename: str,
+def read_gasoline(filename: str,  # noqa: E302
                   outtype: str = "sarracen"
                   ) -> GasolineFrames | GasolineDicts | int:
     """
