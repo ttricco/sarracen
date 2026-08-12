@@ -4,21 +4,25 @@ import warnings
 from ..sarracen_dataframe import SarracenDataFrame
 from .utils import _get_mass, _get_origin
 from .utils import _bin_particles_by_radius, _get_bin_midpoints
+from typing import TypeAlias
 
-from typing import Tuple, Union
+
+ProfileResult: TypeAlias = np.ndarray | tuple[np.ndarray, np.ndarray]
+SDResult: TypeAlias = (ProfileResult |
+                       tuple[np.ndarray, np.ndarray, np.ndarray] |
+                       tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray])
+AngularMomentumResult: TypeAlias = tuple[np.ndarray, ...]
 
 
 def azimuthal_average(data: 'SarracenDataFrame',
                       target: str,
-                      r_in: Union[float, None] = None,
-                      r_out: Union[float, None] = None,
+                      r_in: float | None = None,
+                      r_out: float | None = None,
                       bins: int = 300,
                       log: bool = False,
                       geometry: str = 'cylindrical',
-                      origin: Union[list, None] = None,
-                      retbins: bool = False) -> Union[np.ndarray,
-                                                      Tuple[np.ndarray,
-                                                            np.ndarray]]:
+                      origin: list[float] | None = None,
+                      retbins: bool = False) -> ProfileResult:
     """
     Calculates the 1D azimuthally-averaged profile for a target quantity.
 
@@ -44,7 +48,7 @@ def azimuthal_average(data: 'SarracenDataFrame',
     geometry : str, optional
         Coordinate system to use to calculate the particle radii. Can be
         either *spherical* or *cylindrical*. Defaults to *cylindrical*.
-    origin : array-like, optional
+    origin : array_like, optional
         The x, y and z centre point around which to compute radii. Defaults to
         [0, 0, 0].
     retbins : bool, optional
@@ -52,10 +56,10 @@ def azimuthal_average(data: 'SarracenDataFrame',
 
     Returns
     -------
-    array
+    ndarray
         A NumPy array of length bins containing the averaged profile.
-    array, optional
-        The midpoint values of each bin. Only returned if *retbins=True*.
+    ndarray, optional
+        The midpoint values of each bin. Only returned if `retbins=True`.
 
     Raises
     ------
@@ -76,22 +80,13 @@ def azimuthal_average(data: 'SarracenDataFrame',
 
 
 def surface_density(data: 'SarracenDataFrame',
-                    r_in: Union[float, None] = None,
-                    r_out: Union[float, None] = None,
+                    r_in: float | None = None,
+                    r_out: float | None = None,
                     bins: int = 300,
                     log: bool = False,
                     geometry: str = 'cylindrical',
-                    origin: Union[list, None] = None,
-                    retbins: bool = False) -> Union[np.ndarray,
-                                                    Tuple[np.ndarray,
-                                                          np.ndarray],
-                                                    Tuple[np.ndarray,
-                                                          np.ndarray,
-                                                          np.ndarray],
-                                                    Tuple[np.ndarray,
-                                                          np.ndarray,
-                                                          np.ndarray,
-                                                          np.ndarray]]:
+                    origin: list[float] | None = None,
+                    retbins: bool = False) -> SDResult:
     """
     Calculates the 1D azimuthally-averaged surface density profile.
 
@@ -115,7 +110,7 @@ def surface_density(data: 'SarracenDataFrame',
     geometry : str, optional
         Coordinate system to use to calculate the particle radii. Can be
         either *spherical* or *cylindrical*. Defaults to *cylindrical*.
-    origin : array-like, optional
+    origin : array_like, optional
         The x, y and z centre point around which to compute radii. Defaults to
         [0, 0, 0].
     retbins : bool, optional
@@ -123,9 +118,14 @@ def surface_density(data: 'SarracenDataFrame',
 
     Returns
     -------
-    array
+    ndarray or tuple of ndarray
         A NumPy array of length bins containing the surface density profile.
-    array, optional
+        For gas-only data, this is the gas surface density profile. For
+        one-fluid data, the gas and dust surface desity profiles are returned.
+        For multiple small dust grains, the gas surface density profile is
+        returned, along with the total dust profile and per-grain dust
+        profiles.
+    ndarray, optional
         The midpoint values of each bin. Only returned if *retbins=True*.
 
     Raises
@@ -194,7 +194,7 @@ def surface_density(data: 'SarracenDataFrame',
         else:
             return sigma_gas, sigma_dust
 
-    elif ndustsmall > 1:  # multiple grain sizes
+    else:  # multiple grain sizes
         if 'dustfrac_total' not in data.columns:
             data.calc_one_fluid_quantities()
 
@@ -221,28 +221,27 @@ def surface_density(data: 'SarracenDataFrame',
 
 def _calc_angular_momentum(data: 'SarracenDataFrame',
                            rbins: pd.Series,
-                           origin: list,
-                           unit_vector: bool) -> Tuple[pd.Series,
-                                                       pd.Series,
+                           origin: list[float],
+                           unit_vector: bool) -> tuple[pd.Series, pd.Series,
                                                        pd.Series]:
     """
     Utility function to calculate angular momentum of the disc.
 
     Parameters
     ----------
-    data: SarracenDataFrame
+    data : SarracenDataFrame
         Particle data, in a SarracenDataFrame.
-    rbins: Series
+    rbins : Series
         The radial bin to which each particle belongs.
-    origin: list
+    origin : list of float
         The x, y and z centre point around which to compute radii.
-    unit_vector: bool
+    unit_vector : bool
         Whether to convert the angular momentum to unit vectors.
         Default is True.
 
     Returns
     -------
-    Lx, Ly, Lz: Series
+    Lx, Ly, Lz : Series
         The x, y and z components of the angular momentum per bin.
     """
 
@@ -276,15 +275,14 @@ def _calc_angular_momentum(data: 'SarracenDataFrame',
 
 
 def angular_momentum(data: 'SarracenDataFrame',
-                     r_in: Union[float, None] = None,
-                     r_out: Union[float, None] = None,
+                     r_in: float | None = None,
+                     r_out: float | None = None,
                      bins: int = 300,
                      log: bool = False,
                      geometry: str = 'cylindrical',
-                     origin: Union[list, None] = None,
+                     origin: list[float] | None = None,
                      retbins: bool = False,
-                     unit_vector: bool = True) -> Union[Tuple[np.ndarray,
-                                                              ...]]:
+                     unit_vector: bool = True) -> AngularMomentumResult:
     """
     Calculates the angular momentum profile of the disc.
 
@@ -308,21 +306,22 @@ def angular_momentum(data: 'SarracenDataFrame',
     geometry : str, optional
         Coordinate system to use to calculate the particle radii. Can be
         either *spherical* or *cylindrical*. Defaults to *cylindrical*.
-    origin : array-like, optional
+    origin : array_like, optional
         The x, y and z centre point around which to compute radii. Defaults to
         [0, 0, 0].
     retbins : bool, optional
         Whether to return the midpoints of the bins or not. Defaults to False.
-    unit_vector: bool, optional
+    unit_vector : bool, optional
         Whether to convert the angular momentum to unit vectors.
         Default is True.
 
     Returns
     -------
-    array
-        A NumPy array of length bins containing the angular momentum profile.
-    array, optional
-        The midpoint values of each bin. Only returned if *retbins=True*.
+    tuple of ndarray
+        Three NumPy arrays of length bins containing the Lx, Ly and Lz angular
+        momentum profiles.
+    ndarray, optional
+        The midpoint values of each bin. Only returned if `retbins=True`.
 
     Raises
     ------
@@ -350,17 +349,17 @@ def angular_momentum(data: 'SarracenDataFrame',
 
 def _calc_scale_height(data: 'SarracenDataFrame',
                        rbins: pd.Series,
-                       origin: list) -> pd.Series:
+                       origin: list[float]) -> pd.Series:
     """
     Utility function to calculate the scale height of the disc.
 
     Parameters
     ----------
-    data: SarracenDataFrame
+    data : SarracenDataFrame
         Particle data, in a SarracenDataFrame.
-    rbins: Series
+    rbins : Series
         The radial bin to which each particle belongs.
-    origin : array-like, optional
+    origin : array_like, optional
         The x, y and z centre point around which to compute radii. Defaults to
         [0, 0, 0].
 
@@ -380,15 +379,13 @@ def _calc_scale_height(data: 'SarracenDataFrame',
 
 
 def scale_height(data: 'SarracenDataFrame',
-                 r_in: Union[float, None] = None,
-                 r_out: Union[float, None] = None,
+                 r_in: float | None = None,
+                 r_out: float | None = None,
                  bins: int = 300,
                  log: bool = False,
                  geometry: str = 'cylindrical',
-                 origin: Union[list, None] = None,
-                 retbins: bool = False) -> Union[np.ndarray,
-                                                 Tuple[np.ndarray,
-                                                       np.ndarray]]:
+                 origin: list[float] | None = None,
+                 retbins: bool = False) -> ProfileResult:
     """
     Calculates the scale height, H/R, of the disc.
 
@@ -415,7 +412,7 @@ def scale_height(data: 'SarracenDataFrame',
     geometry : str, optional
         Coordinate system to use to calculate the particle radii. Can be
         either *spherical* or *cylindrical*. Defaults to *cylindrical*.
-    origin : array-like, optional
+    origin : array_like, optional
         The x, y and z centre point around which to compute radii. Defaults to
         [0, 0, 0].
     retbins : bool, optional
@@ -423,10 +420,10 @@ def scale_height(data: 'SarracenDataFrame',
 
     Returns
     -------
-    array
+    ndarray
         A NumPy array of length bins scale height, H, profile.
-    array, optional
-        The midpoint values of each bin. Only returned if *retbins=True*.
+    ndarray, optional
+        The midpoint values of each bin. Only returned if `retbins=True`.
 
     Raises
     ------
@@ -452,14 +449,13 @@ def scale_height(data: 'SarracenDataFrame',
 
 
 def honH(data: 'SarracenDataFrame',
-         r_in: Union[float, None] = None,
-         r_out: Union[float, None] = None,
+         r_in: float | None = None,
+         r_out: float | None = None,
          bins: int = 300,
          log: bool = False,
          geometry: str = 'cylindrical',
-         origin: Union[list, None] = None,
-         retbins: bool = False) -> Union[np.ndarray, Tuple[np.ndarray,
-                                                           np.ndarray]]:
+         origin: list[float] | None = None,
+         retbins: bool = False) -> ProfileResult:
     """
     Calculates <h>/H, the averaged smoothing length divided by the scale
     height.
@@ -484,7 +480,7 @@ def honH(data: 'SarracenDataFrame',
     geometry : str, optional
         Coordinate system to use to calculate the particle radii. Can be
         either *spherical* or *cylindrical*. Defaults to *cylindrical*.
-    origin : array-like, optional
+    origin : array_like, optional
         The x, y and z centre point around which to compute radii. Defaults to
         [0, 0, 0].
     retbins : bool, optional
@@ -492,10 +488,10 @@ def honH(data: 'SarracenDataFrame',
 
     Returns
     -------
-    array
+    ndarray
         A NumPy array of length bins containing the <h>/H profile.
-    array, optional
-        The midpoint values of each bin. Only returned if *retbins=True*.
+    ndarray, optional
+        The midpoint values of each bin. Only returned if `retbins=True`.
 
     Raises
     ------

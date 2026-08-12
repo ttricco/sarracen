@@ -1,5 +1,7 @@
 """pytest unit tests for render.py functions."""
-from typing import Any, Callable, Dict, List
+from collections.abc import Callable
+from typing import Any
+
 from matplotlib import pyplot as plt
 from numba import cuda
 from numpy.testing import assert_array_equal
@@ -106,7 +108,7 @@ def test_cbar_exclusion(backend: str) -> None:
     sdf_3 = SarracenDataFrame(data_3)
     sdf_3.backend = backend
 
-    args_list: List[Dict[str, Any]] = [{'data': sdf_2, 'xsec': None},
+    args_list: list[dict[str, Any]] = [{'data': sdf_2, 'xsec': None},
                                        {'data': sdf_3, 'xsec': None},
                                        {'data': sdf_3, 'xsec': 1.5}]
     for args in args_list:
@@ -135,7 +137,7 @@ def test_cbar_keywords(backend: str) -> None:
     sdf_3 = SarracenDataFrame(data_3)
     sdf_3.backend = backend
 
-    args_list: List[Dict[str, Any]] = [{'data': sdf_2, 'xsec': None},
+    args_list: list[dict[str, Any]] = [{'data': sdf_2, 'xsec': None},
                                        {'data': sdf_3, 'xsec': None},
                                        {'data': sdf_3, 'xsec': 1.5}]
     for args in args_list:
@@ -167,7 +169,7 @@ def test_kwargs(backend: str) -> None:
     sdf_4 = SarracenDataFrame(data_4)
     sdf_4.backend = backend
 
-    args_list: List[Dict[str, Any]] = [{'data': sdf_2, 'xsec': None},
+    args_list: list[dict[str, Any]] = [{'data': sdf_2, 'xsec': None},
                                        {'data': sdf_3, 'xsec': None},
                                        {'data': sdf_3, 'xsec': 1.5}]
     for args in args_list:
@@ -216,7 +218,7 @@ def test_plot_labels(backend: str) -> None:
     sdf_3 = SarracenDataFrame(data_3)
     sdf_3.backend = backend
 
-    args_list: List[Dict[str, Any]] = [{'data': sdf_2, 'xsec': None},
+    args_list: list[dict[str, Any]] = [{'data': sdf_2, 'xsec': None},
                                        {'data': sdf_3, 'xsec': None},
                                        {'data': sdf_3, 'xsec': 0}]
     for args in args_list:
@@ -240,7 +242,7 @@ def test_plot_labels(backend: str) -> None:
                ('column ' if column else '') + 'rho'
         plt.close(fig)
 
-    functions_list: List[Callable] = [streamlines, arrowplot]
+    functions_list: list[Callable] = [streamlines, arrowplot]
     for func in functions_list:
         fig, ax = plt.subplots()
         func(sdf_2, ('Ax', 'Ay'), ax=ax)
@@ -287,7 +289,7 @@ def test_plot_bounds(backend: str) -> None:
     sdf_3 = SarracenDataFrame(data_3)
     sdf_3.backend = backend
 
-    args_list: List[Dict[str, Any]] = [{'data': sdf_2, 'xsec': None},
+    args_list: list[dict[str, Any]] = [{'data': sdf_2, 'xsec': None},
                                        {'data': sdf_3, 'xsec': None},
                                        {'data': sdf_3, 'xsec': 1.5}]
     for args in args_list:
@@ -319,7 +321,7 @@ def test_plot_bounds(backend: str) -> None:
     assert ax.get_ylim() == (0, interpolate_2d_line(sdf_2, 'P').max())
     plt.close(fig)
 
-    functions_list: List[Callable] = [arrowplot, streamlines]
+    functions_list: list[Callable] = [arrowplot, streamlines]
     for func in functions_list:
         fig, ax = plt.subplots()
         func(sdf_3, ('Ax', 'Ay', 'Az'), ax=ax)

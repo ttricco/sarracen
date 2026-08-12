@@ -1,5 +1,6 @@
 """pytest unit tests for kernel functionality."""
-from typing import Callable
+from collections.abc import Callable
+
 from pytest import approx, mark
 from scipy.integrate import quad, dblquad, tplquad
 import numpy as np

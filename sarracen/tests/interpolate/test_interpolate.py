@@ -1,7 +1,8 @@
 """
 pytest unit tests for interpolate.py functions.
 """
-from typing import Any, Callable, Dict, List
+from collections.abc import Callable
+from typing import Any
 
 import pandas as pd
 import numpy as np
@@ -21,14 +22,14 @@ backends = ['cpu']
 if cuda.is_available():
     backends.append('gpu')
 
-funcs2d: List[Callable] = [interpolate_2d, interpolate_2d_line]
-funcs2dvec: List[Callable] = [interpolate_2d_vec]
-funcs3d: List[Callable] = [interpolate_3d_line, interpolate_3d_proj,
+funcs2d: list[Callable] = [interpolate_2d, interpolate_2d_line]
+funcs2dvec: list[Callable] = [interpolate_2d_vec]
+funcs3d: list[Callable] = [interpolate_3d_line, interpolate_3d_proj,
                            interpolate_3d_cross, interpolate_3d_grid]
-funcs3dvec: List[Callable] = [interpolate_3d_vec, interpolate_3d_cross_vec]
+funcs3dvec: list[Callable] = [interpolate_3d_vec, interpolate_3d_cross_vec]
 
-funcscolumn: List[Callable] = [interpolate_3d_proj, interpolate_3d_vec]
-funcsline: List[Callable] = [interpolate_2d_line, interpolate_3d_line]
+funcscolumn: list[Callable] = [interpolate_3d_proj, interpolate_3d_vec]
+funcsline: list[Callable] = [interpolate_2d_line, interpolate_3d_line]
 
 funcs = funcs2d + funcs2dvec + funcs3d + funcs3dvec
 
@@ -624,7 +625,7 @@ def test_default_kernel(backend: str, use_default_kernel: bool) -> None:
     sdf_2.backend = backend
     sdf_3.backend = backend
 
-    kwargs: Dict[str, Any] = {'normalize': False}
+    kwargs: dict[str, Any] = {'normalize': False}
 
     if use_default_kernel:
         kernel: BaseKernel = QuarticSplineKernel()
@@ -776,7 +777,7 @@ def test_pixel_arguments() -> None:
         assert img.shape == (default_pixels, default_pixels, default_pixels)
 
     # Non-vector functions
-    functions_list: List[Callable] = [interpolate_2d, interpolate_3d_proj,
+    functions_list: list[Callable] = [interpolate_2d, interpolate_3d_proj,
                                       interpolate_3d_cross]
     for func in functions_list:
         for axes in [('x', 'y'),
@@ -1200,7 +1201,7 @@ def test_required_columns(backend: str, func: Callable, column: str) -> None:
     sdf = SarracenDataFrame(data, params=dict())
     sdf.backend = backend
 
-    kwargs: Dict[str, Any] = dict()
+    kwargs: dict[str, Any] = dict()
     if func in funcs2d + funcs3d:
         kwargs['target'] = 'A'
     elif func in funcs2dvec:
@@ -1289,7 +1290,7 @@ def test_density_weighted(backend: str,
     if not dens_weight:
         weight = weight / sdf['rho'][0]
 
-    kwargs: Dict[str, Any] = {'xlim': (-1, 1), 'ylim': (-1, 1),
+    kwargs: dict[str, Any] = {'xlim': (-1, 1), 'ylim': (-1, 1),
                               'dens_weight': dens_weight,
                               'normalize': False, 'hmin': False}
 
@@ -1348,7 +1349,7 @@ def test_normalize_interpolation(backend: str, normalize: bool) -> None:
         norm3d = weight / sdf_2['h'][0] * kernel.w(0, 3)
         norm3d_column = weight * kernel.get_column_kernel()[0]
 
-    kwargs: Dict[str, Any] = {'xlim': (-1, 1), 'ylim': (-1, 1),
+    kwargs: dict[str, Any] = {'xlim': (-1, 1), 'ylim': (-1, 1),
                               'dens_weight': False, 'normalize': normalize}
 
     img = interpolate_2d(sdf_2, 'A',
@@ -1478,7 +1479,7 @@ def test_minimum_smoothing_length_3d(backend: str) -> None:
     sdf_a.backend = backend
     sdf_b.backend = backend
 
-    functions_list: List[Callable] = [interpolate_3d_cross,
+    functions_list: list[Callable] = [interpolate_3d_cross,
                                       interpolate_3d_proj,
                                       interpolate_3d_grid]
     for interpolate in functions_list:

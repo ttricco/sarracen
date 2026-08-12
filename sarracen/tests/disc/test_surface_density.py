@@ -124,9 +124,20 @@ def test_one_fluid_single_grain() -> None:
                                   'vx': vx, 'vy': vy, 'vz': vz,
                                   'dustfrac': dustfrac, 'mass': mass})
 
-    sigma_g_in, sigma_d_in = surface_density(sdf, r_in=0, r_out=0.5, bins=50)
-    sigma_g_out, sigma_d_out = surface_density(sdf, r_in=0.5, r_out=1, bins=50)
-    sigma_g_all, sigma_d_all = surface_density(sdf, r_in=0, r_out=1, bins=100)
+    sigmas = surface_density(sdf, r_in=0, r_out=0.5, bins=50)
+    assert isinstance(sigmas, tuple)
+    assert len(sigmas) == 2
+    sigma_g_in, sigma_d_in = sigmas
+
+    sigmas = surface_density(sdf, r_in=0.5, r_out=1, bins=50)
+    assert isinstance(sigmas, tuple)
+    assert len(sigmas) == 2
+    sigma_g_out, sigma_d_out = sigmas
+
+    sigmas = surface_density(sdf, r_in=0, r_out=1, bins=100)
+    assert isinstance(sigmas, tuple)
+    assert len(sigmas) == 2
+    sigma_g_all, sigma_d_all = sigmas
 
     assert_allclose(sigma_g_in, sigma_g_all[:50], atol=1e-15, rtol=0.0)
     assert_allclose(sigma_g_out, sigma_g_all[50:], atol=1e-15, rtol=0.0)
@@ -163,12 +174,18 @@ def test_one_fluid_multi_grain() -> None:
     sdf.params['ndustsmall'] = 3
 
     sigmas = surface_density(sdf, r_in=0, r_out=0.5, bins=50)
+    assert isinstance(sigmas, tuple)
+    assert len(sigmas) == 3
     sigma_g_in, sigma_d_tot_in, sigma_d_in = sigmas
 
     sigmas = surface_density(sdf, r_in=0.5, r_out=1, bins=50)
+    assert isinstance(sigmas, tuple)
+    assert len(sigmas) == 3
     sigma_g_out, sigma_d_tot_out, sigma_d_out = sigmas
 
     sigmas = surface_density(sdf, r_in=0, r_out=1, bins=100)
+    assert isinstance(sigmas, tuple)
+    assert len(sigmas) == 3
     sigma_g_all, sigma_d_tot_all, sigma_d_all = sigmas
 
     assert_allclose(sigma_g_in, sigma_g_all[:50], atol=1e-15, rtol=0)

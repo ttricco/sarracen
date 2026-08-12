@@ -1,4 +1,4 @@
-from typing import Tuple, IO, Type
+from typing import IO
 
 import numpy as np
 import pandas as pd
@@ -114,7 +114,7 @@ class MARISAIO_TAGS(IntEnum):
 # 2: sets the reference point at the end of the file
 
 
-def _marisa_read_capture_pattern(fp: IO) -> Tuple[int, int]:
+def _marisa_read_capture_pattern(fp: IO) -> tuple[int, int]:
     if fp.read(7) != b"marisa\x00":
         raise AssertionError("Capture pattern not present. "
                              "Is this a valid data file?")
@@ -128,13 +128,13 @@ def _marisa_read_tag(fp: IO) -> int:
     return tag
 
 
-def _marisa_read_data(fp: IO, dtype: Type[np.number]) -> np.ndarray:
+def _marisa_read_data(fp: IO, dtype: type[np.number]) -> np.ndarray:
     size = int.from_bytes(fp.read(4), byteorder='little')
     data = fp.read(size)
     return np.frombuffer(data, dtype=dtype)
 
 
-def _marisa_parse_tags(fp: IO) -> Tuple[np.ndarray, np.ndarray]:
+def _marisa_parse_tags(fp: IO) -> tuple[np.ndarray, np.ndarray]:
     currentpos = fp.tell()
 
     fp.seek(0, 2)

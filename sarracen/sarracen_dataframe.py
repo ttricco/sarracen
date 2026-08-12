@@ -1,4 +1,5 @@
-from typing import Any, Type, Union, Callable, Tuple, Optional, Dict, List
+from collections.abc import Callable
+from typing import Any, TypeAlias
 
 from matplotlib.axes import Axes
 from matplotlib.colors import Colormap
@@ -11,6 +12,11 @@ from scipy.spatial.transform import Rotation
 from .render import streamlines, arrowplot, render, lineplot
 from .interpolate import interpolate_2d, interpolate_3d_grid
 from .kernels import CubicSplineKernel, BaseKernel
+
+
+Bounds: TypeAlias = tuple[float | None, float | None]
+VectorLike: TypeAlias = np.ndarray | list | tuple
+OriginLike: TypeAlias = VectorLike | pd.Series | str | None
 
 
 def _copy_doc(copy_func: Callable) -> Callable:
@@ -124,7 +130,7 @@ class SarracenDataFrame(DataFrame):
         self._backend = 'gpu' if cuda.is_available() else 'cpu'
 
     @property
-    def _constructor(self) -> Type:
+    def _constructor(self) -> type:
         return SarracenDataFrame
 
     def _identify_special_columns(self) -> None:
@@ -317,28 +323,28 @@ class SarracenDataFrame(DataFrame):
     @_copy_doc(render)
     def render(self,
                target: str,
-               x: Union[str, None] = None,
-               y: Union[str, None] = None,
-               z: Union[str, None] = None,
-               xsec: Union[float, None] = None,
-               kernel: Union[BaseKernel, None] = None,
-               x_pixels: Union[int, None] = None,
-               y_pixels: Union[int, None] = None,
-               xlim: Union[Tuple[float, float], None] = None,
-               ylim: Union[Tuple[float, float], None] = None,
-               cmap: Union[str, Colormap] = 'gist_heat',
+               x: str | None = None,
+               y: str | None = None,
+               z: str | None = None,
+               xsec: float | None = None,
+               kernel: BaseKernel | None = None,
+               x_pixels: int | None = None,
+               y_pixels: int | None = None,
+               xlim: Bounds | None = None,
+               ylim: Bounds | None = None,
+               cmap: str | Colormap = 'gist_heat',
                cbar: bool = True,
                cbar_kws: dict = {},
-               cbar_ax: Union[Axes, None] = None,
-               ax: Union[Axes, None] = None,
+               cbar_ax: Axes | None = None,
+               ax: Axes | None = None,
                exact: bool = False,
-               backend: Union[str, None] = None,
+               backend: str | None = None,
                integral_samples: int = 1000,
-               rotation: Union[np.ndarray, list, Rotation, None] = None,
-               rot_origin: Union[np.ndarray, list, str, None] = None,
+               rotation: VectorLike | Rotation | None = None,
+               rot_origin: OriginLike = None,
                log_scale: bool = False,
                symlog_scale: bool = False,
-               dens_weight: Union[bool, None] = None,
+               dens_weight: bool | None = None,
                normalize: bool = False,
                hmin: bool = False,
                **kwargs: Any) -> Axes:
@@ -351,16 +357,16 @@ class SarracenDataFrame(DataFrame):
     @_copy_doc(lineplot)
     def lineplot(self,
                  target: str,
-                 x: Union[str, None] = None,
-                 y: Union[str, None] = None,
-                 z: Union[str, None] = None,
-                 kernel: Union[BaseKernel, None] = None,
+                 x: str | None = None,
+                 y: str | None = None,
+                 z: str | None = None,
+                 kernel: BaseKernel | None = None,
                  pixels: int = 512,
-                 xlim: Union[Tuple[float, float], None] = None,
-                 ylim: Union[Tuple[float, float], None] = None,
-                 zlim: Union[Tuple[float, float], None] = None,
-                 ax: Union[Axes, None] = None,
-                 backend: Union[str, None] = None,
+                 xlim: Bounds | float | int | None = None,
+                 ylim: Bounds | float | int | None = None,
+                 zlim: Bounds | float | int | None = None,
+                 ax: Axes | None = None,
+                 backend: str | None = None,
                  log_scale: bool = False,
                  dens_weight: bool = False,
                  normalize: bool = False,
@@ -372,22 +378,22 @@ class SarracenDataFrame(DataFrame):
 
     @_copy_doc(streamlines)
     def streamlines(self,
-                    target: Union[Tuple[str, str], Tuple[str, str, str]],
-                    x: Union[str, None] = None,
-                    y: Union[str, None] = None,
-                    z: Union[str, None] = None,
-                    xsec: Union[int, None] = None,
-                    kernel: Union[BaseKernel, None] = None,
+                    target: tuple[str, str] | tuple[str, str, str],
+                    x: str | None = None,
+                    y: str | None = None,
+                    z: str | None = None,
+                    xsec: int | None = None,
+                    kernel: BaseKernel | None = None,
                     integral_samples: int = 1000,
-                    rotation: Union[np.ndarray, list, Rotation, None] = None,
-                    rot_origin: Union[np.ndarray, list, str, None] = None,
-                    x_pixels: Union[int, None] = None,
-                    y_pixels: Union[int, None] = None,
-                    xlim: Union[Tuple[float, float], None] = None,
-                    ylim: Union[Tuple[float, float], None] = None,
-                    ax: Union[Axes, None] = None,
+                    rotation: VectorLike | Rotation | None = None,
+                    rot_origin: OriginLike = None,
+                    x_pixels: int | None = None,
+                    y_pixels: int | None = None,
+                    xlim: Bounds | None = None,
+                    ylim: Bounds | None = None,
+                    ax: Axes | None = None,
                     exact: bool = False,
-                    backend: Union[str, None] = None,
+                    backend: str | None = None,
                     dens_weight: bool = False,
                     normalize: bool = False,
                     hmin: bool = False,
@@ -399,25 +405,25 @@ class SarracenDataFrame(DataFrame):
 
     @_copy_doc(arrowplot)
     def arrowplot(self,
-                  target: Union[Tuple[str, str], Tuple[str, str, str]],
-                  x: Union[str, None] = None,
-                  y: Union[str, None] = None,
-                  z: Union[str, None] = None,
-                  xsec: Union[int, None] = None,
-                  kernel: Union[BaseKernel, None] = None,
+                  target: tuple[str, str] | tuple[str, str, str],
+                  x: str | None = None,
+                  y: str | None = None,
+                  z: str | None = None,
+                  xsec: int | None = None,
+                  kernel: BaseKernel | None = None,
                   integral_samples: int = 1000,
-                  rotation: Union[np.ndarray, list, Rotation, None] = None,
-                  rot_origin: Union[np.ndarray, list, str, None] = None,
-                  x_arrows: Union[int, None] = None,
-                  y_arrows: Union[int, None] = None,
-                  xlim: Union[Tuple[float, float], None] = None,
-                  ylim: Union[Tuple[float, float], None] = None,
-                  ax: Union[Axes, None] = None,
+                  rotation: VectorLike | Rotation | None = None,
+                  rot_origin: OriginLike = None,
+                  x_arrows: int | None = None,
+                  y_arrows: int | None = None,
+                  xlim: Bounds | None = None,
+                  ylim: Bounds | None = None,
+                  ax: Axes | None = None,
                   qkey: bool = True,
-                  qkey_kws: Union[dict, None] = None,
+                  qkey_kws: dict | None = None,
                   exact: bool = False,
-                  backend: Union[str, None] = None,
-                  dens_weight: Union[bool, None] = None,
+                  backend: str | None = None,
+                  dens_weight: bool | None = None,
                   normalize: bool = False,
                   hmin: bool = False,
                   **kwargs: Any) -> Axes:
@@ -428,21 +434,18 @@ class SarracenDataFrame(DataFrame):
 
     def sph_interpolate(self,
                         target: str,
-                        x: Union[str, None] = None,
-                        y: Union[str, None] = None,
-                        z: Union[str, None] = None,
-                        kernel: Union[BaseKernel, None] = None,
-                        rotation: Union[np.ndarray, list,
-                                        Rotation, None] = None,
-                        rot_origin: Union[np.ndarray, list, str, None] = None,
-                        x_pixels: Union[int, None] = None,
-                        y_pixels: Union[int, None] = None,
-                        z_pixels: Union[int, None] = None,
-                        xlim: Optional[Tuple[Optional[float],
-                                             Optional[float]]] = None,
-                        ylim: Optional[Tuple[Optional[float],
-                                             Optional[float]]] = None,
-                        zlim: Union[Tuple[float, float], None] = None,
+                        x: str | None = None,
+                        y: str | None = None,
+                        z: str | None = None,
+                        kernel: BaseKernel | None = None,
+                        rotation: VectorLike | Rotation | None = None,
+                        rot_origin: OriginLike = None,
+                        x_pixels: int | None = None,
+                        y_pixels: int | None = None,
+                        z_pixels: int | None = None,
+                        xlim: Bounds | None = None,
+                        ylim: Bounds | None = None,
+                        zlim: Bounds | None = None,
                         exact: bool = False,
                         backend: str = 'cpu',
                         dens_weight: bool = False,
@@ -454,45 +457,45 @@ class SarracenDataFrame(DataFrame):
 
         Parameters
         ----------
-        target: str
+        target : str
             The column label of the target data.
-        x, y, z: str
+        x, y, z : str
             The column labels of the directional data to interpolate over.
             Defaults to the x, y, and z columns detected in `data`.
-        kernel: BaseKernel
+        kernel : BaseKernel
             The kernel to use for smoothing the target data. Defaults to the
             kernel specified in `data`.
-        rotation: array_like or SciPy Rotation, optional
+        rotation : array_like or SciPy Rotation, optional
             The rotation to apply to the data before interpolation. If defined
             as an array, the order of rotations is [z, y, x] in degrees. Only
             applies to 3D datasets.
-        rot_origin: array_like or ['com', 'midpoint'], optional
+        rot_origin : array_like or ['com', 'midpoint'], optional
             Point of rotation of the data. Only applies to 3D datasets. If
             array_like, then the [x, y, z] coordinates specify the point around
             which the data is rotated. If 'com', then data is rotated around
             the centre of mass. If 'midpoint', then data is rotated around the
             midpoint, that is, min + max / 2. Defaults to the midpoint.
-        x_pixels, y_pixels, z_pixels: int, optional
+        x_pixels, y_pixels, z_pixels : int, optional
             Number of pixels in the output image in the x, y & z directions.
             Default values are chosen to keep a consistent aspect ratio.
-        xlim, ylim, zlim: tuple of float, optional
+        xlim, ylim, zlim : tuple of float or None, optional
             The minimum and maximum values to use in interpolation, in particle
             data space. Defaults to the minimum and maximum values of `x`, `y`
             and `z`.
-        exact: bool
+        exact : bool
             Whether to use exact interpolation of the data. Only applies to
             2D datasets.
-        backend: ['cpu', 'gpu']
+        backend : ['cpu', 'gpu']
             The computation backend to use when interpolating this data.
             Defaults to 'gpu' if CUDA is enabled, otherwise 'cpu' is used. A
             manually specified backend in `data` will override the default.
-        dens_weight: bool
+        dens_weight : bool
             If True, the target will be multiplied by density. Defaults to
             False.
-        normalize: bool
+        normalize : bool
             If True, will normalize the interpolation. Defaults to False (this
             may change in future versions).
-        hmin: bool
+        hmin : bool
             If True, a minimum smoothing length of 0.5 * pixel size will be
             imposed. This ensures each particle contributes to at least one
             grid cell / pixel. Defaults to False (this may change in a future
@@ -535,10 +538,6 @@ class SarracenDataFrame(DataFrame):
         (165,  526, 512)
         """
         if self.get_dim() == 2:
-            if xlim is None:
-                xlim = (None, None)
-            if ylim is None:
-                ylim = (None, None)
             return interpolate_2d(self, target, x, y, kernel, x_pixels,
                                   y_pixels, xlim, ylim, exact, backend,
                                   dens_weight, normalize, hmin)
@@ -550,7 +549,7 @@ class SarracenDataFrame(DataFrame):
         raise ValueError('Invalid number of dimensions.')
 
     @property
-    def params(self) -> Dict[str, Any]:
+    def params(self) -> dict[str, Any]:
         """
         dict: Miscellaneous dataset-level parameters.
 
@@ -562,14 +561,14 @@ class SarracenDataFrame(DataFrame):
         return self._params
 
     @params.setter
-    def params(self, new_params: Union[Dict[str, Any], None]) -> None:
+    def params(self, new_params: dict[str, Any] | None) -> None:
         if new_params is not None and not isinstance(new_params, dict):
             raise TypeError("Parameters not a dictionary")
         self._params = dict(new_params or {})
 
     @property
     def units(self) -> Series:
-        """Series: Units for each column of this dataset."""
+        """Series : Units for each column of this dataset."""
         return self._units
 
     @units.setter
@@ -587,7 +586,7 @@ class SarracenDataFrame(DataFrame):
         return self._xcol
 
     @xcol.setter
-    def xcol(self, new_col: Union[str, None]) -> None:
+    def xcol(self, new_col: str | None) -> None:
         if new_col in self or new_col is None:
             self._xcol = new_col
 
@@ -602,7 +601,7 @@ class SarracenDataFrame(DataFrame):
         return self._ycol
 
     @ycol.setter
-    def ycol(self, new_col: Union[str, None]) -> None:
+    def ycol(self, new_col: str | None) -> None:
         if new_col in self or new_col is None:
             self._ycol = new_col
 
@@ -617,7 +616,7 @@ class SarracenDataFrame(DataFrame):
         return self._zcol
 
     @zcol.setter
-    def zcol(self, new_col: Union[str, None]) -> None:
+    def zcol(self, new_col: str | None) -> None:
         if new_col in self or new_col is None:
             self._zcol = new_col
 
@@ -632,7 +631,7 @@ class SarracenDataFrame(DataFrame):
         return self._hcol
 
     @hcol.setter
-    def hcol(self, new_col: Union[str, None]) -> None:
+    def hcol(self, new_col: str | None) -> None:
         if new_col in self or new_col is None:
             self._hcol = new_col
 
@@ -647,7 +646,7 @@ class SarracenDataFrame(DataFrame):
         return self._mcol
 
     @mcol.setter
-    def mcol(self, new_col: Union[str, None]) -> None:
+    def mcol(self, new_col: str | None) -> None:
         if new_col in self or new_col is None:
             self._mcol = new_col
 
@@ -662,7 +661,7 @@ class SarracenDataFrame(DataFrame):
         return self._rhocol
 
     @rhocol.setter
-    def rhocol(self, new_col: Union[str, None]) -> None:
+    def rhocol(self, new_col: str | None) -> None:
         if new_col in self or new_col is None:
             self._rhocol = new_col
 
@@ -678,7 +677,7 @@ class SarracenDataFrame(DataFrame):
         return self._vxcol
 
     @vxcol.setter
-    def vxcol(self, new_col: Union[str, None]) -> None:
+    def vxcol(self, new_col: str | None) -> None:
         if new_col in self or new_col is None:
             self._vxcol = new_col
 
@@ -694,7 +693,7 @@ class SarracenDataFrame(DataFrame):
         return self._vycol
 
     @vycol.setter
-    def vycol(self, new_col: Union[str, None]) -> None:
+    def vycol(self, new_col: str | None) -> None:
         if new_col in self or new_col is None:
             self._vycol = new_col
 
@@ -710,16 +709,16 @@ class SarracenDataFrame(DataFrame):
         return self._vzcol
 
     @vzcol.setter
-    def vzcol(self, new_col: Union[str, None]) -> None:
+    def vzcol(self, new_col: str | None) -> None:
         if new_col in self or new_col is None:
             self._vzcol = new_col
 
     @property
-    def dustfracscol(self) -> List[str]:
+    def dustfracscol(self) -> list[str]:
         return self._dustfracscol
 
     @dustfracscol.setter
-    def dustfracscol(self, new_col: List[str]) -> None:
+    def dustfracscol(self, new_col: list[str]) -> None:
         if new_col in self or new_col is None:
             self._dustfracscol = new_col
 

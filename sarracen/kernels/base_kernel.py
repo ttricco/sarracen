@@ -1,8 +1,8 @@
+from collections.abc import Callable
 import math
 
 import numpy as np
 from numba import njit, prange
-from typing import Callable
 
 
 class BaseKernel:
@@ -41,7 +41,7 @@ class BaseKernel:
 
         Parameters
         ----------
-        samples: int
+        samples : int
             Number of sample points to calculate when approximating the kernel.
 
         Returns
@@ -74,7 +74,7 @@ class BaseKernel:
 
         Parameters
         ----------
-        samples: int
+        samples : int
             Number of sample points to calculate when approximating the kernel.
 
         Returns

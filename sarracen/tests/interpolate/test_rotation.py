@@ -1,4 +1,4 @@
-from typing import Callable, List, Tuple
+from collections.abc import Callable
 
 import numpy as np
 from numba import cuda
@@ -16,18 +16,18 @@ if cuda.is_available():
     backends.append('gpu')
 
 
-def rotate(target: Tuple[float, float, float],
+def rotate(target: tuple[float, float, float],
            rot_z: float,
            rot_y: float,
-           rot_x: float) -> Tuple[float, float, float]:
+           rot_x: float) -> tuple[float, float, float]:
     """ Perform a rotation of a target vector in three dimensions.
 
     A helper function for test_nonstandard_rotation()
 
     Parameters
     ----------
-    target: float tuple of shape (3)
-    rot_z, rot_y, rot_x: Rotation around each axis (in degrees)
+    target : float tuple of shape (3)
+    rot_z, rot_y, rot_x : Rotation around each axis (in degrees)
 
     Returns
     -------
@@ -342,7 +342,7 @@ def test_rotation_stability(backend: str) -> None:
     real = -1 + (np.arange(0, 50) + 0.5) * (1 / 25)
     pixel_x, pixel_y = 12, 30
 
-    functions_list: List[Callable] = [interpolate_3d_proj,
+    functions_list: list[Callable] = [interpolate_3d_proj,
                                       interpolate_3d_cross]
     for func in functions_list:
         img = func(sdf, 'A',
@@ -463,7 +463,7 @@ def test_axes_rotation_equivalency(backend: str) -> None:
             for i_x in range(4):
                 rot_x, rot_y, rot_z = i_x * 90, i_y * 90, i_z * 90
 
-                functions_list: List[Callable] = [interpolate_3d_proj,
+                functions_list: list[Callable] = [interpolate_3d_proj,
                                                   interpolate_3d_cross]
                 for func in functions_list:
                     img1 = func(sdf, 'A',
@@ -518,7 +518,7 @@ def test_com_rotation() -> None:
     sdf_zero = SarracenDataFrame({'x': x, 'y': y, 'z': z, 'h': h, 'val': val},
                                  params={'mass': mass, 'hfact': 1.2})
 
-    functions_list: List[Callable] = [interpolate_3d_proj,
+    functions_list: list[Callable] = [interpolate_3d_proj,
                                       interpolate_3d_cross]
     for func in functions_list:
         img1 = func(sdf_com, 'val',

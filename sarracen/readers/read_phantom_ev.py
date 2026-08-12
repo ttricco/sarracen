@@ -1,9 +1,9 @@
-from typing import IO, List, Union
+from typing import IO
 import pandas as pd
 import numpy as np
 
 
-def _determine_column_labels(file: IO) -> List[str]:
+def _determine_column_labels(file: IO) -> list[str]:
     """
     Determine the column labels.
 
@@ -42,7 +42,7 @@ def _determine_column_labels(file: IO) -> List[str]:
     return labels
 
 
-def _infer_type(s: str) -> Union[np.float64, np.int32, str]:
+def _infer_type(s: str) -> np.float64 | np.int32 | str:
     """
     Given a value from the ev, determine its type.
 

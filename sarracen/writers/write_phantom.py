@@ -1,4 +1,5 @@
-from typing import Dict, List, Union, Type, Tuple, Any
+from typing import Any, TypeAlias
+from collections.abc import Sequence
 import numpy as np
 import re
 import warnings
@@ -7,11 +8,11 @@ from datetime import datetime
 from ..sarracen_dataframe import SarracenDataFrame
 
 
-params_dict_type = Dict[str, Union[np.generic, str]]
+ParamsDict: TypeAlias = dict[str, np.generic | str]
 
 
-def _write_fortran_block(value: List[np.generic],
-                         dtype: Type[np.generic]) -> bytearray:
+def _write_fortran_block(value: Sequence[int | float | np.generic],
+                         dtype: type[np.generic]) -> bytearray:
     write_tag = np.array([len(value) * dtype().itemsize], dtype=np.int32)
     file = bytearray(write_tag.tobytes())
     file += bytearray(np.array(value, dtype=dtype).tobytes())
@@ -46,8 +47,8 @@ def _write_file_identifier(sdf: SarracenDataFrame) -> bytearray:
     return file
 
 
-def _write_capture_pattern(def_int: Type[np.generic],
-                           def_real: Type[np.generic],
+def _write_capture_pattern(def_int: type[np.generic],
+                           def_real: type[np.generic],
                            iversion: int = 1) -> bytearray:
     write_tag = np.array([16 + def_real().itemsize], dtype=np.int32)
     i1 = np.array([60769], dtype=def_int)
@@ -72,7 +73,7 @@ def _check_for_essential_data(sdf: SarracenDataFrame) -> None:
 
     required_cols = [sdf.xcol, sdf.ycol, sdf.zcol, sdf.hcol]
     if any(col is None for col in required_cols):
-        missing: List[str] = []
+        missing: list[str] = []
         if sdf.xcol is None:
             missing.append("x")
         if sdf.ycol is None:
@@ -112,7 +113,7 @@ def _check_for_essential_data(sdf: SarracenDataFrame) -> None:
             raise ValueError(msg)
 
 
-def _remove_invalid_keys(params: params_dict_type) -> params_dict_type:
+def _remove_invalid_keys(params: ParamsDict) -> ParamsDict:
     """ Remove keys specific to Sarracen internal use."""
 
     exclude = ['file_identifier', 'mass', 'def_int_dtype',
@@ -120,7 +121,7 @@ def _remove_invalid_keys(params: params_dict_type) -> params_dict_type:
     return {k: v for k, v in params.items() if k not in exclude}
 
 
-def _standardize_dtypes(params: Dict[str, Any]) -> params_dict_type:
+def _standardize_dtypes(params: dict[str, Any]) -> ParamsDict:
     """ Convert all params to numpy dtypes."""
 
     for k, v in params.items():
@@ -133,7 +134,7 @@ def _standardize_dtypes(params: Dict[str, Any]) -> params_dict_type:
 
 
 def _validate_ntypes(sdf: SarracenDataFrame,
-                     params: params_dict_type) -> params_dict_type:
+                     params: ParamsDict) -> ParamsDict:
     """ Update params ntypes to reflect particle data."""
 
     if 'ntypes' in params:
@@ -183,7 +184,7 @@ def _validate_ntypes(sdf: SarracenDataFrame,
 
 
 def _validate_particle_counts(sdf: SarracenDataFrame,
-                              params: params_dict_type) -> params_dict_type:
+                              params: ParamsDict) -> ParamsDict:
     """
     Update params particle counts to match actual particle counts.
 
@@ -249,7 +250,7 @@ def _validate_particle_counts(sdf: SarracenDataFrame,
 
 
 def _validate_particle_masses(sdf: SarracenDataFrame,
-                              params: params_dict_type) -> params_dict_type:
+                              params: ParamsDict) -> ParamsDict:
     """ Update params particle masses to match actual particle masses."""
 
     if 'mass' in params:
@@ -287,7 +288,7 @@ def _validate_particle_masses(sdf: SarracenDataFrame,
     return params
 
 
-def _relocate_special_params(param_dicts: List[params_dict_type]) -> None:
+def _relocate_special_params(param_dicts: list[ParamsDict]) -> None:
     """Move certain parameters to their required dtype indices."""
     # Integer parameters that must be int32
     for param in ['iexternalforce', 'ieos']:
@@ -309,12 +310,12 @@ def _rename_duplicate(tag: str) -> str:
     return tag
 
 
-def _write_global_header_array(tags: List[str],
-                               values: List[np.generic],
-                               dtype: Type[np.generic]) -> bytearray:
+def _write_global_header_array(tags: list[str],
+                               values: list[np.generic],
+                               dtype: type[np.generic]) -> bytearray:
     tags = [_rename_duplicate(tag) for tag in tags]
-    tags2: List[List[int]] = [list(map(ord, tag.ljust(16))) for tag in tags]
-    tags3: List[np.uint8] = [np.uint8(c) for tag in tags2 for c in tag]
+    tags2: list[list[int]] = [list(map(ord, tag.ljust(16))) for tag in tags]
+    tags3: list[np.uint8] = [np.uint8(c) for tag in tags2 for c in tag]
 
     file = _write_fortran_block(tags3, np.uint8)
     file += _write_fortran_block(values, dtype)
@@ -322,7 +323,7 @@ def _write_global_header_array(tags: List[str],
     return file
 
 
-def sort_key(k: str) -> Tuple[str, int]:
+def sort_key(k: str) -> tuple[str, int]:
     """
     Returns (basename, number) where basename is the part before any
     numeric suffix, and number is an integer used for sorting.
@@ -337,13 +338,13 @@ def sort_key(k: str) -> Tuple[str, int]:
     return (base, num)
 
 
-def _reorder_params(params: params_dict_type) -> params_dict_type:
+def _reorder_params(params: ParamsDict) -> ParamsDict:
     return dict(sorted(params.items(), key=lambda item: sort_key(item[0])))
 
 
 def _write_global_header(sdf: SarracenDataFrame,
-                         def_int: Type[np.generic],
-                         def_real: Type[np.generic]) -> bytearray:
+                         def_int: type[np.generic],
+                         def_real: type[np.generic]) -> bytearray:
 
     params_dict = sdf.params.copy()
     params_dict = _standardize_dtypes(params_dict)
@@ -357,7 +358,7 @@ def _write_global_header(sdf: SarracenDataFrame,
               def_real, np.float32, np.float64]
 
     # create params dict per dtype and populate
-    param_dtype_dicts: List[params_dict_type] = [dict() for _ in dtypes]
+    param_dtype_dicts: list[ParamsDict] = [dict() for _ in dtypes]
     for k, v in params_dict.items():
         if isinstance(v, def_int):
             param_dtype_dicts[0][k] = v
@@ -406,7 +407,7 @@ def _write_global_header(sdf: SarracenDataFrame,
 
 
 def _get_array_tags(sdf: SarracenDataFrame,
-                    dtype: Type[np.generic]) -> List[str]:
+                    dtype: type[np.generic]) -> list[str]:
     return list(sdf.select_dtypes(include=[dtype]).columns)
 
 
@@ -415,10 +416,9 @@ def _get_last_index(sdf: SarracenDataFrame) -> int:
 
 
 def _write_array_blocks(sdf: SarracenDataFrame,
-                        def_int: Type[np.generic],
-                        def_real: Type[np.generic],
-                        sinks: Union[SarracenDataFrame,
-                                     None] = None) -> bytearray:
+                        def_int: type[np.generic],
+                        def_real: type[np.generic],
+                        sinks: SarracenDataFrame | None = None) -> bytearray:
 
     dtypes = [def_int, np.int8, np.int16, np.int32, np.int64,
               def_real, np.float32, np.float64]
@@ -460,9 +460,9 @@ def _write_array_blocks(sdf: SarracenDataFrame,
                 # irregardless of what the xcol, ycol, etc are set to
                 mapping = {sdf.xcol: 'x', sdf.ycol: 'y',
                            sdf.zcol: 'z', sdf.hcol: 'h'}
-                write_tag = mapping.get(tag, tag)
-                write_tag = _rename_duplicate(write_tag).ljust(16)
-                file += _write_fortran_block(list(map(ord, write_tag)),
+                wtag = mapping.get(tag, tag)
+                wtag = _rename_duplicate(wtag).ljust(16)
+                file += _write_fortran_block(list(map(ord, wtag)),
                                              dtype=np.uint8)
                 file += _write_fortran_block(list(sdf[tag]), dtype)
     return file
@@ -470,7 +470,7 @@ def _write_array_blocks(sdf: SarracenDataFrame,
 
 def write_phantom(filename: str,
                   sdf: SarracenDataFrame,
-                  sinks: Union[SarracenDataFrame, None] = None) -> None:
+                  sinks: SarracenDataFrame | None = None) -> None:
     """
     Write a Phantom dump file from a SarracenDataFrame.
 

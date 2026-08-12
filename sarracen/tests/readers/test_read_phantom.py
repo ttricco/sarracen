@@ -1,4 +1,3 @@
-from typing import Type, Union, List, Tuple, Dict
 
 import pandas as pd
 import numpy as np
@@ -10,8 +9,8 @@ import tempfile
 from sarracen import SarracenDataFrame
 
 
-def _create_capture_pattern(def_int: Type[np.generic],
-                            def_real: Type[np.generic],
+def _create_capture_pattern(def_int: type[np.generic],
+                            def_real: type[np.generic],
                             swap_endian: bool = False) -> bytearray:
     """ Construct capture pattern. """
 
@@ -55,16 +54,16 @@ def _create_file_identifier(swap_endian: bool = False) -> bytearray:
 
 
 def _create_global_header(massoftype: float = 1e-6,
-                          massoftype_7: Union[float, None] = None,
-                          def_int: Type[np.generic] = np.int32,
-                          def_real: Type[np.generic] = np.float64,
+                          massoftype_7: float | None = None,
+                          def_int: type[np.generic] = np.int32,
+                          def_real: type[np.generic] = np.float64,
                           mpi_blocks: int = 1,
                           swap_endian: bool = False) -> bytearray:
     """ Construct global variables. Only massoftype in this example. """
 
     dtypes = [def_int, np.int8, np.int16, np.int32, np.int64,
               def_real, np.float32, np.float64]
-    param_dicts: List[Dict] = [dict() for _ in dtypes]
+    param_dicts: list[dict] = [dict() for _ in dtypes]
 
     params_def_int = param_dicts[0]
     params_def_real = param_dicts[5]
@@ -76,7 +75,7 @@ def _create_global_header(massoftype: float = 1e-6,
 
     params_def_int['nblocks'] = np.array([mpi_blocks], dtype=def_int)
 
-    dtype_param_pairs: List[Tuple[Type, Dict]] = list(zip(dtypes, param_dicts))
+    dtype_param_pairs: list[tuple[type, dict]] = list(zip(dtypes, param_dicts))
 
     read_tag = np.array([13], dtype='int32')
     if swap_endian:
@@ -98,7 +97,7 @@ def _create_global_header(massoftype: float = 1e-6,
 
             file += bytearray(read_tag.tobytes())
             for v in params.values():
-                v_np = np.array([v], dtype=dtype)
+                v_np: np.ndarray = np.array([v], dtype=dtype)
                 if swap_endian:
                     v_np = v_np.byteswap()
                 file += bytearray(v_np)
@@ -109,7 +108,7 @@ def _create_global_header(massoftype: float = 1e-6,
 
 def _create_particle_array(tag: str,
                            data: list,
-                           dtype: Type[np.generic] = np.float64,
+                           dtype: type[np.generic] = np.float64,
                            swap_endian: bool = False) -> bytearray:
 
     read_tag = np.array([13], dtype='int32')
@@ -136,8 +135,8 @@ def _create_particle_array(tag: str,
                           (np.int32, np.float32, True),
                           (np.int64, np.float64, True),
                           (np.int64, np.float32, True)])
-def test_determine_default_precision(def_int: Type[np.generic],
-                                     def_real: Type[np.generic],
+def test_determine_default_precision(def_int: type[np.generic],
+                                     def_real: type[np.generic],
                                      swap_endian: bool) -> None:
     """ Test if default int / real precision can be determined. """
 
