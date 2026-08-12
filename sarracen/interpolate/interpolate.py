@@ -258,9 +258,9 @@ def _check_dimension(data: 'SarracenDataFrame',
 
 
 def _rotate_data(data: 'SarracenDataFrame',
-                 x_data: np.ndarray | pd.Series,
-                 y_data: np.ndarray | pd.Series,
-                 z_data: np.ndarray | pd.Series,
+                 x_data: np.ndarray,
+                 y_data: np.ndarray,
+                 z_data: np.ndarray,
                  rotation: VectorLike | Rotation | None,
                  rot_origin: OriginLike) -> tuple[np.ndarray, np.ndarray,
                                                   np.ndarray]:
@@ -365,9 +365,11 @@ def _rotate_xyz(data: 'SarracenDataFrame',
     x_data, y_data, z_data : ndarray
         The rotated x, y, and z directional data.
     """
-    rotated_x, rotated_y, rotated_z = _rotate_data(data, data[data.xcol],
-                                                   data[data.ycol],
-                                                   data[data.zcol], rotation,
+    rotated_x, rotated_y, rotated_z = _rotate_data(data,
+                                                   data[data.xcol].to_numpy(),
+                                                   data[data.ycol].to_numoy(),
+                                                   data[data.zcol].to_numpy(),
+                                                   rotation,
                                                    rot_origin)
     x_data = rotated_x if x == data.xcol else \
         rotated_y if x == data.ycol else \
@@ -1196,9 +1198,11 @@ def interpolate_3d_vec(data: 'SarracenDataFrame',
     if target_z not in data.columns:
         raise KeyError(f"z-directional target column '{target_z}' does not "
                        f"exist in the provided dataset.")
-    target_x_data, target_y_data, _ = _rotate_data(data, data[target_x],
-                                                   data[target_y],
-                                                   data[target_z], rotation,
+    target_x_data, target_y_data, _ = _rotate_data(data,
+                                                   data[target_x].to_numpy(),
+                                                   data[target_y].to_numpy(),
+                                                   data[target_z].to_numpy(),
+                                                   rotation,
                                                    rot_origin)
 
     wx_data = _get_weight(data, target_x_data, dens_weight)
@@ -1472,9 +1476,11 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame',
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     _check_boundaries(x_pixels, y_pixels, xlim, ylim)
 
-    target_x_data, target_y_data, _ = _rotate_data(data, data[target_x],
-                                                   data[target_y],
-                                                   data[target_z], rotation,
+    target_x_data, target_y_data, _ = _rotate_data(data,
+                                                   data[target_x].to_numpy(),
+                                                   data[target_y].to_numpy(),
+                                                   data[target_z].to_numpy(),
+                                                   rotation,
                                                    rot_origin)
 
     wx_data = _get_weight(data, target_x_data, dens_weight)

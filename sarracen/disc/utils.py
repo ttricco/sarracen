@@ -83,7 +83,8 @@ def _bin_particles_by_radius(data: 'SarracenDataFrame',
         bin_edges = np.logspace(np.log10(r_in), np.log10(r_out), bins+1)
     else:
         bin_edges = np.linspace(r_in, r_out, bins+1)
-    rbins = pd.cut(r, pd.Series(bin_edges))
+
+    rbins = pd.Series(pd.cut(r, pd.Series(bin_edges)))
 
     return rbins, bin_edges
 
