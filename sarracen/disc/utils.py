@@ -50,7 +50,7 @@ def _bin_particles_by_radius(data: 'SarracenDataFrame',
     geometry : str
         Coordinate system to use to calculate the particle radii. Can be
         either *spherical* or *cylindrical*. Defaults to *cylindrical*.
-    origin : array-like
+    origin : array_like
         The x, y and z centre point around which to compute radii. Defaults to
         [0, 0, 0].
 

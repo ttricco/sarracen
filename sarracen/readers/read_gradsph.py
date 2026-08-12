@@ -4,7 +4,7 @@ from ..sarracen_dataframe import SarracenDataFrame
 
 
 def read_gradsph(filename: str,
-                 separate_types: str = 'sinks'
+                 separate_types: str | None = 'sinks'
                  ) -> list[SarracenDataFrame] | SarracenDataFrame:
     """
     Read data from a GradSPH dump file.

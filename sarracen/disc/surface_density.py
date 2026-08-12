@@ -48,7 +48,7 @@ def azimuthal_average(data: 'SarracenDataFrame',
     geometry : str, optional
         Coordinate system to use to calculate the particle radii. Can be
         either *spherical* or *cylindrical*. Defaults to *cylindrical*.
-    origin : array-like, optional
+    origin : array_like, optional
         The x, y and z centre point around which to compute radii. Defaults to
         [0, 0, 0].
     retbins : bool, optional
@@ -56,9 +56,9 @@ def azimuthal_average(data: 'SarracenDataFrame',
 
     Returns
     -------
-    array
+    ndarray
         A NumPy array of length bins containing the averaged profile.
-    array, optional
+    ndarray, optional
         The midpoint values of each bin. Only returned if *retbins=True*.
 
     Raises
@@ -110,7 +110,7 @@ def surface_density(data: 'SarracenDataFrame',
     geometry : str, optional
         Coordinate system to use to calculate the particle radii. Can be
         either *spherical* or *cylindrical*. Defaults to *cylindrical*.
-    origin : array-like, optional
+    origin : array_like, optional
         The x, y and z centre point around which to compute radii. Defaults to
         [0, 0, 0].
     retbins : bool, optional
@@ -118,9 +118,14 @@ def surface_density(data: 'SarracenDataFrame',
 
     Returns
     -------
-    array
+    ndarray or tuple of ndarray
         A NumPy array of length bins containing the surface density profile.
-    array, optional
+        For gas-only data, this is the gas surface density profile. For
+        one-fluid data, the gas and dust surface desity profiles are returned.
+        For multiple small dust grains, the gas surface density profile is
+        returned, along with the total dust profile and per-grain dust
+        profiles.
+    ndarray, optional
         The midpoint values of each bin. Only returned if *retbins=True*.
 
     Raises
@@ -301,7 +306,7 @@ def angular_momentum(data: 'SarracenDataFrame',
     geometry : str, optional
         Coordinate system to use to calculate the particle radii. Can be
         either *spherical* or *cylindrical*. Defaults to *cylindrical*.
-    origin : array-like, optional
+    origin : array_like, optional
         The x, y and z centre point around which to compute radii. Defaults to
         [0, 0, 0].
     retbins : bool, optional
@@ -312,9 +317,10 @@ def angular_momentum(data: 'SarracenDataFrame',
 
     Returns
     -------
-    array
-        A NumPy array of length bins containing the angular momentum profile.
-    array, optional
+    tuple of ndarray
+        Three NumPy arrays of length bins containing the Lx, Ly and Lz angular
+        momentum profiles.
+    ndarray, optional
         The midpoint values of each bin. Only returned if *retbins=True*.
 
     Raises
@@ -353,7 +359,7 @@ def _calc_scale_height(data: 'SarracenDataFrame',
         Particle data, in a SarracenDataFrame.
     rbins: Series
         The radial bin to which each particle belongs.
-    origin : array-like, optional
+    origin : array_like, optional
         The x, y and z centre point around which to compute radii. Defaults to
         [0, 0, 0].
 
@@ -406,7 +412,7 @@ def scale_height(data: 'SarracenDataFrame',
     geometry : str, optional
         Coordinate system to use to calculate the particle radii. Can be
         either *spherical* or *cylindrical*. Defaults to *cylindrical*.
-    origin : array-like, optional
+    origin : array_like, optional
         The x, y and z centre point around which to compute radii. Defaults to
         [0, 0, 0].
     retbins : bool, optional
@@ -414,9 +420,9 @@ def scale_height(data: 'SarracenDataFrame',
 
     Returns
     -------
-    array
+    ndarray
         A NumPy array of length bins scale height, H, profile.
-    array, optional
+    ndarray, optional
         The midpoint values of each bin. Only returned if *retbins=True*.
 
     Raises
@@ -474,7 +480,7 @@ def honH(data: 'SarracenDataFrame',
     geometry : str, optional
         Coordinate system to use to calculate the particle radii. Can be
         either *spherical* or *cylindrical*. Defaults to *cylindrical*.
-    origin : array-like, optional
+    origin : array_like, optional
         The x, y and z centre point around which to compute radii. Defaults to
         [0, 0, 0].
     retbins : bool, optional
@@ -482,9 +488,9 @@ def honH(data: 'SarracenDataFrame',
 
     Returns
     -------
-    array
+    ndarray
         A NumPy array of length bins containing the <h>/H profile.
-    array, optional
+    ndarray, optional
         The midpoint values of each bin. Only returned if *retbins=True*.
 
     Raises

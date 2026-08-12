@@ -106,7 +106,7 @@ def decode_bytes_to_doubles(byte_data: bytes) -> list[float]:
 
     Returns
     -------
-    list[float]
+    list of float
         A list of double-precision floating-point numbers decoded from
         the byte array.
 

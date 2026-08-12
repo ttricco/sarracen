@@ -445,7 +445,7 @@ class SarracenDataFrame(DataFrame):
                         z_pixels: int | None = None,
                         xlim: Bounds | None = None,
                         ylim: Bounds | None = None,
-                        zlim: tuple[float, float] | None = None,
+                        zlim: Bounds | None = None,
                         exact: bool = False,
                         backend: str = 'cpu',
                         dens_weight: bool = False,
@@ -478,7 +478,7 @@ class SarracenDataFrame(DataFrame):
         x_pixels, y_pixels, z_pixels: int, optional
             Number of pixels in the output image in the x, y & z directions.
             Default values are chosen to keep a consistent aspect ratio.
-        xlim, ylim, zlim: tuple of float, optional
+        xlim, ylim, zlim: tuple of float or None, optional
             The minimum and maximum values to use in interpolation, in particle
             data space. Defaults to the minimum and maximum values of `x`, `y`
             and `z`.
@@ -538,10 +538,6 @@ class SarracenDataFrame(DataFrame):
         (165,  526, 512)
         """
         if self.get_dim() == 2:
-            if xlim is None:
-                xlim = (None, None)
-            if ylim is None:
-                ylim = (None, None)
             return interpolate_2d(self, target, x, y, kernel, x_pixels,
                                   y_pixels, xlim, ylim, exact, backend,
                                   dens_weight, normalize, hmin)

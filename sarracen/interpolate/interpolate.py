@@ -31,7 +31,7 @@ def _default_xy(data: 'SarracenDataFrame',
     ----------
     data: SarracenDataFrame
         The particle dataset to interpolate over.
-    x, y: str
+    x, y: str or None
         The x and y directional column labels passed to the interpolation
         function.
 
@@ -60,7 +60,7 @@ def _default_xyz(data: 'SarracenDataFrame',
     ----------
     data: SarracenDataFrame
         The particle dataset to interpolate over.
-    x, y, z: str
+    x, y, z: str or None
         The x, y and z directional column labels passed to the interpolation
         function.
 
@@ -97,13 +97,9 @@ def _default_bounds(x_data: np.ndarray,
 
     Parameters
     ----------
-    data: SarracenDataFrame
-        The particle dataset to interpolate over.
-    x, y: str
-        The directional column labels that will be used in interpolation.
-    x_data, y_data, z_data: ndarray
+    x_data, y_data: ndarray
         The particle coordinate data.
-    xlim, ylim: tuple of float
+    xlim, ylim: tuple of float or None
         The minimum and maximum values passed to the interpolation function, in
         particle data space.
 
@@ -525,9 +521,11 @@ def interpolate_2d(data: 'SarracenDataFrame',
     x_pixels, y_pixels: int, optional
         Number of pixels in the output image in the x & y directions. Default
         values are chosen to keep a consistent aspect ratio.
-    xlim, ylim: tuple of float, optional
+    xlim, ylim: tuple of float or None, optional
         The minimum and maximum values to use in interpolation, in particle
         data space. Defaults to the minimum and maximum values of `x` and `y`.
+        `None` in a tuple defaults to the minimum or maximum value,
+        respectively.
     exact: bool, optional
         Whether to use exact interpolation of the data.
     backend: ['cpu', 'gpu'], optional
@@ -630,9 +628,11 @@ def interpolate_2d_vec(data: 'SarracenDataFrame',
     x_pixels, y_pixels: int, optional
         Number of pixels in the output image in the x & y directions. Default
         values are chosen to keep a consistent aspect ratio.
-    xlim, ylim: tuple of float, optional
+    xlim, ylim: tuple of float or None, optional
         The minimum and maximum values to use in interpolation, in particle
         data space. Defaults to the minimum and maximum values of `x` and `y`.
+        `None` in a tuple defaults to the minimum or maximum value,
+        respectively.
     exact: bool, optional
         Whether to use exact interpolation of the data.
     backend: ['cpu', 'gpu'], optional
@@ -737,9 +737,13 @@ def interpolate_2d_line(data: 'SarracenDataFrame',
         specified in `data`.
     pixels: int, optional
         Number of points in the resulting line plot in the x-direction.
-    xlim, ylim: tuple of float, optional
-        Starting and ending coordinates of the cross-section line (in particle
-        data space). Defaults to the minimum and maximum values of `x` and `y`.
+    xlim, ylim: float. int, or tuple of float or None, optional
+        Coordinate bounds of the cross-sectional line. A scalar value is
+        treated as both bounds for that axis, fixing the line along that
+        constant coordinate value. A tuple gives the upper and lower bounds.
+        Either value of the tuple may be `None`, which defaults to the minimum
+        or maximum value of `x` and `y`, respectively. If omitted, the limit
+        defaults to the minimum and maximum values.
     backend: ['cpu', 'gpu'], optional
         The computation backend to use when interpolating this data. Defaults
         to 'gpu' if CUDA is enabled, otherwise 'cpu' is used. A manually
@@ -851,10 +855,13 @@ def interpolate_3d_line(data: 'SarracenDataFrame',
     pixels: int, optional
         Number of pixels in the output image in the x & y directions. Default
         values are chosen to keep a consistent aspect ratio.
-    xlim, ylim, zlim: tuple of float, optional
-        Starting and ending coordinates of the cross-section line (in particle
-        data space). Defaults to the minimum and maximum values of `x`, `y`,
-        and `z`.
+    xlim, ylim, zlim: float, int, or tuple of float or None, optional
+        Coordinate bounds of the cross-sectional line. A scalar value is
+        treated as both bounds for that axis, fixing the line along that
+        constant coordinate value. A tuple gives the upper and lower bounds.
+        Either value of the tuple may be `None`, which defaults to the minimum
+        or maximum value of `x`, `y`, and `z`, respectively. If omitted, the
+        limit defaults to the minimum and maximum values.
     backend: ['cpu', 'gpu'], optional
         The computation backend to use when interpolating this data. Defaults
         to 'gpu' if CUDA is enabled, otherwise 'cpu' is used. A manually
@@ -995,9 +1002,11 @@ def interpolate_3d_proj(data: 'SarracenDataFrame',
     x_pixels, y_pixels: int, optional
         Number of pixels in the output image in the x & y directions. Default
         values are chosen to keep a consistent aspect ratio.
-    xlim, ylim: tuple of float, optional
+    xlim, ylim: tuple of float or None, optional
         The minimum and maximum values to use in interpolation, in particle
         data space. Defaults to the minimum and maximum values of `x` and `y`.
+        `None` in a tuple defaults to the minimum or maximum value,
+        respectively.
     exact: bool, optional
         Whether to use exact interpolation of the data.
     backend: ['cpu', 'gpu'], optional
@@ -1132,9 +1141,11 @@ def interpolate_3d_vec(data: 'SarracenDataFrame',
     x_pixels, y_pixels: int, optional
         Number of pixels in the output image in the x & y directions. Default
         values are chosen to keep a consistent aspect ratio.
-    xlim, ylim: tuple of float, optional
+    xlim, ylim: tuple of float or None, optional
         The minimum and maximum values to use in interpolation, in particle
         data space. Defaults to the minimum and maximum values of `x` and `y`.
+        `None` in a tuple defaults to the minimum or maximum value,
+        respectively.
     exact: bool, optional
         Whether to use exact interpolation of the data.
     backend: ['cpu', 'gpu'], optional
@@ -1276,9 +1287,11 @@ def interpolate_3d_cross(data: 'SarracenDataFrame',
     x_pixels, y_pixels: int, optional
         Number of pixels in the output image in the x & y directions. Default
         values are chosen to keep a consistent aspect ratio.
-    xlim, ylim: tuple of float, optional
+    xlim, ylim: tuple of float or None, optional
         The minimum and maximum values to use in interpolation, in particle
         data space. Defaults to the minimum and maximum values of `x` and `y`.
+        `None` in a tuple defaults to the minimum or maximum value,
+        respectively.
     backend: ['cpu', 'gpu'], optional
         The computation backend to use when interpolating this data. Defaults
         to 'gpu' if CUDA is enabled, otherwise 'cpu' is used. A manually
@@ -1408,9 +1421,11 @@ def interpolate_3d_cross_vec(data: 'SarracenDataFrame',
     x_pixels, y_pixels: int, optional
         Number of pixels in the output image in the x & y directions. Default
         values are chosen to keep a consistent aspect ratio.
-    xlim, ylim: float, optional
+    xlim, ylim: tuple of float or None, optional
         The minimum and maximum values to use in interpolation, in particle
         data space. Defaults to the minimum and maximum values of `x` and `y`.
+        `None` in a tuple defaults to the minimum or maximum value,
+        respectively.
     backend: ['cpu', 'gpu'], optional
         The computation backend to use when interpolating this data. Defaults
         to 'gpu' if CUDA is enabled, otherwise 'cpu' is used. A manually
@@ -1502,7 +1517,7 @@ def interpolate_3d_grid(data: 'SarracenDataFrame',
                         z_pixels: int | None = None,
                         xlim: Bounds | None = None,
                         ylim: Bounds | None = None,
-                        zlim: tuple[float, float] | None = None,
+                        zlim: Bounds | None = None,
                         backend: str | None = None,
                         dens_weight: bool = False,
                         normalize: bool = True,
@@ -1538,10 +1553,11 @@ def interpolate_3d_grid(data: 'SarracenDataFrame',
     x_pixels, y_pixels, z_pixels: int, optional
         Number of pixels in the output image in the x, y & z directions.
         Default values are chosen to keep a consistent aspect ratio.
-    xlim, ylim, zlim: tuple of float, optional
+    xlim, ylim, zlim: tuple of float or None, optional
         The minimum and maximum values to use in interpolation, in particle
         data space. Defaults to the minimum and maximum values of `x`, `y`
-        and `z`.
+        and `z`. `None` in a tuple defaults to the minimum or maximum value,
+        respectively.
     backend: ['cpu', 'gpu'], optional
         The computation backend to use when interpolating this data. Defaults
         to 'gpu' if CUDA is enabled, otherwise 'cpu' is used. A manually
@@ -1584,7 +1600,13 @@ def interpolate_3d_grid(data: 'SarracenDataFrame',
     if not ylim:
         ylim = (None, None)
     xlim, ylim = _default_bounds(x_data, y_data, xlim, ylim)
-    zlim = zlim if zlim else (z_data.min(), z_data.max())
+
+    z1 = data.loc[:, z].min() if zlim is None or zlim[0] is None else zlim[0]
+    z2 = data.loc[:, z].max() if zlim is None or zlim[1] is None else zlim[1]
+    zlim = z1, z2
+
+    if zlim is None or zlim[0] is None or zlim[1] is None:
+        raise ValueError('Zero area cross section!')
 
     x_pixels, y_pixels = _set_pixels(x_pixels, y_pixels, xlim, ylim)
     if z_pixels is None:

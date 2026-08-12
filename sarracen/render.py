@@ -163,7 +163,7 @@ def _default_bounds(data: 'SarracenDataFrame',
         The particle dataset to render.
     x, y: str
         The directional column labels that will be used for rendering.
-    xlim, ylim: tuple of float
+    xlim, ylim: tuple of float or None, optional
         The minimum and maximum values passed to the render function, in
         particle data space.
 
@@ -276,8 +276,11 @@ def render(data: 'SarracenDataFrame',
         specified in `data`.
     x_pixels, y_pixels: int, optional
         Number of pixels present in the final image.
-    xlim, ylim: tuple of float, optional
-        The starting and ending corners of the final 2D image.
+    xlim, ylim: tuple of float or None, optional
+        The starting and ending corners of the 2D image. A tuple gives the
+        upper and lower bounds. Either value of the tuple may be `None`, which
+        defaults to the minimum or maximum value of `x` and `y`, respectively.
+        If omitted, the limit defaults to the minimum and maximum values.
     vmin, vmax: float, optional
         Lower and upper limits of the range of values for the colour bar.
     cmap: str or Colormap, optional
@@ -328,8 +331,8 @@ def render(data: 'SarracenDataFrame',
         If True, a minimum smoothing length of 0.5 * pixel size will be
         imposed. This ensures each particle contributes to at least one grid
         cell / pixel. Defaults to False (this may change in a future verison).
-    corotation: list, optional
-        Moves particles to the co-rotating frame of two location. corotation
+    corotation: array_like, optional
+        Moves particles to the co-rotating frame of two location. Corotation
         contains two lists which correspond to the two x, y, z coordinates.
     kwargs: other keyword arguments
         Keyword arguments to pass to ax.imshow.
@@ -512,8 +515,13 @@ def lineplot(data: 'SarracenDataFrame',
         specified in `data`.
     pixels: int, optional
         Number of samples taken across the x axis in the final plot.
-    xlim, ylim, zlim: tuple of float, optional
-        Coordinates of the two points that make up the cross-sectional line.
+    xlim, ylim, zlim: int, float, or tuple of float or None, optional
+        Coordinate bounds of the cross-sectional line. A scalar value is
+        treated as both bounds for that axis, fixing the line along that
+        constant coordinate value. A tuple gives the upper and lower bounds.
+        Either value of the tuple may be `None`, which defaults to the minimum
+        or maximum value of `x`, `y`, and `z`, respectively. If omitted, the
+        limit defaults to the minimum and maximum values.
     ax: Axes, optional
         The main axes in which to draw the final plot.
     backend: ['cpu', 'gpu'], optional
@@ -543,8 +551,8 @@ def lineplot(data: 'SarracenDataFrame',
     Raises
     -------
     ValueError
-        If `x_pixels` or `y_pixels` are less than or equal to zero, or if the
-        specified `x` and `y` minimum and maximums result in an invalid region.
+        If `pixels` are less than or equal to zero, or if the specified `x`
+        and `y` minimum and maximum values result in an invalid region.
     KeyError
         If `target`, `x`, `y`, mass, density, or smoothing length columns do
         not exist in `data`.
@@ -671,9 +679,12 @@ def streamlines(data: 'SarracenDataFrame',
     x_pixels, y_pixels: int, optional
         Number of interpolation samples to pass to ax.streamlines(). Default
         values are chosen to keep a consistent aspect ratio.
-    xlim, ylim: float, optional
-        The minimum and maximum values to use in interpolation, in particle
-        data space. Defaults to the minimum and maximum values of `x` and `y`.
+    xlim, ylim: tuple of float or None, optional
+        The minimum and maximum values to use in interpolation along each axis.
+        A tuple gives the upper and lower bounds. Either value of the tuple may
+        be `None`, which defaults to the minimum or maximum value of `x` and
+        `y`, respectively. If omitted, the limit defaults to the minimum and
+        maximum values.
     ax: Axes, optional
         The main axes in which to draw the rendered image.
     exact: bool, optional
@@ -834,9 +845,12 @@ def arrowplot(data: 'SarracenDataFrame',
     x_arrows, y_arrows: int, optional
         Number of arrows in the output image in the x & y directions. Default
         values are chosen to keep a consistent aspect ratio.
-    xlim, ylim: tuple of float, optional
-        The minimum and maximum values to use in interpolation, in particle
-        data space. Defaults to the minimum and maximum values of `x` and `y`.
+    xlim, ylim: tuple of float or None, optional
+        The minimum and maximum values to use in interpolation along each axis.
+        A tuple gives the upper and lower bounds. Either value of the tuple may
+        be `None`, which defaults to the minimum or maximum value of `x` and
+        `y`, respectively. If omitted, the limit defaults to the minimum and
+        maximum values.
     ax: Axes, optional
         The main axes in which to draw the rendered image.
     qkey: bool, optional

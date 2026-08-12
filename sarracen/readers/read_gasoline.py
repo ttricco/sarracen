@@ -48,7 +48,12 @@ def read_gasoline(filename: str,  # noqa: E302
 
     Returns
     -------
-    list of SarracenDataFrames or Python dictionaries
+    tuple of SarracenDataFrames or Python dictionaries
+
+    Raises
+    ------
+    ValueError
+        If the header and file size are inconsistent.
 
     Notes
     --------
@@ -112,14 +117,14 @@ def read_gasoline(filename: str,  # noqa: E302
         fp.read(4)
     # File is borked if this is true
     elif (fs != 28+48*ng+36*nd+44*ns):
-        print("Tipsy ERROR: Header and file size inconsistend")
+        print("Tipsy ERROR: Header and file size inconsistent")
         print("Estimates: Header bytes: 28 or 32 (either is OK)")
         print("     ngas: ", ng, " bytes:", 48*ng)
         print("    ndark: ", nd, " bytes:", 38*nd)
         print("    nstar: ", ns, " bytes:", 44*ns)
         print("Actual File bytes:", fs, " does not work")
         fp.close()
-        return 1
+        raise ValueError("Header and file size inconsistent")
 
     # Make dicitonaries for data
     catg = {'mass': np.zeros(ng), 'pos': np.zeros((ng, 3)),
