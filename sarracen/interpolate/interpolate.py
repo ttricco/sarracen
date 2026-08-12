@@ -86,8 +86,8 @@ def _default_xyz(data: 'SarracenDataFrame',
     return x, y, z
 
 
-def _default_bounds(x_data: np.ndarray,
-                    y_data: np.ndarray,
+def _default_bounds(x_data: np.ndarray | pd.Series,
+                    y_data: np.ndarray | pd.Series,
                     xlim: Bounds | None,
                     ylim: Bounds | None) -> tuple[tuple[float, float],
                                                   tuple[float, float]]:
@@ -258,9 +258,9 @@ def _check_dimension(data: 'SarracenDataFrame',
 
 
 def _rotate_data(data: 'SarracenDataFrame',
-                 x_data: np.ndarray,
-                 y_data: np.ndarray,
-                 z_data: np.ndarray,
+                 x_data: np.ndarray | pd.Series,
+                 y_data: np.ndarray | pd.Series,
+                 z_data: np.ndarray | pd.Series,
                  rotation: VectorLike | Rotation | None,
                  rot_origin: OriginLike) -> tuple[np.ndarray, np.ndarray,
                                                   np.ndarray]:
@@ -371,13 +371,13 @@ def _rotate_xyz(data: 'SarracenDataFrame',
                                                    rot_origin)
     x_data = rotated_x if x == data.xcol else \
         rotated_y if x == data.ycol else \
-        rotated_z if x == data.zcol else data[x]
+        rotated_z if x == data.zcol else data[x].to_numpy()
     y_data = rotated_x if y == data.xcol else \
         rotated_y if y == data.ycol else \
-        rotated_z if y == data.zcol else data[y]
+        rotated_z if y == data.zcol else data[y].to_numpy()
     z_data = rotated_x if z == data.xcol else \
         rotated_y if z == data.ycol else \
-        rotated_z if z == data.zcol else data[z]
+        rotated_z if z == data.zcol else data[z].to_numpy()
 
     return x_data, y_data, z_data
 

@@ -147,9 +147,8 @@ def _default_bounding_box(data: 'SarracenDataFrame',
     return np.array(corners).transpose()
 
 
-def _default_bounds(data: 'SarracenDataFrame',
-                    x_data: np.ndarray,
-                    y_data: np.ndarray,
+def _default_bounds(x_data: np.ndarray | pd.Series,
+                    y_data: np.ndarray | pd.Series,
                     xlim: Bounds | None,
                     ylim: Bounds | None) -> tuple[tuple[float, float],
                                                   tuple[float, float]]:
@@ -159,10 +158,8 @@ def _default_bounds(data: 'SarracenDataFrame',
 
     Parameters
     ----------
-    data : SarracenDataFrame
-        The particle dataset to render.
-    x, y : str
-        The directional column labels that will be used for rendering.
+    x_data, y_data : ndarray or Series
+        The x and y particle coordinate data.
     xlim, ylim : tuple of float or None, optional
         The minimum and maximum values passed to the render function, in
         particle data space.
@@ -171,8 +168,7 @@ def _default_bounds(data: 'SarracenDataFrame',
     -------
     xlim, ylim : tuple of float
         The minimum and maximum values to use for rendering, in particle data
-        space. Defaults to the maximum and minimum values of `x` and `y`,
-        snapped to the nearest integer.
+        space. Defaults to the maximum and minimum values of `x` and `y`.
     """
     # boundaries of the plot default to the max & min values of the data.
     x_min = xlim[0] if xlim is not None and xlim[0] is not None else None
@@ -436,7 +432,7 @@ def render(data: 'SarracenDataFrame',
     corners = _default_bounding_box(data, x, y, xlim, ylim, xsec)
     rotated_corners = _rotate_data(data, corners[0], corners[1], corners[2],
                                    rotation, rot_origin)
-    xlim, ylim = _default_bounds(data, rotated_corners[0], rotated_corners[1],
+    xlim, ylim = _default_bounds(rotated_corners[0], rotated_corners[1],
                                  xlim, ylim)
 
     kwargs.setdefault("origin", 'lower')
@@ -572,7 +568,7 @@ def lineplot(data: 'SarracenDataFrame',
         ylim = ylim, ylim
 
     x, y = _default_axes(data, x, y)
-    xlim, ylim = _default_bounds(data, data.loc[:, x], data.loc[:, y],
+    xlim, ylim = _default_bounds(data.loc[:, x], data.loc[:, y],
                                  xlim, ylim)
 
     if data.get_dim() == 2:
@@ -762,7 +758,7 @@ def streamlines(data: 'SarracenDataFrame',
     corners = _default_bounding_box(data, x, y, xlim, ylim, xsec)
     rotated_corners = _rotate_data(data, corners[0], corners[1], corners[2],
                                    rotation, rot_origin)
-    xlim, ylim = _default_bounds(data, rotated_corners[0], rotated_corners[1],
+    xlim, ylim = _default_bounds(rotated_corners[0], rotated_corners[1],
                                  xlim, ylim)
 
     kwargs.setdefault("color", 'black')
@@ -897,7 +893,7 @@ def arrowplot(data: 'SarracenDataFrame',
     corners = _default_bounding_box(data, x, y, xlim, ylim, xsec)
     rotated_corners = _rotate_data(data, corners[0], corners[1], corners[2],
                                    rotation, rot_origin)
-    xlim, ylim = _default_bounds(data, rotated_corners[0], rotated_corners[1],
+    xlim, ylim = _default_bounds(rotated_corners[0], rotated_corners[1],
                                  xlim, ylim)
     x_arrows, y_arrows = _set_pixels(x_arrows, y_arrows, xlim, ylim, 20)
 
