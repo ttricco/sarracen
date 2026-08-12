@@ -59,7 +59,7 @@ def azimuthal_average(data: 'SarracenDataFrame',
     ndarray
         A NumPy array of length bins containing the averaged profile.
     ndarray, optional
-        The midpoint values of each bin. Only returned if *retbins=True*.
+        The midpoint values of each bin. Only returned if `retbins=True`.
 
     Raises
     ------
@@ -229,19 +229,19 @@ def _calc_angular_momentum(data: 'SarracenDataFrame',
 
     Parameters
     ----------
-    data: SarracenDataFrame
+    data : SarracenDataFrame
         Particle data, in a SarracenDataFrame.
-    rbins: Series
+    rbins : Series
         The radial bin to which each particle belongs.
-    origin: list
+    origin : list of float
         The x, y and z centre point around which to compute radii.
-    unit_vector: bool
+    unit_vector : bool
         Whether to convert the angular momentum to unit vectors.
         Default is True.
 
     Returns
     -------
-    Lx, Ly, Lz: Series
+    Lx, Ly, Lz : Series
         The x, y and z components of the angular momentum per bin.
     """
 
@@ -311,7 +311,7 @@ def angular_momentum(data: 'SarracenDataFrame',
         [0, 0, 0].
     retbins : bool, optional
         Whether to return the midpoints of the bins or not. Defaults to False.
-    unit_vector: bool, optional
+    unit_vector : bool, optional
         Whether to convert the angular momentum to unit vectors.
         Default is True.
 
@@ -321,7 +321,7 @@ def angular_momentum(data: 'SarracenDataFrame',
         Three NumPy arrays of length bins containing the Lx, Ly and Lz angular
         momentum profiles.
     ndarray, optional
-        The midpoint values of each bin. Only returned if *retbins=True*.
+        The midpoint values of each bin. Only returned if `retbins=True`.
 
     Raises
     ------
@@ -355,9 +355,9 @@ def _calc_scale_height(data: 'SarracenDataFrame',
 
     Parameters
     ----------
-    data: SarracenDataFrame
+    data : SarracenDataFrame
         Particle data, in a SarracenDataFrame.
-    rbins: Series
+    rbins : Series
         The radial bin to which each particle belongs.
     origin : array_like, optional
         The x, y and z centre point around which to compute radii. Defaults to
@@ -423,7 +423,7 @@ def scale_height(data: 'SarracenDataFrame',
     ndarray
         A NumPy array of length bins scale height, H, profile.
     ndarray, optional
-        The midpoint values of each bin. Only returned if *retbins=True*.
+        The midpoint values of each bin. Only returned if `retbins=True`.
 
     Raises
     ------
@@ -491,7 +491,7 @@ def honH(data: 'SarracenDataFrame',
     ndarray
         A NumPy array of length bins containing the <h>/H profile.
     ndarray, optional
-        The midpoint values of each bin. Only returned if *retbins=True*.
+        The midpoint values of each bin. Only returned if `retbins=True`.
 
     Raises
     ------

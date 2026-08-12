@@ -41,7 +41,7 @@ class BaseKernel:
 
         Parameters
         ----------
-        samples: int
+        samples : int
             Number of sample points to calculate when approximating the kernel.
 
         Returns
@@ -74,7 +74,7 @@ class BaseKernel:
 
         Parameters
         ----------
-        samples: int
+        samples : int
             Number of sample points to calculate when approximating the kernel.
 
         Returns

@@ -36,7 +36,7 @@ def _bin_particles_by_radius(data: 'SarracenDataFrame',
 
     Parameters
     ----------
-    data: SarracenDataFrame
+    data : SarracenDataFrame
         The particle dataset.
     r_in : float
         Inner radius of the disc. Defaults to the minimum r value.
@@ -56,9 +56,9 @@ def _bin_particles_by_radius(data: 'SarracenDataFrame',
 
     Returns
     -------
-    rbins: Series
+    rbins : Series
         The radial bin to which each particle belongs.
-    bin_edges: ndarray
+    bin_edges : ndarray
         Locations of the bin edges.
     """
 
@@ -95,7 +95,7 @@ def _get_bin_midpoints(bin_edges: np.ndarray,
 
     Parameters
     ----------
-    bin_edges: ndarray
+    bin_edges : ndarray
         Locations of the bin edges.
     log : bool, optional
         Whether to bin in log scale or not. Defaults to False.

@@ -11,11 +11,11 @@ def line_int(r0: float, d1: float, d2: float, h: float) -> float:
 
     Parameters
     ----------
-    r0: float
+    r0 : float
         Distance between the contributing particle and the line.
-    d1, d2: float
+    d1, d2 : float
         Distance from the endpoint of `r0` to each endpoint of the line.
-    h: float
+    h : float
         Smoothing length of the contributing particle.
 
     Returns
@@ -62,10 +62,10 @@ def _full_2d_mod(phi: float, q0: float) -> float:
 
     Parameters
     ----------
-    phi: float
+    phi : float
         Angle between `q0` and the endpoint of the line, relative to the
         contributing particle.
-    q0: float
+    q0 : float
         The distance between the contributing particle and the line, scaled by
         the smoothing length of the particle.
 
@@ -130,10 +130,10 @@ def _f1_2d(phi: float, q0: float) -> float:
 
     Parameters
     ----------
-    phi: float
+    phi : float
         Angle between `q0` and the endpoint of the line segment, relative to
         the contributing particle.
-    q0: float
+    q0 : float
         The distance between the contributing particle and the line, scaled by
         the smoothing length of the particle.
 
@@ -163,10 +163,10 @@ def _f2_2d(phi: float, q0: float) -> float:
 
     Parameters
     ----------
-    phi: float
+    phi : float
         Angle between `q0` and the endpoint of the line segment, relative to
         the contributing particle.
-    q0: float
+    q0 : float
         The distance between the contributing particle and the line, scaled by
         the smoothing length of the particle.
 
@@ -204,7 +204,7 @@ def _f3_2d(phi: float) -> float:
 
     Parameters
     ----------
-    phi: float
+    phi : float
         Angle pointing towards the endpoint of the line segment, relative to
         the contributing particle.
 
@@ -232,13 +232,13 @@ def surface_int(r0: float,
 
     Parameters
     ----------
-    r0: float
+    r0 : float
         Distance between the contributing particle and the target surface.
-    x1, y1, x2, y2: float
+    x1, y1, x2, y2 : float
         Upper and lower bounds of the target surface, relative to r0.
-    wx, wy: float
+    wx, wy : float
         The size of a single pixel.
-    h: float
+    h : float
         The smoothing length of the contributing particle.
 
     Returns
@@ -288,13 +288,13 @@ def _line_int3d(r0: float, r1: float, d1: float, d2: float, h: float) -> float:
 
     Parameters
     ----------
-    r0: float
+    r0 : float
         Distance between the contributing particle and the target surface.
-    r1: float
+    r1 : float
         Distance between the endpoint of `r0` and the line.
-    d1, d2: float
+    d1, d2 : float
         Distance from the endpoint of `r1` to each endpoint of the line.
-    h: float
+    h : float
         Smoothing length of the contributing particle.
 
     Returns
@@ -358,13 +358,13 @@ def _full_integral_3d(d: float, r0: float, r1: float, h: float) -> float:
 
     Parameters
     ----------
-    d: float
+    d : float
         Distance of the line.
-    r0: float
+    r0 : float
         Distance between the target surface and the contributing particle.
-    r1: float
+    r1 : float
         Distance between the end of `r0` and the line.
-    h: float
+    h : float
         The smoothing length of the contributing particle.
 
     Returns

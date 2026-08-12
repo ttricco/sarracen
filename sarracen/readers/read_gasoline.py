@@ -48,7 +48,7 @@ def read_gasoline(filename: str,  # noqa: E302
 
     Returns
     -------
-    tuple of SarracenDataFrames or Python dictionaries
+    tuple of SarracenDataFrame or dict
 
     Raises
     ------
@@ -56,7 +56,7 @@ def read_gasoline(filename: str,  # noqa: E302
         If the header and file size are inconsistent.
 
     Notes
-    --------
+    -----
     Adapted from `PyTipsy <https://github.com/bwkeller/pytipsy>`_.
 
     Examples

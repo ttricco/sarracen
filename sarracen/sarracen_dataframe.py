@@ -457,45 +457,45 @@ class SarracenDataFrame(DataFrame):
 
         Parameters
         ----------
-        target: str
+        target : str
             The column label of the target data.
-        x, y, z: str
+        x, y, z : str
             The column labels of the directional data to interpolate over.
             Defaults to the x, y, and z columns detected in `data`.
-        kernel: BaseKernel
+        kernel : BaseKernel
             The kernel to use for smoothing the target data. Defaults to the
             kernel specified in `data`.
-        rotation: array_like or SciPy Rotation, optional
+        rotation : array_like or SciPy Rotation, optional
             The rotation to apply to the data before interpolation. If defined
             as an array, the order of rotations is [z, y, x] in degrees. Only
             applies to 3D datasets.
-        rot_origin: array_like or ['com', 'midpoint'], optional
+        rot_origin : array_like or ['com', 'midpoint'], optional
             Point of rotation of the data. Only applies to 3D datasets. If
             array_like, then the [x, y, z] coordinates specify the point around
             which the data is rotated. If 'com', then data is rotated around
             the centre of mass. If 'midpoint', then data is rotated around the
             midpoint, that is, min + max / 2. Defaults to the midpoint.
-        x_pixels, y_pixels, z_pixels: int, optional
+        x_pixels, y_pixels, z_pixels : int, optional
             Number of pixels in the output image in the x, y & z directions.
             Default values are chosen to keep a consistent aspect ratio.
-        xlim, ylim, zlim: tuple of float or None, optional
+        xlim, ylim, zlim : tuple of float or None, optional
             The minimum and maximum values to use in interpolation, in particle
             data space. Defaults to the minimum and maximum values of `x`, `y`
             and `z`.
-        exact: bool
+        exact : bool
             Whether to use exact interpolation of the data. Only applies to
             2D datasets.
-        backend: ['cpu', 'gpu']
+        backend : ['cpu', 'gpu']
             The computation backend to use when interpolating this data.
             Defaults to 'gpu' if CUDA is enabled, otherwise 'cpu' is used. A
             manually specified backend in `data` will override the default.
-        dens_weight: bool
+        dens_weight : bool
             If True, the target will be multiplied by density. Defaults to
             False.
-        normalize: bool
+        normalize : bool
             If True, will normalize the interpolation. Defaults to False (this
             may change in future versions).
-        hmin: bool
+        hmin : bool
             If True, a minimum smoothing length of 0.5 * pixel size will be
             imposed. This ensures each particle contributes to at least one
             grid cell / pixel. Defaults to False (this may change in a future
@@ -568,7 +568,7 @@ class SarracenDataFrame(DataFrame):
 
     @property
     def units(self) -> Series:
-        """Series: Units for each column of this dataset."""
+        """Series : Units for each column of this dataset."""
         return self._units
 
     @units.setter

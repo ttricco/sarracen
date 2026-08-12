@@ -41,14 +41,14 @@ def _default_axes(data: 'SarracenDataFrame',
 
     Parameters
     ----------
-    data: SarracenDataFrame
+    data : SarracenDataFrame
         The particle dataset to render.
-    x, y: str
+    x, y : str
         The x and y directional column labels passed to the render function.
 
     Returns
     -------
-    x, y: str
+    x, y : str
         The directional column labels to use for rendering. Defaults to the
         x-column detected in `data`
     """
@@ -72,14 +72,14 @@ def _rotate_data(data: 'SarracenDataFrame',
 
     Parameters
     ----------
-    data: SarracenDataFrame
+    data : SarracenDataFrame
         The particle dataset to interpolate over.
-    x_data, y_data, z_data: ndarray
+    x_data, y_data, z_data : ndarray
         The directional vector data.
-    rotation: array_like or SciPy Rotation
+    rotation : array_like or SciPy Rotation
         The rotation to apply to the vector data. If defined as an array, the
         order of rotations is [z, y, x] in degrees
-    rot_origin: array_like or ['com', 'midpoint']
+    rot_origin : array_like or ['com', 'midpoint']
         Point of rotation of the data. Only applies to 3D datasets. If
         array_like, then the [x, y, z] coordinates specify the point around
         which the data is rotated. If 'com', then data is rotated around the
@@ -88,7 +88,7 @@ def _rotate_data(data: 'SarracenDataFrame',
 
     Returns
     -------
-    x_data, y_data, z_data: ndarray
+    x_data, y_data, z_data : ndarray
         The rotated x, y, and z directional data.
     """
     vectors = np.array([x_data, y_data, z_data]).transpose()
@@ -159,17 +159,17 @@ def _default_bounds(data: 'SarracenDataFrame',
 
     Parameters
     ----------
-    data: SarracenDataFrame
+    data : SarracenDataFrame
         The particle dataset to render.
-    x, y: str
+    x, y : str
         The directional column labels that will be used for rendering.
-    xlim, ylim: tuple of float or None, optional
+    xlim, ylim : tuple of float or None, optional
         The minimum and maximum values passed to the render function, in
         particle data space.
 
     Returns
     -------
-    xlim, ylim: tuple of float
+    xlim, ylim : tuple of float
         The minimum and maximum values to use for rendering, in particle data
         space. Defaults to the maximum and minimum values of `x` and `y`,
         snapped to the nearest integer.
@@ -199,16 +199,16 @@ def _set_pixels(x_pixels: int | None,
 
     Parameters
     ----------
-    x_pixels, y_pixels: int
+    x_pixels, y_pixels : int
         The number of pixels in the x & y directions passed to the
         interpolation function.
-    xlim, ylim: tuple of float
+    xlim, ylim : tuple of float
         The minimum and maximum values to use in interpolation, in particle
         data space.
 
     Returns
     -------
-    x_pixels, y_pixels: int
+    x_pixels, y_pixels : int
         The number of pixels in the x & y directions to use in 2D
         interpolation.
     """
@@ -263,78 +263,78 @@ def render(data: 'SarracenDataFrame',
     ----------
     data : SarracenDataFrame
         Particle data, in a SarracenDataFrame.
-    target: str
+    target : str
         Column label of the target variable.
-    x, y, z: str, optional
+    x, y, z : str, optional
         Column labels of the x, y & z directional axes. Defaults to the columns
         detected in `data`.
-    xsec: float, optional.
+    xsec : float, optional
         For a 3D dataset, the z value to take a cross-section at. If none,
         column interpolation is performed.
-    kernel: BaseKernel, optional
+    kernel : BaseKernel, optional
         Kernel to use for smoothing the target data. Defaults to the kernel
         specified in `data`.
-    x_pixels, y_pixels: int, optional
+    x_pixels, y_pixels : int, optional
         Number of pixels present in the final image.
-    xlim, ylim: tuple of float or None, optional
+    xlim, ylim : tuple of float or None, optional
         The starting and ending corners of the 2D image. A tuple gives the
         upper and lower bounds. Either value of the tuple may be `None`, which
         defaults to the minimum or maximum value of `x` and `y`, respectively.
         If omitted, the limit defaults to the minimum and maximum values.
-    vmin, vmax: float, optional
+    vmin, vmax : float, optional
         Lower and upper limits of the range of values for the colour bar.
-    cmap: str or Colormap, optional
+    cmap : str or Colormap, optional
         The color map to use when plotting a 2D image.
-    cbar: bool, optional
+    cbar : bool, optional
         True if a colorbar should be drawn.
-    cbar_kws: dict, optional
+    cbar_kws : dict, optional
         Keyword arguments to pass to matplotlib.figure.Figure.colorbar().
-    cbar_ax: Axes, optional
+    cbar_ax : Axes, optional
         Axes to draw the colorbar in, if not provided then space will be taken
         from the main Axes.
-    ax: Axes, optional
+    ax : Axes, optional
         The main axes in which to draw the rendered image.
-    exact: bool, optional
+    exact : bool, optional
         Whether to use exact interpolation of the data. For cross-sections this
         is ignored. Defaults to False.
-    backend: ['cpu', 'gpu'], optional
+    backend : ['cpu', 'gpu'], optional
         The computation backend to use when interpolating this data. Defaults
         to 'gpu' if CUDA is enabled, otherwise 'cpu' is used. A manually
         specified backend in `data` will override the default.
-    integral_samples: int, optional
+    integral_samples : int, optional
         If using column interpolation, the number of sample points to take when
         approximating the 2D column kernel.
-    rotation: array_like or SciPy Rotation, optional
+    rotation : array_like or SciPy Rotation, optional
         The rotation to apply to the data before interpolation. If defined as
         an array, the order of rotations is [z, y, x] in degrees. Only applies
         to 3D datasets.
-    rot_origin: array_like or ['com', 'midpoint'], optional
+    rot_origin : array_like or ['com', 'midpoint'], optional
         Point of rotation of the data. Only applies to 3D datasets. If
         array_like, then the [x, y, z] coordinates specify the point around
         which the data is rotated. If 'com', then data is rotated around the
         centre of mass. If 'midpoint', then data is rotated around the
         midpoint, that is, min + max / 2. Defaults to the midpoint.
-    log_scale: bool, optional
+    log_scale : bool, optional
         Whether to use a logarithmic scale for color coding.
-    symlog_scale: bool, optional
+    symlog_scale : bool, optional
         Whether to use a symmetrical logarithmic scale for color coding (i.e.,
         allows positive and negative values). Optionally add "linthresh" and
         "linscale" to kwargs to set the linear region and the scaling of linear
         values, respectively (defaults to 1e-9 and 1, respectively). Only works
         if log_scale == True.
-    dens_weight: bool, optional
+    dens_weight : bool, optional
         If True, will plot the target multiplied by the density. Defaults to
         True for column-integrated views and False for everything else.
-    normalize: bool, optional
+    normalize : bool, optional
         If True, will normalize the interpolation. Defaults to True.
-    hmin: bool, optional
+    hmin : bool, optional
         If True, a minimum smoothing length of 0.5 * pixel size will be
         imposed. This ensures each particle contributes to at least one grid
         cell / pixel. Defaults to False (this may change in a future verison).
-    corotation: array_like, optional
+    corotation : array_like, optional
         Moves particles to the co-rotating frame of two location. Corotation
         contains two lists which correspond to the two x, y, z coordinates.
-    kwargs: other keyword arguments
+    kwargs : other keyword arguments
         Keyword arguments to pass to ax.imshow.
 
     Returns
@@ -360,7 +360,7 @@ def render(data: 'SarracenDataFrame',
 
             A_{pixel} = \\sum_b \\frac{m_b}{\\rho_b} A_b W_{ab}(h_b)
 
-    where :math:`m` is the mass, :math:`\\rho` is the density, and :math:`W` is
+    where  :math:`m` is the mass, :math:`\\rho` is the density, and :math:`W` is
     the smoothing kernel with smoothing length, :math:`h`.
 
     Normalized interpolation divides the above summation by an interpolation of
@@ -505,42 +505,42 @@ def lineplot(data: 'SarracenDataFrame',
     ----------
     data : SarracenDataFrame
         Particle data, in a SarracenDataFrame.
-    target: str
+    target : str
         Column label of the target variable.
-    x, y, z: str, optional
+    x, y, z : str, optional
         Column labels of the x, y & z directional axes. Defaults to the columns
         detected in `data`.
-    kernel: BaseKernel, optional
+    kernel : BaseKernel, optional
         Kernel to use for smoothing the target data. Defaults to the kernel
         specified in `data`.
-    pixels: int, optional
+    pixels : int, optional
         Number of samples taken across the x axis in the final plot.
-    xlim, ylim, zlim: int, float, or tuple of float or None, optional
+    xlim, ylim, zlim : int, float, or tuple of float or None, optional
         Coordinate bounds of the cross-sectional line. A scalar value is
         treated as both bounds for that axis, fixing the line along that
         constant coordinate value. A tuple gives the upper and lower bounds.
         Either value of the tuple may be `None`, which defaults to the minimum
         or maximum value of `x`, `y`, and `z`, respectively. If omitted, the
         limit defaults to the minimum and maximum values.
-    ax: Axes, optional
+    ax : Axes, optional
         The main axes in which to draw the final plot.
-    backend: ['cpu', 'gpu'], optional
+    backend : ['cpu', 'gpu'], optional
         The computation backend to use when interpolating this data. Defaults
         to 'gpu' if CUDA is enabled, otherwise 'cpu' is used. A manually
         specified backend in `data` will override the default.
-    log_scale: bool, optional
+    log_scale : bool, optional
         Whether to use a logarithmic scale for color coding.
-    dens_weight: bool, optional
+    dens_weight : bool, optional
         If True, will plot the target mutliplied by the density. Defaults to
         False.
-    normalize: bool, optional
+    normalize : bool, optional
         If True, will normalize the interpolation. Defaults to False (this may
         change in future versions).
-    hmin: bool, optional
+    hmin : bool, optional
         If True, a minimum smoothing length of 0.5 * pixel size will be
         imposed. This ensures each particle contributes to at least one grid
         cell / pixel. Defaults to False (this may change in a future verison).
-    kwargs: other keyword arguments
+    kwargs : other keyword arguments
         Keyword arguments to pass to sns.lineplot.
 
     Returns
@@ -650,61 +650,61 @@ def streamlines(data: 'SarracenDataFrame',
 
     Parameters
     ----------
-    data: SarracenDataFrame
+    data : SarracenDataFrame
         Particle data, in a SarracenDataFrame.
-    target: str tuple of shape (2) or (3).
+    target : str tuple of shape (2) or (3).
         Column label of the target vector. Shape must match the # of dimensions
         in `data`.
-    x, y, z: str, optional
+    x, y, z : str, optional
         Column label of the x, y & z directional axes. Defaults to the columns
         detected in `data`.
-    xsec: float, optional
+    xsec : float, optional
         The z to take a cross-section at. If none, column interpolation is
         performed.
-    kernel: BaseKernel, optional
+    kernel : BaseKernel, optional
         Kernel to use for smoothing the target data. Defaults to the kernel
         specified in `data`.
-    integral_samples: int, optional
+    integral_samples : int, optional
         If using column interpolation, the number of sample points to take when
         approximating the 2D column kernel.
-    rotation: array_like or SciPy Rotation, optional
+    rotation : array_like or SciPy Rotation, optional
         The rotation to apply to the data before interpolation. If defined as
         an array, the order of rotations is [z, y, x] in degrees.
-    rot_origin: array_like or ['com', 'midpoint'], optional
+    rot_origin : array_like or ['com', 'midpoint'], optional
         Point of rotation of the data. Only applies to 3D datasets. If
         array_like, then the [x, y, z] coordinates specify the point around
         which the data is rotated. If 'com', then data is rotated around the
         centre of mass. If 'midpoint', then data is rotated around the
         midpoint, that is, min + max / 2. Defaults to the midpoint.
-    x_pixels, y_pixels: int, optional
+    x_pixels, y_pixels : int, optional
         Number of interpolation samples to pass to ax.streamlines(). Default
         values are chosen to keep a consistent aspect ratio.
-    xlim, ylim: tuple of float or None, optional
+    xlim, ylim : tuple of float or None, optional
         The minimum and maximum values to use in interpolation along each axis.
         A tuple gives the upper and lower bounds. Either value of the tuple may
         be `None`, which defaults to the minimum or maximum value of `x` and
         `y`, respectively. If omitted, the limit defaults to the minimum and
         maximum values.
-    ax: Axes, optional
+    ax : Axes, optional
         The main axes in which to draw the rendered image.
-    exact: bool, optional
+    exact : bool, optional
         Whether to use exact interpolation of the data. For cross-sections
         this is ignored. Defaults to False.
-    backend: ['cpu', 'gpu'], optional
+    backend : ['cpu', 'gpu'], optional
         The computation backend to use when interpolating this data. Defaults
         to 'gpu' if CUDA is enabled, otherwise 'cpu' is used. A manually
         specified backend in `data` will override the default.
-    dens_weight: bool, optional
+    dens_weight : bool, optional
         If True, will plot the target mutliplied by the density. Defaults to
         True for column-integrated views and False for everything else.
-    normalize: bool, optional
+    normalize : bool, optional
         If True, will normalize the interpolation. Defaults to False (this may
         change in future versions).
-    hmin: bool, optional
+    hmin : bool, optional
         If True, a minimum smoothing length of 0.5 * pixel size will be
         imposed. This ensures each particle contributes to at least one grid
         cell / pixel. Defaults to False (this may change in a future verison).
-    kwargs: other keyword arguments
+    kwargs : other keyword arguments
         Keyword arguments to pass to ax.streamlines()
 
     Returns
@@ -818,63 +818,63 @@ def arrowplot(data: 'SarracenDataFrame',
     ----------
     data : SarracenDataFrame
         Particle data, in a SarracenDataFrame.
-    target: str tuple of shape (2) or (3).
+    target : str tuple of shape (2) or (3).
         Column label of the target vector. Shape must match the # of dimensions
         in `data`.
-    x, y, z: str, optional
+    x, y, z : str, optional
         Column label of the x, y & z directional axes. Defaults to the columns
         detected in `data`.
-    xsec: float, optional
+    xsec : float, optional
         The z to take a cross-section at. If none, column interpolation is
         performed.
-    kernel: BaseKernel, optional
+    kernel : BaseKernel, optional
         Kernel to use for smoothing the target data. Defaults to the kernel
         specified in `data`.
-    integral_samples: int, optional
+    integral_samples : int, optional
         If using column interpolation, the number of sample points to take when
         approximating the 2D column kernel.
-    rotation: array_like or SciPy Rotation, optional
+    rotation : array_like or SciPy Rotation, optional
         The rotation to apply to the data before interpolation. If defined as
         an array, the order of rotations is [z, y, x] in degrees.
-    rot_origin: array_like or ['com', 'midpoint'], optional
+    rot_origin : array_like or ['com', 'midpoint'], optional
         Point of rotation of the data. Only applies to 3D datasets. If
         array_like, then the [x, y, z] coordinates specify the point around
         which the data is rotated. If 'com', then data is rotated around the
         centre of mass. If 'midpoint', then data is rotated around the
         midpoint, that is, min + max / 2. Defaults to the midpoint.
-    x_arrows, y_arrows: int, optional
+    x_arrows, y_arrows : int, optional
         Number of arrows in the output image in the x & y directions. Default
         values are chosen to keep a consistent aspect ratio.
-    xlim, ylim: tuple of float or None, optional
+    xlim, ylim : tuple of float or None, optional
         The minimum and maximum values to use in interpolation along each axis.
         A tuple gives the upper and lower bounds. Either value of the tuple may
         be `None`, which defaults to the minimum or maximum value of `x` and
         `y`, respectively. If omitted, the limit defaults to the minimum and
         maximum values.
-    ax: Axes, optional
+    ax : Axes, optional
         The main axes in which to draw the rendered image.
-    qkey: bool, optional
+    qkey : bool, optional
         Whether to include a quiver key on the final plot.
-    qkey_kws: dict, optional
+    qkey_kws : dict, optional
         Keywords to pass through to ax.quiver.
-    exact: bool, optional
+    exact : bool, optional
         Whether to use exact interpolation of the data. For cross-sections this
         is ignored. Defaults to False.
-    backend: ['cpu', 'gpu'], optional
+    backend : ['cpu', 'gpu'], optional
         The computation backend to use when interpolating this data. Defaults
         to 'gpu' if CUDA is enabled, otherwise 'cpu' is used. A manually
         specified backend in `data` will override the default.
-    dens_weight: bool, optional
+    dens_weight : bool, optional
         If True, will plot the target mutliplied by the density. Defaults to
         True for column-integrated views and False for everything else.
-    normalize: bool, optional
+    normalize : bool, optional
         If True, will normalize the interpolation. Defaults to False (this may
         change in future versions).
-    hmin: bool, optional
+    hmin : bool, optional
         If True, a minimum smoothing length of 0.5 * pixel size will be
         imposed. This ensures each particle contributes to at least one grid
         cell / pixel. Defaults to False (this may change in a future verison).
-    kwargs: other keyword arguments
+    kwargs : other keyword arguments
         Keyword arguments to pass to ax.quiver()
 
     Returns

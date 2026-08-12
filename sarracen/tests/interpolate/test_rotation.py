@@ -26,8 +26,8 @@ def rotate(target: tuple[float, float, float],
 
     Parameters
     ----------
-    target: float tuple of shape (3)
-    rot_z, rot_y, rot_x: Rotation around each axis (in degrees)
+    target : float tuple of shape (3)
+    rot_z, rot_y, rot_x : Rotation around each axis (in degrees)
 
     Returns
     -------
