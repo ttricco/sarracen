@@ -356,8 +356,8 @@ def render(data: 'SarracenDataFrame',
 
             A_{pixel} = \\sum_b \\frac{m_b}{\\rho_b} A_b W_{ab}(h_b)
 
-    where  :math:`m` is the mass, :math:`\\rho` is the density, and :math:`W` is
-    the smoothing kernel with smoothing length, :math:`h`.
+    where  :math:`m` is the mass, :math:`\\rho` is the density, and :math:`W`
+    is the smoothing kernel with smoothing length, :math:`h`.
 
     Normalized interpolation divides the above summation by an interpolation of
     a constant scalar field equal to 1:
