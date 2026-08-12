@@ -1,14 +1,11 @@
-from typing import Union, List
-
 import pandas as pd
 
 from ..sarracen_dataframe import SarracenDataFrame
 
 
 def read_gradsph(filename: str,
-                 separate_types: str = 'sinks') -> Union[List[
-                                                         SarracenDataFrame],
-                                                         SarracenDataFrame]:
+                 separate_types: str | None = 'sinks'
+                 ) -> list[SarracenDataFrame] | SarracenDataFrame:
     """
     Read data from a GradSPH dump file.
 

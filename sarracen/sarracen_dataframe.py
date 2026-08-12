@@ -1,4 +1,5 @@
-from typing import Any, Type, Union, Callable, Tuple, Optional, Dict
+from collections.abc import Callable
+from typing import Any, TypeAlias
 
 from matplotlib.axes import Axes
 from matplotlib.colors import Colormap
@@ -14,6 +15,11 @@ from .interpolate import interpolate_2d, interpolate_3d_grid
 from .kernels import CubicSplineKernel, BaseKernel
 
 from sklearn.neighbors import KDTree
+
+Bounds: TypeAlias = tuple[float | None, float | None]
+VectorLike: TypeAlias = np.ndarray | list | tuple
+OriginLike: TypeAlias = VectorLike | pd.Series | str | None
+
 
 def _copy_doc(copy_func: Callable) -> Callable:
     """Copy documentation from another function to this function."""
@@ -81,7 +87,7 @@ class SarracenDataFrame(DataFrame):
         >>> particles = {'x': [1.0, 2.0, 3.0], 'y': [2.0, 2.0, 2.0], 'h': [3.0, 3.5, 4.0]}
         >>> sdf = sarracen.SarracenDataFrame(particles)
         >>> sdf
-            x     y     h
+              x     y     h
         0   1.0   2.0   3.0
         1   2.0   2.0   3.5
         2   3.0   2.0   4.0
@@ -91,7 +97,7 @@ class SarracenDataFrame(DataFrame):
         >>> particles = np.array([[1.0, 2.0, 3.0], [2.0, 2.0, 3.5], [3.0, 2.0, 4.0]])
         >>> sdf = sarracen.SarracenDataFrame(particles, columns=['x', 'y', 'h'])
         >>> sdf
-            x     y     h
+              x     y     h
         0   1.0   2.0   3.0
         1   2.0   2.0   3.5
         2   3.0   2.0   4.0
@@ -126,7 +132,7 @@ class SarracenDataFrame(DataFrame):
         self._backend = 'gpu' if cuda.is_available() else 'cpu'
 
     @property
-    def _constructor(self) -> Type:
+    def _constructor(self) -> type:
         return SarracenDataFrame
 
     def _identify_special_columns(self) -> None:
@@ -151,7 +157,7 @@ class SarracenDataFrame(DataFrame):
         elif 'rx' in self.columns:
             self.xcol = 'rx'
         elif len(self.columns) > 0:
-            self.xcol = self.columns[0]
+            self.xcol = str(self.columns[0])
 
         # First look for 'y', then 'ry', and then default to the second column.
         if 'y' in self.columns:
@@ -159,7 +165,7 @@ class SarracenDataFrame(DataFrame):
         elif 'ry' in self.columns:
             self.ycol = 'ry'
         elif len(self.columns) > 1:
-            self.ycol = self.columns[1]
+            self.ycol = str(self.columns[1])
 
         # First look for 'z', then 'rz', and then assume data is 2-dimensional.
         if 'z' in self.columns:
@@ -193,26 +199,8 @@ class SarracenDataFrame(DataFrame):
 
         # Look for the keyword 'dustfrac' in the data.
         for column in self.columns:
-            if column.startswith('dustfrac'):
+            if isinstance(column, str) and column.startswith('dustfrac'):
                 self.dustfracscol.append(column)
-
-    def create_mass_column(self) -> None:
-        """
-        Create a new column 'm', copied from the 'massoftype' parameter.
-
-        Intended for use with Phantom data dumps.
-
-        Raises
-        ------
-        KeyError
-            If the 'massoftype' column does not exist in `params`.
-        """
-        if self.params is None or 'mass' not in self.params:
-            raise KeyError("'mass' value does not exist in this "
-                           "SarracenDataFrame.")
-
-        self['m'] = self.params['mass']
-        self.mcol = 'm'
 
     def calc_density(self) -> None:
         """
@@ -234,22 +222,31 @@ class SarracenDataFrame(DataFrame):
         Raises
         ------
         KeyError
-            If the `hcol` column does not exist, there is no `mcol` column or
-            `mass` in params, or if `hfact` does not exist in `params`.
+            If the `hcol` column does not exist or if 'hfact' is not in
+            'params'.
+        ValueError
+            If there is no particle mass data.
+
+        Notes
+        -----
+        For one-fluid dump files, this will calculate the total density (gas +
+        dust) of the particle.
         """
-        if not {self.hcol}.issubset(self.columns):
+        if self.hcol not in self.columns:
             raise KeyError('Missing smoothing length data in this '
                            'SarracenDataFrame')
+
         if self.params is None or 'hfact' not in self.params:
             raise KeyError('hfact missing from params in this '
                            'SarracenDataFrame.')
+
         if self.mcol not in self.columns and (self.params is None or
                                               'mass' not in self.params):
-            raise KeyError('Missing particle mass data in this '
-                           'SarracenDataFrame.')
+            raise ValueError('Missing particle mass data in this '
+                             'SarracenDataFrame.')
 
         # prioritize using mass per particle, if present
-        if {self.mcol}.issubset(self.columns):
+        if self.mcol in self.columns:
             mass = self[self.mcol]
         else:
             mass = self.params['mass']
@@ -267,41 +264,49 @@ class SarracenDataFrame(DataFrame):
         Raises
         -------
         KeyError
-            If the `dustfrac` column does not exist.
+            If `dustfrac` columns do not exist.
         ValueError
-            If `ndustsmall` is zero or `ndustlarge` is non zero.
+            If `ndustsmall` is zero or `ndustlarge` is non-zero.
         """
-        if not {self.dustfracscol[0]}.issubset(self.columns):
+        if len(self.dustfracscol) == 0:
             raise KeyError('Missing dust fraction data in this '
                            'SarracenDataFrame')
-        # use self[self.dustfrac], check if columns exist
-        if not {self.rhocol}.issubset(self.columns):
+        if self.dustfracscol[0] not in self.columns:
+            raise KeyError('Missing dust fraction data in this '
+                           'SarracenDataFrame')
+
+        ndustsmall = self.params.get('ndustsmall', 0)
+        ndustlarge = self.params.get('ndustlarge', 0)
+
+        if ndustsmall == 0 or ndustlarge > 0:
+            raise ValueError('Not a one-fluid-only dump.')
+
+        if self.rhocol not in self.columns:
             self.calc_density()
 
-        if (int(self.params['ndustsmall']) == 0 or
-                int(self.params['ndustlarge']) != 0):
-            raise ValueError('Not a one-fluid-only dump.')
+        if ndustsmall == 1:
+            self['rho_d'] = self['rho'] * self[self.dustfracscol[0]]
+            self['rho_g'] = self['rho'] * (1 - self[self.dustfracscol[0]])
+            self['dtg'] = self['rho_d'] / self['rho_g']
         else:
-            if int(self.params['ndustsmall']) == 1:
-                self['rho_g'] = self['rho'] * self['dustfrac']
-                self['rho_d'] = self['rho'] * (1 - self['dustfrac'])
-                self['dtg'] = self['rho_d'] / self['rho_g']
-            else:
-                self['dustfrac_total'] = self[self.dustfracscol].sum(axis=1)
-                self['rho_g'] = self['rho'] * (1 - self['dustfrac_total'])
-                self['rho_d_total'] = self['rho'] * self['dustfrac_total']
-                self['rho_d'] = self['rho'] * self[self.dustfracscol[0]]
-                for i in range(1, int(self.params['ndustsmall'])):
-                    self[f'rho_d_{i+1}'] = self['rho'] * \
-                                                    self[self.dustfracscol[i]]
-                self['dtg'] = self['dustfrac_total'] / (1 -
-                                                        self['dustfrac_total'])
+            self['dustfrac_total'] = self[self.dustfracscol].sum(axis=1)
+            self['rho_g'] = self['rho'] * (1 - self['dustfrac_total'])
+            self['rho_d_total'] = self['rho'] * self['dustfrac_total']
+            self['rho_d'] = self['rho'] * self[self.dustfracscol[0]]
+            for i in range(1, int(ndustsmall)):
+                self[f'rho_d_{i+1}'] = self['rho'] * self[self.dustfracscol[i]]
+            self['dtg'] = self['dustfrac_total'] / (1 - self['dustfrac_total'])
 
     def centre_of_mass(self) -> list:
         """
         Returns the centre of mass of the data.
+
+        Returns
+        -------
+        list
+            A list with the centre of mass of the data.
         """
-        if {self.mcol}.issubset(self.columns):
+        if self.mcol in self.columns:
             mass = self[self.mcol]
         else:
             mass = self.params['mass']
@@ -359,60 +364,31 @@ class SarracenDataFrame(DataFrame):
         unbound = pd.Series((energies.min(axis=0) > 0)[0, :], index=self.index)
         self.loc[unbound[unbound].index, "sink"] = -1
 
-    #method to interpolate gas density for dust particles
-    def interpolate_gas_density(self):
-        """Linearly interpolates gas density onto dust particles using a grid method.
-        """
-        if "rho_gas" not in self: # speed up by only performing interpolation if not already done
-
-            self.calc_density()
-            self["rho_gas"] = self["rho"]
-
-            gas_df = self[self["itype"]==1]
-            gas_pos = (gas_df["x"],gas_df["y"],gas_df["z"])
-            gasvals = gas_df["rho"]
-
-            dust_df = self[self["itype"]==7]
-            dust_pos = (dust_df["x"],dust_df["y"],dust_df["z"])
-            dustvals = griddata(gas_pos,gasvals,dust_pos,method="nearest")
-
-            self.loc[self["itype"]==7,"rho_gas"] = dustvals
-
-    def calc_stokes(self,c_s,G=1):
-        """"Calculates Stokes number of two-fluid dust particles."""
-        if "St" not in self:
-            self.interpolate_gas_density()
-            self["r"] = (self[self.xcol]**2 + self[self.ycol]**2)**0.5
-            omega_kep = (self.sinks["m"][0]*G/self["r"]**3)**0.5
-            t_s = self.params["graindens"] * self.params["grainsize"]/(self["rho_gas"]+self["rho"])/c_s
-            self["St"] = t_s * omega_kep
-            self.loc[self["itype"]==1,"St"] = 0
-
     @_copy_doc(render)
     def render(self,
                target: str,
-               x: Union[str, None] = None,
-               y: Union[str, None] = None,
-               z: Union[str, None] = None,
-               xsec: Union[float, None] = None,
-               kernel: Union[BaseKernel, None] = None,
-               x_pixels: Union[int, None] = None,
-               y_pixels: Union[int, None] = None,
-               xlim: Union[Tuple[float, float], None] = None,
-               ylim: Union[Tuple[float, float], None] = None,
-               cmap: Union[str, Colormap] = 'gist_heat',
+               x: str | None = None,
+               y: str | None = None,
+               z: str | None = None,
+               xsec: float | None = None,
+               kernel: BaseKernel | None = None,
+               x_pixels: int | None = None,
+               y_pixels: int | None = None,
+               xlim: Bounds | None = None,
+               ylim: Bounds | None = None,
+               cmap: str | Colormap = 'gist_heat',
                cbar: bool = True,
                cbar_kws: dict = {},
-               cbar_ax: Union[Axes, None] = None,
-               ax: Union[Axes, None] = None,
+               cbar_ax: Axes | None = None,
+               ax: Axes | None = None,
                exact: bool = False,
-               backend: Union[str, None] = None,
+               backend: str | None = None,
                integral_samples: int = 1000,
-               rotation: Union[np.ndarray, list, Rotation, None] = None,
-               rot_origin: Union[np.ndarray, list, str, None] = None,
+               rotation: VectorLike | Rotation | None = None,
+               rot_origin: OriginLike = None,
                log_scale: bool = False,
                symlog_scale: bool = False,
-               dens_weight: Union[bool, None] = None,
+               dens_weight: bool | None = None,
                normalize: bool = False,
                hmin: bool = False,
                **kwargs: Any) -> Axes:
@@ -425,16 +401,16 @@ class SarracenDataFrame(DataFrame):
     @_copy_doc(lineplot)
     def lineplot(self,
                  target: str,
-                 x: Union[str, None] = None,
-                 y: Union[str, None] = None,
-                 z: Union[str, None] = None,
-                 kernel: Union[BaseKernel, None] = None,
+                 x: str | None = None,
+                 y: str | None = None,
+                 z: str | None = None,
+                 kernel: BaseKernel | None = None,
                  pixels: int = 512,
-                 xlim: Union[Tuple[float, float], None] = None,
-                 ylim: Union[Tuple[float, float], None] = None,
-                 zlim: Union[Tuple[float, float], None] = None,
-                 ax: Union[Axes, None] = None,
-                 backend: Union[str, None] = None,
+                 xlim: Bounds | float | int | None = None,
+                 ylim: Bounds | float | int | None = None,
+                 zlim: Bounds | float | int | None = None,
+                 ax: Axes | None = None,
+                 backend: str | None = None,
                  log_scale: bool = False,
                  dens_weight: bool = False,
                  normalize: bool = False,
@@ -446,22 +422,22 @@ class SarracenDataFrame(DataFrame):
 
     @_copy_doc(streamlines)
     def streamlines(self,
-                    target: Union[Tuple[str, str], Tuple[str, str, str]],
-                    x: Union[str, None] = None,
-                    y: Union[str, None] = None,
-                    z: Union[str, None] = None,
-                    xsec: Union[int, None] = None,
-                    kernel: Union[BaseKernel, None] = None,
+                    target: tuple[str, str] | tuple[str, str, str],
+                    x: str | None = None,
+                    y: str | None = None,
+                    z: str | None = None,
+                    xsec: int | None = None,
+                    kernel: BaseKernel | None = None,
                     integral_samples: int = 1000,
-                    rotation: Union[np.ndarray, list, Rotation, None] = None,
-                    rot_origin: Union[np.ndarray, list, str, None] = None,
-                    x_pixels: Union[int, None] = None,
-                    y_pixels: Union[int, None] = None,
-                    xlim: Union[Tuple[float, float], None] = None,
-                    ylim: Union[Tuple[float, float], None] = None,
-                    ax: Union[Axes, None] = None,
+                    rotation: VectorLike | Rotation | None = None,
+                    rot_origin: OriginLike = None,
+                    x_pixels: int | None = None,
+                    y_pixels: int | None = None,
+                    xlim: Bounds | None = None,
+                    ylim: Bounds | None = None,
+                    ax: Axes | None = None,
                     exact: bool = False,
-                    backend: Union[str, None] = None,
+                    backend: str | None = None,
                     dens_weight: bool = False,
                     normalize: bool = False,
                     hmin: bool = False,
@@ -473,25 +449,25 @@ class SarracenDataFrame(DataFrame):
 
     @_copy_doc(arrowplot)
     def arrowplot(self,
-                  target: Union[Tuple[str, str], Tuple[str, str, str]],
-                  x: Union[str, None] = None,
-                  y: Union[str, None] = None,
-                  z: Union[str, None] = None,
-                  xsec: Union[int, None] = None,
-                  kernel: Union[BaseKernel, None] = None,
+                  target: tuple[str, str] | tuple[str, str, str],
+                  x: str | None = None,
+                  y: str | None = None,
+                  z: str | None = None,
+                  xsec: int | None = None,
+                  kernel: BaseKernel | None = None,
                   integral_samples: int = 1000,
-                  rotation: Union[np.ndarray, list, Rotation, None] = None,
-                  rot_origin: Union[np.ndarray, list, str, None] = None,
-                  x_arrows: Union[int, None] = None,
-                  y_arrows: Union[int, None] = None,
-                  xlim: Union[Tuple[float, float], None] = None,
-                  ylim: Union[Tuple[float, float], None] = None,
-                  ax: Union[Axes, None] = None,
+                  rotation: VectorLike | Rotation | None = None,
+                  rot_origin: OriginLike = None,
+                  x_arrows: int | None = None,
+                  y_arrows: int | None = None,
+                  xlim: Bounds | None = None,
+                  ylim: Bounds | None = None,
+                  ax: Axes | None = None,
                   qkey: bool = True,
-                  qkey_kws: Union[dict, None] = None,
+                  qkey_kws: dict | None = None,
                   exact: bool = False,
-                  backend: Union[str, None] = None,
-                  dens_weight: Union[bool, None] = None,
+                  backend: str | None = None,
+                  dens_weight: bool | None = None,
                   normalize: bool = False,
                   hmin: bool = False,
                   **kwargs: Any) -> Axes:
@@ -502,21 +478,18 @@ class SarracenDataFrame(DataFrame):
 
     def sph_interpolate(self,
                         target: str,
-                        x: Union[str, None] = None,
-                        y: Union[str, None] = None,
-                        z: Union[str, None] = None,
-                        kernel: Union[BaseKernel, None] = None,
-                        rotation: Union[np.ndarray, list,
-                                        Rotation, None] = None,
-                        rot_origin: Union[np.ndarray, list, str, None] = None,
-                        x_pixels: Union[int, None] = None,
-                        y_pixels: Union[int, None] = None,
-                        z_pixels: Union[int, None] = None,
-                        xlim: Optional[Tuple[Optional[float],
-                                             Optional[float]]] = None,
-                        ylim: Optional[Tuple[Optional[float],
-                                             Optional[float]]] = None,
-                        zlim: Union[Tuple[float, float], None] = None,
+                        x: str | None = None,
+                        y: str | None = None,
+                        z: str | None = None,
+                        kernel: BaseKernel | None = None,
+                        rotation: VectorLike | Rotation | None = None,
+                        rot_origin: OriginLike = None,
+                        x_pixels: int | None = None,
+                        y_pixels: int | None = None,
+                        z_pixels: int | None = None,
+                        xlim: Bounds | None = None,
+                        ylim: Bounds | None = None,
+                        zlim: Bounds | None = None,
                         exact: bool = False,
                         backend: str = 'cpu',
                         dens_weight: bool = False,
@@ -528,45 +501,45 @@ class SarracenDataFrame(DataFrame):
 
         Parameters
         ----------
-        target: str
+        target : str
             The column label of the target data.
-        x, y, z: str
+        x, y, z : str
             The column labels of the directional data to interpolate over.
             Defaults to the x, y, and z columns detected in `data`.
-        kernel: BaseKernel
+        kernel : BaseKernel
             The kernel to use for smoothing the target data. Defaults to the
             kernel specified in `data`.
-        rotation: array_like or SciPy Rotation, optional
+        rotation : array_like or SciPy Rotation, optional
             The rotation to apply to the data before interpolation. If defined
             as an array, the order of rotations is [z, y, x] in degrees. Only
             applies to 3D datasets.
-        rot_origin: array_like or ['com', 'midpoint'], optional
+        rot_origin : array_like or ['com', 'midpoint'], optional
             Point of rotation of the data. Only applies to 3D datasets. If
             array_like, then the [x, y, z] coordinates specify the point around
             which the data is rotated. If 'com', then data is rotated around
             the centre of mass. If 'midpoint', then data is rotated around the
             midpoint, that is, min + max / 2. Defaults to the midpoint.
-        x_pixels, y_pixels, z_pixels: int, optional
+        x_pixels, y_pixels, z_pixels : int, optional
             Number of pixels in the output image in the x, y & z directions.
             Default values are chosen to keep a consistent aspect ratio.
-        xlim, ylim, zlim: tuple of float, optional
+        xlim, ylim, zlim : tuple of float or None, optional
             The minimum and maximum values to use in interpolation, in particle
             data space. Defaults to the minimum and maximum values of `x`, `y`
             and `z`.
-        exact: bool
+        exact : bool
             Whether to use exact interpolation of the data. Only applies to
             2D datasets.
-        backend: ['cpu', 'gpu']
+        backend : ['cpu', 'gpu']
             The computation backend to use when interpolating this data.
             Defaults to 'gpu' if CUDA is enabled, otherwise 'cpu' is used. A
             manually specified backend in `data` will override the default.
-        dens_weight: bool
+        dens_weight : bool
             If True, the target will be multiplied by density. Defaults to
             False.
-        normalize: bool
+        normalize : bool
             If True, will normalize the interpolation. Defaults to False (this
             may change in future versions).
-        hmin: bool
+        hmin : bool
             If True, a minimum smoothing length of 0.5 * pixel size will be
             imposed. This ensures each particle contributes to at least one
             grid cell / pixel. Defaults to False (this may change in a future
@@ -590,12 +563,25 @@ class SarracenDataFrame(DataFrame):
         KeyError
             If `target`, `x`, `y`, `z`, mass, density, or smoothing length
             columns do not exist in `data`.
+
+        Examples
+        --------
+
+        Interpolate SPH particles to a uniform grid.
+
+        >>> sdf, sdf_sinks = sarracen.read_phantom('dustydisc_00250')
+        >>> grid = sdf.sph_interpolate('rho')
+
+        The grid is a NumPy array in order of [z, y, x].
+
+        The default dimensions of the grid are scaled to keep a similar aspect
+        ratio. In this example, the z-direction is shorter because of the
+        geometry of the data (accretion disc).
+
+        >>> grid.shape
+        (165,  526, 512)
         """
         if self.get_dim() == 2:
-            if xlim is None:
-                xlim = (None, None)
-            if ylim is None:
-                ylim = (None, None)
             return interpolate_2d(self, target, x, y, kernel, x_pixels,
                                   y_pixels, xlim, ylim, exact, backend,
                                   dens_weight, normalize, hmin)
@@ -607,7 +593,7 @@ class SarracenDataFrame(DataFrame):
         raise ValueError('Invalid number of dimensions.')
 
     @property
-    def params(self) -> Dict[str, Any]:
+    def params(self) -> dict[str, Any]:
         """
         dict: Miscellaneous dataset-level parameters.
 
@@ -619,14 +605,14 @@ class SarracenDataFrame(DataFrame):
         return self._params
 
     @params.setter
-    def params(self, new_params: Union[Dict[str, Any], None]) -> None:
+    def params(self, new_params: dict[str, Any] | None) -> None:
         if new_params is not None and not isinstance(new_params, dict):
             raise TypeError("Parameters not a dictionary")
         self._params = dict(new_params or {})
 
     @property
     def units(self) -> Series:
-        """Series: Units for each column of this dataset."""
+        """Series : Units for each column of this dataset."""
         return self._units
 
     @units.setter
@@ -644,7 +630,7 @@ class SarracenDataFrame(DataFrame):
         return self._xcol
 
     @xcol.setter
-    def xcol(self, new_col: Union[str, None]) -> None:
+    def xcol(self, new_col: str | None) -> None:
         if new_col in self or new_col is None:
             self._xcol = new_col
 
@@ -659,7 +645,7 @@ class SarracenDataFrame(DataFrame):
         return self._ycol
 
     @ycol.setter
-    def ycol(self, new_col: Union[str, None]) -> None:
+    def ycol(self, new_col: str | None) -> None:
         if new_col in self or new_col is None:
             self._ycol = new_col
 
@@ -674,7 +660,7 @@ class SarracenDataFrame(DataFrame):
         return self._zcol
 
     @zcol.setter
-    def zcol(self, new_col: Union[str, None]) -> None:
+    def zcol(self, new_col: str | None) -> None:
         if new_col in self or new_col is None:
             self._zcol = new_col
 
@@ -689,7 +675,7 @@ class SarracenDataFrame(DataFrame):
         return self._hcol
 
     @hcol.setter
-    def hcol(self, new_col: Union[str, None]) -> None:
+    def hcol(self, new_col: str | None) -> None:
         if new_col in self or new_col is None:
             self._hcol = new_col
 
@@ -704,7 +690,7 @@ class SarracenDataFrame(DataFrame):
         return self._mcol
 
     @mcol.setter
-    def mcol(self, new_col: Union[str, None]) -> None:
+    def mcol(self, new_col: str | None) -> None:
         if new_col in self or new_col is None:
             self._mcol = new_col
 
@@ -719,7 +705,7 @@ class SarracenDataFrame(DataFrame):
         return self._rhocol
 
     @rhocol.setter
-    def rhocol(self, new_col: Union[str, None]) -> None:
+    def rhocol(self, new_col: str | None) -> None:
         if new_col in self or new_col is None:
             self._rhocol = new_col
 
@@ -735,7 +721,7 @@ class SarracenDataFrame(DataFrame):
         return self._vxcol
 
     @vxcol.setter
-    def vxcol(self, new_col: Union[str, None]) -> None:
+    def vxcol(self, new_col: str | None) -> None:
         if new_col in self or new_col is None:
             self._vxcol = new_col
 
@@ -751,7 +737,7 @@ class SarracenDataFrame(DataFrame):
         return self._vycol
 
     @vycol.setter
-    def vycol(self, new_col: Union[str, None]) -> None:
+    def vycol(self, new_col: str | None) -> None:
         if new_col in self or new_col is None:
             self._vycol = new_col
 
@@ -767,16 +753,16 @@ class SarracenDataFrame(DataFrame):
         return self._vzcol
 
     @vzcol.setter
-    def vzcol(self, new_col: Union[str, None]) -> None:
+    def vzcol(self, new_col: str | None) -> None:
         if new_col in self or new_col is None:
             self._vzcol = new_col
 
     @property
-    def dustfracscol(self):
+    def dustfracscol(self) -> list[str]:
         return self._dustfracscol
 
     @dustfracscol.setter
-    def dustfracscol(self, new_col: str) -> None:
+    def dustfracscol(self, new_col: list[str]) -> None:
         if new_col in self or new_col is None:
             self._dustfracscol = new_col
 
@@ -872,7 +858,7 @@ def Stokes_number(data_dust: 'SarracenDataFrame',
                   vy_gas: str = None,
                   vz_gas: str = None,
                   backend: str = None):
-    
+
     _check_dimension(data_dust, 3)
     _check_dimension(data_gas, 3)
 
@@ -910,7 +896,7 @@ def Stokes_number(data_dust: 'SarracenDataFrame',
     dust_velocity = np.vstack((vx_dust_data, vy_dust_data, vz_dust_data)).T
 
     tree = KDTree(gas_positions, leaf_size=10)
-    
+
     # Search using gas particle positions and smoothing lengths
     neighbours = tree.query_radius(dust_positions, r=2 * h_gas_data)
 
@@ -932,9 +918,9 @@ def Stokes_number(data_dust: 'SarracenDataFrame',
     for ind, array in enumerate(dust_neighbours):
         vx_neighb = 0
         vy_neighb = 0
-        vz_neighb = 0    
+        vz_neighb = 0
         neighbor_rho = 0
-        
+
         rho_dust = rho_dust_data[ind]
         r_dust = dust_positions[ind]
         v_dust = dust_velocity[ind]
@@ -954,8 +940,8 @@ def Stokes_number(data_dust: 'SarracenDataFrame',
             vx_neighb += vx_gas * normalized_weight
             vy_neighb += vy_gas * normalized_weight
             vz_neighb += vz_gas * normalized_weight
-            
-        rhog_on_dust[ind] = neighbor_rho 
+
+        rhog_on_dust[ind] = neighbor_rho
         vx_on_dust[ind] = vx_neighb
         vy_on_dust[ind] = vy_neighb
         vz_on_dust[ind] = vz_neighb

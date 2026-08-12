@@ -1,4 +1,3 @@
-from typing import Tuple
 
 from numba.core.registry import CPUDispatcher
 from numpy import ndarray, zeros
@@ -38,7 +37,7 @@ class BaseBackend:
                                   x_max: float,
                                   y_min: float,
                                   y_max: float,
-                                  exact: bool) -> Tuple[ndarray, ndarray]:
+                                  exact: bool) -> tuple[ndarray, ndarray]:
         """ Interpolate 2D vector data to a pair of 2D pixel grids. """
         return zeros((y_pixels, x_pixels)), zeros((y_pixels, x_pixels))
 
@@ -106,7 +105,7 @@ class BaseBackend:
                                       x_max: float,
                                       y_min: float,
                                       y_max: float,
-                                      exact: bool) -> Tuple[ndarray, ndarray]:
+                                      exact: bool) -> tuple[ndarray, ndarray]:
         """ Interpolate 3D vector data to a pair of 2D pixel grids using
         column projection."""
         return zeros((y_pixels, x_pixels)), zeros((y_pixels, x_pixels))
@@ -147,7 +146,7 @@ class BaseBackend:
                                  x_min: float,
                                  x_max: float,
                                  y_min: float,
-                                 y_max: float) -> Tuple[ndarray, ndarray]:
+                                 y_max: float) -> tuple[ndarray, ndarray]:
         """
         Interpolate 3D vector data to a pair of 2D pixel grids using a 3D
         cross-section at a specific z value.

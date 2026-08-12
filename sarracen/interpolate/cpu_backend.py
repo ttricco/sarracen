@@ -1,4 +1,3 @@
-from typing import Tuple
 
 from numba import njit, prange, get_num_threads
 from numba.core.registry import CPUDispatcher
@@ -47,7 +46,7 @@ class CPUBackend(BaseBackend):
                                   x_max: float,
                                   y_min: float,
                                   y_max: float,
-                                  exact: bool) -> Tuple[ndarray, ndarray]:
+                                  exact: bool) -> tuple[ndarray, ndarray]:
         if exact:
             return (CPUBackend._exact_2d_render(x, y, weight_x, h, x_pixels,
                                                 y_pixels, x_min, x_max,
@@ -133,7 +132,7 @@ class CPUBackend(BaseBackend):
                                       x_max: float,
                                       y_min: float,
                                       y_max: float,
-                                      exact: bool) -> Tuple[ndarray, ndarray]:
+                                      exact: bool) -> tuple[ndarray, ndarray]:
         if exact:
             return (CPUBackend._exact_3d_project(x, y, weight_x, h, x_pixels,
                                                  y_pixels, x_min, x_max,
@@ -182,7 +181,7 @@ class CPUBackend(BaseBackend):
                                  x_min: float,
                                  x_max: float,
                                  y_min: float,
-                                 y_max: float) -> Tuple[ndarray, ndarray]:
+                                 y_max: float) -> tuple[ndarray, ndarray]:
         return (CPUBackend._fast_2d(x, y, z, z_slice, weight_x, h,
                                     weight_function, kernel_radius, x_pixels,
                                     y_pixels, x_min, x_max, y_min, y_max, 3),

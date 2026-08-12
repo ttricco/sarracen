@@ -9,7 +9,7 @@ from ..sarracen_dataframe import SarracenDataFrame
 
 def read_shamrock_vtk(filename: str, pmass: float) -> SarracenDataFrame:
     """
-    Read data from a SHAMROCK vtk file (compatible with Paraview).
+    Read data from a Shamrock vtk file (compatible with Paraview).
 
     Parameters
     ----------
