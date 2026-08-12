@@ -367,7 +367,7 @@ def _rotate_xyz(data: 'SarracenDataFrame',
     """
     rotated_x, rotated_y, rotated_z = _rotate_data(data,
                                                    data[data.xcol].to_numpy(),
-                                                   data[data.ycol].to_numoy(),
+                                                   data[data.ycol].to_numpy(),
                                                    data[data.zcol].to_numpy(),
                                                    rotation,
                                                    rot_origin)
