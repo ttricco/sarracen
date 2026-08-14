@@ -1,12 +1,14 @@
 import numpy as np
-from pytest import approx
+from pytest import approx, mark
 
-from sarracen.kernels import CubicSplineKernel
+from sarracen.kernels import CubicSplineKernel, QuinticSplineKernel
 from sarracen import SarracenDataFrame
 from sarracen.dust import stokes_number_2fluid
 
 
-def test_uniform_gas_density():
+@mark.parametrize("kernel",
+                  [CubicSplineKernel(), QuinticSplineKernel()])
+def test_single_dust_in_uniform_gas_density(kernel) -> None:
     """
     Test a single dust particle in a uniform gas density.
 
@@ -43,9 +45,9 @@ def test_uniform_gas_density():
                                'vx': vel, 'vy': vel, 'vz': vel,
                                'mass': mass_gas},
                               params=params_gas)
+    sdf_g.kernel = kernel
 
     # Create 1 dust particle in the centre
-    kernel = CubicSplineKernel()
     params_dust = params_gas.copy()
     params_dust['hfact'] = kernel.w(0, 3)**(1/3)
     mass_dust = 0.01  # 1% of total gas mass
@@ -54,6 +56,7 @@ def test_uniform_gas_density():
                                'vx': [0.0], 'vy': [0.0], 'vz': [0.0],
                                'mass': mass_dust},
                               params=params_dust)
+    sdf_d.kernel = kernel
 
     stokes_calculated = stokes_number_2fluid(sdf_g, sdf_d, c_s=c_s)
 
@@ -61,7 +64,12 @@ def test_uniform_gas_density():
     dust_density = mass_dust * kernel.w(0, 3) / h_dust[0]**3
 
     coef = np.sqrt(np.pi * params_gas['gamma'] / 8)
-    interp_gas_dens = 1.0056236562869192
+
+    if isinstance(kernel, CubicSplineKernel):
+        interp_gas_dens = 1.0056236562869192
+    else:
+        interp_gas_dens = 1.0001440759936475
+
     denom = (interp_gas_dens + dust_density) * c_s
     tstop = coef * params_dust['grainsize'] * params_dust['graindens'] / denom
 
