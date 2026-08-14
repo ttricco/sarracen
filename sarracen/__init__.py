@@ -27,12 +27,13 @@ from .render import render, streamlines, arrowplot
 
 from . import disc
 from . import ptmass
+from . import dust
 
 __version__ = "1.3.1"
 
 __all__ = ["read_csv", "read_gasoline", "read_gradsph", "read_marisa",
            "read_phantom", "read_phantom_ev", "read_shamrock",
            "read_shamrock_vtk", "write_phantom",
-           "SarracenDataFrame", "disc", "ptmass",
+           "SarracenDataFrame", "disc", "ptmass", "dust",
            "interpolate_2d", "interpolate_2d_line", "interpolate_3d_proj",
            "interpolate_3d_cross", "render", "streamlines", "arrowplot"]

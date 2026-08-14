@@ -1,4 +1,3 @@
-from ..dust.stokes_number import getting_dust_locations, \
-    inverting_dust_locations
+from ..dust.stokes_number import stokes_number_2fluid
 
-__all__ = ["getting_dust_locations", "inverting_dust_locations"]
+__all__ = ["stokes_number_2fluid"]
