@@ -71,7 +71,7 @@ def azimuthal_average(data: 'SarracenDataFrame',
     rbins, bin_edges = _bin_particles_by_radius(data, r_in, r_out, bins, log,
                                                 geometry, origin)
 
-    result = data[target].groupby(rbins).mean().to_numpy()
+    result = data[target].groupby(rbins, observed=False).mean().to_numpy()
 
     if retbins:
         return result, _get_bin_midpoints(bin_edges, log)
@@ -167,7 +167,6 @@ def surface_density(data: 'SarracenDataFrame',
         else:
             counts = data.groupby(rbins, observed=False).size().astype(float)
             sigma = counts * mass
-        sigma = sigma.reindex(rbins.cat.categories, fill_value=0)
         sigma = (sigma / areas).to_numpy()
 
         if retbins:
@@ -181,12 +180,10 @@ def surface_density(data: 'SarracenDataFrame',
 
         mass_gas = mass * (1. - data[data.dustfracscol[0]])
         sigma_gas = mass_gas.groupby(rbins, observed=False).sum()
-        sigma_gas = sigma_gas.reindex(rbins.cat.categories, fill_value=0)
         sigma_gas = (sigma_gas / areas).to_numpy()
 
         mass_dust = mass * data[data.dustfracscol[0]]
         sigma_dust = mass_dust.groupby(rbins, observed=False).sum()
-        sigma_dust = sigma_dust.reindex(rbins.cat.categories, fill_value=0)
         sigma_dust = (sigma_dust / areas).to_numpy()
 
         if retbins:
@@ -200,12 +197,10 @@ def surface_density(data: 'SarracenDataFrame',
 
         mass_gas = mass * (1. - data['dustfrac_total'])
         sigma_gas = mass_gas.groupby(rbins, observed=False).sum()
-        sigma_gas = sigma_gas.reindex(rbins.cat.categories, fill_value=0)
         sigma_gas = (sigma_gas / areas).to_numpy()
 
         mass_dtot = mass * data['dustfrac_total']
         sigma_dtot = mass_dtot.groupby(rbins, observed=False).sum()
-        sigma_dtot = sigma_dtot.reindex(rbins.cat.categories, fill_value=0)
         sigma_dtot = (sigma_dtot / areas).to_numpy()
 
         sigma_d = np.empty([ndustsmall, bins])
@@ -256,13 +251,13 @@ def _calc_angular_momentum(data: 'SarracenDataFrame',
     Lz = x_data * data[data.vycol] - y_data * data[data.vxcol]
 
     if isinstance(mass, float):
-        Lx = (mass * Lx).groupby(rbins).sum()
-        Ly = (mass * Ly).groupby(rbins).sum()
-        Lz = (mass * Lz).groupby(rbins).sum()
+        Lx = (mass * Lx).groupby(rbins, observed=False).sum()
+        Ly = (mass * Ly).groupby(rbins, observed=False).sum()
+        Lz = (mass * Lz).groupby(rbins, observed=False).sum()
     else:
-        Lx = (data[data.mcol] * Lx).groupby(rbins).sum()
-        Ly = (data[data.mcol] * Ly).groupby(rbins).sum()
-        Lz = (data[data.mcol] * Lz).groupby(rbins).sum()
+        Lx = (data[data.mcol] * Lx).groupby(rbins, observed=False).sum()
+        Ly = (data[data.mcol] * Ly).groupby(rbins, observed=False).sum()
+        Lz = (data[data.mcol] * Lz).groupby(rbins, observed=False).sum()
 
     if unit_vector:
         Lmag = 1.0 / np.sqrt(Lx ** 2 + Ly ** 2 + Lz ** 2)
@@ -375,7 +370,7 @@ def _calc_scale_height(data: 'SarracenDataFrame',
         + rbins.map(Ly).to_numpy() * data[data.ycol] \
         + rbins.map(Lz).to_numpy() * data[data.zcol]
 
-    return zdash.groupby(rbins).std()
+    return zdash.groupby(rbins, observed=False).std()
 
 
 def scale_height(data: 'SarracenDataFrame',
@@ -509,7 +504,7 @@ def honH(data: 'SarracenDataFrame',
 
     H = _calc_scale_height(data, rbins, origin).to_numpy()
 
-    mean_h = data.groupby(rbins)[data.hcol].mean().to_numpy()
+    mean_h = data.groupby(rbins, observed=False)[data.hcol].mean().to_numpy()
 
     if retbins:
         return mean_h / H, _get_bin_midpoints(bin_edges, log)
