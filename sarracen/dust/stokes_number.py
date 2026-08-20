@@ -39,18 +39,18 @@ def _verify_columns(data: 'SarracenDataFrame',
             raise KeyError("No z-velocity column specified.")
 
 
-def _get_dust_locations(gas_locations: np.ndarray,
-                        dust_locations: np.ndarray,
-                        h_gas: np.ndarray,
-                        kernel_radius: float) -> np.ndarray:
+def _get_dust_neighbours(xyz_gas: np.ndarray,
+                         xyz_dust: np.ndarray,
+                         h_gas: np.ndarray,
+                         kernel_radius: float) -> np.ndarray:
     """
-    Compute the dust locations within each gas particles smoothing volume.
+    Locate the dust neighbours within each gas particle's smoothing volume.
 
     Parameters
     ----------
-    gas_locations : ndarray
-        n-dimensioal array of gas particle locations.
-    dust_locations : ndarray
+    xyz_gas : ndarray
+        n-dimensional array of gas particle locations.
+    xyz_dust : ndarray
         n-dimensional array of dust particle locations.
     h_gas : ndarray
         1-dimensional array of gas particle smoothing lengths.
@@ -60,52 +60,51 @@ def _get_dust_locations(gas_locations: np.ndarray,
     Returns
     -------
     ndarray
-        An array with size of len(gas_positions). Each element is an ndarray
+        An array with size of len(xyz_gas). Each element is an ndarray
         with the integer indices of the dust particles that are within the
         corresponding gas particle's smoothing volume.
     """
 
-    if len(gas_locations) != len(h_gas):
+    if len(xyz_gas) != len(h_gas):
         raise ValueError("Length of gas locations and h is inconsistent.")
 
     # Create a tree to store the dust locations
-    dust_tree = KDTree(dust_locations, leaf_size=10)
+    dust_tree = KDTree(xyz_dust, leaf_size=10)
 
     # Query the tree using the gas particles.
     # Makes a neighbour list of dust locations for each gas particle.
 
-    # "dust_locations_per_gas_particle" is an array of size len(gas_positions).
-    # Each element of "dust_locations_per_gas_particle" is an integer array of
-    # indices of "dust_positions" that are neighbours of that gas particle.
-    dust_locations_per_gas = dust_tree.query_radius(gas_locations,
-                                                    r=kernel_radius * h_gas)
+    # "dust_neighbours" is an array of size len(xyz_gas).
+    # Each element of "dust_neighbours" is an integer array of dust particle
+    # indices of that are neighbours of that gas particle.
+    dust_neighbours = dust_tree.query_radius(xyz_gas, r=kernel_radius * h_gas)
 
-    return dust_locations_per_gas
+    return dust_neighbours
 
 
-def _invert_dust_locations(dust_positions: np.ndarray,
-                           dust_neighbours: np.ndarray) -> list[np.ndarray]:
+def _invert_dust_neighbours(dust_neighbours: np.ndarray,
+                            ndust: int) -> list[np.ndarray]:
     """
     Invert the list of dust neighbours.
 
-    Given a list of gas particles and their dust particle neighbours, invert
-    the list such that it is a list of dust particles and the gas particles
-    that contribute to that location of the dust particles.
+    Given a list containing list of dust particle neighbour indices per gas
+    particle, invert the list such that it is a list of dust particles and the
+    gas particles that contribute to that location of the dust particles.
 
-    Note that this is not a list of gas particles within a dust particles
-    smoothing volume. Only the smoothing length of the gas is used. The dust
-    particle is within the smoothing volume of each of its gas "neighbours",
-    but because the dust smoothing lengths are not used, there is no guarantee
-    that the gas particle is within the dust smoothing volume.
+    Note that this is not just a list of gas particle neighbours per dust
+    particle. Only the smoothing length of the gas is used. The dust particle
+    is within the smoothing volume of each of its gas "neighbours", but because
+    the dust smoothing lengths are not used, there is no guarantee that the gas
+    particle is within the dust smoothing volume.
 
     Parameters
     ----------
-    dust_positions : ndarray
-        n-dimensional array of dust particle locations.
     dust_neighbours : ndarray
         An array with length the number of gas particles. Each element is an
         array of dust particle integer indices that are neighbours of the
         corresponding gas particle.
+    ndust : int
+        The number of dust particles.
 
     Returns
     -------
@@ -118,15 +117,15 @@ def _invert_dust_locations(dust_positions: np.ndarray,
     # Initialize structure to hold the list of gas particles that
     # each dust location gets contribution from
     # Use regular list instead of ndarray for append efficiency
-    invert: list[list[int]] = [[] for _ in range(len(dust_positions))]
+    inverted: list[list[int]] = [[] for _ in range(ndust)]
 
     # Loop over each gas-dust neighbour pair
-    for gas_index, dust_locations in enumerate(dust_neighbours):
-        for dust_index in dust_locations:
-            invert[dust_index].append(gas_index)
+    for gas_idx, dust_indices in enumerate(dust_neighbours):
+        for dust_idx in dust_indices:
+            inverted[dust_idx].append(gas_idx)
 
     # Convert the list of lists to a list of ndarrays
-    return [np.asarray(indices, dtype=np.int64) for indices in invert]
+    return [np.asarray(indices, dtype=np.int64) for indices in inverted]
 
 
 def _interpolate_gas(gas_particles_per_dust_location: list[np.ndarray],
@@ -216,15 +215,15 @@ def _interpolate_gas(gas_particles_per_dust_location: list[np.ndarray],
     return rho_gas_on_dust, vxyz_gas_on_dust
 
 
-def _stoppingtime(rho_gas: np.ndarray,
-                  rho_dust: np.ndarray,
-                  vxyz_gas: np.ndarray | None,
-                  vxyz_dust: np.ndarray,
-                  c_s: float,
-                  rho_grain: float,
-                  grain_size: float,
-                  gamma: float,
-                  kwok: bool) -> np.ndarray:
+def _stopping_time(rho_gas: np.ndarray,
+                   rho_dust: np.ndarray,
+                   vxyz_gas: np.ndarray | None,
+                   vxyz_dust: np.ndarray,
+                   c_s: float,
+                   rho_grain: float,
+                   grain_size: float,
+                   gamma: float,
+                   kwok: bool) -> np.ndarray:
     """
     Calculate the stopping time per particle.
     """
@@ -250,11 +249,20 @@ def stokes_number_2fluid(data_gas: 'SarracenDataFrame',
                          kernel: BaseKernel | None = None,
                          kwok: bool = True) -> np.ndarray:
     """
-    Calculate the Stokes number for each dust particle.
+    Calculate the Stokes numbers for 2-fluid gas-dust simulations.
 
-    This interpolates the gas density and velocity at the location of each dust
-    particle to calculate the stopping time, and subsequently the Stokes
-    number.
+    The Stokes number is defined as the ratio of the stopping time to the
+    dynamical time. The dynamical time is currently defined as the local
+    timescale as `h / c_s`, where h is the smoothing length. Note that this is
+    resolution dependent. Addition of other dynamical timescales, such as the
+    Keplerian angular frequency in the context of discs, may be added in
+    future.
+
+    A single Stokes number per dust particle is calculated by interpolating
+    the gas density and velocity at the location of each dust particle. This
+    defines a single stopping time per dust particle (using the co-located dust
+    and interpolated gas properties), rather than a stopping time per pair of
+    gas and dust particles.
 
     Parameters
     ----------
@@ -302,6 +310,35 @@ def stokes_number_2fluid(data_gas: 'SarracenDataFrame',
     KeyError
         If the SarracenDataFrames are missing position, smoothing length, or
         velocity data.
+
+    Examples
+    --------
+    Load a 2-fluid data set that contains a set of gas and dust particles.
+
+    >>> import sarracen
+    >>> sdf_g, sdf_d = sarracen.read_phantom('dump_0000', separate_types='all')
+
+    Double check that the grain density and size are present.
+
+    >>> sdf_d.params['grainsize']
+    np.float64(1.080146899978397e-24)
+
+    >>> sdf_d.params['graindens']
+    np.float64(3e+20)
+
+    These values are in code units. We can validate that we have the expected
+    grain size (0.1 micron in this example) by converting to cgs.
+
+    >>> sdf_d.params['grainsize'] * sdf_d.params['udist']
+    no.float64(1e-5)
+
+    Calculate the Stokes number per dust particle. This will use the grain
+    size and density stored in the dust params dict, though these can be
+    overriden. If your particle data is in code units, then these values need
+    to also be in code units (default behaviour).
+
+    >>> sdf_d['St'] = sarracen.dust.stokes_number_2fluid(sdf_g, sdf_d, c_s=1.0)
+
     """
     if rho_grain is None:
         rho_grain = data_dust.params.get('graindens')
@@ -352,19 +389,24 @@ def stokes_number_2fluid(data_gas: 'SarracenDataFrame',
     xyz_dust = data_dust[[data_dust.xcol, data_dust.ycol,
                           data_dust.zcol]].to_numpy()
 
-    vxyz_gas = data_gas[[data_gas.vxcol, data_gas.vycol,
-                         data_gas.vzcol]].to_numpy()
-    vxyz_dust = data_dust[[data_dust.vxcol, data_dust.vycol,
-                           data_dust.vzcol]].to_numpy()
+    if kwok:
+        vxyz_gas = data_gas[[data_gas.vxcol, data_gas.vycol,
+                             data_gas.vzcol]].to_numpy()
+        vxyz_dust = data_dust[[data_dust.vxcol, data_dust.vycol,
+                               data_dust.vzcol]].to_numpy()
+    else:
+        vxyz_gas = np.empty((0, 3))
+        vxyz_dust = np.empty((0, 3))
 
     # Make a neighbour list of dust particles per gas particle
-    dust_neighbours = _get_dust_locations(xyz_gas, xyz_dust,
-                                          h_gas, kernel.get_radius())
+    dust_neighbours = _get_dust_neighbours(xyz_gas, xyz_dust,
+                                           h_gas, kernel.get_radius())
 
     # Invert the neighbour list.
     # Each element corresponds to a dust particle. It contains the list of gas
     # particles whose smoothing length touches this dust particle location.
-    dust_neighbours_inv = _invert_dust_locations(xyz_dust, dust_neighbours)
+    dust_neighbours_inv = _invert_dust_neighbours(dust_neighbours,
+                                                  len(data_dust))
 
     # Interpolate gas quantities to the location of the dust particles
     rho_gas_on_dust, vxyz_gas_on_dust = _interpolate_gas(dust_neighbours_inv,
@@ -380,8 +422,8 @@ def stokes_number_2fluid(data_gas: 'SarracenDataFrame',
                                                          data_gas.get_dim())
 
     # Calculate stopping time for the now co-located gas/dust
-    tstop = _stoppingtime(rho_gas_on_dust, rho_dust, vxyz_gas_on_dust,
-                          vxyz_dust, c_s, rho_grain, grain_size, gamma, kwok)
+    tstop = _stopping_time(rho_gas_on_dust, rho_dust, vxyz_gas_on_dust,
+                           vxyz_dust, c_s, rho_grain, grain_size, gamma, kwok)
 
     # Get co-located gas smoothing lengths from interpolated gas densities
     h = data_gas.params['hfact'] * (gas_mass / rho_gas_on_dust)**(1/3)
