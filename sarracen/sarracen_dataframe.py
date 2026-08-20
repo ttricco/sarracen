@@ -13,7 +13,6 @@ from .render import streamlines, arrowplot, render, lineplot
 from .interpolate import interpolate_2d, interpolate_3d_grid
 from .kernels import CubicSplineKernel, BaseKernel
 
-
 Bounds: TypeAlias = tuple[float | None, float | None]
 VectorLike: TypeAlias = np.ndarray | list | tuple
 OriginLike: TypeAlias = VectorLike | pd.Series | str | None
@@ -187,7 +186,7 @@ class SarracenDataFrame(DataFrame):
         elif 'density' in self.columns:
             self.rhocol = 'density'
 
-        # Look for the keyword 'rho' or 'density' in the data.
+        # Look for the keywords 'vx', 'vy', 'vz' for velocity data.
         if 'vx' in self.columns:
             self.vxcol = 'vx'
         if 'vy' in self.columns:
