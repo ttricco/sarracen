@@ -5,14 +5,17 @@ from ..kernels.base_kernel import BaseKernel
 from ..sarracen_dataframe import SarracenDataFrame
 
 
-def _verify_columns(data: 'SarracenDataFrame') -> None:
+def _verify_columns(data: 'SarracenDataFrame',
+                    kwok: bool) -> None:
     """
-    Verify that the given columns exist in `data`.
+    Verify that the required columns exist in `data`.
 
     Parameters
     ----------
-    data: SarracenDataFrame
+    data : SarracenDataFrame
         The particle dataset to check.
+    kwok : bool
+        If True, then the velocity columns are also checked.
 
     Raises
     ------
@@ -27,18 +30,19 @@ def _verify_columns(data: 'SarracenDataFrame') -> None:
         raise KeyError("No z-directional column specified.")
     if data.hcol is None:
         raise KeyError("No smoothing length column specified.")
-    if data.vxcol is None:
-        raise KeyError("No x-velocity column specified.")
-    if data.vycol is None:
-        raise KeyError("No y-velocity column specified.")
-    if data.vzcol is None:
-        raise KeyError("No z-velocity column specified.")
+    if kwok:
+        if data.vxcol is None:
+            raise KeyError("No x-velocity column specified.")
+        if data.vycol is None:
+            raise KeyError("No y-velocity column specified.")
+        if data.vzcol is None:
+            raise KeyError("No z-velocity column specified.")
 
 
 def _get_dust_locations(gas_locations: np.ndarray,
                         dust_locations: np.ndarray,
                         h_gas: np.ndarray,
-                        kernel_radius: float = 2.0) -> np.ndarray:
+                        kernel_radius: float) -> np.ndarray:
     """
     Compute the dust locations within each gas particles smoothing volume.
 
@@ -50,6 +54,8 @@ def _get_dust_locations(gas_locations: np.ndarray,
         n-dimensional array of dust particle locations.
     h_gas : ndarray
         1-dimensional array of gas particle smoothing lengths.
+    kernel_radius : float
+        The radial extent of the smoothing kernel.
 
     Returns
     -------
@@ -131,8 +137,9 @@ def _interpolate_gas(gas_particles_per_dust_location: list[np.ndarray],
                      h_gas: np.ndarray,
                      kernel: BaseKernel,
                      gas_mass: float,
+                     kwok: bool,
                      ndust: int,
-                     ndim: int) -> tuple[np.ndarray, np.ndarray]:
+                     ndim: int) -> tuple[np.ndarray, np.ndarray | None]:
     """
     Interpolate gas density and velocity to location of dust particles.
 
@@ -162,6 +169,9 @@ def _interpolate_gas(gas_particles_per_dust_location: list[np.ndarray],
         The smoothing kernel to use.
     gas_mass : float
         The gas particle mass.
+    kwok: bool
+        Whether to apply the Kwok (1975) correction for supersonic motions to
+        the stopping time. If False, then the gas velocity is not interpolated.
     ndust : int
         The number of dust particles.
     ndim : int
@@ -169,15 +179,20 @@ def _interpolate_gas(gas_particles_per_dust_location: list[np.ndarray],
 
     Returns
     -------
-    tuple of ndarray
-        The interpolated gas density and velocity at the location of each
-        dust particle.
+    ndarray
+        The interpolated gas density at the location of each dust particle. Has
+        length the number of dust particles.
+    ndarray or None
+        The interpolated x, y and z gas velocity at the location of each dust
+        particle.If kwok is False, then the returned velocity is None as it is
+        unneeded for the stopping time and Stokes number calculations.
     """
 
     rho_gas_on_dust = np.zeros(ndust)
-    vx_on_dust = np.zeros(ndust)
-    vy_on_dust = np.zeros(ndust)
-    vz_on_dust = np.zeros(ndust)
+    vxyz_gas_on_dust: np.ndarray | None = None
+
+    if kwok:
+        vxyz_gas_on_dust = np.zeros((ndust, len(xyz_gas[0])))
 
     # Interpolate the gas density and velocity at the dust particle locations
     for dust_idx, gas_particles in enumerate(gas_particles_per_dust_location):
@@ -189,29 +204,27 @@ def _interpolate_gas(gas_particles_per_dust_location: list[np.ndarray],
 
             rho_gas_on_dust[dust_idx] += weight
 
-            weight = weight / rho_gas[gas_idx]
-            vx_on_dust[dust_idx] += vxyz_gas[gas_idx, 0] * weight
-            vy_on_dust[dust_idx] += vxyz_gas[gas_idx, 1] * weight
-            vz_on_dust[dust_idx] += vxyz_gas[gas_idx, 2] * weight
+            if kwok and vxyz_gas_on_dust is not None:
+                weight = weight / rho_gas[gas_idx]
+                vxyz_gas_on_dust[dust_idx] += vxyz_gas[gas_idx] * weight
 
     rho_gas_on_dust *= gas_mass
-    vx_on_dust *= gas_mass
-    vy_on_dust *= gas_mass
-    vz_on_dust *= gas_mass
 
-    gas_velocity_on_dust = np.vstack((vx_on_dust, vy_on_dust, vz_on_dust)).T
+    if kwok and vxyz_gas_on_dust is not None:
+        vxyz_gas_on_dust *= gas_mass
 
-    return rho_gas_on_dust, gas_velocity_on_dust
+    return rho_gas_on_dust, vxyz_gas_on_dust
 
 
-def _stoppingtime(rho_dust: np.ndarray,
-                  rho_gas: np.ndarray,
-                  v_gas: np.ndarray,
-                  v_dust: np.ndarray,
+def _stoppingtime(rho_gas: np.ndarray,
+                  rho_dust: np.ndarray,
+                  vxyz_gas: np.ndarray | None,
+                  vxyz_dust: np.ndarray,
+                  c_s: float,
                   rho_grain: float,
                   grain_size: float,
-                  c_s: float,
-                  gamma: float) -> np.ndarray:
+                  gamma: float,
+                  kwok: bool) -> np.ndarray:
     """
     Calculate the stopping time per particle.
     """
@@ -219,8 +232,11 @@ def _stoppingtime(rho_dust: np.ndarray,
     coef = np.sqrt(np.pi * gamma * 0.125)
 
     # Kwok supersonic correction
-    deltav_sq = np.linalg.norm(v_gas - v_dust, axis=1)**2
-    f = np.sqrt(1 + 0.0703125 * np.pi * deltav_sq / c_s**2)
+    if kwok and vxyz_gas is not None:
+        deltav_sq = np.linalg.norm(vxyz_gas - vxyz_dust, axis=1)**2
+        f = np.sqrt(1 + 0.0703125 * np.pi * deltav_sq / c_s**2)
+    else:
+        f = 1.0
 
     return coef * rho_grain * grain_size / ((rho_dust + rho_gas) * c_s * f)
 
@@ -231,7 +247,8 @@ def stokes_number_2fluid(data_gas: 'SarracenDataFrame',
                          rho_grain: float | None = None,
                          grain_size: float | None = None,
                          gamma: float | None = None,
-                         kernel: BaseKernel | None = None) -> np.ndarray:
+                         kernel: BaseKernel | None = None,
+                         kwok: bool = True) -> np.ndarray:
     """
     Calculate the Stokes number for each dust particle.
 
@@ -246,15 +263,17 @@ def stokes_number_2fluid(data_gas: 'SarracenDataFrame',
     data_dust : SarracenDataFrame
         A SarracenDataFrame containing the dust particle data.
     c_s : float
-        The speed of sound. This is taken to be a constant value assuming an
-        isothermal equation of state. Support for other equations of state to
-        be added.
+        The speed of sound. The same units as the particle data are used. This
+        is taken to be a constant value assuming an isothermal equation of
+        state. Support for other equations of state is to be added in future.
     rho_grain : float, optional
-        The intrinsic density of the dust grains. If not specified, then the
-        value is retrieved from the dust SarracenDataFrame's params dict.
+        The intrinsic density of the dust grains. The same units as the
+        particle data are used. If not specified, then the value is retrieved
+        from the dust SarracenDataFrame's params dict.
     grain_size : float, optional
-        The size of the dust grains. If not specified, then the value is
-        retrieved from the dust SarracenDataFrame's params dict.
+        The size of the dust grains. The same units as the particle data are
+        used. If not specified, then the value is retrieved from the dust
+        SarracenDataFrame's params dict.
     gamma : float, optional
         The equation of state gamma. If not specified, then the value is
         retrieved from the gas SarracenDataFrame's params dict.
@@ -262,6 +281,10 @@ def stokes_number_2fluid(data_gas: 'SarracenDataFrame',
         The smoothing kernel to use to interpolate the gas density and velocity
         to the location of dust particles. If not specified, then the smoothing
         kernel in the gas SarracenDataFrame is used.
+    kwok : bool, optional
+        If True, then the stopping time applies the Kwok (1975) correction for
+        supersonic motions. This requires interpolation of the gas velocity to
+        the location of the dust particles. Defaults to True.
 
     Returns
     -------
@@ -271,13 +294,13 @@ def stokes_number_2fluid(data_gas: 'SarracenDataFrame',
     Raises
     ------
     ValueError
-        If the grain density or size are not present.
+        If the grain density or size are not specified and not found in params.
     ValueError
-        If the thermodynamic gamma value is not present.
+        If the thermodynamic gamma is not specified and not found in params.
     ValueError
         If particle mass cannot be found or particles have unequal masses.
     KeyError
-        If the SarracenDataFrames are missing position, smoothing length, and
+        If the SarracenDataFrames are missing position, smoothing length, or
         velocity data.
     """
     if rho_grain is None:
@@ -299,8 +322,8 @@ def stokes_number_2fluid(data_gas: 'SarracenDataFrame',
         kernel = data_gas.kernel
 
     # Ensure all required columns exist in their respective dataframes
-    _verify_columns(data_dust)
-    _verify_columns(data_gas)
+    _verify_columns(data_dust, kwok)
+    _verify_columns(data_gas, kwok)
 
     # Getting specific dataframe columns as lists
     if data_dust.rhocol is None:
@@ -352,12 +375,13 @@ def stokes_number_2fluid(data_gas: 'SarracenDataFrame',
                                                          h_gas,
                                                          kernel,
                                                          gas_mass,
+                                                         kwok,
                                                          len(data_dust),
                                                          data_gas.get_dim())
 
     # Calculate stopping time for the now co-located gas/dust
-    tstop = _stoppingtime(rho_dust, rho_gas_on_dust, vxyz_gas_on_dust,
-                          vxyz_dust, rho_grain, grain_size, c_s, gamma)
+    tstop = _stoppingtime(rho_gas_on_dust, rho_dust, vxyz_gas_on_dust,
+                          vxyz_dust, c_s, rho_grain, grain_size, gamma, kwok)
 
     # Get co-located gas smoothing lengths from interpolated gas densities
     h = data_gas.params['hfact'] * (gas_mass / rho_gas_on_dust)**(1/3)
