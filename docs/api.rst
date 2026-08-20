@@ -9,22 +9,41 @@ API Reference
 File reading
 ------------
 
-Sarracen can read all general file formats supported by pandas (csv, notably).
+Sarracen's design goal is to read data from multiple SPH codes while preserving
+full functionality. All the general file formats supported by pandas (csv,
+notably) work within Sarracen.
 
-For SPH codes, Sarracen supports reading the native binary format of the `Phantom
-SPH code <https://phantomsph.bitbucket.io>`_. Raise an issue on our GitHub if you
-would like Sarracen to be able to read the file format for other SPH codes (or
-make a pull request!).
+For SPH codes, Sarracen supports reading the native binary format of the
+`Phantom code <https://phantomsph.bitbucket.io>`_, the `Gasoline code
+<https://gasoline-code.com/>`_, and the `Shamrock code
+<https://shamrock-code.github.io/>`_.
+
+Raise an issue on our GitHub if you would like Sarracen to be able to read the
+file format for other SPH codes (or make a pull request!).
 
 .. autosummary::
    :toctree: api/
 
    read_csv
-   read_phantom
-   read_marisa
-   read_gradsph
    read_gasoline
+   read_gradsph
+   read_marisa
+   read_phantom
+   read_phantom_ev
    read_shamrock
+   read_shamrock_vtk
+
+
+File writing
+------------
+
+Sarracen can write native binary Phantom dump files. SarracenDataFrames can
+also be dumped to .csv using pandas functionality.
+
+.. autosummary::
+   :toctree: api/
+
+   write_phantom
 
 
 SarracenDataFrame
@@ -51,6 +70,7 @@ Extra Quantities
    :nosignatures:
 
    SarracenDataFrame.calc_density
+   SarracenDataFrame.calc_one_fluid_quantities
    SarracenDataFrame.centre_of_mass
 
 Rendering
@@ -73,10 +93,11 @@ Interpolation
    SarracenDataFrame.sph_interpolate
 
 
-Kernels
--------
+sarracen.kernels
+----------------
 
-The default smoothing kernel is the cubic spline. Additional smoothing kernels are included within Sarracen.
+The default smoothing kernel is the cubic spline. Additional smoothing kernels
+are included within the kernels module.
 
 .. autosummary::
    :toctree: api/
@@ -86,8 +107,8 @@ The default smoothing kernel is the cubic spline. Additional smoothing kernels a
    kernels.QuinticSplineKernel
 
 
-Disc
-----
+sarracen.disc
+-------------
 
 Accretion disc analysis routines are in the disc module.
 
@@ -99,3 +120,15 @@ Accretion disc analysis routines are in the disc module.
    disc.angular_momentum
    disc.scale_height
    disc.honH
+
+
+sarracen.ptmass
+---------------
+
+Analysis routines related to point masses and sink particles are in the ptmass
+module.
+
+.. autosummary::
+   :toctree: api/
+
+   ptmass.classify_bound_particles

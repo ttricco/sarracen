@@ -1,8 +1,8 @@
+from collections.abc import Callable
 import math
 
 import numpy as np
 from numba import njit, prange
-from typing import Callable
 
 
 class BaseKernel:
@@ -41,7 +41,7 @@ class BaseKernel:
 
         Parameters
         ----------
-        samples: int
+        samples : int
             Number of sample points to calculate when approximating the kernel.
 
         Returns
@@ -74,7 +74,7 @@ class BaseKernel:
 
         Parameters
         ----------
-        samples: int
+        samples : int
             Number of sample points to calculate when approximating the kernel.
 
         Returns
@@ -112,6 +112,6 @@ class BaseKernel:
             q_z = np.linspace(0, bounds, samples)
             q = np.sqrt(q_xy ** 2 + q_z ** 2)
             y = wfunc(q, 3)
-            result[i] = 2 * float(np.trapz(y, x=q_z))
+            result[i] = 2 * float(np.trapezoid(y, x=q_z))
 
         return result

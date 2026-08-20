@@ -1,4 +1,4 @@
-from typing import Tuple, Union
+from typing import Literal, TypeAlias, overload
 
 import numpy as np
 import pandas as pd
@@ -8,12 +8,26 @@ import struct
 from ..sarracen_dataframe import SarracenDataFrame
 
 
+GasolineFrames: TypeAlias = tuple[SarracenDataFrame, SarracenDataFrame,
+                                  SarracenDataFrame]
+GasolineDicts: TypeAlias = tuple[dict, dict, dict, dict]
+
+
+@overload
 def read_gasoline(filename: str,
-                  outtype: str = "sarracen") -> Union[Tuple[SarracenDataFrame,
-                                                            SarracenDataFrame,
-                                                            SarracenDataFrame],
-                                                      Tuple[dict, dict,
-                                                            dict, dict], int]:
+                  outtype: Literal["sarracen"] = "sarracen"
+                  ) -> GasolineFrames | int: ...
+@overload  # noqa: E302
+def read_gasoline(filename: str,
+                  outtype: Literal["dic", "dict", "dictionary"]
+                  ) -> GasolineDicts | int: ...
+@overload  # noqa: E302
+def read_gasoline(filename: str,
+                  outtype: str
+                  ) -> GasolineFrames | GasolineDicts | int: ...
+def read_gasoline(filename: str,  # noqa: E302
+                  outtype: str = "sarracen"
+                  ) -> GasolineFrames | GasolineDicts | int:
     """
     Read data from a Gasoline tipsy file.
 
@@ -34,10 +48,15 @@ def read_gasoline(filename: str,
 
     Returns
     -------
-    list of SarracenDataFrames or Python dictionaries
+    tuple of SarracenDataFrame or dict
+
+    Raises
+    ------
+    ValueError
+        If the header and file size are inconsistent.
 
     Notes
-    --------
+    -----
     Adapted from `PyTipsy <https://github.com/bwkeller/pytipsy>`_.
 
     Examples
@@ -98,14 +117,14 @@ def read_gasoline(filename: str,
         fp.read(4)
     # File is borked if this is true
     elif (fs != 28+48*ng+36*nd+44*ns):
-        print("Tipsy ERROR: Header and file size inconsistend")
+        print("Tipsy ERROR: Header and file size inconsistent")
         print("Estimates: Header bytes: 28 or 32 (either is OK)")
         print("     ngas: ", ng, " bytes:", 48*ng)
         print("    ndark: ", nd, " bytes:", 38*nd)
         print("    nstar: ", ns, " bytes:", 44*ns)
         print("Actual File bytes:", fs, " does not work")
         fp.close()
-        return 1
+        raise ValueError("Header and file size inconsistent")
 
     # Make dicitonaries for data
     catg = {'mass': np.zeros(ng), 'pos': np.zeros((ng, 3)),

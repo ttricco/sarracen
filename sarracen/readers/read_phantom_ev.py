@@ -1,9 +1,9 @@
-from typing import IO, List, Union
+from typing import IO
 import pandas as pd
 import numpy as np
 
 
-def _determine_column_labels(file: IO) -> List[str]:
+def _determine_column_labels(file: IO) -> list[str]:
     """
     Determine the column labels.
 
@@ -27,6 +27,9 @@ def _determine_column_labels(file: IO) -> List[str]:
             file.seek(pos)
             break
 
+    if last_line is None:
+        raise ValueError("No header line found in file.")
+
     # Get header labels
     # Assumes labels are exactly 3 spaces apart.
     # Assumes labels start with 2 digits (which we discard).
@@ -39,7 +42,7 @@ def _determine_column_labels(file: IO) -> List[str]:
     return labels
 
 
-def _infer_type(s: str) -> Union[np.float64, np.int32, str]:
+def _infer_type(s: str) -> np.float64 | np.int32 | str:
     """
     Given a value from the ev, determine its type.
 
@@ -92,8 +95,8 @@ def read_phantom_ev(filename: str) -> pd.DataFrame:
 
         # Read data
         for line in file:
-            line = line.strip().split()
-            line = [_infer_type(x) for x in line]
-            data.append(line)
+            parts = line.strip().split()
+            row = [_infer_type(x) for x in parts]
+            data.append(row)
 
     return pd.DataFrame(data, columns=labels)
