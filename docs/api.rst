@@ -122,6 +122,17 @@ Accretion disc analysis routines are in the disc module.
    disc.honH
 
 
+sarracen.dust
+-------------
+
+Analysis routines related to dust.
+
+.. autosummary::
+   :toctree: api/
+
+   dust.stokes_number_2fluid
+
+
 sarracen.ptmass
 ---------------
 
