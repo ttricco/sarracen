@@ -1,5 +1,6 @@
 from collections.abc import Callable
 from typing import Any, TypeAlias
+import warnings
 
 from matplotlib.axes import Axes
 from matplotlib.colors import Colormap
@@ -718,8 +719,20 @@ class SarracenDataFrame(DataFrame):
 
     @dustfracscol.setter
     def dustfracscol(self, new_col: list[str]) -> None:
-        if new_col in self or new_col is None:
-            self._dustfracscol = new_col
+        if not isinstance(new_col, list):
+            raise TypeError('dustfracscol needs to be a list')
+        for col in new_col:
+            if col not in self:
+                raise ValueError(f'Column {col} does not exist in dataset')
+
+        n = self.params.get('ndustsmall', 0) + self.params.get('ndustlarge', 0)
+        if n != len(new_col):
+            msg = ('len(dustfracscol) differs from sum of ndustsmall and '
+                   'ndustlarge in params dict '
+                   f'(found {len(new_col)}, expected {n})')
+            warnings.warn(msg, UserWarning, stacklevel=2)
+
+        self._dustfracscol = new_col
 
     @property
     def kernel(self) -> BaseKernel:
