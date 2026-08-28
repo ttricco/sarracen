@@ -158,7 +158,7 @@ def surface_density(data: 'SarracenDataFrame',
 
     areas = np.pi * (bin_edges[1:] ** 2 - bin_edges[:-1] ** 2)
 
-    ndustsmall = data.params.get('ndustsmall') or len(data.dustfracscol)
+    ndustsmall = data.params.get('ndustsmall', 0)
 
     mass = _get_mass(data)
     if ndustsmall == 0:  # gas-only dump
@@ -175,6 +175,8 @@ def surface_density(data: 'SarracenDataFrame',
             return sigma
 
     elif ndustsmall == 1:  # 'dust-as-mixture' dump
+        if len(data.dustfracscol) == 0:
+            raise KeyError('dustfrac not found in data')
         if data.dustfracscol[0] not in data.columns:
             raise KeyError('dustfrac not found in data')
 
