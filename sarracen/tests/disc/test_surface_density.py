@@ -106,6 +106,36 @@ def test_itype_combining() -> None:
     assert_allclose(sigma_1 + sigma_7, sigma_total, atol=1e-15, rtol=0.0)
 
 
+@pytest.mark.filterwarnings('ignore:Surface density being*:UserWarning')
+def test_multiple_itypes_combining() -> None:
+    """ Adding profiles from different itypes should equal the total. """
+
+    # randomly place particles
+    rng = np.random.default_rng(seed=5)
+    x = rng.random(200)
+    y = rng.random(200)
+    z = rng.random(200)
+    vx = rng.random(200)
+    vy = rng.random(200)
+    vz = rng.random(200)
+    mass = [3.2e-4] * 100 + [5.22e-6] * 100
+    dustfrac = [0.01] * 200
+    itype = [1] * 100 + [7] * 50 + [8] * 50
+
+    sdf = SarracenDataFrame(data={'x': x, 'y': y, 'z': z,
+                                  'vx': vx, 'vy': vy, 'vz': vz,
+                                  'mass': mass, 'itype': itype,
+                                  'dustfrac': dustfrac})
+
+    sigma_1 = surface_density(sdf[sdf.itype == 1], r_in=0, r_out=1, bins=30)
+    sigma_7 = surface_density(sdf[sdf.itype == 7], r_in=0, r_out=1, bins=30)
+    sigma_8 = surface_density(sdf[sdf.itype == 8], r_in=0, r_out=1, bins=30)
+    sigma_total = surface_density(sdf, r_in=0, r_out=1, bins=30)
+
+    assert_allclose(sigma_1 + sigma_7 + sigma_8, sigma_total,
+                    atol=1e-15, rtol=0.0)
+
+
 def test_one_fluid_single_grain() -> None:
     """ Parts vs whole test for single-grain one-fluid dust. """
 
@@ -123,6 +153,8 @@ def test_one_fluid_single_grain() -> None:
     sdf = SarracenDataFrame(data={'x': x, 'y': y, 'z': z,
                                   'vx': vx, 'vy': vy, 'vz': vz,
                                   'dustfrac': dustfrac, 'mass': mass})
+
+    sdf.params['ndustsmall'] = 1
 
     sigmas = surface_density(sdf, r_in=0, r_out=0.5, bins=50)
     assert isinstance(sigmas, tuple)
